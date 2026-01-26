@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { getEntityGraph, getEntityTargets, getEntitySources } from '../../src/editor/graph';
-import { EntitySystem } from '../../src/entities/system';
-import { Entity } from '../../src/entities/entity';
+import { getEntityGraph, getEntityTargets, getEntitySources } from '../../../src/editor/graph';
+import { EntitySystem } from '../../../src/entities/system';
+import { Entity } from '../../../src/entities/entity';
 
 describe('Entity Graph', () => {
   let mockEntitySystem: any;

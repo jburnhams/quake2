@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGame, GameExports } from '../../src/index.js';
+import { createGame, GameExports } from '../../../src/index.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import type { GameImports } from '../../src/index.js';
-import { ModAPI } from '../../src/mod.js';
+import type { GameImports } from '../../../src/index.js';
+import { ModAPI } from '../../../src/mod.js';
 
 describe('Mod Initialization Hooks', () => {
     it('should allow setting and calling onModInit', () => {

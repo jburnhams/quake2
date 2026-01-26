@@ -6,8 +6,8 @@ import {
   findEntitiesInBounds,
   searchEntityFields,
   getAllEntityClassnames
-} from '../../src/editor/search';
-import { Entity } from '../../src/entities/entity';
+} from '../../../src/editor/search';
+import { Entity } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
 
 describe('Entity Search', () => {

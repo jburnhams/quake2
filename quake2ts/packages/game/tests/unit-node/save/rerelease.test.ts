@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { parseRereleaseSave, summarizeRereleaseSave } from '../../src/save/index.js';
+import { parseRereleaseSave, summarizeRereleaseSave } from '../../../src/save/index.js';
 
 describe('rerelease save format inspection', () => {
   it('parses game saves with client counts that match the rerelease rules', () => {
