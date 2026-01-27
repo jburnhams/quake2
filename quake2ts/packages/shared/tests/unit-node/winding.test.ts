@@ -55,26 +55,7 @@ describe('winding', () => {
       expect(d).toBeCloseTo(dist);
     }
 
-    // Check bounds roughly
-    // With Z normal, we expect points to be at large +/- X, +/- Y coordinates
-    // and Z=0
-    // Algorithm:
-    // vup = {1,0,0} (major axis is Z, so case 2)
-    // vright = vup x normal = {1,0,0} x {0,0,1} = {0,-1,0}
-    // points should be large
-
-    // Actually wait, let's trace the implementation logic for Z normal
-    // x = 2 (Z axis major)
-    // vup = {1,0,0}
-    // v = dot(vup, normal) = 0
-    // vup remains {1,0,0}
-    // org = {0,0,0}
-    // vright = cross(vup, normal) = {1,0,0} x {0,0,1} = {0,-1,0}
-
-    // p[0] = org - vright + vup = -{0,-1,0} + {1,0,0} = {0,1,0} + {1,0,0} = {1,1,0} * MAX_WORLD_COORD
-    // p[1] = org + vright + vup = {0,-1,0} + {1,0,0} = {1,-1,0} * MAX_WORLD_COORD
-    // p[2] = org + vright - vup = {0,-1,0} - {1,0,0} = {-1,-1,0} * MAX_WORLD_COORD
-    // p[3] = org - vright - vup = -{0,-1,0} - {1,0,0} = {0,1,0} - {1,0,0} = {-1,1,0} * MAX_WORLD_COORD
+    // Check that the points form a large square on the XY plane.
 
     expect(Math.abs(w.points[0].x)).toBeCloseTo(MAX_WORLD_COORD);
     expect(Math.abs(w.points[0].y)).toBeCloseTo(MAX_WORLD_COORD);
