@@ -96,32 +96,13 @@ describe('winding', () => {
       expect(d).toBeCloseTo(dist, 1); // Allow some tolerance due to large coordinates
     }
 
-    // Check convexity / winding order?
-    // Compute normal from triangle 0,1,2
+    // Check that the generated winding has the correct orientation. Quake2 uses a
+    // clockwise winding order for front-facing polygons, so the calculated normal
+    // from the points should match the input normal.
     const v1 = subtractVec3(w.points[1], w.points[0]);
     const v2 = subtractVec3(w.points[2], w.points[0]);
-    const computedNormal = normalizeVec3(crossVec3(v2, v1)); // v2 x v1 is wrong order for CCW?
-    // q2tools WindingPlane: v1=p[1]-p[0], v2=p[2]-p[0], CrossProduct(v2, v1, normal)
-    // Wait, q2tools code: CrossProduct(v2, v1, normal).
-    // Usually normal is (p1-p0) x (p2-p0).
-
-    // Let's check `q2tools/src/polylib.c` again for WindingPlane:
-    // VectorSubtract(w->p[1], w->p[0], v1);
-    // VectorSubtract(w->p[2], w->p[0], v2);
-    // CrossProduct(v2, v1, normal);
-
-    // CrossProduct(a,b) = a x b.
-    // So (p2-p0) x (p1-p0).
-    // This implies clockwise winding?
-    // If standard right-hand rule, (p1-p0) x (p2-p0) gives normal out of CCW face.
-    // (p2-p0) x (p1-p0) = - ((p1-p0) x (p2-p0)).
-    // Quake uses clockwise winding for front face?
-
-    // "When generating Quake 2 brush faces programmatically, vertices must be wound clockwise from the outside to ensure normals point outwards"
-    // Memory says this.
-
-    const computedNormalCross = crossVec3(v2, v1);
-    const computedNormalNormalized = normalizeVec3(computedNormalCross);
+    // The cross product (p2-p0) x (p1-p0) is used to get the normal for a clockwise winding.
+    const computedNormalNormalized = normalizeVec3(crossVec3(v2, v1));
 
     expect(computedNormalNormalized.x).toBeCloseTo(normal.x);
     expect(computedNormalNormalized.y).toBeCloseTo(normal.y);
