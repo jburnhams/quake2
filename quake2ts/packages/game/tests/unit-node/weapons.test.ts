@@ -8,13 +8,12 @@ import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaste
 import { createBlasterBolt, createRocket, createBfgBall } from '../../src/entities/projectiles.js';
 import { T_Damage } from '../../src/combat/damage.js';
 import {
-    createGameImportsAndEngine,
+    createTestGame,
     createPlayerEntityFactory,
     createPlayerClientFactory,
     createTraceMock,
-    createMockGameExports,
-    spawnEntity,
-    createEntity
+    createEntity,
+    MockImportsAndEngine
 } from '@quake2ts/test-utils';
 
 // Mock projectiles
@@ -33,13 +32,14 @@ vi.mock('../../src/combat/damage.js', () => ({
 
 describe('Weapon Tests', () => {
     let mockGame: GameExports;
+    let mockImports: MockImportsAndEngine['imports'];
     let player: Entity;
 
     beforeEach(() => {
         vi.clearAllMocks();
         (T_Damage as any).mockClear();
 
-        const { imports, engine } = createGameImportsAndEngine({
+        const { game, imports } = createTestGame({
             imports: {
                 trace: vi.fn().mockReturnValue(createTraceMock({
                     fraction: 1.0,
@@ -48,26 +48,13 @@ describe('Weapon Tests', () => {
                 })),
                 pointcontents: vi.fn(),
             },
-            engine: {
-                trace: vi.fn().mockReturnValue(createTraceMock({
-                    fraction: 1.0,
-                    endpos: { x: 100, y: 0, z: 0 },
-                    ent: null
-                })),
+            config: {
+                deathmatch: false
             }
         });
 
-        // Use createMockGameExports for unit testing firing logic
-        mockGame = createMockGameExports({
-            ...engine,
-            ...imports,
-            time: 100,
-            deathmatch: false,
-            entities: {
-                world: { index: 0 },
-                spawn: vi.fn(),
-            }
-        });
+        mockGame = game;
+        mockImports = imports;
 
         player = createEntity(createPlayerEntityFactory({
             client: createPlayerClientFactory({
@@ -118,7 +105,7 @@ describe('Weapon Tests', () => {
             // We need trace to hit something
             const target = { takedamage: true };
             // Hit once then stop (fraction 1.0)
-            (mockGame.trace as any)
+            mockImports.trace
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
@@ -156,7 +143,7 @@ describe('Weapon Tests', () => {
             // We need trace to hit something
             const target = { takedamage: true };
             // Hit once then stop
-            (mockGame.trace as any)
+            mockImports.trace
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
@@ -195,7 +182,7 @@ describe('Weapon Tests', () => {
              (mockGame as any).deathmatch = false;
              // Ensure spinup count triggers shots
              const target = { takedamage: true };
-             (mockGame.trace as any).mockReturnValue(createTraceMock({
+             mockImports.trace.mockReturnValue(createTraceMock({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
                  ent: target as any,
@@ -226,7 +213,7 @@ describe('Weapon Tests', () => {
              (mockGame as any).deathmatch = true;
 
              const target = { takedamage: true };
-             (mockGame.trace as any).mockReturnValue(createTraceMock({
+             mockImports.trace.mockReturnValue(createTraceMock({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
                  ent: target as any,
@@ -255,37 +242,37 @@ describe('Weapon Tests', () => {
         it('should burst 1->2->3 shots', () => {
             // First shot (spinup 1) -> 1 shot + 1 source trace
             fireChaingun(mockGame, player);
-            expect(mockGame.trace).toHaveBeenCalledTimes(2);
+            expect(mockImports.trace).toHaveBeenCalledTimes(2);
 
-            (mockGame.trace as any).mockClear();
+            mockImports.trace.mockClear();
 
             // Second shot (spinup 2) -> 1 shot + 1 source trace
              fireChaingun(mockGame, player);
-            expect(mockGame.trace).toHaveBeenCalledTimes(2);
+            expect(mockImports.trace).toHaveBeenCalledTimes(2);
 
-             (mockGame.trace as any).mockClear();
+             mockImports.trace.mockClear();
 
             // 3, 4, 5 -> 1 shot + 1 source trace each = 3 * 2 = 6
             fireChaingun(mockGame, player); // 3
             fireChaingun(mockGame, player); // 4
             fireChaingun(mockGame, player); // 5
-            expect(mockGame.trace).toHaveBeenCalledTimes(6);
+            expect(mockImports.trace).toHaveBeenCalledTimes(6);
 
-             (mockGame.trace as any).mockClear();
+             mockImports.trace.mockClear();
 
             // 6 -> 2 shots + 1 source trace = 3
             fireChaingun(mockGame, player);
-            expect(mockGame.trace).toHaveBeenCalledTimes(3);
+            expect(mockImports.trace).toHaveBeenCalledTimes(3);
 
-             (mockGame.trace as any).mockClear();
+             mockImports.trace.mockClear();
 
             // ... skip to 11
              for(let i=0; i<4; i++) fireChaingun(mockGame, player); // 7, 8, 9, 10
-             (mockGame.trace as any).mockClear();
+             mockImports.trace.mockClear();
 
              // 11 -> 3 shots + 1 source trace = 4
              fireChaingun(mockGame, player);
-             expect(mockGame.trace).toHaveBeenCalledTimes(4);
+             expect(mockImports.trace).toHaveBeenCalledTimes(4);
         });
     });
 
