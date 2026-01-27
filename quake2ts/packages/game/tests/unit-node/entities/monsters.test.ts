@@ -1,15 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../../../src/index.js';
-import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../../src/entities/spawn.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { describe, it, expect } from 'vitest';
+import { createTestGame } from '@quake2ts/test-utils';
+import { spawnEntityFromDictionary, createDefaultSpawnRegistry } from '../../../src/entities/spawn.js';
 import { Solid } from '../../../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Monster Spawning', () => {
-  const { imports, engine } = createGameImportsAndEngine();
-
-  const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-  const entities = new EntitySystem(engine, imports);
+  const { game } = createTestGame();
+  const entities = game.entities;
   const registry = createDefaultSpawnRegistry(game);
 
   const monsters = [

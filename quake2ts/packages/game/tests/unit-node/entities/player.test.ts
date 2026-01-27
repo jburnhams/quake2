@@ -10,15 +10,13 @@ describe('Player Death', () => {
     });
 
     it('should set dead flags and properties', () => {
-        // We need a real entity for methods, factory returns partial
-        const player = new Entity(1);
-        Object.assign(player, createPlayerEntityFactory({
-            number: 1,
+        const { game } = createTestGame();
+
+        // Spawn the player using the system
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
             health: 0,
             origin: { x: 0, y: 0, z: 0 }
         }));
-
-        const { game } = createTestGame();
 
         // Pass game.entities as system
         player_die(player, null, null, 10, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN, game.entities);
@@ -37,10 +35,10 @@ describe('Player Death', () => {
         });
         const system = game.entities;
 
-        const spawnSpy = vi.spyOn(system, 'spawn').mockImplementation(() => new Entity(100));
+        // Spy on spawn to check for gibs
+        const spawnSpy = vi.spyOn(system, 'spawn');
 
         const player = spawnEntity(system, createPlayerEntityFactory({
-            number: 1,
             health: -50,
             origin: { x: 0, y: 0, z: 0 }
         }));
@@ -55,7 +53,6 @@ describe('Player Death', () => {
         const system = game.entities;
 
         const player = spawnEntity(system, createPlayerEntityFactory({
-            number: 1,
             health: 0
         }));
 
