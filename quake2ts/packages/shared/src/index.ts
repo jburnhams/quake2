@@ -1,4 +1,5 @@
 export * from './math/vec3.js';
+export * from './math/winding.js';
 export * from './math/angles.js';
 export * from './math/anorms.js';
 export * from './math/color.js';
