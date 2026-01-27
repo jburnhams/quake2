@@ -134,24 +134,17 @@ export function baseWindingForPlane(normal: Vec3, dist: number): Winding {
   const w = createWinding(4);
 
   // p[0] = org - vright + vup
-  let p0 = subtractVec3(org, vrightScaled);
-  p0 = addVec3(p0, vupScaled);
-  w.points[0] = p0;
+  // p[0] = org - vright + vup
+  w.points[0] = addVec3(subtractVec3(org, vrightScaled), vupScaled);
 
   // p[1] = org + vright + vup
-  let p1 = addVec3(org, vrightScaled);
-  p1 = addVec3(p1, vupScaled);
-  w.points[1] = p1;
+  w.points[1] = addVec3(addVec3(org, vrightScaled), vupScaled);
 
   // p[2] = org + vright - vup
-  let p2 = addVec3(org, vrightScaled);
-  p2 = subtractVec3(p2, vupScaled);
-  w.points[2] = p2;
+  w.points[2] = subtractVec3(addVec3(org, vrightScaled), vupScaled);
 
   // p[3] = org - vright - vup
-  let p3 = subtractVec3(org, vrightScaled);
-  p3 = subtractVec3(p3, vupScaled);
-  w.points[3] = p3;
+  w.points[3] = subtractVec3(subtractVec3(org, vrightScaled), vupScaled);
 
   return w;
 }
