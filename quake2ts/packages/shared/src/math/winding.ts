@@ -39,10 +39,7 @@ export const MAX_WORLD_COORD = 1048576;
  * Points are initialized to {0,0,0}.
  */
 export function createWinding(numPoints: number): Winding {
-  const points = new Array<Vec3>(numPoints);
-  for (let i = 0; i < numPoints; i++) {
-    points[i] = { x: 0, y: 0, z: 0 };
-  }
+  const points = Array.from({ length: numPoints }, () => ({ x: 0, y: 0, z: 0 }));
   return {
     points,
     numPoints,
