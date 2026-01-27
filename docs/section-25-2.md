@@ -14,9 +14,9 @@ Implement polygon (winding) operations in `@quake2ts/shared`. Windings are conve
 
 ### 1.1 Core Types
 
-- [ ] Create `packages/shared/src/math/winding.ts`
-- [ ] Define `Winding` interface
-- [ ] Define `WindingPoint` type
+- [x] Create `packages/shared/src/math/winding.ts`
+- [x] Define `Winding` interface
+- [x] Define `WindingPoint` type
 
 **File: `packages/shared/src/math/winding.ts`**
 ```typescript
@@ -42,9 +42,9 @@ export const SIDE_CROSS = 3;  // Winding spans plane
 
 ### 1.2 Creation Functions
 
-- [ ] Implement `createWinding(numPoints: number): Winding`
-- [ ] Implement `copyWinding(w: Winding): Winding`
-- [ ] Implement `freeWinding(w: Winding): void` (no-op in JS, for API parity)
+- [x] Implement `createWinding(numPoints: number): Winding`
+- [x] Implement `copyWinding(w: Winding): Winding`
+- [x] Implement `freeWinding(w: Winding): void` (no-op in JS, for API parity)
 
 **Signatures:**
 ```typescript
@@ -61,7 +61,7 @@ export function reverseWinding(w: Winding): Winding;
 
 ### 2.1 Create Large Winding on Plane
 
-- [ ] Implement `baseWindingForPlane(normal: Vec3, dist: number): Winding`
+- [x] Implement `baseWindingForPlane(normal: Vec3, dist: number): Winding`
 
 Creates a very large (MAX_WORLD_COORD) square winding lying on the given plane. This is the starting point before clipping to brush bounds.
 
@@ -79,9 +79,9 @@ export function baseWindingForPlane(normal: Vec3, dist: number): Winding;
 
 ### 2.2 Tests
 
-- [ ] Test: Axis-aligned plane (X, Y, Z) produces correct winding
-- [ ] Test: Angled plane produces valid convex quad
-- [ ] Test: Winding points are coplanar with input plane
+- [x] Test: Axis-aligned plane (X, Y, Z) produces correct winding
+- [x] Test: Angled plane produces valid convex quad
+- [x] Test: Winding points are coplanar with input plane
 
 ---
 
