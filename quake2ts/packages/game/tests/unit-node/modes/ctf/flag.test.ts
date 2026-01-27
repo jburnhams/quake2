@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createFlagPickupEntity } from '../../../src/modes/ctf/flag.js';
-import { GameExports } from '../../../src/index.js';
-import { FLAG_ITEMS } from '../../../src/inventory/items.js';
-import { Entity, Solid } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { PlayerClient, KeyId } from '../../../src/inventory/playerInventory.js';
-import { createPlayerInventory } from '../../../src/inventory/playerInventory.js';
-import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
+import { createFlagPickupEntity } from '../../../../src/modes/ctf/flag.js';
+import { GameExports } from '../../../../src/index.js';
+import { FLAG_ITEMS } from '../../../../src/inventory/items.js';
+import { Entity, Solid } from '../../../../src/entities/entity.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { PlayerClient, KeyId } from '../../../../src/inventory/playerInventory.js';
+import { createPlayerInventory } from '../../../../src/inventory/playerInventory.js';
+import { createPlayerWeaponStates } from '../../../../src/combat/weapons/state.js';
 
 describe('CTF Flag Entities', () => {
     let mockGame: GameExports;

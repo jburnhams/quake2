@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { createGame } from '../../src/index.js';
-import { GameRecorder } from '../../src/replay/recorder.js';
-import { GameReplayer } from '../../src/replay/player.js';
+import { createGame } from '../../../src/index.js';
+import { GameRecorder } from '../../../src/replay/recorder.js';
+import { GameReplayer } from '../../../src/replay/player.js';
 import { UserCommand } from '@quake2ts/shared';
 
 const GRAVITY = { x: 0, y: 0, z: -800 } as const;

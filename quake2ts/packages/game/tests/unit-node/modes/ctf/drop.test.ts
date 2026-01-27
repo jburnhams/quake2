@@ -1,10 +1,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { dropFlag, flagThink } from '../../../src/modes/ctf/drop.js';
-import { FlagEntity, FlagState } from '../../../src/modes/ctf/state.js';
-import { Entity, Solid } from '../../../src/entities/entity.js';
-import { GameExports } from '../../../src/index.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { dropFlag, flagThink } from '../../../../src/modes/ctf/drop.js';
+import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
+import { Entity, Solid } from '../../../../src/entities/entity.js';
+import { GameExports } from '../../../../src/index.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
 
 describe('CTF Flag Drop', () => {
     let flag: FlagEntity;

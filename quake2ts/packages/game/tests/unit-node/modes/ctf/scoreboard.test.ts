@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { updateCtfScoreboard, teamScores, CtfTeam, addTeamScore } from '../../../src/modes/ctf/scoreboard.js';
-import { Entity } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { updateCtfScoreboard, teamScores, CtfTeam, addTeamScore } from '../../../../src/modes/ctf/scoreboard.js';
+import { Entity } from '../../../../src/entities/entity.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
 import { PlayerStat } from '@quake2ts/shared';
-import { ClientWithTeam } from '../../../src/modes/ctf/teams.js';
+import { ClientWithTeam } from '../../../../src/modes/ctf/teams.js';
 
 describe('CTF Scoreboard', () => {
     let player: Entity;
