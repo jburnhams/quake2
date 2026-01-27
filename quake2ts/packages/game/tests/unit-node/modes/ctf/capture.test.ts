@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { checkCapture, captureFlag } from '../../../src/modes/ctf/capture';
-import { FlagEntity, FlagState } from '../../../src/modes/ctf/state';
-import { Entity, Solid } from '../../../src/entities/entity';
-import { EntitySystem } from '../../../src/entities/system';
-import { GameExports } from '../../../src/index';
-import { KeyId } from '../../../src/inventory/playerInventory';
+import { checkCapture, captureFlag } from '../../../../src/modes/ctf/capture';
+import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state';
+import { Entity, Solid } from '../../../../src/entities/entity';
+import { EntitySystem } from '../../../../src/entities/system';
+import { GameExports } from '../../../../src/index';
+import { KeyId } from '../../../../src/inventory/playerInventory';
 import { createTestContext } from '@quake2ts/test-utils';
 
 describe('CTF Capture Logic', () => {

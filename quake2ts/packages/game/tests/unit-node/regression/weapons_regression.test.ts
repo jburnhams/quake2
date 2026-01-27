@@ -1,17 +1,17 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTestContext, createMockGameExports } from '@quake2ts/test-utils';
-import { Entity } from '../../src/entities/entity.js';
-import { DamageMod } from '../../src/combat/damageMods.js';
-import { createBlasterBolt } from '../../src/entities/projectiles.js';
-import { fireRailgunShot, fireChaingun, fireBFG, fireBlaster } from '../../src/combat/weapons/firing.js';
-import { DamageFlags } from '../../src/combat/damageFlags.js';
-import { WeaponState } from '../../src/combat/types.js';
-import { T_Damage } from '../../src/combat/damage.js';
-import { WeaponId } from '../../src/inventory/playerInventory.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { DamageMod } from '../../../src/combat/damageMods.js';
+import { createBlasterBolt } from '../../../src/entities/projectiles.js';
+import { fireRailgunShot, fireChaingun, fireBFG, fireBlaster } from '../../../src/combat/weapons/firing.js';
+import { DamageFlags } from '../../../src/combat/damageFlags.js';
+import { WeaponState } from '../../../src/combat/types.js';
+import { T_Damage } from '../../../src/combat/damage.js';
+import { WeaponId } from '../../../src/inventory/playerInventory.js';
 
 // Mock specific weapon functions
-vi.mock('../../src/entities/projectiles.js', async () => {
-    const actual = await vi.importActual('../../src/entities/projectiles.js');
+vi.mock('../../../src/entities/projectiles.js', async () => {
+    const actual = await vi.importActual('../../../src/entities/projectiles.js');
     return {
         ...actual,
         createBlasterBolt: vi.fn(actual.createBlasterBolt),
@@ -51,7 +51,7 @@ vi.mock('../../src/entities/projectiles.js', async () => {
 
 const originalT_Damage = vi.fn();
 
-vi.mock('../../src/combat/damage.js', () => ({
+vi.mock('../../../src/combat/damage.js', () => ({
     // We export a mock T_Damage that we can inspect
     T_Damage: vi.fn((...args) => {
         // We can add simple logic here if needed for return values

@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { handleFlagPickup } from '../../../src/modes/ctf/pickup.js';
-import { FlagEntity, FlagState } from '../../../src/modes/ctf/state.js';
-import { Entity } from '../../../src/entities/entity.js';
-import { GameExports } from '../../../src/index.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { handleFlagPickup } from '../../../../src/modes/ctf/pickup.js';
+import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
+import { Entity } from '../../../../src/entities/entity.js';
+import { GameExports } from '../../../../src/index.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
 
 describe('CTF Flag Pickup', () => {
     let flag: FlagEntity;

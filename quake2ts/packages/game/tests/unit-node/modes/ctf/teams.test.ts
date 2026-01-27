@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { assignTeam, CtfTeam, countPlayersOnTeam, ClientWithTeam, onSameTeam, checkFriendlyFire, setTeamSkin } from '../../../src/modes/ctf/teams.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity } from '../../../src/entities/entity.js';
-import { GameExports } from '../../../src/index.js';
+import { assignTeam, CtfTeam, countPlayersOnTeam, ClientWithTeam, onSameTeam, checkFriendlyFire, setTeamSkin } from '../../../../src/modes/ctf/teams.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { Entity } from '../../../../src/entities/entity.js';
+import { GameExports } from '../../../../src/index.js';
 
 describe('CTF Teams', () => {
     let mockEntities: any;

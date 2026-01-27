@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { FlagState, setFlagState, FlagEntity } from '../../../src/modes/ctf/state.js';
-import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity } from '../../../src/entities/entity.js';
+import { FlagState, setFlagState, FlagEntity } from '../../../../src/modes/ctf/state.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { Entity } from '../../../../src/entities/entity.js';
 
 describe('CTF Flag State', () => {
     let flag: FlagEntity;
