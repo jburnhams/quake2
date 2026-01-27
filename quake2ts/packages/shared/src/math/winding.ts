@@ -53,10 +53,7 @@ export function createWinding(numPoints: number): Winding {
  * Creates a deep copy of a winding.
  */
 export function copyWinding(src: Winding): Winding {
-  const points = new Array<Vec3>(src.numPoints);
-  for (let i = 0; i < src.numPoints; i++) {
-    points[i] = copyVec3(src.points[i]);
-  }
+  const points = src.points.map(copyVec3);
   return {
     points,
     numPoints: src.numPoints,
