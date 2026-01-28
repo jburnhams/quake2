@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { WeaponId } from '../../inventory/index.js';
-import { createPlayerInventory, deserializePlayerInventory, serializePlayerInventory } from '../../inventory/playerInventory.js';
+import { WeaponId } from '../../../src/inventory/index.js';
+import { createPlayerInventory, deserializePlayerInventory, serializePlayerInventory } from '../../../src/inventory/playerInventory.js';
 
 describe('Player Inventory Serialization', () => {
   it('should serialize and deserialize player inventory', () => {

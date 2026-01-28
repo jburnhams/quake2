@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSerializedGameState, applySerializedGameState, AdapterContext } from '../adapter.js';
-import { EntitySystem, EntitySystemSnapshot } from '../../entities/system.js';
-import { LevelClock } from '../../level.js';
-import { Entity } from '../../entities/entity.js';
-import { createPlayerInventory, WeaponId } from '../../inventory/index.js';
+import { createSerializedGameState, applySerializedGameState, AdapterContext } from '../../../src/save/adapter.js';
+import { EntitySystem, EntitySystemSnapshot } from '../../../src/entities/system.js';
+import { LevelClock } from '../../../src/level.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { createPlayerInventory, WeaponId } from '../../../src/inventory/index.js';
 import { RandomGenerator } from '@quake2ts/shared';
 
 describe('Save Adapter', () => {
