@@ -37,17 +37,11 @@ describe('monster_soldier', () => {
         const testContext = createTestContext();
         context = testContext.entities;
 
-        // Create a real registry (or use the one from testContext if we wanted to register globally)
-        // Since we are testing a specific registration function, we can just use a fresh one or the context's
-        // But for this test, we want to extract the specific spawn function for soldier.
-        const spawnMap = new Map();
-        registry = {
-            register: (name, func) => spawnMap.set(name, func),
-            get: (name) => spawnMap.get(name)
-        } as unknown as SpawnRegistry;
+        // Create a real registry
+        registry = new SpawnRegistry();
 
         registerMonsterSpawns(registry);
-        spawnFunc = spawnMap.get('monster_soldier');
+        spawnFunc = registry.get('monster_soldier');
 
         // Use factory and spawn helper
         entity = spawnEntity(context, createMonsterEntityFactory('monster_soldier', {

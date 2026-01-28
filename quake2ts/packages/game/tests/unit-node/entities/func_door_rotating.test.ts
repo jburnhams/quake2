@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerFuncSpawns, DoorState } from '../../../src/entities/funcs.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('func_door_rotating', () => {
@@ -14,12 +14,12 @@ describe('func_door_rotating', () => {
     registry = new SpawnRegistry();
     registerFuncSpawns(registry);
 
-    entity = new Entity(1);
-    // Default func_door_rotating properties
-    entity.classname = 'func_door_rotating';
-    entity.angles = { x: 0, y: 0, z: 0 };
-    entity.mins = { x: -10, y: -10, z: -10 };
-    entity.maxs = { x: 10, y: 10, z: 10 };
+    entity = spawnEntity(context.entities, createEntityFactory({
+      classname: 'func_door_rotating',
+      angles: { x: 0, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+    }));
     // We need to mock distance if it comes from map keys (it's not on entity usually)
     // But in our spawn function, we read it from entity property (which is mapped from keyvalues)
     (entity as any).distance = 90;
@@ -114,7 +114,7 @@ describe('func_door_rotating', () => {
     expect(entity.state).toBe(DoorState.Closed);
 
     // Use it
-    const other = new Entity(2);
+    const other = spawnEntity(context.entities, createEntityFactory({ number: 2 }));
     entity.use?.(entity, other, other);
 
     // Should be opening

@@ -14,9 +14,8 @@ describe('trigger_multiple', () => {
     registry = new SpawnRegistry();
     registerTriggerSpawns(registry);
 
-    // Use createTriggerEntityFactory but manually create Entity first as registry expects instance
-    entity = new Entity(1);
-    Object.assign(entity, createTriggerEntityFactory('trigger_multiple'));
+    // Use createTriggerEntityFactory and spawnEntity
+    entity = spawnEntity(context.entities, createTriggerEntityFactory('trigger_multiple'));
   });
 
   it('should initialize correctly', () => {
