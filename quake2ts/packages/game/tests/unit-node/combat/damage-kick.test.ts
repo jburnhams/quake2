@@ -1,8 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import { player_pain, P_PlayerThink } from '../../../src/entities/player.js';
 import { Entity } from '../../../src/entities/entity.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
 describe('Player Damage Kick', () => {
     let context: ReturnType<typeof createTestContext>;
@@ -12,15 +11,15 @@ describe('Player Damage Kick', () => {
     beforeEach(() => {
         context = createTestContext();
 
-        player = createPlayerEntityFactory({
+        player = spawnEntity(context.entities, createPlayerEntityFactory({
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 }
-        });
+        }));
 
         // Attacker is just an entity
-        attacker = createEntityFactory({
+        attacker = spawnEntity(context.entities, createEntityFactory({
              origin: { x: 100, y: 0, z: 0 }
-        });
+        }));
     });
 
     it('applies pitch kick on damage', () => {
