@@ -67,6 +67,7 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `game/tests/modes` tests to `game/tests/unit-node/modes/`
    - Moved: `game/tests/regression` tests to `game/tests/unit-node/regression/`
    - Moved: `game/tests/replay` tests to `game/tests/unit-node/replay/`
+   - Moved: `game/src/save/tests/*` (callbacks, adapter, playerInventory) to `game/tests/unit-node/save/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`

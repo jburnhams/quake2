@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { Entity } from '../../entities/entity.js';
-import { EntitySystem } from '../../entities/system.js';
-import { createCallbackRegistry, registerCallback } from '../../entities/callbacks.js';
-import type { GameEngine } from '../../index.js';
+import { Entity } from '../../../src/entities/entity.js';
+import { EntitySystem } from '../../../src/entities/system.js';
+import { createCallbackRegistry, registerCallback } from '../../../src/entities/callbacks.js';
+import type { GameEngine } from '../../../src/index.js';
 
 const mockEngine: GameEngine = {
   trace: () => ({}),
