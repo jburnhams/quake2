@@ -89,7 +89,7 @@ export function baseWindingForPlane(normal: Vec3, dist: number): Winding;
 
 ### 3.1 Classify Winding Against Plane
 
-- [ ] Implement `windingOnPlaneSide(w: Winding, normal: Vec3, dist: number): number`
+- [x] Implement `windingOnPlaneSide(w: Winding, normal: Vec3, dist: number): number`
 
 Returns `SIDE_FRONT`, `SIDE_BACK`, `SIDE_ON`, or `SIDE_CROSS`.
 
@@ -107,7 +107,7 @@ export function windingOnPlaneSide(
 
 ### 3.2 Clip Winding to Plane
 
-- [ ] Implement `clipWindingEpsilon(w: Winding, normal: Vec3, dist: number, epsilon: number, front: boolean): Winding | null`
+- [x] Implement `clipWindingEpsilon(w: Winding, normal: Vec3, dist: number, epsilon: number, front: boolean): Winding | null`
 
 Clips a winding to one side of a plane. Returns the portion on the specified side, or null if entirely clipped away.
 
@@ -141,7 +141,7 @@ export function clipWinding(
 
 ### 3.3 Split Winding by Plane
 
-- [ ] Implement `splitWinding(w: Winding, normal: Vec3, dist: number): { front: Winding | null, back: Winding | null }`
+- [x] Implement `splitWinding(w: Winding, normal: Vec3, dist: number): { front: Winding | null, back: Winding | null }`
 
 Splits winding into front and back portions.
 
@@ -164,10 +164,10 @@ export function splitWinding(
 
 ### 3.4 Tests
 
-- [ ] Test: Clip square winding by diagonal plane produces triangle
-- [ ] Test: Clip winding entirely in front returns copy
-- [ ] Test: Clip winding entirely behind returns null
-- [ ] Test: Split produces two valid convex polygons
+- [x] Test: Clip square winding by diagonal plane produces triangle
+- [x] Test: Clip winding entirely in front returns copy
+- [x] Test: Clip winding entirely behind returns null
+- [x] Test: Split produces two valid convex polygons
 - [ ] Test: Split preserves total area (front + back = original)
 
 ---

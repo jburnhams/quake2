@@ -142,3 +142,224 @@ export function baseWindingForPlane(normal: Vec3, dist: number): Winding {
 
   return w;
 }
+
+/**
+ * Classifies a winding against a plane.
+ * Returns SIDE_FRONT, SIDE_BACK, SIDE_ON, or SIDE_CROSS.
+ */
+export function windingOnPlaneSide(
+  w: Winding,
+  normal: Vec3,
+  dist: number,
+  epsilon: number = 0.1
+): number {
+  let front = false;
+  let back = false;
+
+  for (let i = 0; i < w.numPoints; i++) {
+    const d = dotVec3(w.points[i], normal) - dist;
+    if (d < -epsilon) {
+      back = true;
+    } else if (d > epsilon) {
+      front = true;
+    }
+  }
+
+  if (back && front) return SIDE_CROSS;
+  if (front) return SIDE_FRONT;
+  if (back) return SIDE_BACK;
+  return SIDE_ON;
+}
+
+/**
+ * Clips a winding to one side of a plane.
+ * If keepFront is true, keeps the portion in front of the plane.
+ * If keepFront is false, keeps the portion behind the plane.
+ * Returns null if the winding is completely clipped away.
+ */
+export function clipWindingEpsilon(
+  w: Winding,
+  normal: Vec3,
+  dist: number,
+  epsilon: number,
+  keepFront: boolean
+): Winding | null {
+  const dists: number[] = new Array(MAX_POINTS_ON_WINDING + 4);
+  const sides: number[] = new Array(MAX_POINTS_ON_WINDING + 4);
+  let counts: [number, number, number] = [0, 0, 0];
+
+  let dot: number;
+  for (let i = 0; i < w.numPoints; i++) {
+    dot = dotVec3(w.points[i], normal);
+    dists[i] = dot - dist;
+    if (dists[i] > epsilon) {
+      sides[i] = SIDE_FRONT;
+    } else if (dists[i] < -epsilon) {
+      sides[i] = SIDE_BACK;
+    } else {
+      sides[i] = SIDE_ON;
+    }
+    counts[sides[i]]++;
+  }
+
+  // Wrap around for easier loop
+  sides[w.numPoints] = sides[0];
+  dists[w.numPoints] = dists[0];
+
+  // If the winding is entirely on the kept side, return a copy
+  if (keepFront) {
+    if (counts[SIDE_BACK] === 0) return copyWinding(w);
+    if (counts[SIDE_FRONT] === 0) return null;
+  } else {
+    if (counts[SIDE_FRONT] === 0) return copyWinding(w);
+    if (counts[SIDE_BACK] === 0) return null;
+  }
+
+  const newW = createWinding(0); // empty winding initially
+  newW.points = []; // start empty to push
+
+  for (let i = 0; i < w.numPoints; i++) {
+    const p1 = w.points[i];
+
+    if (sides[i] === SIDE_ON) {
+      newW.points.push(copyVec3(p1));
+      continue;
+    }
+
+    if (sides[i] === (keepFront ? SIDE_FRONT : SIDE_BACK)) {
+      newW.points.push(copyVec3(p1));
+    }
+
+    if (sides[i + 1] === SIDE_ON || sides[i + 1] === sides[i]) {
+      continue;
+    }
+
+    // Generate a split point
+    const p2 = w.points[(i + 1) % w.numPoints];
+
+    dot = dists[i] / (dists[i] - dists[i + 1]);
+
+    const mid: Vec3 = {
+      x: p1.x + dot * (p2.x - p1.x),
+      y: p1.y + dot * (p2.y - p1.y),
+      z: p1.z + dot * (p2.z - p1.z),
+    };
+
+    newW.points.push(mid);
+  }
+
+  // Handle potential degeneration or empty result
+  if (newW.points.length < 3) {
+    return null;
+  }
+
+  newW.numPoints = newW.points.length;
+  return newW;
+}
+
+/**
+ * Convenience wrapper for clipWindingEpsilon with default epsilon.
+ */
+export function clipWinding(
+  w: Winding,
+  normal: Vec3,
+  dist: number,
+  keepFront: boolean
+): Winding | null {
+  return clipWindingEpsilon(w, normal, dist, 0.1, keepFront);
+}
+
+export interface WindingSplit {
+  front: Winding | null;
+  back: Winding | null;
+}
+
+/**
+ * Splits a winding by a plane.
+ */
+export function splitWinding(
+  w: Winding,
+  normal: Vec3,
+  dist: number,
+  epsilon: number = 0.1
+): WindingSplit {
+  const dists: number[] = new Array(MAX_POINTS_ON_WINDING + 4);
+  const sides: number[] = new Array(MAX_POINTS_ON_WINDING + 4);
+  let counts: [number, number, number] = [0, 0, 0];
+
+  let dot: number;
+  for (let i = 0; i < w.numPoints; i++) {
+    dot = dotVec3(w.points[i], normal);
+    dists[i] = dot - dist;
+    if (dists[i] > epsilon) {
+      sides[i] = SIDE_FRONT;
+    } else if (dists[i] < -epsilon) {
+      sides[i] = SIDE_BACK;
+    } else {
+      sides[i] = SIDE_ON;
+    }
+    counts[sides[i]]++;
+  }
+
+  sides[w.numPoints] = sides[0];
+  dists[w.numPoints] = dists[0];
+
+  if (counts[SIDE_FRONT] === 0 && counts[SIDE_BACK] === 0) {
+    // Both front and back get a copy if it's ON the plane
+    return { front: copyWinding(w), back: copyWinding(w) };
+  }
+
+  if (counts[SIDE_FRONT] === 0) {
+    return { front: null, back: copyWinding(w) };
+  }
+  if (counts[SIDE_BACK] === 0) {
+    return { front: copyWinding(w), back: null };
+  }
+
+  const f = createWinding(0); f.points = [];
+  const b = createWinding(0); b.points = [];
+
+  for (let i = 0; i < w.numPoints; i++) {
+    const p1 = w.points[i];
+
+    if (sides[i] === SIDE_ON) {
+      f.points.push(copyVec3(p1));
+      b.points.push(copyVec3(p1));
+      continue;
+    }
+
+    if (sides[i] === SIDE_FRONT) {
+      f.points.push(copyVec3(p1));
+    }
+    if (sides[i] === SIDE_BACK) {
+      b.points.push(copyVec3(p1));
+    }
+
+    if (sides[i + 1] === SIDE_ON || sides[i + 1] === sides[i]) {
+      continue;
+    }
+
+    // Generate split point
+    const p2 = w.points[(i + 1) % w.numPoints];
+
+    dot = dists[i] / (dists[i] - dists[i + 1]);
+
+    const mid: Vec3 = {
+      x: p1.x + dot * (p2.x - p1.x),
+      y: p1.y + dot * (p2.y - p1.y),
+      z: p1.z + dot * (p2.z - p1.z),
+    };
+
+    f.points.push(copyVec3(mid));
+    b.points.push(copyVec3(mid));
+  }
+
+  // Handle degenerate cases
+  const frontW = f.points.length >= 3 ? f : null;
+  const backW = b.points.length >= 3 ? b : null;
+
+  if (frontW) frontW.numPoints = frontW.points.length;
+  if (backW) backW.numPoints = backW.points.length;
+
+  return { front: frontW, back: backW };
+}
