@@ -507,8 +507,8 @@ export function validateWinding(w: Winding): WindingValidation {
     const c = crossVec3(e2, e1);
 
     if (dotVec3(c, plane.normal) < -0.001) {
-        // Allow some tolerance for collinear points which produce zero cross product
-        // But zero is fine, < 0 is convex in wrong direction (concave)
+        // A negative dot product indicates the corner is concave relative to the winding's normal.
+        // A zero dot product means the edges are collinear, which is acceptable.
       errors.push(`Concave corner at index ${(i + 1) % w.numPoints}`);
     }
   }
