@@ -1,5 +1,6 @@
 import {
   type Vec3,
+  type Bounds3,
   addVec3,
   copyVec3,
   crossVec3,
@@ -7,6 +8,10 @@ import {
   normalizeVec3,
   scaleVec3,
   subtractVec3,
+  lengthVec3,
+  createEmptyBounds3,
+  addPointToBounds,
+  distance,
 } from './vec3.js';
 
 /** A point in a winding (alias for Vec3) */
@@ -362,4 +367,151 @@ export function splitWinding(
   if (backW) backW.numPoints = backW.points.length;
 
   return { front: frontW, back: backW };
+}
+
+/**
+ * Calculates the surface area of the winding.
+ */
+export function windingArea(w: Winding): number {
+  let area = 0;
+  const p0 = w.points[0];
+
+  for (let i = 2; i < w.numPoints; i++) {
+    const p1 = w.points[i - 1];
+    const p2 = w.points[i];
+    const d1 = subtractVec3(p1, p0);
+    const d2 = subtractVec3(p2, p0);
+    const cross = crossVec3(d1, d2);
+    area += 0.5 * lengthVec3(cross);
+  }
+
+  return area;
+}
+
+/**
+ * Calculates the bounding box of the winding.
+ */
+export function windingBounds(w: Winding): Bounds3 {
+  let bounds = createEmptyBounds3();
+  for (let i = 0; i < w.numPoints; i++) {
+    bounds = addPointToBounds(w.points[i], bounds);
+  }
+  return bounds;
+}
+
+/**
+ * Calculates the center (centroid) of the winding.
+ */
+export function windingCenter(w: Winding): Vec3 {
+  let center = { x: 0, y: 0, z: 0 };
+  for (let i = 0; i < w.numPoints; i++) {
+    center = addVec3(center, w.points[i]);
+  }
+  return scaleVec3(center, 1 / w.numPoints);
+}
+
+/**
+ * Derives the plane equation from the winding.
+ * Assumes the winding is valid (coplanar points).
+ */
+export function windingPlane(w: Winding): { normal: Vec3; dist: number } {
+  if (w.numPoints < 3) {
+    // Degenerate winding, return default
+    return { normal: { x: 0, y: 0, z: 1 }, dist: 0 };
+  }
+
+  const p0 = w.points[0];
+  const p1 = w.points[1];
+  const p2 = w.points[2];
+
+  const d1 = subtractVec3(p1, p0);
+  const d2 = subtractVec3(p2, p0);
+
+  // Use (p2-p0) x (p1-p0) for standard Quake CW winding normal
+  const n = normalizeVec3(crossVec3(d2, d1));
+  const d = dotVec3(p0, n);
+
+  return { normal: n, dist: d };
+}
+
+/**
+ * Checks if a point is inside the winding (assumed to be on the same plane).
+ */
+export function pointInWinding(
+  point: Vec3,
+  w: Winding,
+  normal: Vec3,
+  epsilon: number = 0.1
+): boolean {
+  for (let i = 0; i < w.numPoints; i++) {
+    const p1 = w.points[i];
+    const p2 = w.points[(i + 1) % w.numPoints];
+
+    const edge = subtractVec3(p2, p1);
+    const edgeNormal = crossVec3(edge, normal); // Points inside for CW winding
+
+    const d = dotVec3(subtractVec3(point, p1), edgeNormal);
+    if (d < -epsilon) {
+      return false; // Outside
+    }
+  }
+  return true;
+}
+
+export interface WindingValidation {
+  valid: boolean;
+  errors: string[];
+}
+
+/**
+ * Validates a winding for correctness.
+ */
+export function validateWinding(w: Winding): WindingValidation {
+  const errors: string[] = [];
+
+  if (w.numPoints < 3) {
+    errors.push(`Not enough points: ${w.numPoints}`);
+    return { valid: false, errors };
+  }
+
+  // Check edge lengths
+  for (let i = 0; i < w.numPoints; i++) {
+    const p1 = w.points[i];
+    const p2 = w.points[(i + 1) % w.numPoints];
+    if (distance(p1, p2) < 0.001) {
+      // Small epsilon
+      errors.push(`Degenerate edge at index ${i}`);
+    }
+  }
+
+  // Check coplanarity
+  const plane = windingPlane(w);
+  for (let i = 0; i < w.numPoints; i++) {
+    const d = dotVec3(w.points[i], plane.normal) - plane.dist;
+    if (Math.abs(d) > 0.1) {
+      errors.push(`Point ${i} off plane by ${d}`);
+    }
+  }
+
+  // Check convexity
+  // Cross product of consecutive edges should align with normal
+  for (let i = 0; i < w.numPoints; i++) {
+    const p0 = w.points[i];
+    const p1 = w.points[(i + 1) % w.numPoints];
+    const p2 = w.points[(i + 2) % w.numPoints];
+
+    const e1 = subtractVec3(p1, p0);
+    const e2 = subtractVec3(p2, p1);
+
+    // Use e2 x e1 to match windingPlane's d2 x d1 convention (Quake CW)
+    const c = crossVec3(e2, e1);
+
+    if (dotVec3(c, plane.normal) < -0.001) {
+        // Allow some tolerance for collinear points which produce zero cross product
+        // But zero is fine, < 0 is convex in wrong direction (concave)
+      errors.push(`Concave corner at index ${(i + 1) % w.numPoints}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
 }

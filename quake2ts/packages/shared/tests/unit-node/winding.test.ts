@@ -10,12 +10,25 @@ import {
   windingOnPlaneSide,
   clipWinding,
   splitWinding,
+  windingArea,
+  windingBounds,
+  windingCenter,
+  windingPlane,
+  pointInWinding,
+  validateWinding,
   SIDE_FRONT,
   SIDE_BACK,
   SIDE_ON,
   SIDE_CROSS,
 } from '../../src/math/winding.js';
-import { dotVec3, subtractVec3, crossVec3, normalizeVec3, type Vec3 } from '../../src/index.js';
+import {
+  dotVec3,
+  subtractVec3,
+  crossVec3,
+  normalizeVec3,
+  type Vec3,
+  vec3Equals,
+} from '../../src/index.js';
 
 describe('winding', () => {
   it('creates a new winding', () => {
@@ -235,6 +248,88 @@ describe('winding', () => {
       for(const p of back!.points) {
         expect(p.x).toBeLessThanOrEqual(0.001);
       }
+    });
+  });
+
+  describe('winding geometry', () => {
+    it('calculates area of a square', () => {
+      const w = createWinding(4);
+      w.points[0] = { x: 0, y: 10, z: 0 };
+      w.points[1] = { x: 10, y: 10, z: 0 };
+      w.points[2] = { x: 10, y: 0, z: 0 };
+      w.points[3] = { x: 0, y: 0, z: 0 };
+
+      const area = windingArea(w);
+      expect(area).toBeCloseTo(100);
+    });
+
+    it('calculates area of a triangle', () => {
+      const w = createWinding(3);
+      w.points[0] = { x: 0, y: 0, z: 0 };
+      w.points[1] = { x: 10, y: 0, z: 0 };
+      w.points[2] = { x: 0, y: 10, z: 0 };
+
+      const area = windingArea(w);
+      expect(area).toBeCloseTo(50);
+    });
+
+    it('calculates bounds', () => {
+      const w = createWinding(3);
+      w.points[0] = { x: -5, y: -5, z: -5 };
+      w.points[1] = { x: 10, y: 0, z: 0 };
+      w.points[2] = { x: 0, y: 20, z: 5 };
+
+      const bounds = windingBounds(w);
+      expect(bounds.mins).toEqual({ x: -5, y: -5, z: -5 });
+      expect(bounds.maxs).toEqual({ x: 10, y: 20, z: 5 });
+    });
+
+    it('calculates center', () => {
+      const w = createWinding(4);
+      w.points[0] = { x: -10, y: 10, z: 0 };
+      w.points[1] = { x: 10, y: 10, z: 0 };
+      w.points[2] = { x: 10, y: -10, z: 0 };
+      w.points[3] = { x: -10, y: -10, z: 0 };
+
+      const center = windingCenter(w);
+      expect(center.x).toBeCloseTo(0);
+      expect(center.y).toBeCloseTo(0);
+      expect(center.z).toBeCloseTo(0);
+    });
+
+    it('derives plane from winding', () => {
+      const normal = { x: 0, y: 0, z: 1 };
+      const w = baseWindingForPlane(normal, 10);
+      const plane = windingPlane(w);
+
+      expect(plane.normal.x).toBeCloseTo(normal.x);
+      expect(plane.normal.y).toBeCloseTo(normal.y);
+      expect(plane.normal.z).toBeCloseTo(normal.z);
+      expect(plane.dist).toBeCloseTo(10);
+    });
+  });
+
+  describe('validation', () => {
+    it('validates a correct triangle', () => {
+      const w = createWinding(3);
+      w.points[0] = { x: 0, y: 0, z: 0 };
+      w.points[1] = { x: 10, y: 0, z: 0 };
+      w.points[2] = { x: 0, y: 10, z: 0 };
+      const res = validateWinding(w);
+      expect(res.valid).toBe(true);
+    });
+
+    it('detects point in winding', () => {
+      const w = createWinding(4);
+      w.points[0] = { x: -10, y: 10, z: 0 };
+      w.points[1] = { x: 10, y: 10, z: 0 };
+      w.points[2] = { x: 10, y: -10, z: 0 };
+      w.points[3] = { x: -10, y: -10, z: 0 };
+
+      const normal = { x: 0, y: 0, z: 1 };
+
+      expect(pointInWinding({ x: 0, y: 0, z: 0 }, w, normal)).toBe(true);
+      expect(pointInWinding({ x: 20, y: 0, z: 0 }, w, normal)).toBe(false);
     });
   });
 });
