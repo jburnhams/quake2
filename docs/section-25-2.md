@@ -176,7 +176,7 @@ export function splitWinding(
 
 ### 4.1 Area Calculation
 
-- [ ] Implement `windingArea(w: Winding): number`
+- [x] Implement `windingArea(w: Winding): number`
 
 **Signature:**
 ```typescript
@@ -189,7 +189,7 @@ export function windingArea(w: Winding): number;
 
 ### 4.2 Bounds Calculation
 
-- [ ] Implement `windingBounds(w: Winding): Bounds3`
+- [x] Implement `windingBounds(w: Winding): Bounds3`
 
 **Signature:**
 ```typescript
@@ -200,7 +200,7 @@ export function windingBounds(w: Winding): Bounds3;
 
 ### 4.3 Center Point
 
-- [ ] Implement `windingCenter(w: Winding): Vec3`
+- [x] Implement `windingCenter(w: Winding): Vec3`
 
 **Signature:**
 ```typescript
@@ -211,7 +211,7 @@ export function windingCenter(w: Winding): Vec3;
 
 ### 4.4 Plane from Winding
 
-- [ ] Implement `windingPlane(w: Winding): { normal: Vec3, dist: number }`
+- [x] Implement `windingPlane(w: Winding): { normal: Vec3, dist: number }`
 
 Derives the plane equation from winding points.
 
@@ -224,11 +224,11 @@ export function windingPlane(w: Winding): { normal: Vec3; dist: number };
 
 ### 4.5 Tests
 
-- [ ] Test: Unit square area = 1.0
-- [ ] Test: Known triangle area matches formula
-- [ ] Test: Bounds contains all points
-- [ ] Test: Center is centroid
-- [ ] Test: Derived plane matches original (for baseWindingForPlane output)
+- [x] Test: Unit square area = 1.0
+- [x] Test: Known triangle area matches formula
+- [x] Test: Bounds contains all points
+- [x] Test: Center is centroid
+- [x] Test: Derived plane matches original (for baseWindingForPlane output)
 
 ---
 
@@ -236,7 +236,7 @@ export function windingPlane(w: Winding): { normal: Vec3; dist: number };
 
 ### 5.1 Point-in-Winding Test
 
-- [ ] Implement `pointInWinding(point: Vec3, w: Winding, normal: Vec3): boolean`
+- [x] Implement `pointInWinding(point: Vec3, w: Winding, normal: Vec3): boolean`
 
 **Signature:**
 ```typescript
@@ -245,7 +245,7 @@ export function pointInWinding(point: Vec3, w: Winding, normal: Vec3): boolean;
 
 ### 5.2 Validate Winding
 
-- [ ] Implement `validateWinding(w: Winding): ValidationResult`
+- [x] Implement `validateWinding(w: Winding): ValidationResult`
 
 Checks for:
 - Minimum 3 points
@@ -266,9 +266,9 @@ export function validateWinding(w: Winding): WindingValidation;
 
 ### 5.3 Tests
 
-- [ ] Test: Valid triangle passes
-- [ ] Test: Valid quad passes
-- [ ] Test: Concave polygon fails
+- [x] Test: Valid triangle passes
+- [x] Test: Valid quad passes
+- [x] Test: Concave polygon fails
 - [ ] Test: Degenerate (2 points) fails
 - [ ] Test: Non-coplanar points fail
 

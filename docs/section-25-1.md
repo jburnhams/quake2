@@ -1,4 +1,6 @@
-# Section 25-1: Foundation & Infrastructure
+# Section 25-1: Foundation & Infrastructure (COMPLETED)
+
+**Summary**: Package structure and foundational types established. Test fixtures for maps created. WASM reference implementation deferred.
 
 ## Overview
 
@@ -134,8 +136,8 @@ This section is deferred as it requires complex build environment setup (cmake, 
 ### 4.2 Standard Test Maps
 
 - [x] Create `tests/fixtures/maps/box.ts` - Single hollow box room
-- [ ] Create `tests/fixtures/maps/corridor.ts` - L-shaped corridor
-- [ ] Create `tests/fixtures/maps/multiroom.ts` - Two rooms with doorway
+- [x] Create `tests/fixtures/maps/corridor.ts` - L-shaped corridor
+- [x] Create `tests/fixtures/maps/multiroom.ts` - Two rooms with doorway
 
 ---
 
