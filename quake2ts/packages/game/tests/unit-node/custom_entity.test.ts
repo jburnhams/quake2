@@ -1,4 +1,4 @@
-import { EntitySystem, SpawnFunction, createDefaultSpawnRegistry } from '@quake2ts/game';
+import { EntitySystem, SpawnFunction } from '@quake2ts/game';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createTestContext } from '@quake2ts/test-utils';
 
@@ -10,9 +10,7 @@ describe('Custom Entity Registration', () => {
     testContext = createTestContext();
     context = testContext.entities;
 
-    // Use a real registry to test the delegation
-    const registry = createDefaultSpawnRegistry(testContext.engine);
-    context.setSpawnRegistry(registry);
+    // createTestContext provides a default registry via createMockGame, so we don't need to overwrite it.
   });
 
   it('should allow registering a custom spawn function', () => {

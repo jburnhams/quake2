@@ -22,10 +22,8 @@ describe('Player State Snapshot', () => {
 
         const mockClient = createPlayerClientFactory();
 
-        game.clientBegin(mockClient);
-
-        // Find the player spawned by clientBegin
-        player = game.entities.find(e => e.classname === 'player')!;
+        // Capture the returned player entity directly
+        player = game.clientBegin(mockClient);
     });
 
     it('should correctly report ammo for current weapon', () => {

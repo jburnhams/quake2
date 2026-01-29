@@ -1,17 +1,12 @@
-import { describe, it, expect, vi } from 'vitest';
-import { createGame } from '../../src/index.js';
+import { describe, it, expect } from 'vitest';
 import { Entity } from '../../src/entities/entity.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
 
 describe('Custom Entity Registration', () => {
   it('should register and spawn a custom entity', () => {
-    // We need to use createGame to get the real GameExports implementation
-    // The createTestContext helper returns a mocked game object, which is what we want to avoid.
-
-    const { imports, engine } = createGameImportsAndEngine();
-
-    // Create the REAL game instance
-    const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
+    // Use createTestGame to get a real GameExports implementation
+    // with mocked imports/engine
+    const { game } = createTestGame();
 
     let spawnCalled = false;
     const customSpawn = (entity: Entity) => {
