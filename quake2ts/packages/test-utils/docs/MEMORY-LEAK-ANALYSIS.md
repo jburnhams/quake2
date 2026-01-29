@@ -68,6 +68,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `game/tests/regression` tests to `game/tests/unit-node/regression/`
    - Moved: `game/tests/replay` tests to `game/tests/unit-node/replay/`
    - Moved: `game/src/save/tests/*` (callbacks, adapter, playerInventory) to `game/tests/unit-node/save/`
+   - Moved: `engine/tests/unit-jsdom/editor/*` (`ent.test.ts`, `bsp-inspector.test.ts`) to `engine/tests/unit-node/editor/`
+   - Moved: `engine/tests/unit-jsdom/render/*` (`bspTraversalAreas.test.ts`, `cameraController.test.ts`) to `engine/tests/unit-node/render/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
