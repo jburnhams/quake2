@@ -559,7 +559,7 @@ export function removeColinearPoints(w: Winding, epsilon: number = 0.001): Windi
     // q2tools uses 0.999.
     const dot = dotVec3(v1, v2);
 
-    if (dot < 0.999) {
+    if (dot < 1.0 - epsilon) {
       newPoints.push(copyVec3(pCurr));
     }
   }
