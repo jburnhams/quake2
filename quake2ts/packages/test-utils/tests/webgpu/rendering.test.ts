@@ -1,53 +1,12 @@
-import { describe, it, expect, beforeAll, afterEach, vi, beforeEach } from 'vitest';
-import { globals as realGlobals } from 'webgpu';
+import { describe, it, expect } from 'vitest';
 import { initHeadlessWebGPU } from '../../src/setup/webgpu';
 import { createRenderTestSetup, renderAndCapture } from '../../src/engine/helpers/webgpu-rendering';
-import { createMockGPUAdapter, createMockGPUDevice } from '../../src/engine/mocks/webgpu';
+
+// These tests are intended to run against a real WebGPU implementation (e.g., using mesa-vulkan-drivers in CI)
+// and should fail if the environment is not correctly configured.
+// Do NOT mock 'webgpu' here.
 
 describe('WebGPU Rendering Utilities', () => {
-    beforeEach(() => {
-        vi.resetModules();
-        vi.doMock('webgpu', () => {
-            const mockAdapter = createMockGPUAdapter();
-            const mockDevice = createMockGPUDevice();
-            (mockAdapter.requestDevice as any).mockResolvedValue(mockDevice);
-
-            return {
-                create: vi.fn(() => ({
-                    requestAdapter: vi.fn().mockResolvedValue(mockAdapter)
-                })),
-                globals: {
-                    ...realGlobals,
-                    // Override classes that might depend on native bindings
-                    GPUAdapter: class {},
-                    GPUDevice: class {},
-                    GPUQueue: class {},
-                    GPUBuffer: class {},
-                    GPUTexture: class {},
-                    GPUTextureView: class {},
-                    GPUSampler: class {},
-                    GPUBindGroupLayout: class {},
-                    GPUPipelineLayout: class {},
-                    GPUBindGroup: class {},
-                    GPUShaderModule: class {},
-                    GPUComputePipeline: class {},
-                    GPURenderPipeline: class {},
-                    GPUCommandEncoder: class {},
-                    GPURenderPassEncoder: class {},
-                    GPUComputePassEncoder: class {},
-                }
-            };
-        });
-    });
-
-    afterEach(() => {
-        vi.doUnmock('webgpu');
-    });
-
-    // We rely on createRenderTestSetup calling initHeadlessWebGPU internally (via createHeadlessTestContext)
-    // or we can call it here if needed, but since we reset modules in beforeEach,
-    // we should let the test flow handle initialization to ensure the mock is picked up.
-
     it('initializes render setup', async () => {
         const setup = await createRenderTestSetup(64, 64);
         expect(setup.context.device).toBeDefined();
@@ -67,9 +26,9 @@ describe('WebGPU Rendering Utilities', () => {
         });
 
         expect(pixels).toBeDefined();
-        // Since we are mocking, the buffer content depends on createMockGPUBuffer implementation.
-        // It likely returns an empty ArrayBuffer or zeros.
         expect(pixels.length).toBe(4 * 4 * 4);
+        // Should be all zeros
+        expect(pixels[0]).toBe(0);
 
         await setup.cleanup();
     });

@@ -1,41 +1,11 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { initHeadlessWebGPU, createHeadlessTestContext } from '../../src/setup/webgpu';
-import { createMockGPUAdapter, createMockGPUDevice } from '../../src/engine/mocks/webgpu';
+
+// These tests are intended to run against a real WebGPU implementation (e.g., using mesa-vulkan-drivers in CI)
+// and should fail if the environment is not correctly configured.
+// Do NOT mock 'webgpu' here.
 
 describe('WebGPU Headless Setup', () => {
-  beforeEach(() => {
-    vi.resetModules();
-    // Mock webgpu module for the dynamic import in initHeadlessWebGPU
-    vi.doMock('webgpu', () => {
-        const mockAdapter = createMockGPUAdapter();
-        const mockDevice = createMockGPUDevice();
-        (mockAdapter.requestDevice as any).mockResolvedValue(mockDevice);
-
-        return {
-            create: vi.fn(() => ({
-                requestAdapter: vi.fn().mockResolvedValue(mockAdapter)
-            })),
-            globals: {
-                GPUAdapter: class {},
-                GPUDevice: class {},
-                GPUQueue: class {},
-                GPUBuffer: class {},
-                GPUTexture: class {},
-                // Add other globals as needed by setupHeadlessWebGPUEnv
-            }
-        };
-    });
-  });
-
-  afterEach(() => {
-    vi.doUnmock('webgpu');
-    if (globalThis.navigator && (globalThis.navigator as any).gpu) {
-        try {
-            delete (globalThis.navigator as any).gpu;
-        } catch (e) {}
-    }
-  });
-
   it('should initialize WebGPU in Node.js environment', async () => {
     const setup = await initHeadlessWebGPU();
     expect(setup).toBeDefined();
