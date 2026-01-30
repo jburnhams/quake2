@@ -24,7 +24,7 @@ describe('AssetManager with ResourceLoadTracker', () => {
     manager = new AssetManager(vfs, { resourceTracker: tracker });
 
     // Mock vfs.stat to return dummy metadata
-    (vfs.stat as any).mockImplementation((path: string) => {
+    (vfs.stat).mockImplementation((path: string) => {
         if (path === 'textures/test.wal') return { path, size: 1024, sourcePak: 'pak0.pak' };
         if (path === 'sound/test.wav') return { path, size: 2048, sourcePak: 'pak1.pak' };
         if (path === 'models/test.md2') return { path, size: 4096, sourcePak: 'pak0.pak' };
