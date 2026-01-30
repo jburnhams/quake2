@@ -1,18 +1,18 @@
 
 import { describe, it, expect, beforeAll } from 'vitest';
-import { PakArchive } from '@quake2ts/engine/assets/pak.js';
-import { VirtualFileSystem } from '@quake2ts/engine/assets/vfs.js';
-import { parseBsp } from '@quake2ts/engine/assets/bsp.js';
-import { Md2Loader } from '@quake2ts/engine/assets/md2.js';
-import { Md3Loader } from '@quake2ts/engine/assets/md3.js';
-import { SpriteLoader } from '@quake2ts/engine/assets/sprite.js';
-import { parseWal } from '@quake2ts/engine/assets/wal.js';
-import { parsePcx } from '@quake2ts/engine/assets/pcx.js';
-import { parseWav } from '@quake2ts/engine/assets/wav.js';
-import { decodeOgg } from '@quake2ts/engine/assets/ogg.js';
-import { DemoReader } from '@quake2ts/engine/demo/demoReader.js';
-import { NetworkMessageParser } from '@quake2ts/engine/demo/parser.js';
-import { DemoStream } from '@quake2ts/engine/demo/demoStream.js';
+import { PakArchive } from '../../../src/assets/pak.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { parseBsp } from '../../../src/assets/bsp.js';
+import { Md2Loader } from '../../../src/assets/md2.js';
+import { Md3Loader } from '../../../src/assets/md3.js';
+import { SpriteLoader } from '../../../src/assets/sprite.js';
+import { parseWal } from '../../../src/assets/wal.js';
+import { parsePcx } from '../../../src/assets/pcx.js';
+import { parseWav } from '../../../src/assets/wav.js';
+import { decodeOgg } from '../../../src/assets/ogg.js';
+import { DemoReader } from '../../../src/demo/demoReader.js';
+import { NetworkMessageParser } from '../../../src/demo/parser.js';
+import { DemoStream } from '../../../src/demo/demoStream.js';
 import * as fs from 'fs';
 import * as path from 'path';
 
