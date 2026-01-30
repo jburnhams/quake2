@@ -95,6 +95,9 @@ export async function initHeadlessWebGPU(
     throw new Error('Failed to create WebGPU device');
   }
 
+  // Never skip tests in CI environment as environmental issues must be alerted.
+  // Tests should fail if the WebGPU adapter is unavailable.
+
   return {
     adapter,
     device,
@@ -118,18 +121,4 @@ export async function createHeadlessTestContext(): Promise<WebGPUContextState> {
         queue: device.queue,
         format: 'rgba8unorm'
     };
-}
-
-/**
- * Checks if WebGPU is available in the current environment.
- * Useful for skipping tests in environments without GPU support (like some CI runners).
- */
-export async function isWebGpuAvailable(): Promise<boolean> {
-    try {
-        const setup = await initHeadlessWebGPU();
-        await setup.cleanup();
-        return true;
-    } catch (e) {
-        return false;
-    }
 }
