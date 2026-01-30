@@ -1,5 +1,9 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { initHeadlessWebGPU, createHeadlessTestContext } from '../../src/setup/webgpu';
+
+// These tests are intended to run against a real WebGPU implementation (e.g., using mesa-vulkan-drivers in CI)
+// and should fail if the environment is not correctly configured.
+// Do NOT mock 'webgpu' here.
 
 describe('WebGPU Headless Setup', () => {
   it('should initialize WebGPU in Node.js environment', async () => {

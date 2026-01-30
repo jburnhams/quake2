@@ -1,13 +1,12 @@
-import { describe, it, expect, beforeAll, afterEach } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { initHeadlessWebGPU } from '../../src/setup/webgpu';
 import { createRenderTestSetup, renderAndCapture } from '../../src/engine/helpers/webgpu-rendering';
 
-describe('WebGPU Rendering Utilities', () => {
-    beforeAll(async () => {
-        // Setup WebGPU - will throw if not available
-        await initHeadlessWebGPU();
-    }, 30000); // Increase timeout to 30s for GPU initialization
+// These tests are intended to run against a real WebGPU implementation (e.g., using mesa-vulkan-drivers in CI)
+// and should fail if the environment is not correctly configured.
+// Do NOT mock 'webgpu' here.
 
+describe('WebGPU Rendering Utilities', () => {
     it('initializes render setup', async () => {
         const setup = await createRenderTestSetup(64, 64);
         expect(setup.context.device).toBeDefined();
