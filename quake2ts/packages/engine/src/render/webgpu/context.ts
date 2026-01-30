@@ -26,6 +26,7 @@ export interface WebGPUCapabilities {
   hasDepthClipControl: boolean;
   hasTextureCompressionBC: boolean;
   hasTextureCompressionETC2: boolean;
+  hasTextureCompressionETC2: boolean;
   hasTextureCompressionASTC: boolean;
   maxTextureDimension2D: number;
   maxBindGroups: number;
@@ -46,9 +47,26 @@ export async function createWebGPUContext(
     throw new Error('WebGPU is not supported in this environment');
   }
 
-  const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: options?.powerPreference || 'high-performance',
-  });
+  // Request adapter with retry mechanism
+  let adapter: GPUAdapter | null = null;
+  const preferences: (GPURequestAdapterOptions['powerPreference'] | undefined)[] = [
+    options?.powerPreference || 'high-performance',
+    'low-power',
+    undefined
+  ];
+
+  for (const pref of preferences) {
+    try {
+      adapter = await navigator.gpu.requestAdapter({
+        powerPreference: pref,
+      });
+      if (adapter) {
+        break;
+      }
+    } catch (e) {
+      console.warn(`Failed to request adapter with preference ${pref}:`, e);
+    }
+  }
 
   if (!adapter) {
     throw new Error('No appropriate GPUAdapter found');

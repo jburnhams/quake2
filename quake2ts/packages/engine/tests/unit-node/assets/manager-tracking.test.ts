@@ -14,7 +14,7 @@ describe('AssetManager Tracking', () => {
     vfs = createMockVFS();
 
     // Setup default behaviors for this test
-    (vfs.stat).mockReturnValue({ size: 123, sourcePak: 'pak0.pak' });
+    (vfs.stat as any).mockReturnValue({ size: 123, sourcePak: 'pak0.pak' });
 
     tracker = new ResourceLoadTracker();
     vi.spyOn(tracker, 'recordLoad');
