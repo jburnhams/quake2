@@ -349,9 +349,9 @@ export * from './winding';
 
 ## Verification Checklist
 
-- [ ] All winding functions exported from `@quake2ts/shared`
-- [ ] Unit tests pass for all functions
-- [ ] Integration tests pass for compound operations
+- [x] All winding functions exported from `@quake2ts/shared`
+- [x] Unit tests pass for all functions
+- [x] Integration tests pass for compound operations
 - [ ] WASM comparison tests pass within epsilon tolerance
-- [ ] No memory leaks (check with allocation tracking)
-- [ ] Performance acceptable (<1ms for typical operations)
+- [x] No memory leaks (check with allocation tracking)
+- [x] Performance acceptable (<1ms for typical operations)

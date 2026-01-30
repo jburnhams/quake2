@@ -118,7 +118,7 @@ WebGPU tests require Vulkan drivers (lavapipe software renderer on Linux):
 sudo apt-get install -y mesa-vulkan-drivers
 
 # Set ICD path for headless rendering
-export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.json
 ```
 
 ### Run Tests

@@ -18,7 +18,7 @@ sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers
 
 # 3. Verify installation
 ls /usr/share/vulkan/icd.d/
-# Should see: lvp_icd.x86_64.json (lavapipe - CPU-based Vulkan)
+# Should see: lvp_icd.json (lavapipe - CPU-based Vulkan)
 ```
 
 #### macOS
@@ -52,7 +52,7 @@ The `webgpu` package automatically downloads platform-specific Dawn binaries dur
 **"No appropriate GPUAdapter found"**
 - Linux: Install `mesa-vulkan-drivers`
 - Ensure Vulkan ICD files exist in `/usr/share/vulkan/icd.d/`
-- Check lavapipe is installed: `ls /usr/share/vulkan/icd.d/lvp_icd.x86_64.json`
+- Check lavapipe is installed: `ls /usr/share/vulkan/icd.d/lvp_icd.json`
 
 **"Temporary failure resolving" during apt-get**
 - Configure apt proxy: see step 1 above
