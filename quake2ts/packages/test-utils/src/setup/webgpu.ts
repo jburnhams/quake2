@@ -95,6 +95,9 @@ export async function initHeadlessWebGPU(
     throw new Error('Failed to create WebGPU device');
   }
 
+  // Never skip tests in CI environment as environmental issues must be alerted.
+  // Tests should fail if the WebGPU adapter is unavailable.
+
   return {
     adapter,
     device,
