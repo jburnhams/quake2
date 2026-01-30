@@ -77,10 +77,26 @@ export async function initHeadlessWebGPU(
 ): Promise<HeadlessWebGPUSetup> {
   await setupHeadlessWebGPUEnv();
 
-  // Request Adapter
-  const adapter = await navigator.gpu.requestAdapter({
-    powerPreference: options?.powerPreference || 'high-performance',
-  });
+  // Request Adapter with retry mechanism for CI environments
+  let adapter: GPUAdapter | null = null;
+  const preferences: (GPURequestAdapterOptions['powerPreference'] | undefined)[] = [
+    options?.powerPreference || 'high-performance',
+    'low-power',
+    undefined
+  ];
+
+  for (const pref of preferences) {
+    try {
+      adapter = await navigator.gpu.requestAdapter({
+        powerPreference: pref,
+      });
+      if (adapter) {
+        break;
+      }
+    } catch (e) {
+      console.warn(`Failed to request adapter with preference ${pref}:`, e);
+    }
+  }
 
   if (!adapter) {
     throw new Error('Failed to create WebGPU adapter');
