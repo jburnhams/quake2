@@ -26,7 +26,6 @@ export interface WebGPUCapabilities {
   hasDepthClipControl: boolean;
   hasTextureCompressionBC: boolean;
   hasTextureCompressionETC2: boolean;
-  hasTextureCompressionETC2: boolean;
   hasTextureCompressionASTC: boolean;
   maxTextureDimension2D: number;
   maxBindGroups: number;
