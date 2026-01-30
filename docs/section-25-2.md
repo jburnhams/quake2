@@ -1,4 +1,6 @@
-# Section 25-2: Winding & Polygon Math
+# Section 25-2: Winding & Polygon Math (COMPLETED)
+
+**Summary**: Implemented core winding operations including creation, clipping, splitting, and validation. Added advanced operations like `chopWindingByPlanes` and `removeColinearPoints`. Verified with comprehensive unit tests covering edge cases and geometric properties. WASM comparison tests are deferred as per Section 25-1.
 
 ## Overview
 
@@ -168,7 +170,7 @@ export function splitWinding(
 - [x] Test: Clip winding entirely in front returns copy
 - [x] Test: Clip winding entirely behind returns null
 - [x] Test: Split produces two valid convex polygons
-- [ ] Test: Split preserves total area (front + back = original)
+- [x] Test: Split preserves total area (front + back = original)
 
 ---
 
@@ -269,8 +271,8 @@ export function validateWinding(w: Winding): WindingValidation;
 - [x] Test: Valid triangle passes
 - [x] Test: Valid quad passes
 - [x] Test: Concave polygon fails
-- [ ] Test: Degenerate (2 points) fails
-- [ ] Test: Non-coplanar points fail
+- [x] Test: Degenerate (2 points) fails
+- [x] Test: Non-coplanar points fail
 
 ---
 
@@ -278,7 +280,7 @@ export function validateWinding(w: Winding): WindingValidation;
 
 ### 6.1 Chop Winding by Brush
 
-- [ ] Implement `chopWindingInPlace(w: Winding, brush: MapBrush): Winding | null`
+- [x] Implement `chopWindingByPlanes(w: Winding, planes: Array<{ normal: Vec3; dist: number }>): Winding | null`
 
 Clips winding against all planes of a brush (intersection).
 
@@ -295,7 +297,7 @@ export function chopWindingByPlanes(
 
 ### 6.2 Remove Colinear Points
 
-- [ ] Implement `removeColinearPoints(w: Winding): Winding`
+- [x] Implement `removeColinearPoints(w: Winding): Winding`
 
 Simplifies winding by removing unnecessary points on straight edges.
 
@@ -308,10 +310,10 @@ export function removeColinearPoints(w: Winding, epsilon?: number): Winding;
 
 ### 6.3 Tests
 
-- [ ] Test: Chop square by box leaves square (if inside)
-- [ ] Test: Chop square by box clips corners (if overlapping)
-- [ ] Test: Remove colinear reduces point count
-- [ ] Test: Remove colinear preserves shape
+- [x] Test: Chop square by box leaves square (if inside)
+- [x] Test: Chop square by box clips corners (if overlapping)
+- [x] Test: Remove colinear reduces point count
+- [x] Test: Remove colinear preserves shape
 
 ---
 
@@ -319,8 +321,8 @@ export function removeColinearPoints(w: Winding, epsilon?: number): Winding;
 
 ### 7.1 Update Exports
 
-- [ ] Export winding functions from `packages/shared/src/math/index.ts`
-- [ ] Export winding functions from `packages/shared/src/index.ts`
+- [x] Export winding functions from `packages/shared/src/math/index.ts`
+- [x] Export winding functions from `packages/shared/src/index.ts`
 
 **File: `packages/shared/src/math/index.ts`**
 ```typescript
@@ -333,11 +335,11 @@ export * from './winding';
 
 ### 8.1 Round-Trip Tests
 
-- [ ] Test: Create base winding → clip to box → verify convex
-- [ ] Test: Split winding → combine → equals original area
-- [ ] Test: Multiple clips preserve validity
+- [x] Test: Create base winding → clip to box → verify convex
+- [x] Test: Split winding → combine → equals original area
+- [x] Test: Multiple clips preserve validity
 
-### 8.2 WASM Comparison Tests
+### 8.2 WASM Comparison Tests (Deferred)
 
 - [ ] Compare `baseWindingForPlane` output with C implementation
 - [ ] Compare `clipWinding` output with C implementation
