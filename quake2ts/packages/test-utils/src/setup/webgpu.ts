@@ -119,3 +119,17 @@ export async function createHeadlessTestContext(): Promise<WebGPUContextState> {
         format: 'rgba8unorm'
     };
 }
+
+/**
+ * Checks if WebGPU is available in the current environment.
+ * Useful for skipping tests in environments without GPU support (like some CI runners).
+ */
+export async function isWebGpuAvailable(): Promise<boolean> {
+    try {
+        const setup = await initHeadlessWebGPU();
+        await setup.cleanup();
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
