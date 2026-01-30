@@ -34,7 +34,7 @@ describe('PAK Integration Test', () => {
 
     if (!fs.existsSync(pakPath)) {
         // Fallback: try relative to __dirname just in case
-        const altPath = path.resolve(__dirname, '../../../../pak.pak');
+        const altPath = path.resolve(__dirname, '../../../../../pak.pak');
         console.log('Trying alt path:', altPath);
         if (fs.existsSync(altPath)) {
             pakPath = altPath;

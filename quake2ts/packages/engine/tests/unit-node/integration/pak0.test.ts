@@ -36,7 +36,7 @@ describe('PAK0 Integration Test', () => {
   const resolvePakPath = (filename: string): string | null => {
       // Try traversing up from __dirname
       let searchDir = __dirname;
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 8; i++) {
           const p = path.join(searchDir, filename);
           if (fs.existsSync(p)) return p;
           searchDir = path.join(searchDir, '..');
