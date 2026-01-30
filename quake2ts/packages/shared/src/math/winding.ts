@@ -565,9 +565,8 @@ export function removeColinearPoints(w: Winding, epsilon: number = 0.001): Windi
   }
 
   // Create new winding with filtered points
-  const newW = createWinding(0);
-  newW.points = newPoints;
-  newW.numPoints = newPoints.length;
-
-  return newW;
+  return {
+    points: newPoints,
+    numPoints: newPoints.length,
+  };
 }
