@@ -1,17 +1,16 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { AssetManager } from '../../../src/assets/manager';
-import { VirtualFileSystem } from '../../../src/assets/vfs';
-import { PreparedTexture } from '../../../src/assets/texture';
+import { describe, it, expect, beforeEach } from 'vitest';
+import { AssetManager } from '../../../src/assets/manager.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { PreparedTexture } from '../../../src/assets/texture.js';
+import { createMockVFS } from '@quake2ts/test-utils';
 
 describe('AssetManager TGA Integration', () => {
   let vfs: VirtualFileSystem;
   let manager: AssetManager;
 
   beforeEach(() => {
-    // Create a mock VFS
-    vfs = {
-      readFile: vi.fn(),
-    } as unknown as VirtualFileSystem;
+    // Create a mock VFS using test-utils
+    vfs = createMockVFS();
 
     manager = new AssetManager(vfs);
   });

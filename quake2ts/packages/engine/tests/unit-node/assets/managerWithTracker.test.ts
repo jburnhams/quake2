@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AssetManager } from '../../../src/assets/manager';
 import { ResourceLoadTracker, ResourceType } from '../../../src/assets/resourceTracker';
 import { VirtualFileSystem } from '../../../src/assets/vfs';
+import { createMockVFS } from '@quake2ts/test-utils';
 
 // Mock everything else to avoid complex setups
 vi.mock('../../../src/assets/md2', () => ({ Md2Loader: class { load = vi.fn(); get = vi.fn(); } }));
@@ -17,13 +18,13 @@ describe('AssetManager with ResourceLoadTracker', () => {
   let manager: AssetManager;
 
   beforeEach(() => {
-    vfs = new VirtualFileSystem();
+    vfs = createMockVFS();
     tracker = new ResourceLoadTracker();
     tracker.startTracking();
     manager = new AssetManager(vfs, { resourceTracker: tracker });
 
     // Mock vfs.stat to return dummy metadata
-    vi.spyOn(vfs, 'stat').mockImplementation((path) => {
+    (vfs.stat as any).mockImplementation((path: string) => {
         if (path === 'textures/test.wal') return { path, size: 1024, sourcePak: 'pak0.pak' };
         if (path === 'sound/test.wav') return { path, size: 2048, sourcePak: 'pak1.pak' };
         if (path === 'models/test.md2') return { path, size: 4096, sourcePak: 'pak0.pak' };
@@ -34,7 +35,7 @@ describe('AssetManager with ResourceLoadTracker', () => {
 
   it('should track texture loads with metadata', async () => {
     // Mock vfs to throw error so we fail fast after tracking call
-    vi.spyOn(vfs, 'readFile').mockRejectedValue(new Error('Mock VFS Error'));
+    (vfs.readFile as any).mockRejectedValue(new Error('Mock VFS Error'));
 
     try {
         await manager.loadTexture('textures/test.wal');

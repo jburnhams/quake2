@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AssetManager } from '../../../src/assets/manager.js';
 import { ResourceLoadTracker, ResourceType } from '../../../src/assets/resourceTracker.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { createMockVFS } from '@quake2ts/test-utils';
 
 describe('AssetManager Tracking', () => {
   let vfs: VirtualFileSystem;
@@ -9,11 +10,11 @@ describe('AssetManager Tracking', () => {
   let manager: AssetManager;
 
   beforeEach(() => {
-    vfs = {
-      readFile: vi.fn(),
-      stat: vi.fn().mockReturnValue({ size: 123, sourcePak: 'pak0.pak' }),
-      findByExtension: vi.fn(),
-    } as unknown as VirtualFileSystem;
+    // Use mocked VFS
+    vfs = createMockVFS();
+
+    // Setup default behaviors for this test
+    (vfs.stat as any).mockReturnValue({ size: 123, sourcePak: 'pak0.pak' });
 
     tracker = new ResourceLoadTracker();
     vi.spyOn(tracker, 'recordLoad');
