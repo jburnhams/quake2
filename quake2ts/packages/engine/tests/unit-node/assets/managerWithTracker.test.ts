@@ -35,7 +35,7 @@ describe('AssetManager with ResourceLoadTracker', () => {
 
   it('should track texture loads with metadata', async () => {
     // Mock vfs to throw error so we fail fast after tracking call
-    (vfs.readFile as any).mockRejectedValue(new Error('Mock VFS Error'));
+    (vfs.readFile).mockRejectedValue(new Error('Mock VFS Error'));
 
     try {
         await manager.loadTexture('textures/test.wal');
