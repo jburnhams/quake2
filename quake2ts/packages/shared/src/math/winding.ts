@@ -515,3 +515,58 @@ export function validateWinding(w: Winding): WindingValidation {
 
   return { valid: errors.length === 0, errors };
 }
+
+/**
+ * Clips the winding against a collection of planes.
+ * Typically used to clip a winding to a brush (intersection).
+ * Assumes brush planes point outwards, so we keep the portion BEHIND the planes.
+ */
+export function chopWindingByPlanes(
+  w: Winding,
+  planes: Array<{ normal: Vec3; dist: number }>,
+  epsilon: number = 0.1
+): Winding | null {
+  let currentW: Winding | null = copyWinding(w);
+
+  for (const plane of planes) {
+    if (!currentW) break;
+    // Keep back side (inside the brush)
+    currentW = clipWindingEpsilon(currentW, plane.normal, plane.dist, epsilon, false);
+  }
+
+  return currentW;
+}
+
+/**
+ * Removes colinear points from the winding to simplify it.
+ * Points are considered colinear if the segments joining them are nearly parallel.
+ */
+export function removeColinearPoints(w: Winding, epsilon: number = 0.001): Winding {
+  if (w.numPoints <= 3) return copyWinding(w);
+
+  const newPoints: Vec3[] = [];
+
+  for (let i = 0; i < w.numPoints; i++) {
+    const pPrev = w.points[(i + w.numPoints - 1) % w.numPoints];
+    const pCurr = w.points[i];
+    const pNext = w.points[(i + 1) % w.numPoints];
+
+    const v1 = normalizeVec3(subtractVec3(pCurr, pPrev));
+    const v2 = normalizeVec3(subtractVec3(pNext, pCurr));
+
+    // If vectors are parallel (dot product close to 1), skip pCurr
+    // 1.0 - epsilon is rough check.
+    // q2tools uses 0.999.
+    const dot = dotVec3(v1, v2);
+
+    if (dot < 1.0 - epsilon) {
+      newPoints.push(copyVec3(pCurr));
+    }
+  }
+
+  // Create new winding with filtered points
+  return {
+    points: newPoints,
+    numPoints: newPoints.length,
+  };
+}

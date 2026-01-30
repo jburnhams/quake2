@@ -16,6 +16,8 @@ import {
   windingPlane,
   pointInWinding,
   validateWinding,
+  chopWindingByPlanes,
+  removeColinearPoints,
   SIDE_FRONT,
   SIDE_BACK,
   SIDE_ON,
@@ -249,6 +251,30 @@ describe('winding', () => {
         expect(p.x).toBeLessThanOrEqual(0.001);
       }
     });
+
+    it('preserves total area after split', () => {
+      const w = createWinding(4);
+      w.points[0] = { x: 10, y: 10, z: 0 };
+      w.points[1] = { x: 10, y: -10, z: 0 };
+      w.points[2] = { x: -10, y: -10, z: 0 };
+      w.points[3] = { x: -10, y: 10, z: 0 };
+
+      const totalArea = windingArea(w); // 400
+
+      // Arbitrary diagonal split
+      const normal = normalizeVec3({ x: 1, y: 2, z: 0 });
+      const dist = 0;
+
+      const { front, back } = splitWinding(w, normal, dist);
+
+      expect(front).not.toBeNull();
+      expect(back).not.toBeNull();
+
+      const frontArea = windingArea(front!);
+      const backArea = windingArea(back!);
+
+      expect(frontArea + backArea).toBeCloseTo(totalArea);
+    });
   });
 
   describe('winding geometry', () => {
@@ -319,6 +345,27 @@ describe('winding', () => {
       expect(res.valid).toBe(true);
     });
 
+    it('fails degenerate winding (2 points)', () => {
+      const w = createWinding(2);
+      w.points[0] = { x: 0, y: 0, z: 0 };
+      w.points[1] = { x: 10, y: 0, z: 0 };
+      const res = validateWinding(w);
+      expect(res.valid).toBe(false);
+      expect(res.errors[0]).toContain('Not enough points');
+    });
+
+    it('fails non-coplanar points', () => {
+      const w = createWinding(4);
+      w.points[0] = { x: 0, y: 0, z: 0 };
+      w.points[1] = { x: 10, y: 0, z: 0 };
+      w.points[2] = { x: 10, y: 10, z: 0 };
+      w.points[3] = { x: 0, y: 10, z: 5 }; // Raised point, bent quad
+      const res = validateWinding(w);
+      expect(res.valid).toBe(false);
+      // It might fail on off-plane or concave/bad normal
+      expect(res.errors.some(e => e.includes('off plane') || e.includes('Concave'))).toBe(true);
+    });
+
     it('detects point in winding', () => {
       const w = createWinding(4);
       w.points[0] = { x: -10, y: 10, z: 0 };
@@ -330,6 +377,62 @@ describe('winding', () => {
 
       expect(pointInWinding({ x: 0, y: 0, z: 0 }, w, normal)).toBe(true);
       expect(pointInWinding({ x: 20, y: 0, z: 0 }, w, normal)).toBe(false);
+    });
+  });
+
+  describe('chopWindingByPlanes', () => {
+    it('chops a large winding to a box', () => {
+      // Start with base winding on Z=0
+      const w = baseWindingForPlane({ x: 0, y: 0, z: 1 }, 0);
+
+      // Define 4 planes of a 20x20 box centered at origin
+      // x=10 (normal 1,0,0 dist 10)
+      // x=-10 (normal -1,0,0 dist 10) -> wait, standard brush planes point OUT
+      // So right face (x=10): normal (1,0,0), dist 10. Points inside have x<10. d = x*1 - 10 < 0. Back side. Correct.
+      // Left face (x=-10): normal (-1,0,0), dist 10. Points inside have x>-10 -> -x < 10 -> -x - 10 < 0. Back side. Correct.
+      // y=10: normal (0,1,0), dist 10.
+      // y=-10: normal (0,-1,0), dist 10.
+
+      const planes = [
+        { normal: { x: 1, y: 0, z: 0 }, dist: 10 },
+        { normal: { x: -1, y: 0, z: 0 }, dist: 10 },
+        { normal: { x: 0, y: 1, z: 0 }, dist: 10 },
+        { normal: { x: 0, y: -1, z: 0 }, dist: 10 },
+      ];
+
+      const chopped = chopWindingByPlanes(w, planes);
+
+      expect(chopped).not.toBeNull();
+      expect(chopped!.numPoints).toBe(4); // Should be a square
+
+      const bounds = windingBounds(chopped!);
+      expect(bounds.mins.x).toBeCloseTo(-10);
+      expect(bounds.maxs.x).toBeCloseTo(10);
+      expect(bounds.mins.y).toBeCloseTo(-10);
+      expect(bounds.maxs.y).toBeCloseTo(10);
+    });
+  });
+
+  describe('removeColinearPoints', () => {
+    it('removes unnecessary points from a straight edge', () => {
+      const w = createWinding(5);
+      w.points[0] = { x: 0, y: 0, z: 0 };
+      w.points[1] = { x: 5, y: 0, z: 0 }; // Midpoint on bottom edge
+      w.points[2] = { x: 10, y: 0, z: 0 };
+      w.points[3] = { x: 10, y: 10, z: 0 };
+      w.points[4] = { x: 0, y: 10, z: 0 };
+
+      expect(w.numPoints).toBe(5);
+
+      const simplified = removeColinearPoints(w);
+
+      expect(simplified.numPoints).toBe(4);
+      // p[1] (5,0,0) should be gone
+      // New points: (0,0,0), (10,0,0), (10,10,0), (0,10,0)
+      expect(simplified.points[0]).toEqual({ x: 0, y: 0, z: 0 });
+      expect(simplified.points[1]).toEqual({ x: 10, y: 0, z: 0 });
+      expect(simplified.points[2]).toEqual({ x: 10, y: 10, z: 0 });
+      expect(simplified.points[3]).toEqual({ x: 0, y: 10, z: 0 });
     });
   });
 });
