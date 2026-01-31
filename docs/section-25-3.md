@@ -58,7 +58,7 @@ Two formats supported:
 
 ### 2.1 Token Types
 
-- [ ] Create `src/parser/tokenizer.ts`
+- [x] Create `src/parser/tokenizer.ts`
 
 **File: `src/parser/tokenizer.ts`**
 ```typescript
@@ -100,10 +100,10 @@ export class MapTokenizer {
 
 ### 2.2 Tokenizer Implementation
 
-- [ ] Implement whitespace/comment skipping
-- [ ] Implement string parsing (quoted and unquoted)
-- [ ] Implement number parsing
-- [ ] Implement punctuation tokens
+- [x] Implement whitespace/comment skipping
+- [x] Implement string parsing (quoted and unquoted)
+- [x] Implement number parsing
+- [x] Implement punctuation tokens
 
 **Whitespace/Comments:**
 ```typescript
@@ -113,12 +113,12 @@ private skipWhitespaceAndComments(): void;
 
 ### 2.3 Tests
 
-- [ ] Test: Tokenize empty string → EOF
-- [ ] Test: Tokenize `{ }` → OPEN_BRACE, CLOSE_BRACE, EOF
-- [ ] Test: Tokenize `"hello"` → STRING("hello")
-- [ ] Test: Tokenize `123.45` → NUMBER("123.45")
-- [ ] Test: Tokenize with comments skipped
-- [ ] Test: Line/column tracking correct
+- [x] Test: Tokenize empty string → EOF
+- [x] Test: Tokenize `{ }` → OPEN_BRACE, CLOSE_BRACE, EOF
+- [x] Test: Tokenize `"hello"` → STRING("hello")
+- [x] Test: Tokenize `123.45` → NUMBER("123.45")
+- [x] Test: Tokenize with comments skipped
+- [x] Test: Line/column tracking correct
 
 ---
 
