@@ -1,6 +1,6 @@
 import { EntitySystem, SpawnFunction } from '@quake2ts/game';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntityFromDictionary } from '@quake2ts/test-utils';
 
 describe('Custom Entity Registration', () => {
   let context: EntitySystem;
@@ -39,20 +39,7 @@ describe('Custom Entity Registration', () => {
         message: 'Override'
     };
 
-    const spawnFunc = context.getSpawnFunction('info_custom');
-    expect(spawnFunc).toBeDefined();
-
-    const entity = context.spawn();
-
-    if (spawnFunc) {
-        spawnFunc(entity, {
-            keyValues: mapData,
-            entities: context,
-            health_multiplier: 1,
-            warn: (msg) => console.warn(msg),
-            free: (e) => context.free(e)
-        });
-    }
+    const entity = spawnEntityFromDictionary(context, mapData);
 
     expect(entity.classname).toBe('info_custom');
     expect(entity.message).toBe('Hello Custom');

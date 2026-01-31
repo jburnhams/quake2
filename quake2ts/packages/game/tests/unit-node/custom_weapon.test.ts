@@ -19,23 +19,14 @@ describe('Custom Weapon Registration', () => {
     game = result.game;
 
     // Use spawnEntity to properly insert the player into the entity system
-    player = spawnEntity(game.entities, createPlayerEntityFactory({
-         client: {
-            inventory: {
-                ammo: { counts: [] },
-                ownedWeapons: new Set([WeaponId.Blaster]),
-                currentWeapon: WeaponId.Blaster,
-                powerups: new Map(),
-                keys: new Set(),
-                items: new Set(),
-            },
-            weaponStates: {
-                states: new Map()
-            },
-            pers: {},
-            buttons: 0
-        } as any
-    }));
+    const playerFactory = createPlayerEntityFactory();
+    const client = playerFactory.client!;
+
+    // Customize inventory for the test
+    client.inventory.ownedWeapons = new Set([WeaponId.Blaster]);
+    client.inventory.currentWeapon = WeaponId.Blaster;
+
+    player = spawnEntity(game.entities, playerFactory);
   });
 
   it('should register and fire a custom weapon', () => {
