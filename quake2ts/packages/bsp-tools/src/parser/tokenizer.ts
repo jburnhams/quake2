@@ -215,9 +215,10 @@ export class MapTokenizer {
         }
 
         if (isNumber) {
-             // Validate if it is a valid number structure (e.g. not "1.2.3" or "-")
-             if (value === '-' || value === '.') isNumber = false;
-             if (value.split('.').length > 2) isNumber = false;
+             // More robust number validation to avoid mis-classifying strings like "-." as numbers.
+             if (!/^-?((\d+\.?\d*)|(\d*\.?\d+))$/.test(value)) {
+                 isNumber = false;
+             }
         }
 
         return {
