@@ -1,15 +1,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from './setup.js';
-import { AssetManager } from '@quake2ts/engine/assets/manager.js';
-import { PakFile } from '@quake2ts/engine/assets/pak.js';
-import { VirtualFileSystem } from '@quake2ts/engine/assets/vfs.js';
+import { AssetManager } from '../../../src/assets/manager.js';
+import { PakFile } from '../../../src/assets/pak.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 describe('Asset Loading Integration', () => {
   let vfs: VirtualFileSystem;
   let assetManager: AssetManager;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     vfs = new VirtualFileSystem();
     assetManager = new AssetManager(vfs);
   });
