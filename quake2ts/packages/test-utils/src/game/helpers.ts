@@ -380,6 +380,36 @@ export function spawnEntity(system: EntitySystem, data: Partial<Entity>): Entity
   return ent;
 }
 
+/**
+ * Spawns an entity using the registered spawn function for its classname.
+ * Simulates map loading behavior for a single entity.
+ *
+ * @param system - The EntitySystem.
+ * @param dictionary - The key-value pairs representing the entity fields (e.g. from map).
+ * @returns The spawned entity.
+ */
+export function spawnEntityFromDictionary(system: EntitySystem, dictionary: Record<string, string>): Entity {
+  const classname = dictionary['classname'];
+  if (!classname) throw new Error('Dictionary missing classname');
+
+  const spawnFunc = system.getSpawnFunction(classname);
+  if (!spawnFunc) {
+    throw new Error(`No spawn function found for ${classname}`);
+  }
+
+  const entity = system.spawn();
+
+  spawnFunc(entity, {
+    keyValues: dictionary,
+    entities: system,
+    health_multiplier: 1,
+    warn: vi.fn(),
+    free: (e) => system.free(e),
+  });
+
+  return entity;
+}
+
 export interface MockImportsAndEngine {
   imports: {
     trace: Mock;
