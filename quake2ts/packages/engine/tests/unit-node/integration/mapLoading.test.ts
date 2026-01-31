@@ -1,9 +1,8 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from './setup.js';
-import { EngineHost } from '@quake2ts/engine/host.js';
+import { EngineHost } from '../../../src/host.js';
 import type { GameExports } from '@quake2ts/game';
 import type { ClientExports } from '@quake2ts/client';
-import { VirtualFileSystem } from '@quake2ts/engine/assets/vfs.js';
+import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 
 // Helper to create minimal mocks
 const createMockGame = (): GameExports => ({
@@ -41,7 +40,6 @@ describe('Map Loading Integration', () => {
   let host: EngineHost;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     vfs = new VirtualFileSystem();
     game = createMockGame();
     client = createMockClient();
