@@ -405,9 +405,6 @@ export function spawnEntityFromDictionary(system: EntitySystem, dictionary: Reco
     health_multiplier: 1,
     warn: (msg) => console.warn(msg),
     free: (e) => system.free(e),
-    precacheModel: vi.fn(),
-    precacheSound: vi.fn(),
-    precacheImage: vi.fn(),
   });
 
   return entity;
