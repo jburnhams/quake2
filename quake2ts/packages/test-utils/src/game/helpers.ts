@@ -403,7 +403,7 @@ export function spawnEntityFromDictionary(system: EntitySystem, dictionary: Reco
     keyValues: dictionary,
     entities: system,
     health_multiplier: 1,
-    warn: (msg) => console.warn(msg),
+    warn: vi.fn(),
     free: (e) => system.free(e),
   });
 
