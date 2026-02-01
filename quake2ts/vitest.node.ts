@@ -17,11 +17,13 @@ export default defineConfig({
       { find: '@quake2ts/test-utils/src/engine/mocks/webgpu', replacement: path.resolve(__dirname, 'packages/test-utils/src/engine/mocks/webgpu.ts') },
       { find: '@quake2ts/test-utils/src/setup/webgpu', replacement: path.resolve(__dirname, 'packages/test-utils/src/setup/webgpu.ts') },
       { find: '@quake2ts/test-utils', replacement: path.resolve(__dirname, 'packages/test-utils/src/index.ts') },
+      { find: '@quake2ts/bsp-tools', replacement: path.resolve(__dirname, 'packages/bsp-tools/src/index.ts') },
     ],
   },
   test: {
     environment: 'node',
     include: [
+      'packages/bsp-tools/tests/**/*.test.ts',
       'packages/game/tests/**/*.test.ts',
       'packages/server/tests/**/*.test.ts',
       'packages/shared/tests/**/*.test.ts',
@@ -33,6 +35,7 @@ export default defineConfig({
       'packages/game/src/**/*.test.ts',
       'packages/shared/src/**/*.test.ts',
       'packages/cgame/src/**/*.test.ts',
+      'packages/bsp-tools/src/**/*.test.ts',
       // Also include client tests that run in node
       'packages/client/tests/unit-node/**/*.test.ts',
     ],
