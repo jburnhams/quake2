@@ -1,67 +1,65 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerGunnerSpawns } from '../../../../src/entities/monsters/gunner.js';
-import { Entity, MoveType, Solid } from '../../../../src/entities/entity.js';
-import { SpawnContext, SpawnRegistry } from '../../../../src/entities/spawn.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
-import { GameEngine } from '../../../../src/index.js';
 import { AIFlags } from '../../../../src/ai/constants.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntityFromDictionary, TestContext } from '@quake2ts/test-utils';
+import { EntitySystem } from '../../../../src/entities/system.js';
+import { Entity } from '../../../../src/entities/entity.js';
 
 describe('monster_gunner jump', () => {
   let sys: EntitySystem;
-  let context: SpawnContext;
+  let context: TestContext;
   let gunner: Entity;
-  let spawnRegistry: SpawnRegistry;
 
   beforeEach(() => {
-    // Use createTestContext to get rng and mocks
-    const testCtx = createTestContext();
-    sys = testCtx.entities;
-    context = testCtx;
+    context = createTestContext();
+    sys = context.entities;
 
-    gunner = new Entity(1);
-    spawnRegistry = { register: vi.fn() } as unknown as SpawnRegistry;
+    // Register gunner spawn using the system's register method
+    registerGunnerSpawns({
+        register: (classname, factory) => sys.registerEntityClass(classname, factory)
+    } as any);
+
+    gunner = spawnEntityFromDictionary(sys, { classname: 'monster_gunner' });
   });
 
   it('gunner jump triggers when far from enemy', () => {
-    registerGunnerSpawns(spawnRegistry);
-    const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
-    spawnFn(gunner, context);
-
-    gunner.enemy = new Entity(2);
+    gunner.enemy = sys.spawn();
     gunner.enemy.origin = { x: 300, y: 0, z: 0 }; // > 256
     gunner.origin = { x: 0, y: 0, z: 0 };
-    gunner.groundentity = new Entity(3);
+    gunner.groundentity = sys.spawn();
 
     // Mock random < 0.1
     vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
     // Call run to set state
-    gunner.monsterinfo.run!(gunner, 10, sys);
+    if (gunner.monsterinfo.run) {
+        gunner.monsterinfo.run(gunner, 10, sys);
+    }
 
     // Simulate frame think that checks for jump
     // run_move has jump check at frame 0
     const runMove = gunner.monsterinfo.current_move!;
     const checkJump = runMove.frames[0].think!;
-    checkJump(gunner, sys); // Pass sys/context
+    checkJump(gunner, sys);
 
     // Should switch to jump move
     expect(gunner.monsterinfo.current_move?.firstframe).toBe(209);
   });
 
   it('gunner jump does NOT trigger if SPAWNFLAG_NOJUMPING is set', () => {
-    registerGunnerSpawns(spawnRegistry);
-    const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
-    spawnFn(gunner, context);
-
+    // Re-spawn to apply flags
+    // Or just set flag manually since we already spawned
     gunner.spawnflags |= 16; // NO JUMPING
-    gunner.enemy = new Entity(2);
+
+    gunner.enemy = sys.spawn();
     gunner.enemy.origin = { x: 300, y: 0, z: 0 };
-    gunner.groundentity = new Entity(3);
+    gunner.groundentity = sys.spawn();
 
     vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
-    gunner.monsterinfo.run!(gunner, 10, sys);
+    if (gunner.monsterinfo.run) {
+        gunner.monsterinfo.run(gunner, 10, sys);
+    }
 
     const runMove = gunner.monsterinfo.current_move!;
     const checkJump = runMove.frames[0].think!;
@@ -71,16 +69,14 @@ describe('monster_gunner jump', () => {
   });
 
   it('gunner_jump_takeoff sets velocity and duck flag', () => {
-      registerGunnerSpawns(spawnRegistry);
-      const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
-      spawnFn(gunner, context);
-
-      gunner.enemy = new Entity(2);
+      gunner.enemy = sys.spawn();
       gunner.enemy.origin = { x: 300, y: 0, z: 0 };
       gunner.origin = { x: 0, y: 0, z: 0 };
-      gunner.groundentity = new Entity(3);
+      gunner.groundentity = sys.spawn();
 
-      gunner.monsterinfo.run!(gunner, 10, sys);
+      if (gunner.monsterinfo.run) {
+          gunner.monsterinfo.run(gunner, 10, sys);
+      }
       const runMove = gunner.monsterinfo.current_move!;
 
       // Trigger jump logic
@@ -102,19 +98,17 @@ describe('monster_gunner jump', () => {
   });
 
   it('gunner_check_landing handles landing', () => {
-      registerGunnerSpawns(spawnRegistry);
-      const spawnFn = (spawnRegistry.register as any).mock.calls[0][1];
-      spawnFn(gunner, context);
-
       gunner.monsterinfo.aiflags |= AIFlags.Ducked;
-      gunner.groundentity = new Entity(3);
+      gunner.groundentity = sys.spawn();
 
-      gunner.enemy = new Entity(2);
+      gunner.enemy = sys.spawn();
       gunner.enemy.origin = { x: 300, y: 0, z: 0 };
-      gunner.groundentity = new Entity(3);
+      gunner.groundentity = sys.spawn();
       vi.spyOn(sys.rng, 'frandom').mockReturnValue(0.01);
 
-      gunner.monsterinfo.run!(gunner, 10, sys);
+      if (gunner.monsterinfo.run) {
+          gunner.monsterinfo.run(gunner, 10, sys);
+      }
       const runMove = gunner.monsterinfo.current_move!;
 
       const checkJump = runMove.frames[0].think!;

@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { Entity, MoveType, EntityFlags } from '../../../src/entities/entity.js';
 import { runStep } from '../../../src/physics/movement.js';
 import { GameImports } from '../../../src/imports.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { createGameImportsAndEngine, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, createTraceMock, createEntity } from '@quake2ts/test-utils';
 
 describe('Physics: runStep', () => {
   let ent: Entity;
@@ -12,18 +12,11 @@ describe('Physics: runStep', () => {
   const frametime = 0.1;
 
   beforeEach(() => {
-    const { imports: mockImports } = createGameImportsAndEngine();
-    imports = mockImports as any;
+    const context = createTestContext();
+    imports = context.imports;
+    system = context.entities;
 
-    system = {
-      // Mocking trace to delegate to imports.trace, which is what EntitySystem does
-      trace: (...args: any[]) => (imports.trace as any)(...args),
-      pointcontents: (...args: any[]) => (imports.pointcontents as any)(...args),
-      forEachEntity: vi.fn(),
-      findInBox: vi.fn().mockReturnValue([]), // Mock findInBox
-    } as unknown as EntitySystem;
-
-    ent = createEntityFactory({
+    ent = createEntity(createEntityFactory({
         index: 1,
         movetype: MoveType.Step,
         gravity: 1,
@@ -32,7 +25,7 @@ describe('Physics: runStep', () => {
         mins: { x: -16, y: -16, z: -24 },
         maxs: { x: 16, y: 16, z: 32 },
         flags: 0,
-    }) as Entity;
+    }));
   });
 
   it('should apply gravity if not on ground and not flying/swimming', () => {
@@ -40,7 +33,7 @@ describe('Physics: runStep', () => {
     const gravity = { x: 0, y: 0, z: -800 };
 
     // Mock trace to show no collision (falling through air)
-    (imports.trace as any).mockReturnValue(createTraceMock({
+    (imports.trace as Mock).mockReturnValue(createTraceMock({
         fraction: 1.0,
         endpos: { x: 0, y: 0, z: 100 + (-800 * frametime * frametime) }, // roughly
     }));
@@ -74,7 +67,7 @@ describe('Physics: runStep', () => {
     ent.velocity = { x: 100, y: 0, z: 0 };
 
     // Mock trace to allow full movement
-    (imports.trace as any).mockImplementation((start, mins, maxs, end) => createTraceMock({
+    (imports.trace as Mock).mockImplementation((start, mins, maxs, end) => createTraceMock({
         fraction: 1.0,
         endpos: end,
     }));
@@ -93,7 +86,7 @@ describe('Physics: runStep', () => {
       ent.origin = { x: 0, y: 0, z: 10 };
 
       // Mock hitting the floor
-      (imports.trace as any).mockReturnValue(createTraceMock({
+      (imports.trace as Mock).mockReturnValue(createTraceMock({
           fraction: 0.5, // Hit halfway
           endpos: { x: 0, y: 0, z: 0 },
           plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }, // Floor plane

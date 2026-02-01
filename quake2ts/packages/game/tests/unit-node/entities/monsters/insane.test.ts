@@ -2,29 +2,17 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_misc_insane } from '../../../../src/entities/monsters/insane.js';
 import { Entity, MoveType, Solid, DeadFlag } from '../../../../src/entities/entity.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
-import { GameEngine } from '../../../../src/index.js';
+import { createTestContext, TestContext } from '@quake2ts/test-utils';
 
 describe('monster_insane', () => {
   let system: EntitySystem;
-  let context: SpawnContext;
+  let context: TestContext;
   let entity: Entity;
-  let mockEngine: GameEngine;
 
   beforeEach(() => {
-    mockEngine = {
-      sound: vi.fn(),
-      modelIndex: vi.fn().mockReturnValue(1),
-    } as any;
-
-    system = new EntitySystem(mockEngine);
+    context = createTestContext();
+    system = context.entities;
     entity = system.spawn();
-    context = {
-      keyValues: {},
-      entities: system,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
   });
 
   it('should initialize with correct stats', () => {
