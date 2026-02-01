@@ -16,7 +16,7 @@ describe('physics movement', () => {
       waterlevel: 0,
     }));
 
-    runGravity(ent as any, gravity, frametime);
+    runGravity(ent, gravity, frametime);
 
     // z velocity should be -800 * 0.1 = -80
     expect(ent.velocity!.z).toBe(-80);
@@ -32,7 +32,7 @@ describe('physics movement', () => {
       waterlevel: 2, // Submerged
     }));
 
-    runGravity(ent as any, gravity, frametime);
+    runGravity(ent, gravity, frametime);
 
     // Gravity is 0.1x: -800 * 0.1 * 0.1 = -8 added to velocity
     // Friction is 2 * frametime * speed = 0.2 * 100 = 20 reduced from speed.
