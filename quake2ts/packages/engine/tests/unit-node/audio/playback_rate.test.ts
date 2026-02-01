@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { AudioSystem, AudioSystemOptions } from '../../../src/audio/system.js';
 import { SoundRegistry } from '../../../src/audio/registry.js';
 import { AudioContextController } from '../../../src/audio/context.js';
@@ -26,6 +26,10 @@ describe('AudioSystem Playback Rate', () => {
     });
 
     await system.ensureRunning();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should set playback rate on new sounds', () => {
