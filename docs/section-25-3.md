@@ -126,8 +126,8 @@ private skipWhitespaceAndComments(): void;
 
 ### 3.1 Entity Key-Value Pairs
 
-- [ ] Create `src/parser/entityParser.ts`
-- [ ] Implement `parseKeyValue(tokenizer): { key: string, value: string }`
+- [x] Create `src/parser/entityParser.ts`
+- [x] Implement `parseKeyValue(tokenizer): { key: string, value: string }`
 
 **File: `src/parser/entityParser.ts`**
 ```typescript
@@ -145,7 +145,7 @@ export function parseKeyValue(tokenizer: MapTokenizer): { key: string; value: st
 
 ### 3.2 Entity Parsing
 
-- [ ] Implement `parseEntity(tokenizer): MapEntityDef`
+- [x] Implement `parseEntity(tokenizer): MapEntityDef`
 
 **Signature:**
 ```typescript
@@ -164,9 +164,9 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef;
 
 ### 3.3 Tests
 
-- [ ] Test: Parse entity with only properties
-- [ ] Test: Parse entity with brushes
-- [ ] Test: Extract classname correctly
+- [x] Test: Parse entity with only properties
+- [x] Test: Parse entity with brushes (verified calls parseBrush)
+- [x] Test: Extract classname correctly
 - [ ] Test: Parse origin into Vec3
 
 ---
@@ -175,7 +175,7 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef;
 
 ### 4.1 Brush Side (Face) Parsing
 
-- [ ] Create `src/parser/brushParser.ts`
+- [x] Create `src/parser/brushParser.ts`
 - [ ] Implement `parseBrushSide(tokenizer, mapVersion): MapBrushSideDef`
 
 **File: `src/parser/brushParser.ts`**
@@ -246,7 +246,7 @@ export function planeFromPoints(
 
 ### 4.3 Brush Parsing
 
-- [ ] Implement `parseBrush(tokenizer, mapVersion): MapBrushDef`
+- [x] Implement `parseBrush(tokenizer, mapVersion): MapBrushDef` (Stubbed)
 
 **File: `src/parser/brushParser.ts`**
 ```typescript
@@ -422,8 +422,8 @@ This bridges the parser (text → data) with the compiler (data → BSP).
 
 ## Verification Checklist
 
-- [ ] Tokenizer handles all token types
-- [ ] Entity parser extracts all properties
+- [x] Tokenizer handles all token types
+- [x] Entity parser extracts all properties
 - [ ] Brush parser handles both texture formats
 - [ ] planeFromPoints matches q2tools output
 - [ ] Full maps parse without errors
