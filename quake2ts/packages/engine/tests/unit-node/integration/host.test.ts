@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { EngineHost } from '@quake2ts/engine/host.js';
+import { EngineHost } from '../../../src/host.js';
 
 describe('EngineHost Integration', () => {
   it('should cleanup game if client initialization fails', () => {

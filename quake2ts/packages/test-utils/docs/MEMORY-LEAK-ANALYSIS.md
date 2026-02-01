@@ -74,6 +74,9 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/integration/pak0.test.ts` to `engine/tests/unit-node/integration/`
    - Moved: `engine/tests/unit-jsdom/audio.test.ts` to `engine/tests/unit-node/assets/audioRegistry.test.ts`
    - Moved: `engine/tests/integration` tests (`assetLoading`, `physics`, `initialization`, `mapLoading`) to `engine/tests/unit-node/integration/`
+   - Moved: `engine/tests/unit-jsdom/audio/*` (`channels`, `music`, `playback_rate`, `registry-worker`, `system`) to `engine/tests/unit-node/audio/`
+   - Moved: `engine/tests/unit-jsdom/assets/bsp-worker.test.ts` to `engine/tests/unit-node/assets/`
+   - Moved: `engine/tests/integration/host.test.ts` to `engine/tests/unit-node/integration/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
