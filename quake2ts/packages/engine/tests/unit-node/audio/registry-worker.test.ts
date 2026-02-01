@@ -19,14 +19,15 @@ describe('AudioRegistry Worker', () => {
         };
 
         // Mock global Worker using class syntax
-        (global as any).Worker = class {
+        vi.stubGlobal('Worker', class {
             constructor() {
                 return workerMock;
             }
-        };
+        });
     });
 
     afterEach(() => {
+        vi.unstubAllGlobals();
         vi.restoreAllMocks();
     });
 
