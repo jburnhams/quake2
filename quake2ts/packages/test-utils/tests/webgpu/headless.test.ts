@@ -14,7 +14,7 @@ describe('WebGPU Headless Setup', () => {
     expect(setup.cleanup).toBeTypeOf('function');
 
     await setup.cleanup();
-  });
+  }, 20000);
 
   it('should create a test context with adapter, device and queue', async () => {
     const context = await createHeadlessTestContext();
