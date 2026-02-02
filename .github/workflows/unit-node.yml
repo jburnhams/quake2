@@ -13,14 +13,14 @@ jobs:
     strategy:
       matrix:
         node-version: [25]
-        group: [game, engine-client, shared-server]
+        group: [game, engine-client, other]
         include:
           - group: game
             packages: "packages/game"
           - group: engine-client
             packages: "packages/engine packages/client packages/cgame"
-          - group: shared-server
-            packages: "packages/shared packages/server packages/test-utils"
+          - group: other
+            packages: "--exclude packages/game --exclude packages/engine --exclude packages/client --exclude packages/cgame"
       fail-fast: false
     defaults:
       run:
