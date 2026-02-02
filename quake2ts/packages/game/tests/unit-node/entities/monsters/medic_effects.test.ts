@@ -1,9 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
-import { SP_monster_medic } from '../../../../src/entities/monsters/medic';
-import { Entity } from '../../../../src/entities/entity';
-import { DeadFlag } from '../../../../src/entities/entity';
-import { MulticastType } from '../../../../src/imports';
+import { createTestContext, createEntity } from '@quake2ts/test-utils';
+import { SP_monster_medic } from '../../../../src/entities/monsters/medic.js';
+import { DeadFlag } from '../../../../src/entities/entity.js';
+import { MulticastType } from '../../../../src/imports.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
 
 describe('Medic Effects', () => {
@@ -12,14 +11,18 @@ describe('Medic Effects', () => {
     const { entities } = context;
 
     // Spawn medic
-    const medic = new Entity(1);
+    const medic = createEntity({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 }
+    });
     SP_monster_medic(medic, context);
-    medic.origin = { x: 0, y: 0, z: 0 };
 
     // Spawn dead monster
-    const deadMonster = new Entity(2);
-    deadMonster.deadflag = DeadFlag.Dead;
-    deadMonster.origin = { x: 50, y: 0, z: 0 }; // Close enough
+    const deadMonster = createEntity({
+        index: 2,
+        deadflag: DeadFlag.Dead,
+        origin: { x: 50, y: 0, z: 0 } // Close enough
+    });
 
     // Assign enemy
     medic.enemy = deadMonster;
