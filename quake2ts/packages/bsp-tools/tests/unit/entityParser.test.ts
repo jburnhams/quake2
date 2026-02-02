@@ -112,5 +112,16 @@ describe('EntityParser', () => {
       expect(entity.brushes[0]).toBe(mockBrush);
       expect(brushParser.parseBrush).toHaveBeenCalled();
     });
+
+    it('should parse origin property correctly', () => {
+      const input = `{
+"classname" "info_player_start"
+"origin" "100 -20 30.5"
+}`;
+      const tokenizer = new MapTokenizer(input);
+      const entity = parseEntity(tokenizer);
+
+      expect(entity.properties.get('origin')).toBe('100 -20 30.5');
+    });
   });
 });

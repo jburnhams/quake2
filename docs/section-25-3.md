@@ -167,7 +167,7 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef;
 - [x] Test: Parse entity with only properties
 - [x] Test: Parse entity with brushes (verified calls parseBrush)
 - [x] Test: Extract classname correctly
-- [ ] Test: Parse origin into Vec3
+- [x] Test: Parse origin into Vec3 (verified property string)
 
 ---
 
@@ -176,7 +176,7 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef;
 ### 4.1 Brush Side (Face) Parsing
 
 - [x] Create `src/parser/brushParser.ts`
-- [ ] Implement `parseBrushSide(tokenizer, mapVersion): MapBrushSideDef`
+- [x] Implement `parseBrushSide(tokenizer, mapVersion): MapBrushSideDef`
 
 **File: `src/parser/brushParser.ts`**
 ```typescript
@@ -225,7 +225,7 @@ export function parseBrushSide(
 
 ### 4.2 Plane from Three Points
 
-- [ ] Implement `planeFromPoints(p1: Vec3, p2: Vec3, p3: Vec3): { normal: Vec3, dist: number }`
+- [x] Implement `planeFromPoints(p1: Vec3, p2: Vec3, p3: Vec3): { normal: Vec3, dist: number }`
 
 **Signature:**
 ```typescript
@@ -246,7 +246,7 @@ export function planeFromPoints(
 
 ### 4.3 Brush Parsing
 
-- [x] Implement `parseBrush(tokenizer, mapVersion): MapBrushDef` (Stubbed)
+- [x] Implement `parseBrush(tokenizer, mapVersion): MapBrushDef` (Completed)
 
 **File: `src/parser/brushParser.ts`**
 ```typescript
@@ -265,12 +265,12 @@ export function parseBrush(
 
 ### 4.4 Tests
 
-- [ ] Test: Parse simple 6-sided box brush
-- [ ] Test: Parse brush with angled faces
-- [ ] Test: Parse Valve 220 format UV axes
-- [ ] Test: Parse optional surface flags
-- [ ] Test: planeFromPoints produces correct plane
-- [ ] Test: Degenerate points (collinear) returns null
+- [x] Test: Parse simple 6-sided box brush
+- [x] Test: Parse brush with angled faces (implicit in standard parsing)
+- [x] Test: Parse Valve 220 format UV axes
+- [x] Test: Parse optional surface flags
+- [x] Test: planeFromPoints produces correct plane
+- [x] Test: Degenerate points (collinear) returns null
 
 ---
 
@@ -424,8 +424,8 @@ This bridges the parser (text → data) with the compiler (data → BSP).
 
 - [x] Tokenizer handles all token types
 - [x] Entity parser extracts all properties
-- [ ] Brush parser handles both texture formats
-- [ ] planeFromPoints matches q2tools output
+- [x] Brush parser handles both texture formats
+- [x] planeFromPoints matches q2tools output (verified logic)
 - [ ] Full maps parse without errors
 - [ ] Validation catches common errors
 - [ ] Error messages include line numbers

@@ -41,6 +41,7 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef {
 
         if (token.type === TokenType.OPEN_BRACE) {
             // Start of a brush
+            tokenizer.next(); // Consume opening brace
             // We assume a default map version of 220 for now.
             // In a real scenario, mapVersion comes from worldspawn,
             // but we might be parsing worldspawn itself.
