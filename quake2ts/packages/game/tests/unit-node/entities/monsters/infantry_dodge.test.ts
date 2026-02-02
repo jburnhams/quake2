@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { SP_monster_infantry } from '../../../../src/entities/monsters/infantry.js';
-import { Entity, MoveType, Solid } from '../../../../src/entities/entity.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
+import { Entity } from '../../../../src/entities/entity.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
 import * as aiIndex from '../../../../src/ai/index.js';
+import { createTestContext, createEntity, TestContext } from '@quake2ts/test-utils';
 
 vi.mock('../../../../src/ai/index.js', async (importOriginal) => {
     const actual = await importOriginal<typeof aiIndex>();
@@ -14,30 +14,23 @@ vi.mock('../../../../src/ai/index.js', async (importOriginal) => {
 });
 
 describe('monster_infantry dodge', () => {
+    let context: TestContext;
     let sys: EntitySystem;
-    let context: SpawnContext;
     let infantry: Entity;
 
     beforeEach(() => {
-        sys = {
-            spawn: () => new Entity(1),
-            modelIndex: (s: string) => 1,
-            timeSeconds: 10,
-            multicast: vi.fn(),
-            trace: vi.fn(),
-            engine: { sound: vi.fn() },
-            rng: {
-                frandom: vi.fn(() => 0.5),
-                irandom: vi.fn(() => 0),
-                crandom: vi.fn(() => 0),
-            },
-        } as unknown as EntitySystem;
+        context = createTestContext();
+        sys = context.entities;
 
-        context = {
-            entities: sys,
-        } as unknown as SpawnContext;
+        // Ensure rng methods are spies or mockable
+        // createTestContext provides a real RNG by default, but we want to control it.
+        // We can overwrite it with a mock or spy on it.
+        // Since we want strict control over return values, let's mock the methods.
+        vi.spyOn(sys.rng, 'frandom');
+        vi.spyOn(sys.rng, 'irandom');
+        vi.spyOn(sys.rng, 'crandom');
 
-        infantry = new Entity(1);
+        infantry = createEntity({ index: 1 });
         SP_monster_infantry(infantry, context);
     });
 
@@ -46,8 +39,7 @@ describe('monster_infantry dodge', () => {
     });
 
     it('dodges when random check passes', () => {
-        infantry.enemy = new Entity(2);
-        infantry.enemy.health = 100;
+        infantry.enemy = createEntity({ index: 2, health: 100 });
 
         // Mock rng to be < 0.3 (0.1)
         vi.mocked(sys.rng.frandom).mockReturnValue(0.1);
@@ -60,8 +52,7 @@ describe('monster_infantry dodge', () => {
     });
 
     it('does not dodge when random check fails', () => {
-        infantry.enemy = new Entity(2);
-        infantry.enemy.health = 100;
+        infantry.enemy = createEntity({ index: 2, health: 100 });
 
         // Mock rng to be > 0.3 (0.5)
         vi.mocked(sys.rng.frandom).mockReturnValue(0.5);
@@ -75,9 +66,11 @@ describe('monster_infantry dodge', () => {
     });
 
     it('attacks when visible and close', () => {
-        infantry.enemy = new Entity(2);
-        infantry.enemy.health = 100;
-        infantry.enemy.origin = { x: 100, y: 0, z: 0 }; // Close
+        infantry.enemy = createEntity({
+            index: 2,
+            health: 100,
+            origin: { x: 100, y: 0, z: 0 }
+        });
         infantry.origin = { x: 0, y: 0, z: 0 };
 
         // Mock visible to return true

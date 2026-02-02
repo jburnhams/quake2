@@ -1,10 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_guncmdr } from '../../../../src/entities/monsters/gunnerCommander.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntity, TestContext } from '@quake2ts/test-utils';
 import { Entity, MoveType, Solid } from '../../../../src/entities/entity.js';
-import * as rogueAi from '../../../../src/ai/rogue.js';
-import * as projectiles from '../../../../src/entities/projectiles.js';
-import * as attack from '../../../../src/entities/monsters/attack.js';
 
 // Mock dependencies
 vi.mock('../../../../src/ai/rogue.js', async (importOriginal) => {
@@ -30,7 +27,7 @@ vi.mock('../../../../src/entities/monsters/attack.js', async (importOriginal) =>
 });
 
 describe('monster_guncmdr', () => {
-  let context: any;
+  let context: TestContext;
   let self: Entity;
 
   beforeEach(() => {
@@ -38,12 +35,17 @@ describe('monster_guncmdr', () => {
     context = createTestContext();
     // Mock health_multiplier property on context which is used in spawn
     context.health_multiplier = 1;
-    self = new Entity(1);
-    self.enemy = new Entity(2);
-    self.enemy.inUse = true;
-    self.enemy.origin = { x: 100, y: 0, z: 0 };
-    self.origin = { x: 0, y: 0, z: 0 };
-    self.angles = { x: 0, y: 0, z: 0 };
+
+    self = createEntity({
+        index: 1,
+        origin: { x: 0, y: 0, z: 0 },
+        angles: { x: 0, y: 0, z: 0 },
+        enemy: createEntity({
+            index: 2,
+            inUse: true,
+            origin: { x: 100, y: 0, z: 0 }
+        })
+    });
   });
 
   it('should spawn correctly', () => {

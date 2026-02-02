@@ -1,8 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, Solid, MoveType } from '../../../../src/entities/entity.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
-import { GameEngine } from '../../../../src/index.js';
+import { Entity } from '../../../../src/entities/entity.js';
+import { createTestContext, createEntity, TestContext } from '@quake2ts/test-utils';
 import { SP_monster_gunner } from '../../../../src/entities/monsters/gunner.js';
 import { SP_monster_gladiator } from '../../../../src/entities/monsters/gladiator.js';
 import { SP_monster_tank } from '../../../../src/entities/monsters/tank.js';
@@ -43,29 +41,12 @@ vi.mock('../../../../src/entities/monsters/attack.js', () => ({
 }));
 
 describe('Monster Health Scaling', () => {
-  let sys: EntitySystem;
-  let context: SpawnContext;
+  let context: TestContext;
   let entity: Entity;
 
   beforeEach(() => {
-    const soundMock = vi.fn();
-    const engineMock = {
-        modelIndex: vi.fn().mockReturnValue(1),
-        sound: soundMock,
-    } as unknown as GameEngine;
-
-    sys = {
-        spawn: () => new Entity(1),
-        modelIndex: (s: string) => 1,
-        timeSeconds: 10,
-        multicast: vi.fn(),
-        engine: engineMock,
-        sound: soundMock,
-        soundIndex: vi.fn().mockReturnValue(1),
-        linkentity: vi.fn(),
-    } as unknown as EntitySystem;
-
-    entity = new Entity(1);
+    context = createTestContext();
+    entity = createEntity({ index: 1 });
     vi.clearAllMocks();
   });
 
@@ -99,13 +80,10 @@ describe('Monster Health Scaling', () => {
   testCases.forEach(({ name, sp, baseHealth }) => {
     it(`${name} health scales with multiplier`, () => {
         // Reset entity
-        entity = new Entity(1);
+        entity = createEntity({ index: 1 });
 
         // Test with 2.0 multiplier
-        context = {
-            entities: sys,
-            health_multiplier: 2.0,
-        } as unknown as SpawnContext;
+        context.health_multiplier = 2.0;
 
         sp(entity, context);
 
@@ -115,13 +93,10 @@ describe('Monster Health Scaling', () => {
 
     it(`${name} health has no scale with 1.0 multiplier`, () => {
         // Reset entity
-        entity = new Entity(1);
+        entity = createEntity({ index: 1 });
 
         // Test with 1.0 multiplier
-        context = {
-            entities: sys,
-            health_multiplier: 1.0,
-        } as unknown as SpawnContext;
+        context.health_multiplier = 1.0;
 
         sp(entity, context);
 
