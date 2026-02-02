@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createEngineRuntime } from '../../../src/runtime.js';
-import type { GameFrameResult, GameSimulation, ClientExports, ClientImports } from '../../../src/host.js';
+import type { GameFrameResult, GameSimulation } from '../../../src/host.js';
 import { EngineRuntime } from '../../../src/runtime.js';
 
 describe('Integration Point Smoke Tests', () => {
