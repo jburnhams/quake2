@@ -43,16 +43,17 @@ export class MapParser {
           try {
             const entity = parseEntity(tokenizer);
             entities.push(entity);
-          } catch (err: unknown) {
+          } catch (err) {
+            const e = err as any;
             // Enrich error with location if missing
-            if (!(err instanceof MapParseError)) {
+            if (!(e instanceof MapParseError)) {
               throw new MapParseError(
-                err.message,
+                e.message,
                 tokenizer.line,
                 tokenizer.column
               );
             }
-            throw err;
+            throw e;
           }
         } else {
           throw new MapParseError(
@@ -62,11 +63,12 @@ export class MapParser {
           );
         }
       }
-    } catch (err: any) {
-      if (err instanceof MapParseError) {
-        throw err;
+    } catch (err) {
+      const e = err as any;
+      if (e instanceof MapParseError) {
+        throw e;
       }
-      throw new MapParseError(err.message, tokenizer.line, tokenizer.column);
+      throw new MapParseError(e.message, tokenizer.line, tokenizer.column);
     }
 
     if (entities.length === 0) {
