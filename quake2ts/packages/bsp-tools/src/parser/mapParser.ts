@@ -43,7 +43,7 @@ export class MapParser {
           try {
             const entity = parseEntity(tokenizer);
             entities.push(entity);
-          } catch (err: any) {
+          } catch (err: unknown) {
             // Enrich error with location if missing
             if (!(err instanceof MapParseError)) {
               throw new MapParseError(
