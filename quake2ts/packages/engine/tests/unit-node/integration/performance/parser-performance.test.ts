@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { NetworkMessageParser } from '@quake2ts/engine/demo/parser';
+import { NetworkMessageParser } from '../../../../src/demo/parser';
 import { BinaryStream, ServerCommand } from '@quake2ts/shared';
 
 class ByteBuilder {

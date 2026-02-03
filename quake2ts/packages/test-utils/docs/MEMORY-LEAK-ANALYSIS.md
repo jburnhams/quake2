@@ -78,6 +78,7 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/assets/bsp-worker.test.ts` to `engine/tests/unit-node/assets/`
    - Moved: `engine/tests/integration/host.test.ts` to `engine/tests/unit-node/integration/`
    - Moved: `engine/tests/integration` tests (`audio/*`, `demo/playback.test.ts`, `smoke.test.ts`) to `engine/tests/unit-node/integration/`
+   - Moved: `engine/tests/integration/performance` tests (`memory.test.ts`, `parser-performance.test.ts`, `pipeline_memory.test.ts`) to `engine/tests/unit-node/integration/performance/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
