@@ -1,6 +1,6 @@
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { createRenderer, Renderer } from '../../../../src/render/renderer.js';
 
 // Mock WebGL2RenderingContext
 const gl = {
@@ -63,9 +63,18 @@ describe('Renderer Memory Tracking', () => {
     beforeEach(() => {
         vi.restoreAllMocks(); // Use restore instead of clear to reset mock implementations
         vi.clearAllMocks();
+
+        // Mock createImageBitmap
+        const mockBitmap = { width: 100, height: 100, close: vi.fn() } as unknown as ImageBitmap;
+        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue(mockBitmap));
+
         // Since createRenderer is a factory that internally instantiates pipelines and profiler,
         // we test the public API.
         renderer = createRenderer(gl);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('should track shader memory', () => {
@@ -76,10 +85,7 @@ describe('Renderer Memory Tracking', () => {
     });
 
     it('should track texture memory', async () => {
-        // Mock createImageBitmap
-        const mockBitmap = { width: 100, height: 100, close: vi.fn() } as unknown as ImageBitmap;
-        global.createImageBitmap = vi.fn().mockResolvedValue(mockBitmap);
-
+        // Uses default mock from beforeEach (100x100)
         const data = new ArrayBuffer(100);
         await renderer.registerPic('test.png', data);
 
@@ -90,7 +96,8 @@ describe('Renderer Memory Tracking', () => {
 
     it('should report total memory correctly', async () => {
         const mockBitmap = { width: 10, height: 10, close: vi.fn() } as unknown as ImageBitmap; // 400 bytes
-        global.createImageBitmap = vi.fn().mockResolvedValue(mockBitmap);
+        // Override mock for this test
+        (global.createImageBitmap as any).mockResolvedValue(mockBitmap);
 
         await renderer.registerPic('test2.png', new ArrayBuffer(10));
 
