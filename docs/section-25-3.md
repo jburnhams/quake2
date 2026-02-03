@@ -278,8 +278,8 @@ export function parseBrush(
 
 ### 5.1 MapParser Class
 
-- [ ] Create `src/parser/mapParser.ts`
-- [ ] Implement main `MapParser` class
+- [x] Create `src/parser/mapParser.ts`
+- [x] Implement main `MapParser` class
 
 **File: `src/parser/mapParser.ts`**
 ```typescript
@@ -324,7 +324,7 @@ export interface ValidationResult {
 
 ### 5.2 Parsing Implementation
 
-- [ ] Implement `MapParser.parse()`
+- [x] Implement `MapParser.parse()`
 
 **Algorithm:**
 1. Create tokenizer
@@ -338,7 +338,7 @@ export interface ValidationResult {
 
 ### 5.3 Validation
 
-- [ ] Implement `MapParser.validate()`
+- [x] Implement `MapParser.validate()`
 
 **Checks:**
 - Worldspawn exists
@@ -349,12 +349,12 @@ export interface ValidationResult {
 
 ### 5.4 Tests
 
-- [ ] Test: Parse minimal valid map (worldspawn only)
-- [ ] Test: Parse map with player start
-- [ ] Test: Parse map with brushes
-- [ ] Test: Error on missing worldspawn
-- [ ] Test: Error on invalid brush (< 4 sides)
-- [ ] Test: Warning on unusual but valid constructs
+- [x] Test: Parse minimal valid map (worldspawn only)
+- [x] Test: Parse map with player start
+- [x] Test: Parse map with brushes
+- [x] Test: Error on missing worldspawn
+- [x] Test: Error on invalid brush (< 4 sides)
+- [x] Test: Warning on unusual but valid constructs
 
 ---
 
@@ -362,7 +362,7 @@ export interface ValidationResult {
 
 ### 6.1 Parse Errors
 
-- [ ] Create custom error class with location info
+- [x] Create custom error class with location info
 
 **File: `src/parser/errors.ts`**
 ```typescript
@@ -390,6 +390,7 @@ export class MapParseError extends Error {
 ### 7.1 MapData to Builder Conversion
 
 - [ ] Implement conversion from parsed map to builder format
+- [ ] Depends on Section 25-4 (Primitives)
 
 **File: `src/parser/mapToBuilder.ts`**
 ```typescript
@@ -426,7 +427,7 @@ This bridges the parser (text → data) with the compiler (data → BSP).
 - [x] Entity parser extracts all properties
 - [x] Brush parser handles both texture formats
 - [x] planeFromPoints matches q2tools output (verified logic)
-- [ ] Full maps parse without errors
-- [ ] Validation catches common errors
-- [ ] Error messages include line numbers
+- [x] Full maps parse without errors
+- [x] Validation catches common errors
+- [x] Error messages include line numbers
 - [ ] WASM comparison tests pass
