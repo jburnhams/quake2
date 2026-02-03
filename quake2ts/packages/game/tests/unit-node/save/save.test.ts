@@ -4,21 +4,12 @@ import { describe, expect, it } from 'vitest';
 import { Entity, EntitySystem } from '../../../src/entities/index.js';
 import { LevelClock } from '../../../src/level.js';
 import { applySaveFile, createSaveFile, parseSaveFile, SAVE_FORMAT_VERSION } from '../../../src/save/save.js';
-import { createMockEngine } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('save/load determinism', () => {
   it('restores entity wiring, timing, and RNG deterministically', () => {
-    const mockEngine = createMockEngine();
-    // EntitySystem expects trace in engine for some operations, but we can patch it if needed or assume it's not called during basic spawn/link unless collision is active.
-    // However, the original test had trace: () => ({})
-    // createMockEngine returns { sound, soundIndex, modelIndex, centerprintf }
-    // We should add trace stub.
-    const engineWithTrace = {
-        ...mockEngine,
-        trace: () => ({}) as any
-    };
-
-    const entitySystem = new EntitySystem(engineWithTrace);
+    const { engine } = createGameImportsAndEngine();
+    const entitySystem = new EntitySystem(engine);
     entitySystem.beginFrame(10);
 
     const alpha = entitySystem.spawn();
@@ -68,7 +59,7 @@ describe('save/load determinism', () => {
 
     const parsed = parseSaveFile({ ...save, extraTopLevel: 'ignored' });
 
-    const restoredSystem = new EntitySystem(engineWithTrace);
+    const restoredSystem = new EntitySystem(engine);
     const restoredClock = new LevelClock();
     const restoredRng = new RandomGenerator({ seed: 7 });
 
@@ -104,9 +95,8 @@ describe('save/load determinism', () => {
   });
 
   it('captures RNG state immutably when creating saves', () => {
-    const mockEngine = createMockEngine();
-    const engineWithTrace = { ...mockEngine, trace: () => ({}) as any };
-    const entitySystem = new EntitySystem(engineWithTrace);
+    const { engine } = createGameImportsAndEngine();
+    const entitySystem = new EntitySystem(engine);
     const rng = new RandomGenerator({ seed: 5 });
     rng.irandomUint32();
     const rngState = rng.getState();
@@ -128,9 +118,8 @@ describe('save/load determinism', () => {
   });
 
   it('parses older or future saves while filling defaults', () => {
-    const mockEngine = createMockEngine();
-    const engineWithTrace = { ...mockEngine, trace: () => ({}) as any };
-    const baseSystem = new EntitySystem(engineWithTrace);
+    const { engine } = createGameImportsAndEngine();
+    const baseSystem = new EntitySystem(engine);
     const baseRng = new RandomGenerator({ seed: 99 }).getState();
     const baseSave = {
       version: SAVE_FORMAT_VERSION,
