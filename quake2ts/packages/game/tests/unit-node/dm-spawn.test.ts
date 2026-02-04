@@ -6,7 +6,6 @@ describe('Deathmatch Spawn', () => {
     let context: ReturnType<typeof createTestContext>;
 
     beforeEach(() => {
-        // Use createTestContext which sets up EntitySystem with a mockable RNG
         context = createTestContext();
         context.entities.deathmatch = true;
     });
@@ -25,14 +24,10 @@ describe('Deathmatch Spawn', () => {
         const spots = context.entities.findByClassname('info_player_deathmatch');
         expect(spots.length).toBe(2);
 
-        // Spy on the rng in the context
         vi.spyOn(context.entities.rng, 'frandom').mockReturnValue(0.25);
 
         const selected = SelectDeathmatchSpawnPoint(context.entities);
-        // logic: floor(0.25 * 2) = 0. spots[0] is s1 (first spawned) or s2 (second spawned)?
-        // EntitySystem.spawn pushes to array.
-        // findByClassname filters that array.
-        // s1 spawned first -> index 0. s2 spawned second -> index 1.
+        // Expect index 0 (floor(0.25 * 2))
         expect(selected).toBe(s1);
     });
 
@@ -53,8 +48,6 @@ describe('GameExports Respawn', () => {
             config: { deathmatch: true }
         });
 
-        // Force RNG to return 0 to pick the first spot deterministically
-        // The game.random object is created by createTestGame, we spy on its method
         vi.spyOn(game.random, 'frandom').mockReturnValue(0);
 
         spawnEntity(game.entities, createEntityFactory({

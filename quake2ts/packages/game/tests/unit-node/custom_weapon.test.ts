@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Entity, GameExports } from '@quake2ts/game';
-import { registerWeapon, WeaponDefinition } from '../../src/combat/weapons/registry.js';
+import { Entity, GameExports } from '../../src/index.js';
+import { registerWeapon, type WeaponDefinition } from '../../src/combat/weapons/registry.js';
 import { fire } from '../../src/combat/weapons/firing.js';
 import { WeaponId } from '../../src/inventory/playerInventory.js';
 import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
@@ -10,7 +10,6 @@ describe('Custom Weapon Registration', () => {
   let player: Entity;
 
   beforeEach(() => {
-    // Use createTestGame to get a functional game instance with entity system
     const result = createTestGame({
         config: {
             time: 10
@@ -18,11 +17,9 @@ describe('Custom Weapon Registration', () => {
     });
     game = result.game;
 
-    // Use spawnEntity to properly insert the player into the entity system
     const playerFactory = createPlayerEntityFactory();
     const client = playerFactory.client!;
 
-    // Customize inventory for the test
     client.inventory.ownedWeapons = new Set([WeaponId.Blaster]);
     client.inventory.currentWeapon = WeaponId.Blaster;
 
