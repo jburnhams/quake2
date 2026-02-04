@@ -44,7 +44,7 @@ export interface StairsParams {
   [key: string]: any;
 }
 
-export interface ValidationResult {
+export interface BuildValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
@@ -87,20 +87,20 @@ export class BspBuilder {
   }
 
   // High-level primitives (stubs)
-  addRoom(params: RoomParams): this {
+  addRoom(_params: RoomParams): this {
     throw new Error('Method not implemented.');
   }
 
-  addCorridor(params: CorridorParams): this {
+  addCorridor(_params: CorridorParams): this {
     throw new Error('Method not implemented.');
   }
 
-  addStairs(params: StairsParams): this {
+  addStairs(_params: StairsParams): this {
     throw new Error('Method not implemented.');
   }
 
   // From parsed map (stub)
-  fromParsedMap(map: ParsedMap): this {
+  fromParsedMap(_map: ParsedMap): this {
     throw new Error('Method not implemented.');
   }
 
@@ -123,7 +123,7 @@ export class BspBuilder {
   }
 
   // Validation before build (stub)
-  validate(): ValidationResult {
+  validate(): BuildValidationResult {
     return {
       valid: true,
       errors: [],
