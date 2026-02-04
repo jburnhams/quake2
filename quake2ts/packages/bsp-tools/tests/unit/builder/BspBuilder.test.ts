@@ -28,6 +28,8 @@ describe('BspBuilder', () => {
       sides: [] // Empty for now
     };
     builder.addBrush(brush);
+    const result = builder.build();
+    expect(result.stats.brushCount).toBe(1);
   });
 
   it('should return a build result structure', () => {
