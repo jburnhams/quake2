@@ -14,6 +14,8 @@ Create a programmatic API for building BSP maps from geometric primitives. This 
 
 ### 1.1 Class Overview
 
+- [x] Create `src/builder/BspBuilder.ts`
+
 **File: `src/builder/BspBuilder.ts`**
 ```typescript
 import type { BspData } from '@quake2ts/shared';
@@ -77,7 +79,7 @@ export class BspBuilder {
 
 ### 1.2 Internal State
 
-- [ ] Define internal state structure
+- [x] Define internal state structure
 
 ```typescript
 interface BuilderState {
@@ -94,7 +96,7 @@ interface BuilderState {
 
 ### 2.1 Brush Types
 
-- [ ] Create `src/builder/types.ts`
+- [x] Create `src/builder/types.ts`
 
 **File: `src/builder/types.ts`**
 ```typescript
@@ -138,7 +140,7 @@ export interface EntityDef {
 
 ### 2.2 Default Values
 
-- [ ] Create constants for defaults
+- [x] Create constants for defaults
 
 ```typescript
 export const DEFAULT_TEXTURE: TextureDef = {
