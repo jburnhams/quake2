@@ -43,6 +43,15 @@ describe('Client <-> CGame Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
+    global.localStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    };
+
     const mockRenderer = createMockRenderer({
       width: 800,
       height: 600,

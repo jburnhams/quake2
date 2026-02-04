@@ -11,6 +11,15 @@ describe('Client FOV and View', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
+    global.localStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    };
+
     mockRenderer = createMockRenderer({
         width: 800,
         height: 600,

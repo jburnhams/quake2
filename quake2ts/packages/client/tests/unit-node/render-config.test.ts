@@ -11,6 +11,15 @@ describe('Client Renderer Configuration', () => {
   let clientImports: ClientImports;
 
   beforeEach(() => {
+    global.localStorage = {
+      getItem: vi.fn(),
+      setItem: vi.fn(),
+      removeItem: vi.fn(),
+      clear: vi.fn(),
+      length: 0,
+      key: vi.fn(),
+    };
+
     mockRenderer = createMockRenderer({
       width: 800,
       height: 600,
