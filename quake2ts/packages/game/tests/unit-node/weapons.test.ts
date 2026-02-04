@@ -1,4 +1,4 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, type Mock } from 'vitest';
 import { GameExports } from '../../src/index.js';
 import { Entity } from '../../src/entities/entity.js';
 import { WeaponId } from '../../src/inventory/playerInventory.js';
@@ -30,6 +30,10 @@ vi.mock('../../src/combat/damage.js', () => ({
     T_RadiusDamage: vi.fn()
 }));
 
+type MutableGame = {
+    -readonly [P in keyof GameExports]: GameExports[P];
+};
+
 describe('Weapon Tests', () => {
     let mockGame: GameExports;
     let mockImports: MockImportsAndEngine['imports'];
@@ -37,7 +41,7 @@ describe('Weapon Tests', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        (T_Damage as any).mockClear();
+        vi.mocked(T_Damage).mockClear();
 
         const { game, imports } = createTestGame({
             imports: {
@@ -84,6 +88,10 @@ describe('Weapon Tests', () => {
         }));
     });
 
+    const setDeathmatch = (enabled: boolean) => {
+        (mockGame as MutableGame).deathmatch = enabled;
+    };
+
     describe('Blaster', () => {
         it('should fire with speed 1500', () => {
              fireBlaster(mockGame, player);
@@ -101,16 +109,15 @@ describe('Weapon Tests', () => {
 
     describe('Railgun', () => {
         it('should deal 125 damage in single player', () => {
-            (mockGame as any).deathmatch = false;
-            // We need trace to hit something
-            const target = { takedamage: true };
-            // Hit once then stop (fraction 1.0)
-            mockImports.trace
+            setDeathmatch(false);
+            const target = createEntity({ takedamage: true });
+
+            vi.mocked(mockImports.trace)
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
-                    ent: target as any,
+                    ent: target,
                     plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
                 }))
                 .mockReturnValue(createTraceMock({
@@ -139,16 +146,15 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 100 damage in deathmatch', () => {
-            (mockGame as any).deathmatch = true;
-            // We need trace to hit something
-            const target = { takedamage: true };
-            // Hit once then stop
-            mockImports.trace
+            setDeathmatch(true);
+            const target = createEntity({ takedamage: true });
+
+            vi.mocked(mockImports.trace)
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
-                    ent: target as any,
+                    ent: target,
                     plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
                 }))
                 .mockReturnValue(createTraceMock({
@@ -179,13 +185,12 @@ describe('Weapon Tests', () => {
 
     describe('Chaingun', () => {
         it('should deal 8 damage in single player', () => {
-             (mockGame as any).deathmatch = false;
-             // Ensure spinup count triggers shots
-             const target = { takedamage: true };
-             mockImports.trace.mockReturnValue(createTraceMock({
+             setDeathmatch(false);
+             const target = createEntity({ takedamage: true });
+             vi.mocked(mockImports.trace).mockReturnValue(createTraceMock({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
-                 ent: target as any,
+                 ent: target,
                  plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
              }));
 
@@ -210,13 +215,13 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 6 damage in deathmatch', () => {
-             (mockGame as any).deathmatch = true;
+             setDeathmatch(true);
 
-             const target = { takedamage: true };
-             mockImports.trace.mockReturnValue(createTraceMock({
+             const target = createEntity({ takedamage: true });
+             vi.mocked(mockImports.trace).mockReturnValue(createTraceMock({
                  fraction: 0.5,
                  endpos: { x: 50, y: 0, z: 0 },
-                 ent: target as any,
+                 ent: target,
                  plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 }
              }));
 
@@ -244,13 +249,13 @@ describe('Weapon Tests', () => {
             fireChaingun(mockGame, player);
             expect(mockImports.trace).toHaveBeenCalledTimes(2);
 
-            mockImports.trace.mockClear();
+           vi.mocked(mockImports.trace).mockClear();
 
             // Second shot (spinup 2) -> 1 shot + 1 source trace
              fireChaingun(mockGame, player);
             expect(mockImports.trace).toHaveBeenCalledTimes(2);
 
-             mockImports.trace.mockClear();
+             vi.mocked(mockImports.trace).mockClear();
 
             // 3, 4, 5 -> 1 shot + 1 source trace each = 3 * 2 = 6
             fireChaingun(mockGame, player); // 3
@@ -258,17 +263,17 @@ describe('Weapon Tests', () => {
             fireChaingun(mockGame, player); // 5
             expect(mockImports.trace).toHaveBeenCalledTimes(6);
 
-             mockImports.trace.mockClear();
+             vi.mocked(mockImports.trace).mockClear();
 
             // 6 -> 2 shots + 1 source trace = 3
             fireChaingun(mockGame, player);
             expect(mockImports.trace).toHaveBeenCalledTimes(3);
 
-             mockImports.trace.mockClear();
+             vi.mocked(mockImports.trace).mockClear();
 
             // ... skip to 11
              for(let i=0; i<4; i++) fireChaingun(mockGame, player); // 7, 8, 9, 10
-             mockImports.trace.mockClear();
+             vi.mocked(mockImports.trace).mockClear();
 
              // 11 -> 3 shots + 1 source trace = 4
              fireChaingun(mockGame, player);
@@ -279,7 +284,7 @@ describe('Weapon Tests', () => {
     describe('Rocket Launcher', () => {
         it('should deal random damage 100-120 and 120 radius', () => {
             // Mock irandom to return a known value
-            const randomSpy = vi.spyOn(mockGame.random, 'irandom').mockReturnValue(10); // 100 + 10 = 110
+            vi.spyOn(mockGame.random, 'irandom').mockReturnValue(10); // 100 + 10 = 110
 
             fireRocket(mockGame, player);
 
@@ -297,7 +302,7 @@ describe('Weapon Tests', () => {
 
     describe('HyperBlaster', () => {
          it('should deal 20 damage in single player', () => {
-            (mockGame as any).deathmatch = false;
+            setDeathmatch(false);
             fireHyperBlaster(mockGame, player);
 
             expect(createBlasterBolt).toHaveBeenCalledWith(
@@ -312,7 +317,7 @@ describe('Weapon Tests', () => {
          });
 
          it('should deal 15 damage in deathmatch', () => {
-            (mockGame as any).deathmatch = true;
+            setDeathmatch(true);
             fireHyperBlaster(mockGame, player);
 
             expect(createBlasterBolt).toHaveBeenCalledWith(
@@ -329,7 +334,7 @@ describe('Weapon Tests', () => {
 
     describe('BFG10K', () => {
         it('should deal 500 damage in single player', () => {
-            (mockGame as any).deathmatch = false;
+            setDeathmatch(false);
             player.client!.gun_frame = 22; // Fire frame
 
             fireBFG(mockGame, player);
@@ -346,7 +351,7 @@ describe('Weapon Tests', () => {
         });
 
         it('should deal 200 damage in deathmatch', () => {
-            (mockGame as any).deathmatch = true;
+            setDeathmatch(true);
             player.client!.gun_frame = 22; // Fire frame
 
             fireBFG(mockGame, player);

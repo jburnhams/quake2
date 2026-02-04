@@ -6,7 +6,6 @@ import { createTestGame, createPlayerEntityFactory, spawnEntity } from '@quake2t
 import { T_Damage, DamageFlags, DamageMod } from '../../src/combat/index.js';
 import { giveItem } from '../../src/inventory/index.js';
 
-// Mock T_Damage
 vi.mock('../../src/combat/index.js', async () => {
     const actual = await vi.importActual('../../src/combat/index.js');
     return {
@@ -15,7 +14,6 @@ vi.mock('../../src/combat/index.js', async () => {
     };
 });
 
-// Mock giveItem
 vi.mock('../../src/inventory/index.js', async () => {
     const actual = await vi.importActual('../../src/inventory/index.js');
     return {
@@ -34,13 +32,10 @@ describe('Admin/Cheat APIs', () => {
         game = result.game;
         entities = game.entities;
 
-        // Use spawnEntity to properly insert the player into the entity system
-        // This avoids needing to manually mock 'find' or handle entity linking
         player = spawnEntity(entities, createPlayerEntityFactory({
              origin: { x: 10, y: 20, z: 30 }
         }));
 
-        // Also mock unlink/link for teleport
         vi.spyOn(entities, 'unlink');
         vi.spyOn(entities, 'link');
     });
@@ -75,12 +70,12 @@ describe('Admin/Cheat APIs', () => {
 
     it('giveItem should call inventory giveItem', () => {
         game.giveItem('weapon_shotgun');
-        expect(giveItem).toHaveBeenCalledWith(player, 'weapon_shotgun');
+        expect(vi.mocked(giveItem)).toHaveBeenCalledWith(player, 'weapon_shotgun');
     });
 
     it('damage should call T_Damage on player', () => {
         game.damage(50);
-        expect(T_Damage).toHaveBeenCalledWith(
+        expect(vi.mocked(T_Damage)).toHaveBeenCalledWith(
             player,
             null,
             null,
@@ -110,7 +105,6 @@ describe('Admin/Cheat APIs', () => {
     });
 
     it('API methods should gracefully handle missing player', () => {
-         // Free the player to simulate missing player
          entities.free(player);
 
          expect(() => game.setGodMode(true)).not.toThrow();

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { handleItemPickup } from '../../src/entities/items/common.js';
 import { Solid, Entity, GameExports } from '../../src/index.js';
 import { createTestGame, createItemEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
@@ -31,6 +31,7 @@ describe('Item Respawn', () => {
 
     it('handleItemPickup should schedule respawn in deathmatch', () => {
         game.entities.scheduleThink = vi.fn();
+        const scheduleThinkMock = game.entities.scheduleThink as Mock;
 
         handleItemPickup(game, item, player);
 
@@ -38,17 +39,15 @@ describe('Item Respawn', () => {
         expect(item.modelindex).toBe(0);
         expect(item.svflags & 1).toBeTruthy(); // Hidden
 
-        expect(game.entities.scheduleThink).toHaveBeenCalled();
-        const call = (game.entities.scheduleThink as any).mock.calls[0];
-        expect(call[0]).toBe(item);
-        expect(call[1]).toBeGreaterThan(game.time); // scheduled in future
+        expect(scheduleThinkMock).toHaveBeenCalled();
+        const [target, time] = scheduleThinkMock.mock.calls[0];
+        expect(target).toBe(item);
+        expect(time).toBeGreaterThan(game.time);
     });
 
     it('respawn callback should restore item', () => {
-        // Hide item first
         handleItemPickup(game, item, player);
 
-        // Execute think
         if (item.think) {
             item.think(item);
         }
