@@ -4,3 +4,6 @@ export * from './parser/entityParser.js';
 export * from './parser/brushParser.js';
 export * from './parser/mapParser.js';
 export * from './parser/errors.js';
+export * from './builder/types.js';
+export * from './builder/defaults.js';
+export * from './builder/BspBuilder.js';
