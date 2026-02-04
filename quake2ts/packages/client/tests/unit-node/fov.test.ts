@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager, createMockEngineHost } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager, createMockEngineHost, createMockLocalStorage } from '@quake2ts/test-utils';
 
 describe('Client FOV and View', () => {
   let client: ClientExports;
@@ -11,14 +11,7 @@ describe('Client FOV and View', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
 
-    global.localStorage = {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-      length: 0,
-      key: vi.fn(),
-    };
+    global.localStorage = createMockLocalStorage();
 
     mockRenderer = createMockRenderer({
         width: 800,

@@ -3,7 +3,7 @@ import { createClient, ClientImports, ClientExports } from '@quake2ts/client/ind
 import { ClientConfigStrings } from '@quake2ts/client/configStrings.js';
 import { EngineImports, EngineHost, Renderer } from '@quake2ts/engine';
 import { AssetManager } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager, createMockLocalStorage } from '@quake2ts/test-utils';
 
 // Mock CGame
 vi.mock('@quake2ts/cgame', async (importOriginal) => {
@@ -43,14 +43,7 @@ describe('Client <-> CGame Integration', () => {
   beforeEach(() => {
     vi.clearAllMocks();
 
-    global.localStorage = {
-      getItem: vi.fn(),
-      setItem: vi.fn(),
-      removeItem: vi.fn(),
-      clear: vi.fn(),
-      length: 0,
-      key: vi.fn(),
-    };
+    global.localStorage = createMockLocalStorage();
 
     const mockRenderer = createMockRenderer({
       width: 800,
