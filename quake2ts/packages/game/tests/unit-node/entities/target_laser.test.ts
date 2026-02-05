@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { registerTargetSpawns } from '../../../src/entities/targets.js';
 import { Entity, MoveType, ServerFlags, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
-import { SpawnRegistry } from '../../../src/entities/spawn.js';
+import { createTestGame, spawnEntity, createEntityFactory } from '@quake2ts/test-utils';
 import { T_Damage } from '../../../src/combat/damage.js';
 import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand, RenderFx } from '@quake2ts/shared';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import type { GameExports } from '../../../src/index.js';
+import type { MockImportsAndEngine } from '@quake2ts/test-utils';
+import type { SpawnContext } from '../../../src/entities/spawn.js';
 
 // Mock T_Damage
 vi.mock('../../../src/combat/damage.js', () => ({
@@ -15,35 +15,43 @@ vi.mock('../../../src/combat/damage.js', () => ({
 }));
 
 describe('target_laser', () => {
-    let context: ReturnType<typeof createTestContext>;
+    let game: GameExports;
+    let imports: MockImportsAndEngine['imports'];
     let entity: Entity;
-    let registry: SpawnRegistry;
+    let spawnContext: SpawnContext;
 
     beforeEach(() => {
-        context = createTestContext();
-        registry = new SpawnRegistry();
-        registerTargetSpawns(registry);
+        const result = createTestGame();
+        game = result.game;
+        imports = result.imports;
 
-        entity = createEntityFactory({
-            number: 1,
+        entity = spawnEntity(game.entities, createEntityFactory({
             classname: 'target_laser',
             angles: { x: 0, y: 0, z: 0 },
             origin: { x: 0, y: 0, z: 0 }
-        });
+        }));
+
+        spawnContext = {
+            keyValues: {},
+            entities: game.entities,
+            health_multiplier: 1,
+            warn: vi.fn(),
+            free: (e) => game.entities.free(e)
+        };
+
         vi.clearAllMocks();
     });
 
     it('should initialize correctly via start think', () => {
-        const spawnFn = registry.get('target_laser');
+        const spawnFn = game.entities.getSpawnFunction('target_laser');
         expect(spawnFn).toBeDefined();
-        spawnFn?.(entity, context);
+        spawnFn?.(entity, spawnContext);
 
         expect(entity.nextthink).toBeGreaterThan(0);
         expect(entity.think).toBeDefined();
 
         // Run the start think
         const startThink = entity.think!;
-        // Assuming context time is 0 or whatever default
         startThink(entity);
 
         expect(entity.movetype).toBe(MoveType.None);
@@ -60,8 +68,8 @@ describe('target_laser', () => {
 
     it('should start ON if spawnflag 1 is set', () => {
         entity.spawnflags = 1; // START_ON
-        const spawnFn = registry.get('target_laser');
-        spawnFn?.(entity, context);
+        const spawnFn = game.entities.getSpawnFunction('target_laser');
+        spawnFn?.(entity, spawnContext);
 
         const startThink = entity.think!;
         startThink(entity);
@@ -72,19 +80,25 @@ describe('target_laser', () => {
 
     it('should calculate damage when hitting entities', () => {
         entity.spawnflags = 1; // START_ON
-        const spawnFn = registry.get('target_laser');
-        spawnFn?.(entity, context);
+        const spawnFn = game.entities.getSpawnFunction('target_laser');
+        spawnFn?.(entity, spawnContext);
         entity.think!(entity); // Start
 
         // Mock trace to hit something
-        const victim = new Entity(2);
-        victim.takedamage = true;
+        const victim = spawnEntity(game.entities, createEntityFactory({
+            takedamage: true
+        }));
 
-        context.entities.trace = vi.fn().mockReturnValue({
+        // Mock the trace implementation
+        imports.trace.mockReturnValue({
             ent: victim,
             fraction: 0.5,
             endpos: { x: 50, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } }
+            plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
+            allsolid: false,
+            startsolid: false,
+            contents: 0,
+            surfaceFlags: 0
         });
 
         // Run think
@@ -102,49 +116,49 @@ describe('target_laser', () => {
             1, // kick
             DamageFlags.ENERGY,
             DamageMod.TARGET_LASER,
-            expect.any(Number)
+            expect.any(Number) // time
         );
     });
 
     it('should spawn sparks when hitting solid (non-monster)', () => {
-        entity.spawnflags = 1 | 0x80000000; // START_ON + tracking bit (to force count=8?)
-        // Actually the code sets 0x80000000 in think if it's tracking enemy.
-        // But for sparks logic: if self.spawnflags & 0x80000000 then count=8 else 4.
+        // Set START_ON (1) and tracking bit (0x80000000) to force spark generation logic
+        entity.spawnflags = 1 | 0x80000000;
 
-        const spawnFn = registry.get('target_laser');
-        spawnFn?.(entity, context);
+        const spawnFn = game.entities.getSpawnFunction('target_laser');
+        spawnFn?.(entity, spawnContext);
         entity.think!(entity);
 
         // Mock trace to hit wall
-        const wall = new Entity(3);
-        wall.solid = Solid.Bsp;
-        // Not monster, not client
+        const wall = spawnEntity(game.entities, createEntityFactory({
+            solid: Solid.Bsp
+        }));
 
-        context.entities.trace = vi.fn().mockReturnValueOnce({
+        imports.trace.mockReturnValueOnce({
             ent: wall,
             fraction: 0.5,
             endpos: { x: 50, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } }
+            plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
+             allsolid: false,
+            startsolid: false,
+            contents: 0,
+            surfaceFlags: 0
         }).mockReturnValue({ // Break loop
-             ent: null
+             ent: null,
+            fraction: 1.0,
+            endpos: { x: 100, y: 0, z: 0 },
+            plane: null,
+             allsolid: false,
+            startsolid: false,
+            contents: 0,
+            surfaceFlags: 0
         });
 
-        // Force sparks condition (if self.spawnflags & 0x80000000)
-        // Wait, the spark spawning code:
-        // if (self->spawnflags & 0x80000000) { ... multicast ... }
-        // This bit is set if tracking an enemy changed direction?
-        // Or wait, looking at my code:
-        // if (self.spawnflags & 0x80000000) { ... multicast ... }
-        // Yes.
-        // So we need to set that bit manually to test sparks?
-        // Or satisfy the condition "if (!VectorCompare(self->movedir, last_movedir)) self->spawnflags |= 0x80000000;"
-        // Or if I just set it manually.
         entity.spawnflags |= 0x80000000;
 
         const think = entity.think!;
         think(entity);
 
-        expect(context.entities.multicast).toHaveBeenCalledWith(
+        expect(imports.multicast).toHaveBeenCalledWith(
             expect.any(Object),
             expect.anything(),
             ServerCommand.temp_entity,
@@ -158,8 +172,8 @@ describe('target_laser', () => {
 
     it('should toggle off/on when used', () => {
         entity.spawnflags = 1; // Start ON
-        const spawnFn = registry.get('target_laser');
-        spawnFn?.(entity, context);
+        const spawnFn = game.entities.getSpawnFunction('target_laser');
+        spawnFn?.(entity, spawnContext);
         entity.think!(entity); // Init
 
         expect(entity.svflags & ServerFlags.NoClient).toBeFalsy();
