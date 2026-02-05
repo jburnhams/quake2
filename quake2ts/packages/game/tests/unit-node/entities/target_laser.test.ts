@@ -129,8 +129,9 @@ describe('target_laser', () => {
         entity.think!(entity);
 
         // Mock trace to hit wall
-        const wall = new Entity(3);
-        wall.solid = Solid.Bsp;
+        const wall = spawnEntity(game.entities, createEntityFactory({
+            solid: Solid.Bsp
+        }));
 
         imports.trace.mockReturnValueOnce({
             ent: wall,
