@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createSession, GameSession } from '@quake2ts/client/session';
 import { createGame } from '@quake2ts/game';
 import { createClient } from '@quake2ts/client/index';
 import { EngineHost } from '@quake2ts/engine';
+import { createMockLocalStorage } from '@quake2ts/test-utils';
 
 // Use real implementations for createGame and createClient to test integration
 // But mock EngineHost to avoid starting an actual loop which might depend on time/animation frame
@@ -25,6 +26,7 @@ describe('GameSession Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        vi.stubGlobal('localStorage', createMockLocalStorage());
         mockEngine = {
             trace: vi.fn(() => ({
                 allsolid: false,
@@ -46,6 +48,10 @@ describe('GameSession Integration', () => {
                 listFiles: vi.fn(() => []),
             }
         };
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('should initialize game and client and link them via session', () => {

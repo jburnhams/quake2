@@ -82,6 +82,11 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `client/tests/unit-jsdom/fov.test.ts` to `client/tests/unit-node/fov.test.ts`
    - Moved: `client/tests/unit-jsdom/render-config.test.ts` to `client/tests/unit-node/render-config.test.ts`
    - Moved: `client/tests/integration/cgame-integration.test.ts` to `client/tests/unit-node/integration/cgame-integration.test.ts`
+   - Moved: `client/tests/integration/integration.test.ts` to `client/tests/unit-node/integration/integration.test.ts`
+   - Moved: `client/tests/integration/demo-render-integration.test.ts` to `client/tests/unit-node/integration/demo-render-integration.test.ts`
+   - Moved: `client/tests/integration/effects-integration.test.ts` to `client/tests/unit-node/integration/effects-integration.test.ts`
+   - Moved: `client/tests/integration/music-integration.test.ts` to `client/tests/unit-node/integration/music-integration.test.ts`
+   - Moved: `client/tests/integration/session-integration.test.ts` to `client/tests/unit-node/integration/session-integration.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
