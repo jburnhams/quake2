@@ -85,8 +85,9 @@ describe('target_laser', () => {
         entity.think!(entity); // Start
 
         // Mock trace to hit something
-        const victim = new Entity(2);
-        victim.takedamage = true;
+        const victim = spawnEntity(game.entities, createEntityFactory({
+            takedamage: true
+        }));
 
         // Mock the trace implementation
         imports.trace.mockReturnValue({
