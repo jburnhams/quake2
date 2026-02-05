@@ -1,7 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientImports } from '@quake2ts/client';
 import { EngineImports, EngineHost, Renderer } from '@quake2ts/engine';
 import { CvarFlags, ConfigStringIndex } from '@quake2ts/shared';
+import { createMockLocalStorage } from '@quake2ts/test-utils';
 
 describe('Music Integration', () => {
     let mockEngine: any;
@@ -10,6 +11,7 @@ describe('Music Integration', () => {
     let cvarHandlers: Map<string, (cvar: any) => void>;
 
     beforeEach(() => {
+        vi.stubGlobal('localStorage', createMockLocalStorage());
         mockCvars = new Map();
         cvarHandlers = new Map();
 
@@ -79,6 +81,10 @@ describe('Music Integration', () => {
                 end2D: vi.fn()
             } as unknown as Renderer
         };
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('should set music volume when s_musicvolume changes', () => {
