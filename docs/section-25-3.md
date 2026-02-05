@@ -389,8 +389,8 @@ export class MapParseError extends Error {
 
 ### 7.1 MapData to Builder Conversion
 
-- [ ] Implement conversion from parsed map to builder format
-- [ ] Depends on Section 25-4 (Primitives)
+- [x] Implement conversion from parsed map to builder format
+- [x] Depends on Section 25-4 (Primitives)
 
 **File: `src/parser/mapToBuilder.ts`**
 ```typescript
