@@ -87,7 +87,11 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `client/tests/integration/effects-integration.test.ts` to `client/tests/unit-node/integration/effects-integration.test.ts`
    - Moved: `client/tests/integration/music-integration.test.ts` to `client/tests/unit-node/integration/music-integration.test.ts`
    - Moved: `client/tests/integration/session-integration.test.ts` to `client/tests/unit-node/integration/session-integration.test.ts`
+   - Moved: `client/tests/unit-jsdom/demo/camera.test.ts` to `client/tests/unit-node/demo/camera.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
+   - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment:
+     - `client/tests/integration/demo/demo-playback-integration.test.ts`
+     - `client/tests/integration/demo/demo-recording-integration.test.ts`
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
 5. Configure node tests with `environment: 'node'` in vitest config
