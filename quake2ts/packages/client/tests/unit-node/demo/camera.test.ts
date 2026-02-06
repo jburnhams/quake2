@@ -1,9 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { DemoCameraMode } from '@quake2ts/client/demo/camera.js';
 import { EngineHost, GameRenderSample, Renderer, EngineImports } from '@quake2ts/engine';
 import { mat4 } from 'gl-matrix';
-import { createMockDemoCameraResult } from '@quake2ts/test-utils';
+import { createMockDemoCameraResult, createMockLocalStorage } from '@quake2ts/test-utils';
 
 describe('Demo Camera Modes and Collision', () => {
     let client: ClientExports;
@@ -12,6 +12,8 @@ describe('Demo Camera Modes and Collision', () => {
     let traceMock: any;
 
     beforeEach(() => {
+        vi.stubGlobal('localStorage', createMockLocalStorage());
+
         traceMock = vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } });
 
         mockEngineImports = {
@@ -55,6 +57,10 @@ describe('Demo Camera Modes and Collision', () => {
         };
 
         client = createClient(imports);
+    });
+
+    afterEach(() => {
+        vi.unstubAllGlobals();
     });
 
     it('should calculate third-person camera position correctly without collision', () => {
