@@ -155,6 +155,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   const t = params.wallThickness;
   const brushes: BrushDef[] = [];
 
+  const sidesProvided = !!params.sides;
   const include = params.sides ?? {
     top: true,
     bottom: true,
@@ -164,8 +165,13 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
     west: true,
   };
 
+  const shouldInclude = (face: keyof NonNullable<HollowBoxParams['sides']>) => {
+    if (!sidesProvided) return true;
+    return !!include[face];
+  };
+
   // Helper to create a wall from mins/maxs
-  const createWall = (mins: Vec3, maxs: Vec3, face: keyof typeof include) => {
+  const createWall = (mins: Vec3, maxs: Vec3, face: keyof NonNullable<HollowBoxParams['sides']>) => {
     // Calculate center and size for box()
     const size = {
       x: maxs.x - mins.x,
@@ -178,18 +184,38 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
       z: mins.z + size.z * 0.5,
     };
 
-    // For a wall, we might want to adjust textures or orientation, but passing params.texture is likely expected
-    // Note: This applies the texture mapping to the wall brush.
+    let wallTexture = params.texture;
+
+    // Only perform remapping if we have a per-face texture object
+    if (params.texture && typeof params.texture !== 'string' && !('name' in params.texture)) {
+      const perFace = params.texture as any;
+      if (perFace[face]) {
+        // Find the inner face for this wall
+        let innerFace: 'top' | 'bottom' | 'north' | 'south' | 'east' | 'west' | undefined;
+        if (face === 'top') innerFace = 'bottom';
+        else if (face === 'bottom') innerFace = 'top';
+        else if (face === 'north') innerFace = 'south';
+        else if (face === 'south') innerFace = 'north';
+        else if (face === 'east') innerFace = 'west';
+        else if (face === 'west') innerFace = 'east';
+
+        if (innerFace) {
+          // Construct a new texture object where the inner face gets the requested texture
+          wallTexture = { [innerFace]: perFace[face] };
+        }
+      }
+    }
+
     brushes.push(box({
       origin,
       size,
-      texture: params.texture,
+      texture: wallTexture,
       contents: params.contents
     }));
   };
 
   // Top (Z+)
-  if (include.top !== false) {
+  if (shouldInclude('top')) {
     // Spans full X/Y, thickness in Z downwards from maxs.z
     createWall(
       { x: originalMins.x, y: originalMins.y, z: originalMaxs.z - t },
@@ -199,7 +225,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   // Bottom (Z-)
-  if (include.bottom !== false) {
+  if (shouldInclude('bottom')) {
     // Spans full X/Y, thickness in Z upwards from mins.z
     createWall(
       originalMins,
@@ -209,7 +235,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   // North (Y+)
-  if (include.north !== false) {
+  if (shouldInclude('north')) {
     // Spans full X/Z (minus floor/ceiling overlap if we wanted non-overlapping, but simple overlap is easier)
     // Here we do full overlap.
     createWall(
@@ -220,7 +246,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   // South (Y-)
-  if (include.south !== false) {
+  if (shouldInclude('south')) {
     createWall(
       originalMins,
       { x: originalMaxs.x, y: originalMins.y + t, z: originalMaxs.z },
@@ -229,7 +255,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   // East (X+)
-  if (include.east !== false) {
+  if (shouldInclude('east')) {
     createWall(
       { x: originalMaxs.x - t, y: originalMins.y, z: originalMins.z },
       originalMaxs,
@@ -238,7 +264,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   // West (X-)
-  if (include.west !== false) {
+  if (shouldInclude('west')) {
     createWall(
       originalMins,
       { x: originalMins.x + t, y: originalMaxs.y, z: originalMaxs.z },
