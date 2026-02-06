@@ -161,8 +161,8 @@ export const DEFAULT_CONTENTS = CONTENTS_SOLID;
 
 ### 3.1 Box Primitive
 
-- [ ] Create `src/builder/primitives.ts`
-- [ ] Implement `box()` function
+- [x] Create `src/builder/primitives.ts`
+- [x] Implement `box()` function
 
 **File: `src/builder/primitives.ts`**
 ```typescript
@@ -200,7 +200,7 @@ export function box(params: BoxParams): BrushDef;
 
 ### 3.2 Hollow Box (Room)
 
-- [ ] Implement `hollowBox()` function
+- [x] Implement `hollowBox()` function
 
 ```typescript
 export interface HollowBoxParams extends BoxParams {
@@ -295,9 +295,9 @@ export function cylinder(params: CylinderParams): BrushDef;
 
 ### 3.6 Tests
 
-- [ ] Test: `box()` produces 6-sided brush
-- [ ] Test: `box()` planes face outward
-- [ ] Test: `hollowBox()` produces 6 brushes
+- [x] Test: `box()` produces 6-sided brush
+- [x] Test: `box()` planes face outward
+- [x] Test: `hollowBox()` produces 6 brushes
 - [ ] Test: `wedge()` produces valid convex brush
 - [ ] Test: `stairs()` produces correct step count
 - [ ] Test: `cylinder()` produces N+2 sided brush
