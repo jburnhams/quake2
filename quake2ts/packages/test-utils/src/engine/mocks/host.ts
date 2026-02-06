@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { EngineHost, Cvar } from '@quake2ts/engine';
+import type { EngineHost, Cvar, GameSimulation, GameFrameResult, ClientRenderer, GameRenderSample, EngineExports } from '@quake2ts/engine';
 
 export function createMockEngineHost(overrides?: Partial<EngineHost>): EngineHost {
   const cvars = new Map<string, Cvar>();
@@ -44,4 +44,32 @@ export function createMockEngineHost(overrides?: Partial<EngineHost>): EngineHos
     },
     ...overrides
   } as unknown as EngineHost;
+}
+
+export function createMockGameSimulation<FrameState = unknown>(overrides: Partial<GameSimulation<FrameState>> = {}): GameSimulation<FrameState> {
+  return {
+    init: vi.fn((startTimeMs) => ({ frame: 0, timeMs: startTimeMs } as GameFrameResult<FrameState>)),
+    frame: vi.fn(({ frame, deltaMs }, command) => ({ frame, timeMs: deltaMs } as GameFrameResult<FrameState>)),
+    shutdown: vi.fn(),
+    ...overrides
+  };
+}
+
+export function createMockClientRenderer<FrameState = unknown>(overrides: Partial<ClientRenderer<FrameState>> = {}): ClientRenderer<FrameState> {
+  return {
+    init: vi.fn(),
+    render: vi.fn(),
+    shutdown: vi.fn(),
+    ...overrides
+  };
+}
+
+export function createMockEngineExports(overrides: Partial<EngineExports> = {}): EngineExports {
+  return {
+    init: vi.fn(),
+    shutdown: vi.fn(),
+    createMainLoop: vi.fn(),
+    setAreaPortalState: vi.fn(),
+    ...overrides
+  } as unknown as EngineExports;
 }

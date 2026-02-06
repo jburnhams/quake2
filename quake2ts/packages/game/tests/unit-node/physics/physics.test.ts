@@ -3,15 +3,15 @@ import { Entity, MoveType } from '../../../src/entities/entity.js';
 import { runGravity, runBouncing, runProjectileMovement } from '../../../src/physics/movement.js';
 import { GameTraceResult } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
-import { createEntityFactory, createTraceMock, createTestContext } from '@quake2ts/test-utils';
+import { createEntityFactory, createTraceMock, createTestContext, createEntity } from '@quake2ts/test-utils';
 
 describe('runGravity', () => {
   it('should apply gravity to an entity with MOVETYPE_TOSS', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity(createEntityFactory({
         index: 0,
         movetype: MoveType.Toss,
         velocity: { x: 0, y: 0, z: 0 }
-    }) as Entity;
+    }));
 
     // Mock world constants
     const gravity = { x: 0, y: 0, z: -800 };
@@ -29,12 +29,12 @@ describe('runGravity', () => {
 
 describe('runProjectileMovement', () => {
   it('should move the entity to the destination if there is no collision', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity(createEntityFactory({
         index: 0,
         movetype: MoveType.FlyMissile,
         origin: { x: 0, y: 0, z: 0 },
         velocity: { x: 1000, y: 0, z: 0 }
-    }) as Entity;
+    }));
 
     const mockTrace = createTraceMock({
       fraction: 1.0,
@@ -57,13 +57,13 @@ describe('runProjectileMovement', () => {
   });
 
   it('should pass the entity clipmask to the trace function', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity(createEntityFactory({
         index: 0,
         movetype: MoveType.FlyMissile,
         origin: { x: 0, y: 0, z: 0 },
         velocity: { x: 1000, y: 0, z: 0 },
         clipmask: 42
-    }) as Entity;
+    }));
 
     let passedClipmask = -1;
 
@@ -97,13 +97,13 @@ describe('runProjectileMovement', () => {
 
 describe('runBouncing', () => {
   it('should reflect velocity when a bouncing entity collides with a surface', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity(createEntityFactory({
         index: 0,
         movetype: MoveType.Bounce,
         velocity: { x: 100, y: 0, z: -100 },
         origin: { x: 0, y: 0, z: 10 },
         bounce: 1.5 // This property is now ignored in favor of Q2 standard behavior (1.6 backoff)
-    }) as Entity;
+    }));
     ent.touch = vi.fn(); // Mock touch callback
 
     const mockTrace = createTraceMock({
@@ -158,12 +158,12 @@ describe('runBouncing', () => {
   });
 
   it('should reflect velocity perfectly with WallBounce', () => {
-    const ent = createEntityFactory({
+    const ent = createEntity(createEntityFactory({
         index: 0,
         movetype: MoveType.WallBounce,
         velocity: { x: 100, y: 0, z: -100 },
         origin: { x: 0, y: 0, z: 10 }
-    }) as Entity;
+    }));
     ent.touch = vi.fn();
 
     const mockTrace = createTraceMock({
