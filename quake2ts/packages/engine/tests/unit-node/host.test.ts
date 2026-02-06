@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EngineHost, type GameFrameResult } from '../../src/host.js';
+import { createMockGameSimulation, createMockClientRenderer } from '@quake2ts/test-utils';
 
 interface StubState {
   readonly id: string;
@@ -10,17 +11,11 @@ describe('EngineHost', () => {
     const scheduled: Array<() => void> = [];
     const initialState: GameFrameResult<StubState> = { frame: 0, timeMs: 0, state: { id: 'seed' } };
 
-    const game = {
+    const game = createMockGameSimulation<StubState>({
       init: vi.fn(() => initialState),
-      frame: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
-      init: vi.fn(),
-      render: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    const client = createMockClientRenderer<StubState>();
 
     const host = new EngineHost(game, client, {
       loop: { schedule: (cb) => scheduled.push(cb), now: () => 0, fixedDeltaMs: 25 },
@@ -35,11 +30,9 @@ describe('EngineHost', () => {
   });
 
   it('defaults start time to the loop clock when not provided explicitly', () => {
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs: 123 } satisfies GameFrameResult)),
-      frame: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, undefined, {
       loop: { schedule: () => {}, now: () => 123, fixedDeltaMs: 25 },
@@ -53,15 +46,14 @@ describe('EngineHost', () => {
   it('uses the provided start time for both game init and loop timestamps', () => {
     const frames: GameFrameResult[] = [];
 
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn((timeMs: number) => ({ frame: 0, timeMs } satisfies GameFrameResult)),
       frame: vi.fn(({ frame, nowMs }) => {
         const result = { frame, timeMs: nowMs } satisfies GameFrameResult;
         frames.push(result);
         return result;
       }),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, undefined, {
       startTimeMs: 500,
@@ -83,17 +75,15 @@ describe('EngineHost', () => {
     }> = [];
 
     let timeMs = 0;
-    const game = {
+    const game = createMockGameSimulation<StubState>({
       init: vi.fn(() => ({ frame: 0, timeMs, state: { id: 'seed' } } satisfies GameFrameResult<StubState>)),
       frame: vi.fn(({ frame, deltaMs }) => {
         timeMs += deltaMs;
         return { frame, timeMs, state: { id: `frame-${frame}` } } satisfies GameFrameResult<StubState>;
       }),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
-      init: vi.fn(),
+    const client = createMockClientRenderer<StubState>({
       render: vi.fn((sample) => {
         renderSamples.push({
           previous: sample.previous,
@@ -101,8 +91,7 @@ describe('EngineHost', () => {
           alpha: sample.alpha,
         });
       }),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, client, {
       loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25 },
@@ -121,17 +110,12 @@ describe('EngineHost', () => {
 
   it('shuts down cleanly and avoids duplicate shutdown calls', () => {
     const scheduled: Array<() => void> = [];
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs: 0 } satisfies GameFrameResult)),
       frame: vi.fn(() => ({ frame: 1, timeMs: 25 } satisfies GameFrameResult)),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
-      init: vi.fn(),
-      render: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    const client = createMockClientRenderer();
 
     const host = new EngineHost(game, client, {
       loop: { schedule: (cb) => scheduled.push(cb), now: () => 0, fixedDeltaMs: 25 },
@@ -148,11 +132,10 @@ describe('EngineHost', () => {
   });
 
   it('clears cached frames when stopping so it can restart cleanly', () => {
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs: 0 } satisfies GameFrameResult)),
       frame: vi.fn(({ frame }) => ({ frame, timeMs: frame * 25 } satisfies GameFrameResult)),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, undefined, {
       loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 25 },

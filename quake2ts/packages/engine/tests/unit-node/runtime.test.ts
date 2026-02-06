@@ -1,35 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEngineRuntime } from '../../src/runtime.js';
 import type { GameFrameResult } from '../../src/host.js';
+import { createMockEngineExports, createMockGameSimulation, createMockClientRenderer } from '@quake2ts/test-utils';
 
 describe('EngineRuntime', () => {
   it('initializes engine before wiring the host and client', () => {
     const scheduled: Array<() => void> = [];
 
-    const engine = {
-      init: vi.fn(),
-      shutdown: vi.fn(),
-      createMainLoop: vi.fn(),
-    };
+    const engine = createMockEngineExports();
 
     const initialFrame = { frame: 0, timeMs: 100 } satisfies GameFrameResult;
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => initialFrame),
-      frame: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
-      init: vi.fn(),
-      render: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    // SubtitleClient is required by createEngineRuntime
+    const client = createMockClientRenderer({
+        showSubtitle: vi.fn()
+    } as any);
 
     const audioOptions = {
       registry: {} as any,
       system: {} as any,
     };
-    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
+    const { runtime } = createEngineRuntime(engine, game, client as any, audioOptions, {
       loop: { schedule: (cb) => scheduled.push(cb), fixedDeltaMs: 25, now: () => 100 },
     });
 
@@ -43,33 +37,26 @@ describe('EngineRuntime', () => {
   });
 
   it('pumps the host loop and shuts down everything in order', () => {
-    const engine = {
-      init: vi.fn(),
-      shutdown: vi.fn(),
-      createMainLoop: vi.fn(),
-    };
+    const engine = createMockEngineExports();
 
     let timeMs = 100;
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs } satisfies GameFrameResult)),
       frame: vi.fn(({ frame, deltaMs }) => {
         timeMs += deltaMs;
         return { frame, timeMs } satisfies GameFrameResult;
       }),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
-      init: vi.fn(),
-      render: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    const client = createMockClientRenderer({
+        showSubtitle: vi.fn()
+    } as any);
 
     const audioOptions = {
       registry: {} as any,
       system: {} as any,
     };
-    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
+    const { runtime } = createEngineRuntime(engine, game, client as any, audioOptions, {
       loop: { schedule: () => {}, fixedDeltaMs: 25, now: () => timeMs },
     });
 
