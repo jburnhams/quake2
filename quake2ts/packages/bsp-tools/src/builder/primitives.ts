@@ -360,12 +360,9 @@ export function wedge(params: WedgeParams): BrushDef {
   // Normalize
   const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
   normal = {
-    x: normal.x / len,
-    y: normal.y / len,
-    z: normal.z / len
-  };
+  normal = normalizeVec3(normal);
 
-  const dist = normal.x * distPoint.x + normal.y * distPoint.y + normal.z * distPoint.z;
+  const dist = dotVec3(normal, distPoint);
 
   // Add slope face
   b.sides.push({
