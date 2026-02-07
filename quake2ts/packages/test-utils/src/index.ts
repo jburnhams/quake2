@@ -129,3 +129,4 @@ export type { MockSaveGame, SaveGameDiff } from './game/helpers/save.js';
 export type { MockEngine, MockGame, TestContext, MockImportsAndEngine } from './game/helpers.js';
 export type { SpawnTestEntityOptions } from './game/helpers/spawn.js';
 export * from './game/client.js';
+export * from './client/mocks/test-input-source.js';

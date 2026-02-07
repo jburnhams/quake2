@@ -1,5 +1,4 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { setupBrowserEnvironment } from '@quake2ts/test-utils';
 import { InputController } from '@quake2ts/client/input/controller.js';
 import { MenuSystem } from '@quake2ts/client/ui/menu/system.js';
 
@@ -8,18 +7,8 @@ describe('Input and UI Integration', () => {
   let menuSystem: MenuSystem;
 
   beforeEach(() => {
-    setupBrowserEnvironment();
     input = new InputController();
-
-    const mockClient = {
-        connect: vi.fn(),
-        disconnect: vi.fn(),
-        commands: {
-            register: vi.fn(),
-        }
-    };
-
-    menuSystem = new MenuSystem(mockClient as any);
+    menuSystem = new MenuSystem();
   });
 
   afterEach(() => {
