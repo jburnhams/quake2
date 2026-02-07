@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientImports, ClientExports } from '@quake2ts/client/index.js';
 import { SaveStorage, SaveSlotMetadata, GameSaveFile } from '@quake2ts/game';
 import { MenuSystem } from '@quake2ts/client/ui/menu/system.js';
 import { MainMenuFactory } from '@quake2ts/client/ui/menu/main.js';
+import { createMockLocalStorage } from '@quake2ts/test-utils';
 
 // Mock SaveStorage
 class MockSaveStorage implements SaveStorage {
@@ -58,6 +59,8 @@ describe('Save/Load Menu Integration', () => {
   let menuFactory: MainMenuFactory;
 
   beforeEach(() => {
+    vi.stubGlobal('localStorage', createMockLocalStorage());
+
     const mockEngine = {
       trace: vi.fn().mockReturnValue({ allsolid: false, startsolid: false, fraction: 1.0 }),
       renderer: {},
@@ -90,6 +93,10 @@ describe('Save/Load Menu Integration', () => {
     );
     menuSystem = result.menuSystem;
     menuFactory = result.factory;
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
   });
 
   it('navigates to Load Menu and lists saves', async () => {

@@ -1,21 +1,17 @@
-// @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { InputController, InputAction } from '@quake2ts/client/input/controller.js';
 import { InputBindings } from '@quake2ts/client/input/bindings.js';
-import { BrowserInputSource, createInputInjector, InputInjector } from '@quake2ts/test-utils';
+import { TestInputSource } from '@quake2ts/test-utils';
 
 describe('InputController Integration', () => {
   let controller: InputController;
   let bindings: InputBindings;
-  let injector: InputInjector;
-  let source: BrowserInputSource;
+  let source: TestInputSource;
 
   beforeEach(() => {
     bindings = new InputBindings();
     controller = new InputController({}, bindings);
-    injector = createInputInjector();
-    // Use the actual DOM input source wrapper from test-utils
-    source = new BrowserInputSource(document);
+    source = new TestInputSource();
   });
 
   describe('bindInputSource', () => {
@@ -31,8 +27,8 @@ describe('InputController Integration', () => {
       const onCommand = vi.fn();
       controller.onInputCommand = onCommand;
 
-      // Simulate keydown via injector (which dispatches to document)
-      injector.keyDown('KeyW', 'KeyW');
+      // Simulate keydown
+      source.keyDown('KeyW');
 
       // Verify command generated in buildCommand
       const cmd = controller.buildCommand(16, 1000);
