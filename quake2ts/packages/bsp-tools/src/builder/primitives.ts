@@ -378,7 +378,10 @@ export function wedge(params: WedgeParams): BrushDef {
  */
 export function stairs(params: StairsParams): BrushDef[] {
   const brushes: BrushDef[] = [];
-  const count = Math.max(1, Math.floor(params.stepCount));
+  const count = Math.floor(params.stepCount);
+  if (count <= 0) {
+    return [];
+  }
 
   const stepHeight = params.height / count;
   const stepDepth = params.depth / count;
