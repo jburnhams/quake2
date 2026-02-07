@@ -359,9 +359,11 @@ export function wedge(params: WedgeParams): BrushDef {
 
   // Normalize
   const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
-  normal.x /= len;
-  normal.y /= len;
-  normal.z /= len;
+  normal = {
+    x: normal.x / len,
+    y: normal.y / len,
+    z: normal.z / len
+  };
 
   const dist = normal.x * distPoint.x + normal.y * distPoint.y + normal.z * distPoint.z;
 
