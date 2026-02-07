@@ -38,6 +38,26 @@ export interface HollowBoxParams extends BoxParams {
   };
 }
 
+export interface WedgeParams {
+  origin: Vec3;
+  size: Vec3;
+
+  /** Direction the ramp faces (ascends towards) */
+  direction: 'north' | 'south' | 'east' | 'west';
+
+  texture?: string | TextureDef;
+}
+
+export interface StairsParams {
+  origin: Vec3;
+  width: number;
+  height: number;
+  depth: number;
+  stepCount: number;
+  direction: 'north' | 'south' | 'east' | 'west';
+  texture?: string | TextureDef;
+}
+
 // Internal helper to normalize texture input
 function resolveTexture(
   textureInput: BoxParams['texture'],
@@ -270,6 +290,188 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
       { x: originalMins.x + t, y: originalMaxs.y, z: originalMaxs.z },
       'west'
     );
+  }
+
+  return brushes;
+}
+
+/**
+ * Create a wedge/ramp brush
+ */
+export function wedge(params: WedgeParams): BrushDef {
+  // Start with a standard box
+  const b = box({
+    origin: params.origin,
+    size: params.size,
+    texture: params.texture
+  });
+
+  // Calculate bounds
+  const halfSize = scaleVec3(params.size, 0.5);
+  const mins = {
+    x: params.origin.x - halfSize.x,
+    y: params.origin.y - halfSize.y,
+    z: params.origin.z - halfSize.z,
+  };
+  const maxs = {
+    x: params.origin.x + halfSize.x,
+    y: params.origin.y + halfSize.y,
+    z: params.origin.z + halfSize.z,
+  };
+
+  // Identify and remove the top face (normal 0,0,1)
+  const topIndex = b.sides.findIndex(s =>
+    Math.abs(s.plane.normal.x) < 0.001 &&
+    Math.abs(s.plane.normal.y) < 0.001 &&
+    s.plane.normal.z > 0.999
+  );
+
+  if (topIndex !== -1) {
+    b.sides.splice(topIndex, 1);
+  }
+
+  // Calculate slope normal based on direction
+  // The ramp ascends in the given direction.
+  let normal: Vec3;
+  let distPoint: Vec3;
+
+  if (params.direction === 'north') {
+    // Low South, High North
+    // Normal: (0, -size.z, size.y) normalized
+    normal = { x: 0, y: -params.size.z, z: params.size.y };
+    distPoint = { x: params.origin.x, y: mins.y, z: mins.z };
+  } else if (params.direction === 'south') {
+    // Low North, High South
+    // Normal: (0, size.z, size.y) normalized
+    normal = { x: 0, y: params.size.z, z: params.size.y };
+    distPoint = { x: params.origin.x, y: maxs.y, z: mins.z };
+  } else if (params.direction === 'east') {
+    // Low West, High East
+    // Normal: (-size.z, 0, size.x) normalized
+    normal = { x: -params.size.z, y: 0, z: params.size.x };
+    distPoint = { x: mins.x, y: params.origin.y, z: mins.z };
+  } else { // west
+    // Low East, High West
+    // Normal: (size.z, 0, size.x) normalized
+    normal = { x: params.size.z, y: 0, z: params.size.x };
+    distPoint = { x: maxs.x, y: params.origin.y, z: mins.z };
+  }
+
+  // Normalize
+  const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
+  normal.x /= len;
+  normal.y /= len;
+  normal.z /= len;
+
+  const dist = normal.x * distPoint.x + normal.y * distPoint.y + normal.z * distPoint.z;
+
+  // Add slope face
+  b.sides.push({
+    plane: createPlane(normal, dist),
+    texture: resolveTexture(params.texture, 'top') // Use top texture for slope
+  });
+
+  return b;
+}
+
+/**
+ * Create stair steps
+ */
+export function stairs(params: StairsParams): BrushDef[] {
+  const brushes: BrushDef[] = [];
+  const count = Math.max(1, Math.floor(params.stepCount));
+
+  const stepHeight = params.height / count;
+  const stepDepth = params.depth / count;
+
+  // Origin is center of the whole bounding box
+  const totalHalfSize = {
+    x: params.width * 0.5,
+    y: params.depth * 0.5,
+    z: params.height * 0.5
+  };
+
+  const mins = {
+    x: params.origin.x - totalHalfSize.x,
+    y: params.origin.y - totalHalfSize.y,
+    z: params.origin.z - totalHalfSize.z,
+  };
+
+  // Direction determines how steps are arranged
+  // 'north': ascend towards North (Y+)
+  // Steps progress in Y from South to North, and Z from Bottom to Top.
+
+  for (let i = 0; i < count; i++) {
+    // Calculate bounds for this step
+    // Height: from bottom (mins.z) to (i+1)*stepHeight
+    const h = (i + 1) * stepHeight;
+    const currentZMin = mins.z; // All steps start from floor (solid style)
+    const currentZMax = mins.z + h;
+    const currentZSize = currentZMax - currentZMin;
+    const currentZCenter = currentZMin + currentZSize * 0.5;
+
+    // Determine position based on direction.
+    // Assumptions:
+    // - width: dimension perpendicular to ascent direction
+    // - depth: dimension parallel to ascent direction (total run)
+    // - height: total rise
+
+    let boxSize: Vec3;
+    let boxOrigin: Vec3;
+
+    if (params.direction === 'north') {
+      // Ascend Y+
+      // Step i starts at y = mins.y + i*stepDepth
+      const yStart = mins.y + i * stepDepth;
+
+      boxSize = { x: params.width, y: stepDepth, z: currentZSize };
+      boxOrigin = {
+        x: params.origin.x,
+        y: yStart + stepDepth * 0.5,
+        z: currentZCenter
+      };
+    } else if (params.direction === 'south') {
+      // Ascend Y- (Low at North, High at South)
+      // Steps progress from maxs.y towards mins.y.
+      const maxY = mins.y + params.depth;
+      const yStart = maxY - (i + 1) * stepDepth;
+
+      boxSize = { x: params.width, y: stepDepth, z: currentZSize };
+      boxOrigin = {
+        x: params.origin.x,
+        y: yStart + stepDepth * 0.5,
+        z: currentZCenter
+      };
+    } else if (params.direction === 'east') {
+      // Ascend X+
+      // Low West (mins.x), High East.
+      const xStart = mins.x + i * stepDepth;
+
+      boxSize = { x: stepDepth, y: params.width, z: currentZSize };
+      boxOrigin = {
+        x: xStart + stepDepth * 0.5,
+        y: params.origin.y,
+        z: currentZCenter
+      };
+    } else { // west
+      // Ascend X-
+      // Low East (maxs.x), High West.
+      const maxX = mins.x + params.depth;
+      const xStart = maxX - (i + 1) * stepDepth;
+
+      boxSize = { x: stepDepth, y: params.width, z: currentZSize };
+      boxOrigin = {
+        x: xStart + stepDepth * 0.5,
+        y: params.origin.y,
+        z: currentZCenter
+      };
+    }
+
+    brushes.push(box({
+      origin: boxOrigin,
+      size: boxSize,
+      texture: params.texture
+    }));
   }
 
   return brushes;

@@ -228,7 +228,7 @@ export function hollowBox(params: HollowBoxParams): BrushDef[];
 
 ### 3.3 Wedge/Ramp
 
-- [ ] Implement `wedge()` function
+- [x] Implement `wedge()` function
 
 ```typescript
 export interface WedgeParams {
@@ -253,7 +253,7 @@ export function wedge(params: WedgeParams): BrushDef;
 
 ### 3.4 Stairs
 
-- [ ] Implement `stairs()` function
+- [x] Implement `stairs()` function
 
 ```typescript
 export interface StairsParams {
@@ -298,8 +298,8 @@ export function cylinder(params: CylinderParams): BrushDef;
 - [x] Test: `box()` produces 6-sided brush
 - [x] Test: `box()` planes face outward
 - [x] Test: `hollowBox()` produces 6 brushes
-- [ ] Test: `wedge()` produces valid convex brush
-- [ ] Test: `stairs()` produces correct step count
+- [x] Test: `wedge()` produces valid convex brush
+- [x] Test: `stairs()` produces correct step count
 - [ ] Test: `cylinder()` produces N+2 sided brush
 
 ---
