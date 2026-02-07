@@ -360,9 +360,12 @@ export function wedge(params: WedgeParams): BrushDef {
   // Normalize
   const len = Math.sqrt(normal.x * normal.x + normal.y * normal.y + normal.z * normal.z);
   normal = {
-  normal = normalizeVec3(normal);
+    x: normal.x / len,
+    y: normal.y / len,
+    z: normal.z / len
+  };
 
-  const dist = dotVec3(normal, distPoint);
+  const dist = normal.x * distPoint.x + normal.y * distPoint.y + normal.z * distPoint.z;
 
   // Add slope face
   b.sides.push({
@@ -378,10 +381,7 @@ export function wedge(params: WedgeParams): BrushDef {
  */
 export function stairs(params: StairsParams): BrushDef[] {
   const brushes: BrushDef[] = [];
-  const count = Math.floor(params.stepCount);
-  if (count <= 0) {
-    return [];
-  }
+  const count = Math.max(1, Math.floor(params.stepCount));
 
   const stepHeight = params.height / count;
   const stepDepth = params.depth / count;
