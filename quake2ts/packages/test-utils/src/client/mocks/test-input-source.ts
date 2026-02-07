@@ -1,20 +1,15 @@
 
-export interface InputSource {
-  on(event: 'keydown', handler: (code: string) => void): void;
-  on(event: 'keyup', handler: (code: string) => void): void;
-  on(event: 'mousedown', handler: (button: number) => void): void;
-  on(event: 'mouseup', handler: (button: number) => void): void;
-  on(event: 'mousemove', handler: (dx: number, dy: number) => void): void;
-}
+// Note: Implicitly implements InputSource from @quake2ts/client/input/controller.js
+// We avoid importing it directly to prevent circular dependencies between client and test-utils.
 
 /**
  * A test implementation of InputSource that doesn't rely on DOM events.
  * Useful for testing input logic in Node.js environment.
  */
-export class TestInputSource implements InputSource {
-  private listeners: Map<string, Function[]> = new Map();
+export class TestInputSource {
+  private listeners: Map<string, Array<(...args: any[]) => void>> = new Map();
 
-  on(event: string, handler: Function): void {
+  on(event: string, handler: (...args: any[]) => void): void {
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }

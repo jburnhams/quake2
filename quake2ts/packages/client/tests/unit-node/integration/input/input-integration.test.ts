@@ -19,7 +19,8 @@ describe('InputController Integration', () => {
       // Mock performance.now to ensure consistent timing
       vi.spyOn(performance, 'now').mockReturnValue(900);
 
-      controller.bindInputSource(source as any);
+      // Verify structural typing works without explicit cast
+      controller.bindInputSource(source);
 
       // Bind KeyW to +forward
       bindings.bind('KeyW', '+forward');
