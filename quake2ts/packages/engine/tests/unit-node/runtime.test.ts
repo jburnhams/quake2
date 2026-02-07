@@ -1,7 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createEngineRuntime } from '../../src/runtime.js';
 import type { GameFrameResult } from '../../src/host.js';
-import { createMockEngineExports, createMockGameSimulation, createMockClientRenderer } from '@quake2ts/test-utils';
+import {
+  createMockEngineExports,
+  createMockGameSimulation,
+  createMockClientRenderer,
+  createMockSubtitleClient,
+  createMockAudioApiOptions
+} from '@quake2ts/test-utils';
 
 describe('EngineRuntime', () => {
   it('initializes engine before wiring the host and client', () => {
@@ -15,15 +21,13 @@ describe('EngineRuntime', () => {
     });
 
     // SubtitleClient is required by createEngineRuntime
-    const client = createMockClientRenderer({
-        showSubtitle: vi.fn()
-    } as any);
-
-    const audioOptions = {
-      registry: {} as any,
-      system: {} as any,
+    const client = {
+        ...createMockClientRenderer(),
+        ...createMockSubtitleClient()
     };
-    const { runtime } = createEngineRuntime(engine, game, client as any, audioOptions, {
+
+    const audioOptions = createMockAudioApiOptions();
+    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
       loop: { schedule: (cb) => scheduled.push(cb), fixedDeltaMs: 25, now: () => 100 },
     });
 
@@ -48,15 +52,13 @@ describe('EngineRuntime', () => {
       }),
     });
 
-    const client = createMockClientRenderer({
-        showSubtitle: vi.fn()
-    } as any);
-
-    const audioOptions = {
-      registry: {} as any,
-      system: {} as any,
+    const client = {
+        ...createMockClientRenderer(),
+        ...createMockSubtitleClient()
     };
-    const { runtime } = createEngineRuntime(engine, game, client as any, audioOptions, {
+
+    const audioOptions = createMockAudioApiOptions();
+    const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
       loop: { schedule: () => {}, fixedDeltaMs: 25, now: () => timeMs },
     });
 

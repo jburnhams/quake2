@@ -2,6 +2,9 @@ import { describe, expect, it, vi } from 'vitest';
 import { EngineHost, type GameFrameResult } from '../../src/host.js';
 import { createMockGameSimulation, createMockClientRenderer } from '@quake2ts/test-utils';
 
+/**
+ * Minimal state interface for testing state propagation.
+ */
 interface StubState {
   readonly id: string;
 }

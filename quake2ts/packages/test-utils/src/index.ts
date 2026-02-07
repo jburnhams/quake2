@@ -1,6 +1,7 @@
 // Export all test utilities
 export * from './shared/mocks.js';
 export * from './shared/bsp.js';
+export * from './shared/bsp-factories.js';
 export * from './shared/pak-loader.js';
 export * from './shared/math.js';
 export * from './shared/collision.js';
@@ -39,6 +40,7 @@ export * from './setup/timing.js';
 export * from './setup/node.js';
 export * from './engine/mocks/webgl.js';
 export * from './engine/mocks/audio.js';
+export * from './engine/mocks/audio-api.js';
 export * from './engine/mocks/renderer.js';
 export * from './engine/mocks/assets.js';
 export * from './engine/mocks/vfs.js';
