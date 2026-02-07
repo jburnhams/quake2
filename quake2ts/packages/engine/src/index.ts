@@ -206,7 +206,7 @@ export { AudioSystem, type AudioSystemOptions, type SoundRequest, type ActiveSou
 export { createOcclusionResolver, AudioOcclusion, type TraceFn } from './audio/occlusion.js';
 export { createInitialChannels, pickChannel, type ChannelState } from './audio/channels.js';
 export { MusicSystem, type MusicSystemOptions, type MusicState, type AudioElementLike } from './audio/music.js';
-export { AudioApi, type AudioApiOptions } from './audio/api.js';
+export { AudioApi, type AudioApiOptions, type SubtitleClient } from './audio/api.js';
 export {
   EngineHost,
   type ClientRenderer,

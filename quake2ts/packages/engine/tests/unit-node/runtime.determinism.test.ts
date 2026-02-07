@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createGame, hashGameState, type GameStateSnapshot } from '@quake2ts/game';
 import type { Vec3 } from '@quake2ts/shared';
+import { createMockAudioApiOptions, createMockSubtitleClient } from '@quake2ts/test-utils';
 import { createEngine, type GameFrameResult } from '../../src/index.js';
 import { createEngineRuntime } from '../../src/runtime.js';
 
@@ -24,6 +25,7 @@ describe('EngineRuntime + game integration determinism', () => {
     const hashes: number[] = [];
 
     const client = {
+      ...createMockSubtitleClient(),
       init(initial?: GameFrameResult<ClientState>) {
         if (initial?.state) {
           hashes.push(hashGameState(initial.state));
@@ -39,10 +41,7 @@ describe('EngineRuntime + game integration determinism', () => {
       },
     };
 
-    const audioOptions = {
-      registry: {} as any,
-      system: {} as any,
-    };
+    const audioOptions = createMockAudioApiOptions();
     const { runtime } = createEngineRuntime(
       engine,
       createGame(
@@ -79,6 +78,7 @@ describe('EngineRuntime + game integration determinism', () => {
     const latestFrames: Array<GameFrameResult<ClientState> | undefined> = [];
 
     const client = {
+      ...createMockSubtitleClient(),
       init(initial?: GameFrameResult<ClientState>) {
         latestFrames.push(initial);
       },
@@ -91,10 +91,7 @@ describe('EngineRuntime + game integration determinism', () => {
       },
     };
 
-    const audioOptions = {
-      registry: {} as any,
-      system: {} as any,
-    };
+    const audioOptions = createMockAudioApiOptions();
     const { runtime } = createEngineRuntime(
       engine,
       createGame(
