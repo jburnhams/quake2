@@ -34,3 +34,12 @@ export interface EntityDef {
   properties: Record<string, string>;
   brushes?: BrushDef[];  // For brush entities (func_*)
 }
+
+/** An opening (door/window) in a wall */
+export interface OpeningDef {
+  wall: 'north' | 'south' | 'east' | 'west';
+  /** Position relative to room origin (center) */
+  position: Vec3;
+  /** Size of the opening */
+  size: Vec3;
+}
