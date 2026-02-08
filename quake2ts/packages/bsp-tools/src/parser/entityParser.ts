@@ -53,9 +53,10 @@ export function parseEntity(tokenizer: MapTokenizer, options?: EntityParseOption
             // The brush parser handles version specifics.
             try {
                 brushes.push(parseBrush(tokenizer, 220));
-            } catch (err: any) {
+            } catch (err) {
                 if (options?.skipMalformed) {
-                    options.onWarning?.(`Skipping malformed brush at line ${token.line}: ${err.message}`, token.line);
+                    const message = err instanceof Error ? err.message : String(err);
+                    options.onWarning?.(`Skipping malformed brush at line ${token.line}: ${message}`, token.line);
                     // Recover: consume until '}' matching the brush start
                     // Since we already consumed the opening '{' for the brush,
                     // we just need to scan until we find the closing '}'.
