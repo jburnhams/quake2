@@ -79,8 +79,9 @@ vi.mock('@quake2ts/client/hud.js', () => ({
     Draw_Hud: vi.fn()
 }));
 
-vi.mock('@quake2ts/cgame', async () => {
+vi.mock('@quake2ts/cgame', () => {
   return {
+    __esModule: true,
     ClientPrediction: class {
         setAuthoritative = vi.fn();
         enqueueCommand = vi.fn();

@@ -92,8 +92,9 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `client/tests/integration/inputUI.test.ts` to `client/tests/unit-node/integration/inputUI.test.ts`
    - Moved: `client/tests/integration/menu_lifecycle.test.ts` to `client/tests/unit-node/integration/menu_lifecycle.test.ts`
    - Moved: `client/tests/integration/save-menu.test.ts` to `client/tests/unit-node/integration/save-menu.test.ts`
+   - Moved: `client/tests/integration/wiring.test.ts` to `client/tests/unit-node/integration/wiring.test.ts` (with mocked localStorage)
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
-   - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment:
+   - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:
      - `client/tests/integration/demo/demo-playback-integration.test.ts`
      - `client/tests/integration/demo/demo-recording-integration.test.ts`
 4. Update test scripts in `package.json` to run both test suites
