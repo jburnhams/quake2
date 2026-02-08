@@ -381,7 +381,7 @@ export class MapParseError extends Error {
 
 ### 6.2 Error Recovery
 
-- [ ] Implement optional error recovery (skip malformed brush, continue)
+- [x] Implement optional error recovery (skip malformed brush, continue)
 
 ---
 

@@ -14,6 +14,9 @@ export interface ParseOptions {
 
   /** Callback for warnings */
   onWarning?: (message: string, line: number) => void;
+
+  /** Skip malformed brushes instead of aborting */
+  skipMalformed?: boolean;
 }
 
 export interface ValidationResult {
@@ -41,7 +44,7 @@ export class MapParser {
         // Entities start with '{'
         if (token.type === TokenType.OPEN_BRACE) {
           try {
-            const entity = parseEntity(tokenizer);
+            const entity = parseEntity(tokenizer, options);
             entities.push(entity);
           } catch (err) {
             const e = err as any;

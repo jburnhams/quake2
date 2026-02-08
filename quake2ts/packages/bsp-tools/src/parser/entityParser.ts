@@ -8,6 +8,11 @@ export interface MapEntityDef {
   line: number;  // For error reporting
 }
 
+export interface EntityParseOptions {
+  skipMalformed?: boolean;
+  onWarning?: (message: string, line: number) => void;
+}
+
 export function parseKeyValue(tokenizer: MapTokenizer): { key: string; value: string } {
     // Keys and values are usually quoted strings, but we should be robust
     // and accept numbers as strings if they appear (though unlikely for keys).
@@ -24,7 +29,7 @@ export function parseKeyValue(tokenizer: MapTokenizer): { key: string; value: st
     return { key: keyToken.value, value: valueToken.value };
 }
 
-export function parseEntity(tokenizer: MapTokenizer): MapEntityDef {
+export function parseEntity(tokenizer: MapTokenizer, options?: EntityParseOptions): MapEntityDef {
     const brace = tokenizer.expect(TokenType.OPEN_BRACE);
     const line = brace.line;
     const properties = new Map<string, string>();
@@ -46,7 +51,27 @@ export function parseEntity(tokenizer: MapTokenizer): MapEntityDef {
             // In a real scenario, mapVersion comes from worldspawn,
             // but we might be parsing worldspawn itself.
             // The brush parser handles version specifics.
-            brushes.push(parseBrush(tokenizer, 220));
+            try {
+                brushes.push(parseBrush(tokenizer, 220));
+            } catch (err) {
+                if (options?.skipMalformed) {
+                    const message = err instanceof Error ? err.message : String(err);
+                    options.onWarning?.(`Skipping malformed brush at line ${token.line}: ${message}`, token.line);
+                    // Recover: consume until '}' matching the brush start
+                    // Since we already consumed the opening '{' for the brush,
+                    // we just need to scan until we find the closing '}'.
+                    // Note: This simple recovery assumes brushes don't contain nested blocks,
+                    // which is true for standard Quake map format.
+                    while (!tokenizer.isAtEnd()) {
+                        const t = tokenizer.next();
+                        if (t.type === TokenType.CLOSE_BRACE) {
+                            break;
+                        }
+                    }
+                } else {
+                    throw err;
+                }
+            }
         } else if (token.type === TokenType.STRING || token.type === TokenType.NUMBER) {
             // Property
             const kv = parseKeyValue(tokenizer);
