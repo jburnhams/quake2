@@ -65,6 +65,45 @@ describe('MapParser', () => {
        expect(map.entities[0].brushes).toHaveLength(1);
        expect(map.entities[0].brushes[0].sides).toHaveLength(4);
     });
+
+    it('should skip malformed brushes if skipMalformed is true', () => {
+      const input = `{
+"classname" "worldspawn"
+{
+( 0 0 0 ) ( 1 0 0 ) ( 0 1 0 ) texture 0 0 0 1 1
+( 0 0 0 ) ( 0 1 0 ) ( 0 0 1 ) texture 0 0 0 1 1
+( 0 0 0 ) ( 0 0 1 ) ( 1 0 0 ) texture 0 0 0 1 1
+( 1 0 0 ) ( 0 1 0 ) ( 0 0 1 ) texture 0 0 0 1 1
+}
+{
+( 0 0 0 ) ( 1 0 0 ) ( 0 1 0 ) texture 0 0 0 1 1
+MALFORMED BRUSH CONTENT
+}
+{
+( 0 0 0 ) ( 1 0 0 ) ( 0 1 0 ) texture 0 0 0 1 1
+( 0 0 0 ) ( 0 1 0 ) ( 0 0 1 ) texture 0 0 0 1 1
+( 0 0 0 ) ( 0 0 1 ) ( 1 0 0 ) texture 0 0 0 1 1
+( 1 0 0 ) ( 0 1 0 ) ( 0 0 1 ) texture 0 0 0 1 1
+}
+}`;
+      const onWarning = vi.fn();
+      const map = MapParser.parse(input, { skipMalformed: true, onWarning });
+
+      // Should contain worldspawn, which has 2 valid brushes
+      expect(map.entities).toHaveLength(1);
+      expect(map.entities[0].brushes).toHaveLength(2);
+      expect(onWarning).toHaveBeenCalledWith(expect.stringMatching(/Skipping malformed brush/), expect.any(Number));
+    });
+
+    it('should throw on malformed brush if skipMalformed is false', () => {
+       const input = `{
+"classname" "worldspawn"
+{
+MALFORMED
+}
+}`;
+       expect(() => MapParser.parse(input)).toThrow();
+    });
   });
 
   describe('validate', () => {
