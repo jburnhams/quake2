@@ -304,11 +304,11 @@ export function cylinder(params: CylinderParams): BrushDef;
 
 ---
 
-## 4. High-Level Builders
+## 4. High-Level Builders (COMPLETED)
 
 ### 4.1 Room Builder
 
-- [ ] Implement `addRoom()` on BspBuilder
+- [x] Implement `addRoom()` on BspBuilder
 
 ```typescript
 export interface RoomParams {
@@ -332,7 +332,7 @@ export interface OpeningDef {
 
 ### 4.2 Corridor Builder
 
-- [ ] Implement `addCorridor()` on BspBuilder
+- [x] Implement `addCorridor()` on BspBuilder
 
 ```typescript
 export interface CorridorParams {
@@ -347,9 +347,10 @@ export interface CorridorParams {
 
 ### 4.3 Tests
 
-- [ ] Test: `addRoom()` creates valid enclosed space
-- [ ] Test: `addCorridor()` creates valid enclosed space
-- [ ] Test: Room with opening has correct hole
+- [x] Test: `addRoom()` creates valid enclosed space
+- [x] Test: `addCorridor()` creates valid enclosed space
+- [x] Test: Room with opening has correct hole
+- [x] Integration Test: `addRoom` with non-zero origin works correctly (verified coordinate handling)
 
 ---
 
