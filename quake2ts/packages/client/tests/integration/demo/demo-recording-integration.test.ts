@@ -22,22 +22,20 @@ vi.mock('@quake2ts/engine', async () => {
             };
             return mockRecorderInstance;
         }),
-        DemoPlaybackController: vi.fn().mockImplementation(function() {
-            return {
-                setHandler: vi.fn(),
-                loadDemo: vi.fn(),
-                setSpeed: vi.fn(),
-                setFrameDuration: vi.fn(),
-                getCurrentTime: vi.fn(),
-                getDuration: vi.fn(),
-                getState: vi.fn(),
-                getSpeed: vi.fn(),
-                play: vi.fn(),
-                pause: vi.fn(),
-                stop: vi.fn(),
-                update: vi.fn()
-            };
-        }),
+        DemoPlaybackController: class {
+            setHandler = vi.fn();
+            loadDemo = vi.fn();
+            setSpeed = vi.fn();
+            setFrameDuration = vi.fn();
+            getCurrentTime = vi.fn();
+            getDuration = vi.fn();
+            getState = vi.fn();
+            getSpeed = vi.fn();
+            play = vi.fn();
+            pause = vi.fn();
+            stop = vi.fn();
+            update = vi.fn();
+        },
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };

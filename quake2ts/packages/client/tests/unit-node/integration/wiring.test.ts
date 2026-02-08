@@ -1,9 +1,18 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createClient, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer, AssetManager, EngineHost } from '@quake2ts/engine';
 import { ConfigStringIndex } from '@quake2ts/shared';
+import { createMockLocalStorage } from '@quake2ts/test-utils';
 
 describe('Client Integration Wiring', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', createMockLocalStorage());
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
   it('should propagate config string updates to cgame and assets', async () => {
     // Mock AssetManager
     const assetManager = {
