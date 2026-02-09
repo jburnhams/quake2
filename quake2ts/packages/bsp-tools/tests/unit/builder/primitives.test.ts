@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { box, hollowBox, wedge, stairs } from '../../../src/builder/primitives.js';
+import { box, hollowBox, wedge, stairs, cylinder } from '../../../src/builder/primitives.js';
 import { type Vec3 } from '@quake2ts/shared';
 
 describe('builder/primitives', () => {
@@ -273,6 +273,103 @@ describe('builder/primitives', () => {
 
       expect(top0).toBeCloseTo(-16);
       expect(top3).toBeCloseTo(32);
+    });
+  });
+
+  describe('cylinder', () => {
+    it('should create a brush with N+2 sides', () => {
+      const c = cylinder({
+        origin: { x: 0, y: 0, z: 0 },
+        radius: 32,
+        height: 64,
+        sides: 8
+      });
+      expect(c.sides).toHaveLength(10); // 8 sides + top + bottom
+    });
+
+    it('should have top and bottom planes', () => {
+      const c = cylinder({
+        origin: { x: 0, y: 0, z: 0 },
+        radius: 32,
+        height: 64,
+        sides: 8
+      });
+
+      // Top: (0,0,1) dist 32
+      const top = c.sides.find(s => s.plane.normal.z === 1);
+      expect(top).toBeDefined();
+      expect(top?.plane.dist).toBe(32);
+
+      // Bottom: (0,0,-1) dist 32 (since -mins.z = -(-32) = 32)
+      const bottom = c.sides.find(s => s.plane.normal.z === -1);
+      expect(bottom).toBeDefined();
+      expect(bottom?.plane.dist).toBe(32);
+    });
+
+    it('should generate convex hull', () => {
+      const c = cylinder({
+        origin: { x: 0, y: 0, z: 0 },
+        radius: 32,
+        height: 64,
+        sides: 4
+      });
+
+      // For 4 sides starting at angle 0:
+      // i=0: angle=0, normal=(1,0,0)
+      // i=1: angle=PI/2, normal=(0,1,0)
+      // i=2: angle=PI, normal=(-1,0,0)
+      // i=3: angle=3PI/2, normal=(0,-1,0)
+
+      const px = c.sides.find(s => s.plane.normal.x > 0.9);
+      const py = c.sides.find(s => s.plane.normal.y > 0.9);
+      const nx = c.sides.find(s => s.plane.normal.x < -0.9);
+      const ny = c.sides.find(s => s.plane.normal.y < -0.9);
+
+      expect(px).toBeDefined();
+      expect(py).toBeDefined();
+      expect(nx).toBeDefined();
+      expect(ny).toBeDefined();
+    });
+
+    it('should assign textures based on cardinal direction', () => {
+      const c = cylinder({
+        origin: { x: 0, y: 0, z: 0 },
+        radius: 32,
+        height: 64,
+        sides: 4, // Aligned with axes (0, 90, 180, 270 degrees)
+        texture: {
+          east: { name: 'tex_east' },
+          north: { name: 'tex_north' },
+          west: { name: 'tex_west' },
+          south: { name: 'tex_south' },
+          top: { name: 'tex_top' },
+          bottom: { name: 'tex_bottom' }
+        }
+      });
+
+      // 4 sides:
+      // i=0: angle=0, normal=(1,0,0) -> East
+      // i=1: angle=PI/2, normal=(0,1,0) -> North
+      // i=2: angle=PI, normal=(-1,0,0) -> West
+      // i=3: angle=3PI/2, normal=(0,-1,0) -> South
+
+      const findSideByTexture = (name: string) => c.sides.find(s => s.texture.name === name);
+
+      const east = findSideByTexture('tex_east');
+      expect(east).toBeDefined();
+      expect(east?.plane.normal.x).toBeCloseTo(1);
+
+      const north = findSideByTexture('tex_north');
+      expect(north).toBeDefined();
+      expect(north?.plane.normal.y).toBeCloseTo(1);
+
+      const west = findSideByTexture('tex_west');
+      expect(west).toBeDefined();
+      expect(west?.plane.normal.x).toBeCloseTo(-1);
+
+      const south = findSideByTexture('tex_south');
+      expect(south).toBeDefined();
+      expect(south?.plane.normal.y).toBeCloseTo(-1);
     });
   });
 });

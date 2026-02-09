@@ -58,6 +58,14 @@ export interface StairsParams {
   texture?: string | TextureDef;
 }
 
+export interface CylinderParams {
+  origin: Vec3;
+  radius: number;
+  height: number;
+  sides: number;  // Must be >= 3
+  texture?: string | TextureDef;
+}
+
 // Internal helper to normalize texture input
 function resolveTexture(
   textureInput: BoxParams['texture'],
@@ -293,6 +301,70 @@ export function hollowBox(params: HollowBoxParams): BrushDef[] {
   }
 
   return brushes;
+}
+
+/**
+ * Create a cylindrical brush (approximated by N sides)
+ */
+export function cylinder(params: CylinderParams): BrushDef {
+  const sides = Math.max(3, Math.floor(params.sides));
+  const brushSides: BrushSideDef[] = [];
+  const angleStep = (Math.PI * 2) / sides;
+
+  // Top (Z+)
+  brushSides.push({
+    plane: createPlane({ x: 0, y: 0, z: 1 }, params.origin.z + params.height * 0.5),
+    texture: resolveTexture(params.texture, 'top')
+  });
+
+  // Bottom (Z-)
+  brushSides.push({
+    plane: createPlane({ x: 0, y: 0, z: -1 }, -(params.origin.z - params.height * 0.5)),
+    texture: resolveTexture(params.texture, 'bottom')
+  });
+
+  // Side planes
+  for (let i = 0; i < sides; i++) {
+    const angle = i * angleStep;
+    // Normal is (cos(angle), sin(angle), 0)
+    const nx = Math.cos(angle);
+    const ny = Math.sin(angle);
+
+    // Point on the surface: center + radius * normal
+    // Plane equation: n . p = dist
+    // dist = nx * (origin.x + nx * r) + ny * (origin.y + ny * r)
+    //      = nx * origin.x + ny * origin.y + (nx^2 + ny^2) * r
+    //      = nx * origin.x + ny * origin.y + r
+
+    const dist = nx * params.origin.x + ny * params.origin.y + params.radius;
+
+    // Select the cardinal direction this face most closely aligns with
+    let faceName: 'north' | 'south' | 'east' | 'west';
+
+    // Dot products with cardinal vectors:
+    // North (0,1): ny
+    // South (0,-1): -ny
+    // East (1,0): nx
+    // West (-1,0): -nx
+    const absNx = Math.abs(nx);
+    const absNy = Math.abs(ny);
+
+    if (absNx > absNy) {
+      faceName = nx > 0 ? 'east' : 'west';
+    } else {
+      faceName = ny > 0 ? 'north' : 'south';
+    }
+
+    brushSides.push({
+      plane: createPlane({ x: nx, y: ny, z: 0 }, dist),
+      texture: resolveTexture(params.texture, faceName)
+    });
+  }
+
+  return {
+    sides: brushSides,
+    contents: DEFAULT_CONTENTS
+  };
 }
 
 /**
