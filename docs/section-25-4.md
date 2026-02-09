@@ -276,7 +276,7 @@ export function stairs(params: StairsParams): BrushDef[];
 
 ### 3.5 Cylinder (Approximation)
 
-- [ ] Implement `cylinder()` function
+- [x] Implement `cylinder()` function
 
 ```typescript
 export interface CylinderParams {
@@ -300,7 +300,7 @@ export function cylinder(params: CylinderParams): BrushDef;
 - [x] Test: `hollowBox()` produces 6 brushes
 - [x] Test: `wedge()` produces valid convex brush
 - [x] Test: `stairs()` produces correct step count
-- [ ] Test: `cylinder()` produces N+2 sided brush
+- [x] Test: `cylinder()` produces N+2 sided brush
 
 ---
 
@@ -358,7 +358,7 @@ export interface CorridorParams {
 
 ### 5.1 Common Entities
 
-- [ ] Create `src/builder/entities.ts`
+- [x] Create `src/builder/entities.ts`
 
 **File: `src/builder/entities.ts`**
 ```typescript
@@ -390,9 +390,9 @@ export function funcButton(brush: BrushDef, target: string): EntityDef;
 
 ### 5.2 Tests
 
-- [ ] Test: `playerStart()` produces valid entity
-- [ ] Test: `light()` produces valid entity
-- [ ] Test: `funcDoor()` includes brush
+- [x] Test: `playerStart()` produces valid entity
+- [x] Test: `light()` produces valid entity
+- [x] Test: `funcDoor()` includes brush
 
 ---
 
