@@ -4,8 +4,7 @@ import type { GameFrameResult } from '../../src/host.js';
 import {
   createMockEngineExports,
   createMockGameSimulation,
-  createMockClientRenderer,
-  createMockSubtitleClient,
+  createMockRuntimeClient,
   createMockAudioApiOptions
 } from '@quake2ts/test-utils';
 
@@ -21,10 +20,7 @@ describe('EngineRuntime', () => {
     });
 
     // SubtitleClient is required by createEngineRuntime
-    const client = {
-        ...createMockClientRenderer(),
-        ...createMockSubtitleClient()
-    };
+    const client = createMockRuntimeClient();
 
     const audioOptions = createMockAudioApiOptions();
     const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {
@@ -52,10 +48,7 @@ describe('EngineRuntime', () => {
       }),
     });
 
-    const client = {
-        ...createMockClientRenderer(),
-        ...createMockSubtitleClient()
-    };
+    const client = createMockRuntimeClient();
 
     const audioOptions = createMockAudioApiOptions();
     const { runtime } = createEngineRuntime(engine, game, client, audioOptions, {

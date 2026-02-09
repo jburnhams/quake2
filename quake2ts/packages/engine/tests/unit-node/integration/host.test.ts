@@ -1,21 +1,18 @@
 import { describe, expect, it, vi } from 'vitest';
 import { EngineHost } from '../../../src/host.js';
+import { createMockGameSimulation, createMockClientRenderer } from '@quake2ts/test-utils';
 
 describe('EngineHost Integration', () => {
   it('should cleanup game if client initialization fails', () => {
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs: 0 })),
-      frame: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    });
 
-    const client = {
+    const client = createMockClientRenderer({
       init: vi.fn(() => {
         throw new Error('Client init failed');
       }),
-      render: vi.fn(),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, client, {
       loop: { schedule: () => {}, now: () => 0 },
@@ -28,13 +25,12 @@ describe('EngineHost Integration', () => {
   });
 
   it('should handle errors during simulation step', () => {
-    const game = {
+    const game = createMockGameSimulation({
       init: vi.fn(() => ({ frame: 0, timeMs: 0 })),
       frame: vi.fn(() => {
         throw new Error('Simulation failed');
       }),
-      shutdown: vi.fn(),
-    };
+    });
 
     const host = new EngineHost(game, undefined, {
       loop: { schedule: () => {}, now: () => 0, fixedDeltaMs: 10 },
