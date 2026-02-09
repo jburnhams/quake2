@@ -13,18 +13,13 @@ export function playerStart(origin: Vec3, angle?: number): EntityDef {
 }
 
 export function light(origin: Vec3, intensity?: number, color?: Vec3): EntityDef {
-  const props: Record<string, string> = {
-    origin: `${origin.x} ${origin.y} ${origin.z}`,
-    light: String(intensity ?? 300),
-  };
-
-  if (color) {
-    props._color = `${color.x} ${color.y} ${color.z}`;
-  }
-
   return {
     classname: 'light',
-    properties: props,
+    properties: {
+      origin: `${origin.x} ${origin.y} ${origin.z}`,
+      light: String(intensity ?? 300),
+      ...(color && { _color: `${color.x} ${color.y} ${color.z}` }),
+    },
   };
 }
 
