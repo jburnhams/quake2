@@ -338,11 +338,26 @@ export function cylinder(params: CylinderParams): BrushDef {
 
     const dist = nx * params.origin.x + ny * params.origin.y + params.radius;
 
-    // Use 'north' texture as default for sides if specific mapping isn't feasible here
-    // In a real implementation we might want to map based on direction
+    // Select the cardinal direction this face most closely aligns with
+    let faceName: 'north' | 'south' | 'east' | 'west';
+
+    // Dot products with cardinal vectors:
+    // North (0,1): ny
+    // South (0,-1): -ny
+    // East (1,0): nx
+    // West (-1,0): -nx
+    const absNx = Math.abs(nx);
+    const absNy = Math.abs(ny);
+
+    if (absNx > absNy) {
+      faceName = nx > 0 ? 'east' : 'west';
+    } else {
+      faceName = ny > 0 ? 'north' : 'south';
+    }
+
     brushSides.push({
       plane: createPlane({ x: nx, y: ny, z: 0 }, dist),
-      texture: resolveTexture(params.texture, 'north')
+      texture: resolveTexture(params.texture, faceName)
     });
   }
 

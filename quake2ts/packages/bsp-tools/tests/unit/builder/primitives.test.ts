@@ -330,5 +330,46 @@ describe('builder/primitives', () => {
       expect(nx).toBeDefined();
       expect(ny).toBeDefined();
     });
+
+    it('should assign textures based on cardinal direction', () => {
+      const c = cylinder({
+        origin: { x: 0, y: 0, z: 0 },
+        radius: 32,
+        height: 64,
+        sides: 4, // Aligned with axes (0, 90, 180, 270 degrees)
+        texture: {
+          east: { name: 'tex_east' },
+          north: { name: 'tex_north' },
+          west: { name: 'tex_west' },
+          south: { name: 'tex_south' },
+          top: { name: 'tex_top' },
+          bottom: { name: 'tex_bottom' }
+        }
+      });
+
+      // 4 sides:
+      // i=0: angle=0, normal=(1,0,0) -> East
+      // i=1: angle=PI/2, normal=(0,1,0) -> North
+      // i=2: angle=PI, normal=(-1,0,0) -> West
+      // i=3: angle=3PI/2, normal=(0,-1,0) -> South
+
+      const findSideByTexture = (name: string) => c.sides.find(s => s.texture.name === name);
+
+      const east = findSideByTexture('tex_east');
+      expect(east).toBeDefined();
+      expect(east?.plane.normal.x).toBeCloseTo(1);
+
+      const north = findSideByTexture('tex_north');
+      expect(north).toBeDefined();
+      expect(north?.plane.normal.y).toBeCloseTo(1);
+
+      const west = findSideByTexture('tex_west');
+      expect(west).toBeDefined();
+      expect(west?.plane.normal.x).toBeCloseTo(-1);
+
+      const south = findSideByTexture('tex_south');
+      expect(south).toBeDefined();
+      expect(south?.plane.normal.y).toBeCloseTo(-1);
+    });
   });
 });
