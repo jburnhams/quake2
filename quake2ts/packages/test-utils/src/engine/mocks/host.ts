@@ -1,5 +1,6 @@
 import { vi } from 'vitest';
-import type { EngineHost, Cvar, GameSimulation, GameFrameResult, ClientRenderer, GameRenderSample, EngineExports } from '@quake2ts/engine';
+import type { EngineHost, Cvar, GameSimulation, GameFrameResult, ClientRenderer, GameRenderSample, EngineExports, SubtitleClient } from '@quake2ts/engine';
+import { createMockSubtitleClient } from './audio-api.js';
 
 export function createMockEngineHost(overrides?: Partial<EngineHost>): EngineHost {
   const cvars = new Map<string, Cvar>();
@@ -62,6 +63,16 @@ export function createMockClientRenderer<FrameState = unknown>(overrides: Partia
     shutdown: vi.fn(),
     ...overrides
   };
+}
+
+export function createMockRuntimeClient<FrameState = unknown>(
+  overrides: Partial<ClientRenderer<FrameState> & SubtitleClient> = {}
+): ClientRenderer<FrameState> & SubtitleClient {
+  return {
+    ...createMockClientRenderer<FrameState>(),
+    ...createMockSubtitleClient(),
+    ...overrides
+  } as ClientRenderer<FrameState> & SubtitleClient;
 }
 
 export function createMockEngineExports(overrides: Partial<EngineExports> = {}): EngineExports {
