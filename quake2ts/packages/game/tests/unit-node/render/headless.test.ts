@@ -1,5 +1,5 @@
 import { describe, test, expect, vi } from 'vitest';
-import { createGame } from '../../src/index.js';
+import { createGame } from '../../../src/index.js';
 import { createNullRenderer, createGameImportsAndEngine } from '@quake2ts/test-utils';
 import { Camera } from '@quake2ts/engine';
 

@@ -93,7 +93,11 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `client/tests/integration/menu_lifecycle.test.ts` to `client/tests/unit-node/integration/menu_lifecycle.test.ts`
    - Moved: `client/tests/integration/save-menu.test.ts` to `client/tests/unit-node/integration/save-menu.test.ts`
    - Moved: `client/tests/integration/wiring.test.ts` to `client/tests/unit-node/integration/wiring.test.ts` (with mocked localStorage)
+   - Moved: `engine/tests/unit-jsdom/render/render-options.test.ts` to `engine/tests/unit-node/render/`
+   - Moved: `engine/tests/unit-jsdom/render/rendererStats.test.ts` to `engine/tests/unit-node/render/`
+   - Moved: `game/tests/render/headless.test.ts` to `game/tests/unit-node/render/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
+   - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
    - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:
      - `client/tests/integration/demo/demo-playback-integration.test.ts`
      - `client/tests/integration/demo/demo-recording-integration.test.ts`

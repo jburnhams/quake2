@@ -120,11 +120,15 @@ vi.mock('../../../src/render/debug', () => ({
 }));
 
 // Mock culling to always verify visibility
-vi.mock('../../../src/render/culling', () => ({
-    boxIntersectsFrustum: vi.fn().mockReturnValue(true),
-    extractFrustumPlanes: vi.fn().mockReturnValue([]),
-    transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
-}));
+vi.mock('../../../src/render/culling', async (importOriginal) => {
+    const original = await importOriginal<any>();
+    return {
+        ...original,
+        boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+        // extractFrustumPlanes: vi.fn().mockReturnValue([]), // Use real implementation if possible or keep mocked
+        // transformAabb: vi.fn().mockReturnValue({ mins: {x:0,y:0,z:0}, maxs: {x:0,y:0,z:0} })
+    };
+});
 
 // Mock bspTraversal and light
 vi.mock('../../../src/render/bspTraversal', () => ({
