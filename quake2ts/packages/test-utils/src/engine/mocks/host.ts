@@ -69,8 +69,8 @@ export function createMockRuntimeClient<FrameState = unknown>(
   overrides: Partial<ClientRenderer<FrameState> & SubtitleClient> = {}
 ): ClientRenderer<FrameState> & SubtitleClient {
   return {
-    ...createMockClientRenderer<FrameState>(overrides),
-    ...createMockSubtitleClient(overrides),
+    ...createMockClientRenderer<FrameState>(),
+    ...createMockSubtitleClient(),
     ...overrides
   } as ClientRenderer<FrameState> & SubtitleClient;
 }
