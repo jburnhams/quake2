@@ -2,11 +2,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkCapture, captureFlag } from '../../../../src/modes/ctf/capture';
 import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state';
-import { Entity, Solid } from '../../../../src/entities/entity';
+import { Solid, Entity } from '../../../../src/entities/entity';
 import { EntitySystem } from '../../../../src/entities/system';
 import { GameExports } from '../../../../src/index';
 import { KeyId } from '../../../../src/inventory/playerInventory';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Capture Logic', () => {
   let context: EntitySystem;
@@ -16,56 +16,41 @@ describe('CTF Capture Logic', () => {
   let player: Entity;
 
   beforeEach(async () => {
-    // Basic mocks
-    const testCtx = await createTestContext();
-    context = testCtx.entities;
-    game = testCtx.game;
-
-    // Ensure game.sound and game.centerprintf are spies
-    game.sound = vi.fn();
-    game.centerprintf = vi.fn();
-
     // Red flag setup
-    redFlag = {
-      classname: 'item_flag_team1',
+    redFlag = createItemEntityFactory('item_flag_team1', {
       flagTeam: 'red',
       flagState: FlagState.AT_BASE,
       baseOrigin: { x: 100, y: 0, z: 0 },
       origin: { x: 100, y: 0, z: 0 },
       solid: Solid.Trigger,
-    } as FlagEntity;
+    }) as unknown as FlagEntity;
 
     // Blue flag setup
-    blueFlag = {
-      classname: 'item_flag_team2',
+    blueFlag = createItemEntityFactory('item_flag_team2', {
       flagTeam: 'blue',
       flagState: FlagState.CARRIED, // Assumed carried by player
       baseOrigin: { x: -100, y: 0, z: 0 },
       origin: { x: -100, y: 0, z: 0 },
       solid: Solid.Not,
-    } as FlagEntity;
-
-    // Mock EntitySystem iteration to find flags
-    const entities = [redFlag, blueFlag];
-    context.forEachEntity = (callback: (ent: Entity) => void) => {
-        entities.forEach(callback);
-    };
+    }) as unknown as FlagEntity;
 
     // Player setup
-    player = {
-      client: {
-        inventory: {
-          items: new Map(),
-          ammo: { counts: new Float32Array(), limits: new Float32Array() },
-          keys: new Set(),
-          weapons: new Set(),
-        },
+    player = createPlayerEntityFactory({
+      client: createPlayerClientFactory({
         score: 0,
-        // Mock team property
-        team: 'red',
-      },
-      classname: 'player',
-    } as unknown as Entity;
+        // Mock team property used in CTF logic
+        team: 'red'
+      })
+    }) as unknown as Entity;
+
+    // Create context with initial entities
+    const testCtx = createTestContext({
+      initialEntities: [redFlag, blueFlag, player]
+    });
+
+    context = testCtx.entities;
+    // Cast MockGame to GameExports (compatible enough for tests)
+    game = testCtx.game as unknown as GameExports;
   });
 
   describe('checkCapture', () => {
@@ -87,11 +72,6 @@ describe('CTF Capture Logic', () => {
     it('should call captureFlag and return true if conditions met', () => {
       // Give player blue flag
       player.client!.inventory.keys.add(KeyId.BlueFlag);
-
-      // Spy on captureFlag logic indirectly by checking score change or similar,
-      // but captureFlag is called directly.
-      // Since checkCapture calls captureFlag which we can't easily mock (same module),
-      // we check the side effects of captureFlag.
 
       const result = checkCapture(redFlag, player, game, context);
       expect(result).toBe(true);

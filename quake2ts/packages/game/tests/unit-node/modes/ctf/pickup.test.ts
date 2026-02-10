@@ -1,43 +1,37 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { handleFlagPickup } from '../../../../src/modes/ctf/pickup.js';
 import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
-import { Entity } from '../../../../src/entities/entity.js';
 import { GameExports } from '../../../../src/index.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
+import { createTestContext, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Flag Pickup', () => {
     let flag: FlagEntity;
-    let player: Entity;
+    let player: any;
     let game: GameExports;
     let context: EntitySystem;
 
     beforeEach(() => {
-        flag = {
+        flag = createItemEntityFactory('item_flag_team1', {
             flagState: FlagState.AT_BASE,
             flagTeam: 'red',
             baseOrigin: { x: 100, y: 100, z: 0 },
             origin: { x: 100, y: 100, z: 0 },
             owner: undefined,
-            classname: 'item_flag_team1'
-        } as unknown as FlagEntity;
+        }) as unknown as FlagEntity;
 
-        player = {
-            client: {
-                team: 'red', // Mock team property
-                inventory: {
-                    items: new Set(),
-                    keys: new Set()
-                }
-            }
-        } as unknown as Entity;
+        player = createPlayerEntityFactory({
+             client: createPlayerClientFactory({
+                 team: 'red'
+             })
+        });
 
-        game = {
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            time: 10
-        } as unknown as GameExports;
+        const testCtx = createTestContext();
+        game = testCtx.game as unknown as GameExports;
+        context = testCtx.entities;
 
-        context = {} as EntitySystem;
+        // Mock time
+        (game as any).time = 10;
     });
 
     it('should not allow picking up own flag at base', () => {

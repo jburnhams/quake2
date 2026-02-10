@@ -4,6 +4,8 @@ import {
   createPlayerWeaponStates
 } from '@quake2ts/game';
 
+export type FactoryOverrides<T> = Partial<T> & Record<string, any>;
+
 /**
  * Creates a default PlayerClient object with optional overrides.
  * Includes inventory, weapon states, and persistent state.
@@ -11,8 +13,8 @@ import {
  * @param overrides - Partial PlayerClient to override defaults.
  * @returns A complete PlayerClient object.
  */
-export const createPlayerClientFactory = (overrides?: Partial<PlayerClient>): PlayerClient => {
-    return {
+export const createPlayerClientFactory = (overrides?: FactoryOverrides<PlayerClient>): PlayerClient & Record<string, any> => {
+    const client: PlayerClient = {
         inventory: createPlayerInventory(),
         weaponStates: createPlayerWeaponStates(),
         buttons: 0,
@@ -31,7 +33,8 @@ export const createPlayerClientFactory = (overrides?: Partial<PlayerClient>): Pl
             max_health: 100,
             savedFlags: 0,
             selected_item: 0
-        },
-        ...overrides,
+        }
     };
+
+    return { ...client, ...overrides } as PlayerClient & Record<string, any>;
 };
