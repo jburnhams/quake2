@@ -13,7 +13,7 @@ export type FactoryOverrides<T> = Partial<T> & Record<string, any>;
  * @param overrides - Partial PlayerClient to override defaults.
  * @returns A complete PlayerClient object.
  */
-export const createPlayerClientFactory = (overrides?: FactoryOverrides<PlayerClient>): FactoryOverrides<PlayerClient> => {
+export const createPlayerClientFactory = (overrides?: FactoryOverrides<PlayerClient>): PlayerClient & Record<string, any> => {
     const client: PlayerClient = {
         inventory: createPlayerInventory(),
         weaponStates: createPlayerWeaponStates(),
@@ -36,5 +36,5 @@ export const createPlayerClientFactory = (overrides?: FactoryOverrides<PlayerCli
         }
     };
 
-    return { ...client, ...overrides };
+    return { ...client, ...overrides } as PlayerClient & Record<string, any>;
 };
