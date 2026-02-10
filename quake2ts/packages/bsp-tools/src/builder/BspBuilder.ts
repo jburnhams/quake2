@@ -1,11 +1,12 @@
 import { type Vec3, scaleVec3, subtractVec3, addVec3, dotVec3 } from '@quake2ts/shared';
 import type { ParsedMap } from '../parser/mapParser.js';
+import type { BspData } from '../types/bsp.js';
+import { SimpleCompiler } from '../compiler/SimpleCompiler.js';
 import type { BrushDef, EntityDef, OpeningDef } from './types.js';
 import { box, stairs, type StairsParams } from './primitives.js';
 import { subtractRects, type Rect } from './rectUtils.js';
 
-// TODO: Proper BspData type definition
-export type BspData = any;
+export type { BspData };
 
 export interface BuildOptions {
   /** Use extended QBSP format for larger maps */
@@ -349,17 +350,21 @@ export class BspBuilder {
     throw new Error('Method not implemented.');
   }
 
-  // Build final BSP (stub)
+  // Build final BSP
   build(): BuildResult {
     const start = performance.now();
+
+    const compiler = new SimpleCompiler(this.brushes, this.entities);
+    const result = compiler.compile();
+
     return {
-      bsp: {} as BspData,
+      bsp: result.bsp,
       stats: {
-        brushCount: this.brushes.length,
-        planeCount: 0,
-        nodeCount: 0,
-        leafCount: 0,
-        faceCount: 0,
+        brushCount: result.stats.brushes,
+        planeCount: result.stats.planes,
+        nodeCount: result.stats.nodes,
+        leafCount: result.stats.leafs,
+        faceCount: result.stats.faces,
         entityCount: this.entities.length + 1, // +1 for worldspawn
         buildTimeMs: performance.now() - start
       },
