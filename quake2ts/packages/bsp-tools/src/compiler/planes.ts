@@ -55,13 +55,10 @@ export class PlaneSet {
     for (let i = this.hashTable[hash]; i !== -1; i = this.planes[i].hashChain!) {
       const p = this.planes[i];
       if (Math.abs(p.dist - dist) < 0.01 &&
-          vec3Equals(p.normal, normal)) { // Use epsilon for normal too? vec3Equals is exact.
-        // Assuming canonical normals (normalized)
-         if (Math.abs(p.normal.x - normal.x) < 0.0001 &&
-             Math.abs(p.normal.y - normal.y) < 0.0001 &&
-             Math.abs(p.normal.z - normal.z) < 0.0001) {
-           return i;
-         }
+          Math.abs(p.normal.x - normal.x) < 0.0001 &&
+          Math.abs(p.normal.y - normal.y) < 0.0001 &&
+          Math.abs(p.normal.z - normal.z) < 0.0001) {
+        return i;
       }
     }
 
