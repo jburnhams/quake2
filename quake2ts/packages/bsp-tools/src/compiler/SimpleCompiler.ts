@@ -133,6 +133,7 @@ export class SimpleCompiler {
   private edges: BspEdge[] = [];
   private surfEdges: number[] = [];
   private vertices: Vec3[] = [];
+  private vertexMap: Map<string, number[]> = new Map();
 
   private models: BspModel[] = [];
   private brushes: BspBrush[] = [];
@@ -524,16 +525,66 @@ export class SimpleCompiler {
   }
 
   private addVertex(v: Vec3): number {
-    // Simple linear scan for MVP
-    for (let i = 0; i < this.vertices.length; i++) {
-      const ov = this.vertices[i];
-      if (Math.abs(ov.x - v.x) < 0.01 &&
-          Math.abs(ov.y - v.y) < 0.01 &&
-          Math.abs(ov.z - v.z) < 0.01) {
-        return i;
+    const key = this.getVertexHash(v);
+
+    // Check main bucket and neighbors to catch boundary cases
+    // Epsilon is 0.01, bucket size is 1.0.
+    // Boundary issue happens if v is e.g. 0.999 and duplicate is 1.001.
+    // They are distance 0.002 apart (< 0.01), but in buckets '0' and '1'.
+    // We should check 3x3x3 neighbors or rely on bucket size >> epsilon.
+    // With bucket 1.0 vs epsilon 0.01, checking just the main bucket is "mostly" fine
+    // but theoretically incorrect.
+    // Let's implement neighbor checking for correctness if we want to be robust.
+    // Or just check if candidate is close enough.
+
+    // For MVP optimization, checking adjacent buckets is safer.
+    // But it's 27 lookups.
+    // Alternatively, just iterate all candidates from all adjacent buckets.
+
+    const x = Math.floor(v.x);
+    const y = Math.floor(v.y);
+    const z = Math.floor(v.z);
+
+    for (let dx = -1; dx <= 1; dx++) {
+      for (let dy = -1; dy <= 1; dy++) {
+        for (let dz = -1; dz <= 1; dz++) {
+           const nKey = `${x+dx}_${y+dy}_${z+dz}`;
+           const bucket = this.vertexMap.get(nKey);
+           if (bucket) {
+             for (const idx of bucket) {
+               const ov = this.vertices[idx];
+               if (Math.abs(ov.x - v.x) < 0.01 &&
+                   Math.abs(ov.y - v.y) < 0.01 &&
+                   Math.abs(ov.z - v.z) < 0.01) {
+                 return idx;
+               }
+             }
+           }
+        }
       }
     }
-    return this.vertices.push(v) - 1;
+
+    const candidates = this.vertexMap.get(key);
+
+    // Add new vertex
+    const index = this.vertices.length;
+    this.vertices.push(v);
+
+    // Add to map
+    if (!candidates) {
+      this.vertexMap.set(key, [index]);
+    } else {
+      candidates.push(index);
+    }
+
+    return index;
+  }
+
+  private getVertexHash(v: Vec3): string {
+    const x = Math.floor(v.x);
+    const y = Math.floor(v.y);
+    const z = Math.floor(v.z);
+    return `${x}_${y}_${z}`;
   }
 
   private addEdge(v1: number, v2: number): number {
