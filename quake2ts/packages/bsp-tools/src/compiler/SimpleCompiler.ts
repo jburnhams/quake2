@@ -116,6 +116,12 @@ interface BuildNode {
   brushIndex?: number; // Index in source brushes
 }
 
+interface ProcessedBrush {
+  index: number;
+  def: BrushDef;
+  windings: Map<number, Winding>;
+}
+
 export class SimpleCompiler {
   private planeSet = new PlaneSet();
   private texInfoManager = new TexInfoManager();
@@ -132,6 +138,8 @@ export class SimpleCompiler {
   private brushes: BspBrush[] = [];
   private brushSides: BspBrushSide[] = [];
 
+  private processedBrushes: ProcessedBrush[] = [];
+
   constructor(
     private inputBrushes: BrushDef[],
     private inputEntities: EntityDef[]
@@ -142,7 +150,7 @@ export class SimpleCompiler {
 
   compile(): CompileResult {
     // 1. Process Brushes to Windings
-    const processedBrushes = this.inputBrushes.map((b, i) => {
+    this.processedBrushes = this.inputBrushes.map((b, i) => {
       return {
         index: i,
         def: b,
@@ -151,7 +159,7 @@ export class SimpleCompiler {
     });
 
     // Populate BspBrush and BspBrushSide
-    processedBrushes.forEach(pb => {
+    this.processedBrushes.forEach(pb => {
       const firstSide = this.brushSides.length;
       pb.def.sides.forEach(s => {
          const planeIdx = this.planeSet.findOrAdd(s.plane.normal, s.plane.dist);
@@ -168,7 +176,7 @@ export class SimpleCompiler {
 
     // 2. Build BSP Tree
     // We start with a single root node that covers the world
-    const root = this.buildTree(processedBrushes.map(b => b.index));
+    const root = this.buildTree(this.processedBrushes.map(b => b.index));
 
     // 3. Serialize Tree to BSP structures
     this.serializeTree(root);
@@ -327,7 +335,7 @@ export class SimpleCompiler {
   }
 
   private classifyBrush(brushIdx: number, planeIdx: number): 'front' | 'back' | 'span' {
-    const brush = this.inputBrushes[brushIdx];
+    const processed = this.processedBrushes[brushIdx];
     const plane = this.planeSet.getPlanes()[planeIdx];
     const normal = plane.normal;
     const dist = plane.dist;
@@ -335,11 +343,7 @@ export class SimpleCompiler {
     let front = false;
     let back = false;
 
-    // Check all vertices of the brush?
-    // We can use the windings from generateBrushWindings.
-    const windings = generateBrushWindings(brush); // Recalculating... optimization needed later
-
-    for (const w of windings.values()) {
+    for (const w of processed.windings.values()) {
        for (const p of w.points) {
          const d = dotVec3(p, normal) - dist;
          if (d > 0.1) front = true;
@@ -353,8 +357,9 @@ export class SimpleCompiler {
   }
 
   private buildBrushNode(brushIdx: number): BuildNode {
-    const brush = this.inputBrushes[brushIdx];
-    const windings = generateBrushWindings(brush);
+    const processed = this.processedBrushes[brushIdx];
+    const brush = processed.def;
+    const windings = processed.windings;
 
     // Create a chain of nodes for each face
     // But we need a tree structure.
