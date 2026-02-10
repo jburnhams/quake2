@@ -12,6 +12,10 @@ import { createPlayerClientFactory } from './client.js';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot, GameFrameContext } from '@quake2ts/game';
 
+// -- Types --
+
+export type FactoryOverrides<T> = Partial<T> & Record<string, any>;
+
 // -- Shared / Game State Factories --
 
 /**
@@ -141,7 +145,7 @@ export const createGameStateSnapshotFactory = (overrides?: Partial<GameStateSnap
 
 // Helper to remove internal fields that shouldn't be copied via Object.assign,
 // but PRESERVE the Entity prototype so getters/setters/methods work.
-function sanitizeEntity(ent: Entity): Partial<Entity> {
+function sanitizeEntity(ent: Entity): FactoryOverrides<Entity> {
   // We modify the instance in place (it's a factory-created one, so safe to mutate).
   // We want to delete properties that would conflict with EntitySystem internals
   // if this object is merged into another Entity via Object.assign.
@@ -168,7 +172,7 @@ function sanitizeEntity(ent: Entity): Partial<Entity> {
   delete safe.linkNext;
   delete safe.linkcount;
 
-  return ent;
+  return ent as FactoryOverrides<Entity>;
 }
 
 /**
@@ -177,7 +181,7 @@ function sanitizeEntity(ent: Entity): Partial<Entity> {
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object suitable for Object.assign or direct use.
  */
-export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createEntityFactory(overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   const ent = new Entity(1);
   Object.assign(ent, {
     classname: 'info_null',
@@ -201,7 +205,7 @@ export function createEntityFactory(overrides: Partial<Entity> = {}): Partial<En
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object representing a player.
  */
-export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createPlayerEntityFactory(overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   return createEntityFactory({
     classname: 'player',
     health: 100,
@@ -223,7 +227,7 @@ export function createPlayerEntityFactory(overrides: Partial<Entity> = {}): Part
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object representing a monster.
  */
-export function createMonsterEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createMonsterEntityFactory(classname: string, overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   return createEntityFactory({
     classname,
     health: 100,
@@ -244,7 +248,7 @@ export function createMonsterEntityFactory(classname: string, overrides: Partial
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object representing an item.
  */
-export function createItemEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createItemEntityFactory(classname: string, overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,
@@ -260,7 +264,7 @@ export function createItemEntityFactory(classname: string, overrides: Partial<En
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object representing a projectile.
  */
-export function createProjectileEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createProjectileEntityFactory(classname: string, overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Bsp,
@@ -277,7 +281,7 @@ export function createProjectileEntityFactory(classname: string, overrides: Part
  * @param overrides - Partial Entity properties to override.
  * @returns A partial Entity object representing a trigger.
  */
-export function createTriggerEntityFactory(classname: string, overrides: Partial<Entity> = {}): Partial<Entity> {
+export function createTriggerEntityFactory(classname: string, overrides: FactoryOverrides<Entity> = {}): FactoryOverrides<Entity> {
   return createEntityFactory({
     classname,
     solid: Solid.Trigger,

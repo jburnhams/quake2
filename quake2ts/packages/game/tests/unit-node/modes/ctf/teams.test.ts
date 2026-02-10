@@ -1,25 +1,16 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { assignTeam, CtfTeam, countPlayersOnTeam, ClientWithTeam, onSameTeam, checkFriendlyFire, setTeamSkin } from '../../../../src/modes/ctf/teams.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
 import { Entity } from '../../../../src/entities/entity.js';
 import { GameExports } from '../../../../src/index.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('CTF Teams', () => {
-    let mockEntities: any;
-    let mockGame: any;
+    let mockGame: GameExports;
 
     beforeEach(() => {
-        mockEntities = {
-            entities: [],
-            forEachEntity: (callback: (e: Entity) => void) => {
-                mockEntities.entities.forEach(callback);
-            }
-        };
-
-        mockGame = {
-            serverCommand: vi.fn(),
-            centerprintf: vi.fn(),
-        };
+        // mockGame used in tests below can be created per test or here if generic
+        const testCtx = createTestContext();
+        mockGame = testCtx.game as unknown as GameExports;
     });
 
     it('should count players on team correctly', () => {
@@ -27,49 +18,58 @@ describe('CTF Teams', () => {
         const client2 = { ctfTeam: CtfTeam.BLUE };
         const client3 = { ctfTeam: CtfTeam.RED };
 
-        mockEntities.entities = [
-            { client: client1 },
-            { client: client2 },
-            { client: client3 },
-            { client: undefined }, // Not a player
-        ];
+        const testCtx = createTestContext({
+            initialEntities: [
+                { client: client1 } as any,
+                { client: client2 } as any,
+                { client: client3 } as any,
+                { client: undefined } as any
+            ]
+        });
 
-        expect(countPlayersOnTeam(CtfTeam.RED, mockEntities)).toBe(2);
-        expect(countPlayersOnTeam(CtfTeam.BLUE, mockEntities)).toBe(1);
+        expect(countPlayersOnTeam(CtfTeam.RED, testCtx.entities)).toBe(2);
+        expect(countPlayersOnTeam(CtfTeam.BLUE, testCtx.entities)).toBe(1);
     });
 
     it('should assign specified team', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
-        assignTeam(client, CtfTeam.RED, mockEntities, mockGame);
+        // Pass empty entities
+        const testCtx = createTestContext();
+
+        assignTeam(client, CtfTeam.RED, testCtx.entities, mockGame);
         expect(client.ctfTeam).toBe(CtfTeam.RED);
     });
 
     it('should auto-assign to smaller team (RED smaller)', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
-        mockEntities.entities = [
-            { client: { ctfTeam: CtfTeam.BLUE } },
-        ];
+        const testCtx = createTestContext({
+            initialEntities: [
+                { client: { ctfTeam: CtfTeam.BLUE } } as any
+            ]
+        });
 
-        assignTeam(client, CtfTeam.NOTEAM, mockEntities, mockGame);
+        assignTeam(client, CtfTeam.NOTEAM, testCtx.entities, mockGame);
         expect(client.ctfTeam).toBe(CtfTeam.RED);
     });
 
     it('should auto-assign to smaller team (BLUE smaller)', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
-        mockEntities.entities = [
-            { client: { ctfTeam: CtfTeam.RED } },
-        ];
+        const testCtx = createTestContext({
+            initialEntities: [
+                { client: { ctfTeam: CtfTeam.RED } } as any
+            ]
+        });
 
-        assignTeam(client, CtfTeam.NOTEAM, mockEntities, mockGame);
+        assignTeam(client, CtfTeam.NOTEAM, testCtx.entities, mockGame);
         expect(client.ctfTeam).toBe(CtfTeam.BLUE);
     });
 
     it('should random assign when equal', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
-        mockEntities.entities = [];
+        const testCtx = createTestContext(); // empty
 
         // We can't easily test randomness, but we can ensure it assigns ONE of them
-        assignTeam(client, CtfTeam.NOTEAM, mockEntities, mockGame);
+        assignTeam(client, CtfTeam.NOTEAM, testCtx.entities, mockGame);
         expect([CtfTeam.RED, CtfTeam.BLUE]).toContain(client.ctfTeam);
     });
 

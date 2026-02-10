@@ -1,53 +1,44 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { checkPlayerFlagDrop } from '../../../../src/modes/ctf/integration.js';
 import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
-import { Entity, Solid } from '../../../../src/entities/entity.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
 import { KeyId } from '../../../../src/inventory/playerInventory.js';
 import { GameExports } from '../../../../src/index.js';
+import { createTestContext, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+
+// Helper to cast factories to correct type for tests
+const asFlag = (ent: any) => ent as FlagEntity;
 
 describe('CTF Integration', () => {
-    let player: Entity;
+    let player: any;
     let flag: FlagEntity;
     let context: EntitySystem;
-    let entities: Entity[];
     let mockGame: GameExports;
 
     beforeEach(() => {
-        player = {
-            client: {
-                inventory: {
-                    keys: new Set()
-                }
-            },
+        player = createPlayerEntityFactory({
+            client: createPlayerClientFactory(),
             origin: { x: 100, y: 100, z: 0 }
-        } as unknown as Entity;
+        });
 
-        flag = {
+        flag = createItemEntityFactory('item_flag_team2', {
             flagState: FlagState.CARRIED,
             classname: 'item_flag_team2',
             owner: player,
             origin: { x: 0, y: 0, z: 0 },
             baseOrigin: { x: 1000, y: 1000, z: 0 },
             flagTeam: 'blue'
-        } as unknown as FlagEntity;
+        } as any) as FlagEntity;
 
-        entities = [player, flag];
+        const testCtx = createTestContext({
+            initialEntities: [player, flag]
+        });
 
-        mockGame = {
-            time: 100,
-            sound: vi.fn(),
-            multicast: vi.fn(),
-            centerprintf: vi.fn()
-        } as unknown as GameExports;
+        context = testCtx.entities;
+        mockGame = testCtx.game as unknown as GameExports;
+        (mockGame as any).time = 100;
 
-        context = {
-            forEachEntity: (cb) => entities.forEach(cb),
-            timeSeconds: 100,
-            engine: {
-                centerprintf: vi.fn(),
-            }
-        } as unknown as EntitySystem;
+        // Link game to context if needed by implementation (some code checks ._game)
         (context as any)._game = mockGame;
     });
 

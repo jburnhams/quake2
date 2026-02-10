@@ -2,11 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createFlagPickupEntity } from '../../../../src/modes/ctf/flag.js';
 import { GameExports } from '../../../../src/index.js';
 import { FLAG_ITEMS } from '../../../../src/inventory/items.js';
-import { Entity, Solid } from '../../../../src/entities/entity.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
-import { PlayerClient, KeyId } from '../../../../src/inventory/playerInventory.js';
-import { createPlayerInventory } from '../../../../src/inventory/playerInventory.js';
-import { createPlayerWeaponStates } from '../../../../src/combat/weapons/state.js';
+import { Solid } from '../../../../src/entities/entity.js';
+import { Entity, EntitySystem } from '../../../../src/entities/system.js';
+import { KeyId } from '../../../../src/inventory/playerInventory.js';
+import { createTestContext, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Flag Entities', () => {
     let mockGame: GameExports;
@@ -14,23 +13,16 @@ describe('CTF Flag Entities', () => {
     let mockPlayer: Entity;
 
     beforeEach(() => {
-        mockEntitySystem = {
-            scheduleThink: vi.fn(),
-        } as unknown as EntitySystem;
+        const testCtx = createTestContext();
+        mockGame = testCtx.game as unknown as GameExports;
+        mockEntitySystem = testCtx.entities;
 
-        mockGame = {
-            time: 100,
-            sound: vi.fn(),
-            centerprintf: vi.fn(),
-            entities: mockEntitySystem,
-        } as unknown as GameExports;
+        // Mock time
+        (mockGame as any).time = 100;
 
-        mockPlayer = {
-            client: {
-                inventory: createPlayerInventory(),
-                weaponStates: createPlayerWeaponStates(),
-            } as PlayerClient,
-        } as Entity;
+        mockPlayer = createPlayerEntityFactory({
+            client: createPlayerClientFactory()
+        }) as unknown as Entity;
     });
 
     it('should create red flag entity', () => {

@@ -34,6 +34,18 @@ export interface MockGame {
   clientBegin: LegacyMock<[any], void>;
   damage: LegacyMock<[number], void>;
   entities: any;
+
+  // Expanded GameExports mocks
+  sound: LegacyMock<[Entity, number, string, number, number, number], void>;
+  centerprintf: LegacyMock<[Entity, string], void>;
+  multicast: LegacyMock<[any, any, any, ...any[]], void>;
+  unicast: LegacyMock<[Entity, boolean, any, ...any[]], void>;
+  bprint: LegacyMock<[string], void>;
+  configstring: LegacyMock<[number, string], void>;
+  serverCommand: LegacyMock<[string], void>;
+  trace: LegacyMock<any, any>;
+  pointcontents: LegacyMock<any, number>;
+  time: number;
 }
 
 /**
@@ -118,7 +130,17 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
     }),
     entities: {
       spawnRegistry
-    }
+    },
+    sound: vi.fn(),
+    centerprintf: vi.fn(),
+    multicast: vi.fn(),
+    unicast: vi.fn(),
+    bprint: vi.fn(),
+    configstring: vi.fn(),
+    serverCommand: vi.fn(),
+    trace: vi.fn(),
+    pointcontents: vi.fn(() => 0),
+    time: 0
   };
 
   return { game, spawnRegistry };
@@ -168,6 +190,15 @@ export function createTestContext(options?: {
     unicast: vi.fn(),
     ...options?.imports
   };
+
+  // Wire up game mocks to use engine/imports where appropriate
+  game.sound.mockImplementation((ent, chan, snd, vol, attn, timeofs) => engine.sound(ent, chan, snd, vol, attn, timeofs));
+  game.centerprintf.mockImplementation((ent, msg) => engine.centerprintf(ent, msg));
+  game.trace.mockImplementation((start, mins, maxs, end, passent, mask) => traceFn(start, end, mins, maxs)); // Note args mismatch adaptation if needed
+  game.pointcontents.mockImplementation((p) => imports.pointcontents(p));
+  game.multicast.mockImplementation((...args) => imports.multicast(...args));
+  game.unicast.mockImplementation((...args) => imports.unicast(...args));
+  game.configstring.mockImplementation((idx, val) => imports.configstring(idx, val));
 
   const entityList: Entity[] = options?.initialEntities ? [...options.initialEntities] : [];
 
@@ -274,6 +305,7 @@ export function createTestContext(options?: {
     }),
     beginFrame: vi.fn((timeSeconds: number) => {
       (entities as any).timeSeconds = timeSeconds;
+      game.time = timeSeconds; // Update game time too
     }),
     targetAwareness: {
       timeSeconds: 10,
