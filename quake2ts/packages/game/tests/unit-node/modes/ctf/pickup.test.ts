@@ -18,11 +18,10 @@ describe('CTF Flag Pickup', () => {
             baseOrigin: { x: 100, y: 100, z: 0 },
             origin: { x: 100, y: 100, z: 0 },
             owner: undefined,
-        } as any) as FlagEntity;
+        }) as unknown as FlagEntity;
 
         player = createPlayerEntityFactory({
              client: createPlayerClientFactory({
-                 // @ts-ignore
                  team: 'red'
              })
         });

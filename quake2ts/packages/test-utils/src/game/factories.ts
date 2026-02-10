@@ -8,13 +8,9 @@ import {
   MonsterMove,
   MonsterInfo
 } from '@quake2ts/game';
-import { createPlayerClientFactory } from './client.js';
+import { createPlayerClientFactory, FactoryOverrides } from './client.js';
 import type { PlayerState, EntityState } from '@quake2ts/shared';
 import type { GameStateSnapshot, GameFrameContext } from '@quake2ts/game';
-
-// -- Types --
-
-export type FactoryOverrides<T> = Partial<T> & Record<string, any>;
 
 // -- Shared / Game State Factories --
 

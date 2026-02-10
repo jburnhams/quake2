@@ -39,7 +39,6 @@ describe('CTF Capture Logic', () => {
       client: createPlayerClientFactory({
         score: 0,
         // Mock team property used in CTF logic
-        // @ts-ignore
         team: 'red'
       })
     }) as unknown as Entity;
