@@ -180,14 +180,14 @@ export class SimpleCompiler {
     const root = this.buildTree(this.processedBrushes.map(b => b.index));
 
     // 3. Serialize Tree to BSP structures
-    this.serializeTree(root);
+    const headNode = this.serializeTree(root);
 
     // 4. Create Models (Model 0 is the world)
     this.models.push({
       mins: { x: -4096, y: -4096, z: -4096 }, // TODO: Calc bounds
       maxs: { x: 4096, y: 4096, z: 4096 },
       origin: { x: 0, y: 0, z: 0 },
-      headNode: 0,
+      headNode,
       firstFace: 0,
       numFaces: this.faces.length
     });
