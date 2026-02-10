@@ -96,6 +96,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/render-options.test.ts` to `engine/tests/unit-node/render/`
    - Moved: `engine/tests/unit-jsdom/render/rendererStats.test.ts` to `engine/tests/unit-node/render/`
    - Moved: `game/tests/render/headless.test.ts` to `game/tests/unit-node/render/`
+   - Moved: `engine/tests/integration/rendering.test.ts` to `engine/tests/unit-node/integration/` (removed JSDOM dependency)
+   - Moved: `engine/tests/render/performance/baselines.test.ts` and `benchmark.ts` to `engine/tests/unit-node/render/performance/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
    - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:

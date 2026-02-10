@@ -5,7 +5,7 @@
  * for both WebGL and WebGPU renderers.
  */
 
-import type { Camera } from '../../../src/render/camera.js';
+import type { Camera } from '../../../../src/render/camera.js';
 
 export interface BenchmarkOptions {
   warmupFrames?: number;
