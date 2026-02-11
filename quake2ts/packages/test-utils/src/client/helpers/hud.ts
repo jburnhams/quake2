@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { PlayerState } from '@quake2ts/shared';
-import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
+import { PlayerClient, PowerupId, KeyId, ArmorType, WeaponId } from '@quake2ts/game';
 import { FrameRenderStats } from '@quake2ts/engine';
 import { createPlayerStateFactory, createPlayerClientFactory } from '../../game/factories.js';
 
@@ -38,8 +38,8 @@ export function createMockHudState(overrides?: Partial<HudState>): HudState {
     });
 
     const defaultClient = createPlayerClientFactory();
-    defaultClient.inventory.armor = { armorCount: 50, armorType: 'jacket' };
-    defaultClient.inventory.currentWeapon = 1; // Blaster usually
+    defaultClient.inventory.armor = { armorCount: 50, armorType: ArmorType.JACKET };
+    defaultClient.inventory.currentWeapon = WeaponId.Blaster;
 
     // Use a numeric array for game stats (EntityState.stats)
     // Indexes: 1=Health, 2=Ammo, 4=Armor (based on client/src/index.ts usage)

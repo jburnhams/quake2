@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Draw_Hud, Init_Hud } from '@quake2ts/client/hud.js';
 import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
-import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
+import { PlayerClient, PowerupId, KeyId, ArmorType, WeaponId } from '@quake2ts/game';
 import { MessageSystem } from '@quake2ts/client/hud/messages.js';
 import { createMockAssetManager, createMockRenderer, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
@@ -49,8 +49,8 @@ describe('HUD Rendering', () => {
         });
 
         client = createPlayerClientFactory();
-        client.inventory.armor = { armorCount: 50, armorType: 'jacket' };
-        client.inventory.currentWeapon = 1; // Blaster usually
+        client.inventory.armor = { armorCount: 50, armorType: ArmorType.JACKET };
+        client.inventory.currentWeapon = WeaponId.Blaster;
 
         messageSystem = new MessageSystem();
 
