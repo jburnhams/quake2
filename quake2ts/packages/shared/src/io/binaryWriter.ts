@@ -62,6 +62,12 @@ export class BinaryWriter {
     this.offset += 2;
   }
 
+  public writeUShort(value: number): void {
+    this.ensureSpace(2);
+    this.view.setUint16(this.offset, value, true);
+    this.offset += 2;
+  }
+
   public writeLong(value: number): void {
     this.ensureSpace(4);
     this.view.setInt32(this.offset, value, true);

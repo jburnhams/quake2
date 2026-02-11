@@ -128,6 +128,9 @@ export class BspWriter {
 
   private static encodeNodes(nodes: readonly BspNode[]): Uint8Array {
     const writer = new BinaryWriter(nodes.length * 28);
+    // Reusable buffer for face counts (uint16) if we didn't have writeUShort
+    // But now we have writeUShort!
+
     for (const n of nodes) {
       writer.writeLong(n.planeIndex);
       writer.writeLong(n.children[0]);
@@ -138,17 +141,19 @@ export class BspWriter {
       writer.writeShort(n.maxs[0]);
       writer.writeShort(n.maxs[1]);
       writer.writeShort(n.maxs[2]);
-      // unsigned short for face counts
-      const view = new DataView(new ArrayBuffer(4));
-      view.setUint16(0, n.firstFace, true);
-      view.setUint16(2, n.numFaces, true);
-      writer.writeBytes(new Uint8Array(view.buffer));
+
+      writer.writeUShort(n.firstFace);
+      writer.writeUShort(n.numFaces);
     }
     return writer.getData();
   }
 
   private static encodeTexInfo(texInfos: readonly BspTexInfo[]): Uint8Array {
     const writer = new BinaryWriter(texInfos.length * 76);
+
+    // Reusable buffer for texture name
+    const nameBuf = new Uint8Array(32);
+
     for (const ti of texInfos) {
       BspWriter.writeVec3(writer, ti.s);
       writer.writeFloat(ti.sOffset);
@@ -158,7 +163,7 @@ export class BspWriter {
       writer.writeLong(ti.value);
 
       // Texture name (32 bytes)
-      const nameBuf = new Uint8Array(32);
+      nameBuf.fill(0); // Clear buffer
       const nameBytes = new TextEncoder().encode(ti.texture);
       nameBuf.set(nameBytes.slice(0, 31)); // Ensure null term if exactly 32
       writer.writeBytes(nameBuf);
@@ -171,11 +176,7 @@ export class BspWriter {
   private static encodeFaces(faces: readonly BspFace[]): Uint8Array {
     const writer = new BinaryWriter(faces.length * 20);
     for (const f of faces) {
-      // Uint16 plane index
-      const pView = new DataView(new ArrayBuffer(2));
-      pView.setUint16(0, f.planeIndex, true);
-      writer.writeBytes(new Uint8Array(pView.buffer));
-
+      writer.writeUShort(f.planeIndex);
       writer.writeShort(f.side);
       writer.writeLong(f.firstEdge);
       writer.writeShort(f.numEdges);
@@ -202,6 +203,9 @@ export class BspWriter {
     const allBrushes: number[] = [];
 
     // Temporary storage for leaf data to write later
+    // We can iterate twice or just build arrays. Iterating twice is slower?
+    // Building arrays is what we did before.
+
     const packedLeafs = leafs.map((leaf, i) => {
       const faces = lists.leafFaces[i] || [];
       const brushes = lists.leafBrushes[i] || [];
@@ -235,27 +239,21 @@ export class BspWriter {
       leafWriter.writeShort(l.maxs[1]);
       leafWriter.writeShort(l.maxs[2]);
 
-      const view = new DataView(new ArrayBuffer(8));
-      view.setUint16(0, l.firstLeafFace, true);
-      view.setUint16(2, l.numLeafFaces, true);
-      view.setUint16(4, l.firstLeafBrush, true);
-      view.setUint16(6, l.numLeafBrushes, true);
-      leafWriter.writeBytes(new Uint8Array(view.buffer));
+      leafWriter.writeUShort(l.firstLeafFace);
+      leafWriter.writeUShort(l.numLeafFaces);
+      leafWriter.writeUShort(l.firstLeafBrush);
+      leafWriter.writeUShort(l.numLeafBrushes);
     }
 
     // Write Lists
     const faceWriter = new BinaryWriter(allFaces.length * 2);
     for (const f of allFaces) {
-      const view = new DataView(new ArrayBuffer(2));
-      view.setUint16(0, f, true);
-      faceWriter.writeBytes(new Uint8Array(view.buffer));
+      faceWriter.writeUShort(f);
     }
 
     const brushWriter = new BinaryWriter(allBrushes.length * 2);
     for (const b of allBrushes) {
-      const view = new DataView(new ArrayBuffer(2));
-      view.setUint16(0, b, true);
-      brushWriter.writeBytes(new Uint8Array(view.buffer));
+      brushWriter.writeUShort(b);
     }
 
     return {
@@ -268,10 +266,8 @@ export class BspWriter {
   private static encodeEdges(edges: readonly { vertices: [number, number] }[]): Uint8Array {
     const writer = new BinaryWriter(edges.length * 4);
     for (const e of edges) {
-      const view = new DataView(new ArrayBuffer(4));
-      view.setUint16(0, e.vertices[0], true);
-      view.setUint16(2, e.vertices[1], true);
-      writer.writeBytes(new Uint8Array(view.buffer));
+      writer.writeUShort(e.vertices[0]);
+      writer.writeUShort(e.vertices[1]);
     }
     return writer.getData();
   }
@@ -302,10 +298,8 @@ export class BspWriter {
   private static encodeBrushSides(sides: readonly BspBrushSide[]): Uint8Array {
     const writer = new BinaryWriter(sides.length * 4);
     for (const s of sides) {
-      const view = new DataView(new ArrayBuffer(4));
-      view.setUint16(0, s.planeIndex, true);
-      view.setInt16(2, s.texInfo, true);
-      writer.writeBytes(new Uint8Array(view.buffer));
+      writer.writeUShort(s.planeIndex);
+      writer.writeShort(s.texInfo);
     }
     return writer.getData();
   }
