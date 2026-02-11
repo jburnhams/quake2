@@ -1,7 +1,8 @@
 import { vi } from 'vitest';
 import { PlayerState } from '@quake2ts/shared';
-import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
+import { PlayerClient, PowerupId, KeyId, ArmorType, WeaponId } from '@quake2ts/game';
 import { FrameRenderStats } from '@quake2ts/engine';
+import { createPlayerStateFactory, createPlayerClientFactory } from '../../game/factories.js';
 
 // Since test-utils cannot import from client, we need to mock MessageSystem here or define an interface
 // The Draw_Hud function expects a MessageSystem which has drawCenterPrint and drawNotifications.
@@ -24,7 +25,7 @@ export interface HudState {
 }
 
 export function createMockHudState(overrides?: Partial<HudState>): HudState {
-    const defaultPs = {
+    const defaultPs = createPlayerStateFactory({
         damageAlpha: 0,
         damageIndicators: [],
         origin: { x: 0, y: 0, z: 0 },
@@ -34,19 +35,11 @@ export function createMockHudState(overrides?: Partial<HudState>): HudState {
         waterLevel: 0,
         mins: { x: 0, y: 0, z: 0 },
         maxs: { x: 0, y: 0, z: 0 },
-        centerPrint: null,
-        notify: null
-    } as unknown as PlayerState;
+    });
 
-    const defaultClient = {
-        inventory: {
-            armor: { armorCount: 50, armorType: 'jacket' },
-            currentWeapon: 1, // Blaster usually
-            ammo: { counts: [] },
-            keys: new Set<KeyId>(),
-            powerups: new Map<PowerupId, number>()
-        }
-    } as unknown as PlayerClient;
+    const defaultClient = createPlayerClientFactory();
+    defaultClient.inventory.armor = { armorCount: 50, armorType: ArmorType.JACKET };
+    defaultClient.inventory.currentWeapon = WeaponId.Blaster;
 
     // Use a numeric array for game stats (EntityState.stats)
     // Indexes: 1=Health, 2=Ammo, 4=Armor (based on client/src/index.ts usage)

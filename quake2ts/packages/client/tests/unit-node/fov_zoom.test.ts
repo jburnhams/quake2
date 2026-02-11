@@ -1,140 +1,108 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
-import { AssetManager, Renderer, EngineImports, EngineHost } from '@quake2ts/engine';
-import { createMockRenderer } from '@quake2ts/test-utils';
-
-const mockAssets = {
-  loadMd2Model: vi.fn(),
-  loadMd3Model: vi.fn(),
-  loadSprite: vi.fn(),
-  loadSound: vi.fn(),
-  loadTexture: vi.fn(),
-} as unknown as AssetManager;
-
-const mockRenderer = createMockRenderer();
-
-const mockTrace = vi.fn();
-
-const mockCvars = {
-  register: vi.fn(),
-  get: vi.fn(),
-  list: vi.fn(),
-};
-
-const mockCommands = {
-  register: vi.fn(),
-};
-
-const mockHost = {
-  commands: mockCommands,
-  cvars: mockCvars,
-} as unknown as EngineHost;
-
-const mockEngine: EngineImports & { renderer: Renderer } = {
-  assets: mockAssets,
-  renderer: mockRenderer,
-  trace: mockTrace,
-} as any;
+import { AssetManager, Renderer } from '@quake2ts/engine';
+import { createMockEngineHost, createMockEngineImports, createMockLocalStorage, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Client FOV and Zoom', () => {
   let client: ClientExports;
-  let fovCallback: (val: string) => void;
   let zoomStartCallback: () => void;
   let zoomEndCallback: () => void;
 
   beforeEach(async () => {
     // Mock localStorage
-    global.localStorage = {
-        getItem: vi.fn(),
-        setItem: vi.fn(),
-        removeItem: vi.fn(),
-        clear: vi.fn(),
-        length: 0,
-        key: vi.fn(),
-    };
+    const mockStorage = createMockLocalStorage();
+    vi.stubGlobal('localStorage', mockStorage);
 
-    mockTrace.mockReturnValue({
-      fraction: 1,
-      endpos: { x: 0, y: 0, z: 0 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-      ent: -1
+    const mockEngine = createMockEngineImports({
+        trace: vi.fn().mockReturnValue({
+            fraction: 1,
+            endpos: { x: 0, y: 0, z: 0 },
+            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+            ent: -1
+        })
     });
 
-    (mockAssets.loadMd2Model as any).mockResolvedValue({});
-    (mockAssets.loadMd3Model as any).mockResolvedValue({});
-    (mockAssets.loadSprite as any).mockResolvedValue({});
-    (mockAssets.loadSound as any).mockResolvedValue({});
-    (mockAssets.loadTexture as any).mockResolvedValue({});
+    // Setup assets
+    (mockEngine.assets.loadMd2Model as Mock).mockResolvedValue({});
+    (mockEngine.assets.loadMd3Model as Mock).mockResolvedValue({});
+    (mockEngine.assets.loadSprite as Mock).mockResolvedValue({});
+    (mockEngine.assets.loadSound as Mock).mockResolvedValue({});
+    (mockEngine.assets.loadTexture as Mock).mockResolvedValue({});
 
-    mockRenderer.registerPic.mockResolvedValue({ width: 32, height: 32 });
-    mockRenderer.registerTexture.mockReturnValue({ width: 64, height: 64 });
-    mockRenderer.getPerformanceReport.mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 });
+    // Setup renderer
+    (mockEngine.renderer.registerPic as Mock).mockResolvedValue({ width: 32, height: 32 });
+    (mockEngine.renderer.registerTexture as Mock).mockReturnValue({ width: 64, height: 64 });
+    (mockEngine.renderer.getPerformanceReport as Mock).mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 });
 
-    (mockCvars.list as any).mockReturnValue([]);
-    (mockCvars.register as any).mockImplementation((def: any) => {
-      if (def.name === 'fov') {
-        fovCallback = def.onChange;
-      }
-      return {
-          name: def.name,
-          defaultValue: def.defaultValue,
-          string: def.defaultValue,
-          number: parseFloat(def.defaultValue),
-      };
+    const mockHost = createMockEngineHost();
+
+    // Capture command callbacks
+    // We spy on the mock implementation to capture the callback
+    (mockHost.commands.register as Mock).mockImplementation((name: string, callback: any) => {
+        if (name === '+zoom') zoomStartCallback = callback;
+        if (name === '-zoom') zoomEndCallback = callback;
     });
 
-    (mockCommands.register as any).mockImplementation((name: string, callback: any) => {
-      if (name === '+zoom') zoomStartCallback = callback;
-      if (name === '-zoom') zoomEndCallback = callback;
+    // Helper for Cvars
+    (mockHost.cvars.register as Mock).mockImplementation((def: any) => {
+         return {
+            name: def.name,
+            defaultValue: def.defaultValue,
+            string: def.defaultValue,
+            number: parseFloat(def.defaultValue),
+            onChange: def.onChange
+        };
     });
 
-    client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
+    client = createClient({ engine: mockEngine, host: mockHost } as unknown as ClientImports);
     await client.Init();
   });
 
   it('should zoom in when +zoom is executed', () => {
-    const frame = {
-      state: {
+    // Construct a frame state using PlayerState factory instead of Entity factory
+    // This aligns better with what the client expects (GameFrameResult['state'])
+    const playerState = createPlayerStateFactory({
         origin: { x: 0, y: 0, z: 0 },
         viewAngles: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
-        pmFlags: 0,
         waterLevel: 0,
-        health: 100,
-        armor: 0,
-        ammo: 0,
+        pm_flags: 0,
         blend: [0, 0, 0, 0],
         stats: [],
         kick_angles: { x: 0, y: 0, z: 0 },
         gunoffset: { x: 0, y: 0, z: 0 },
         gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0,
-        client: {
-            inventory: {
-                armor: null,
-                items: new Set(),
-                ammo: { counts: [] },
-                keys: new Set(),
-                powerups: new Map()
-            },
-            weapon: { state: 0 }
-        }
-      } as any,
+        gunindex: 0
+    });
+
+    // Compose with client property and other fields not in base PlayerState but used in snapshot
+    // Note: The snapshot state is a union of PlayerState and other things in the real game code.
+    const state = {
+        ...playerState,
+        client: createPlayerClientFactory(),
+        health: 100, // Explicitly add health/armor/ammo if they are top-level on snapshot
+        armor: 0,
+        ammo: 0
+    };
+
+    const frame = {
+      state: state,
       timeMs: 100,
       serverFrame: 1
     };
 
-    client.render({ latest: frame, previous: frame, alpha: 0 });
+    client.render({ latest: frame as any, previous: frame as any, alpha: 0 });
     expect(client.camera?.fov).toBe(90);
 
-    zoomStartCallback();
+    // zoomStartCallback might be undefined if initialization failed or logic changed
+    if (zoomStartCallback) zoomStartCallback();
 
-    client.render({ latest: frame, previous: frame, alpha: 0 });
+    client.render({ latest: frame as any, previous: frame as any, alpha: 0 });
     expect(client.camera?.fov).toBe(40);
 
-    zoomEndCallback();
+    if (zoomEndCallback) zoomEndCallback();
 
-    client.render({ latest: frame, previous: frame, alpha: 0 });
+    client.render({ latest: frame as any, previous: frame as any, alpha: 0 });
     expect(client.camera?.fov).toBe(90);
   });
 });
