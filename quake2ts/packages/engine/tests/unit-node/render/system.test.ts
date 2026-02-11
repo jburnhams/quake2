@@ -27,16 +27,20 @@ describe('Renderer Integration', () => {
         const textureData = new ArrayBuffer(100);
 
         // Mock createImageBitmap
-        global.createImageBitmap = vi.fn().mockResolvedValue({
+        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({
             width: 64,
             height: 64,
             close: vi.fn()
-        } as unknown as ImageBitmap);
+        }));
 
-        const pic = await renderer.registerPic('test.pcx', textureData);
-        expect(pic).toBeDefined();
-        expect(mockGl.createTexture).toHaveBeenCalled();
-        expect(mockGl.texImage2D).toHaveBeenCalled();
+        try {
+            const pic = await renderer.registerPic('test.pcx', textureData);
+            expect(pic).toBeDefined();
+            expect(mockGl.createTexture).toHaveBeenCalled();
+            expect(mockGl.texImage2D).toHaveBeenCalled();
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 
     it('performs a full frame render with a BSP model', () => {
