@@ -4,7 +4,7 @@ import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 import { PlayerClient, PowerupId, KeyId } from '@quake2ts/game';
 import { MessageSystem } from '@quake2ts/client/hud/messages.js';
-import { createMockAssetManager, createMockRenderer } from '@quake2ts/test-utils';
+import { createMockAssetManager, createMockRenderer, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 // Mock engine dependencies
 const mockRenderer = createMockRenderer({
@@ -36,7 +36,7 @@ describe('HUD Rendering', () => {
         (mockAssetManager.loadTexture as any).mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' });
 
 
-        ps = {
+        ps = createPlayerStateFactory({
             damageAlpha: 0,
             damageIndicators: [],
             origin: { x: 0, y: 0, z: 0 },
@@ -46,17 +46,11 @@ describe('HUD Rendering', () => {
             waterLevel: 0,
             mins: { x: 0, y: 0, z: 0 },
             maxs: { x: 0, y: 0, z: 0 },
-        } as unknown as PlayerState;
+        });
 
-        client = {
-            inventory: {
-                armor: { armorCount: 50, armorType: 'jacket' },
-                currentWeapon: 1, // Blaster usually
-                ammo: { counts: [] },
-                keys: new Set(),
-                powerups: new Map()
-            }
-        } as unknown as PlayerClient;
+        client = createPlayerClientFactory();
+        client.inventory.armor = { armorCount: 50, armorType: 'jacket' };
+        client.inventory.currentWeapon = 1; // Blaster usually
 
         messageSystem = new MessageSystem();
 
