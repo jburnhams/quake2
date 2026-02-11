@@ -1,9 +1,9 @@
 import { describe, test, expect } from 'vitest';
-import { Camera } from '@quake2ts/engine/render/camera.js';
+import { Camera } from '../../../src/render/camera.js';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
-import { createFrameRenderer } from '@quake2ts/engine/render/frame.js';
-import type { BspSurfacePipeline } from '@quake2ts/engine/render/bspPipeline.js';
-import type { SkyboxPipeline } from '@quake2ts/engine/render/skybox.js';
+import { createFrameRenderer } from '../../../src/render/frame.js';
+import type { BspSurfacePipeline } from '../../../src/render/bspPipeline.js';
+import type { SkyboxPipeline } from '../../../src/render/skybox.js';
 
 describe('CameraState Integration', () => {
   test('WebGL renderer ignores cameraState (legacy)', () => {
