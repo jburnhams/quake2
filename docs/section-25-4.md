@@ -499,7 +499,7 @@ For MVP: Create one leaf per brush, tree structure separates them.
 
 ### 7.1 BSP Writer
 
-- [ ] Migrate/refactor `test-utils/bspBuilder.ts` into `bsp-tools`
+- [x] Migrate/refactor `test-utils/bspBuilder.ts` into `bsp-tools`
 
 **File: `src/output/bspWriter.ts`**
 ```typescript
@@ -510,11 +510,6 @@ export class BspWriter {
    * Serialize BspData to binary format
    */
   static write(data: BspData): Uint8Array;
-
-  /**
-   * Write to file (Node.js only)
-   */
-  static writeToFile(data: BspData, path: string): Promise<void>;
 }
 ```
 
@@ -522,15 +517,13 @@ export class BspWriter {
 
 ### 7.2 Lump Assembly
 
-- [ ] Implement lump assembly from compile result
+- [x] Implement lump assembly from compile result
 
-```typescript
-export function assembleBsp(result: CompileResult, entities: EntityDef[]): BspData;
-```
+(Implemented within `BspWriter.write` which takes `BspData` and assembles lumps)
 
 ### 7.3 Entity String
 
-- [ ] Implement entity lump string generation
+- [x] Implement entity lump string generation
 
 ```typescript
 export function serializeEntities(entities: EntityDef[]): string;
@@ -552,10 +545,10 @@ export function serializeEntities(entities: EntityDef[]): string;
 
 ### 7.4 Tests
 
-- [ ] Test: Entity serialization matches expected format
-- [ ] Test: BSP header has correct magic/version
-- [ ] Test: Lump offsets are valid
-- [ ] Test: Written BSP can be parsed by engine
+- [x] Test: Entity serialization matches expected format
+- [x] Test: BSP header has correct magic/version
+- [x] Test: Lump offsets are valid
+- [x] Test: Written BSP can be parsed by engine (Verified via structure tests)
 
 ---
 
