@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { AssetManager, Renderer } from '@quake2ts/engine';
-import { createMockEngineHost, createMockEngineImports, createMockLocalStorage, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import { createMockEngineHost, createMockEngineImports, createMockLocalStorage, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Client FOV and Zoom', () => {
   let client: ClientExports;
@@ -59,20 +59,14 @@ describe('Client FOV and Zoom', () => {
   });
 
   it('should zoom in when +zoom is executed', () => {
-    // Construct a frame state that resembles a Player Entity with Client
-    // We use createPlayerEntityFactory but mix in some properties expected by the test/client
-    const entity = createPlayerEntityFactory({
+    // Construct a frame state using PlayerState factory instead of Entity factory
+    // This aligns better with what the client expects (GameFrameResult['state'])
+    const playerState = createPlayerStateFactory({
         origin: { x: 0, y: 0, z: 0 },
         viewAngles: { x: 0, y: 0, z: 0 },
         velocity: { x: 0, y: 0, z: 0 },
         waterLevel: 0,
-        health: 100,
-        client: createPlayerClientFactory()
-    });
-
-    // Add extra properties used in the original test
-    Object.assign(entity, {
-        pmFlags: 0,
+        pm_flags: 0,
         blend: [0, 0, 0, 0],
         stats: [],
         kick_angles: { x: 0, y: 0, z: 0 },
@@ -81,8 +75,18 @@ describe('Client FOV and Zoom', () => {
         gunindex: 0
     });
 
+    // Compose with client property and other fields not in base PlayerState but used in snapshot
+    // Note: The snapshot state is a union of PlayerState and other things in the real game code.
+    const state = {
+        ...playerState,
+        client: createPlayerClientFactory(),
+        health: 100, // Explicitly add health/armor/ammo if they are top-level on snapshot
+        armor: 0,
+        ammo: 0
+    };
+
     const frame = {
-      state: entity,
+      state: state,
       timeMs: 100,
       serverFrame: 1
     };
