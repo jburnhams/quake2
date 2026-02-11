@@ -1,7 +1,7 @@
 import { describe, expect, test } from 'vitest';
-import { Camera } from '@quake2ts/engine/render/camera.js';
-import { WebGLMatrixBuilder } from '@quake2ts/engine/render/matrix/webgl.js';
-import { buildMatrices } from '@quake2ts/engine/render/matrix/builders.js';
+import { Camera } from '../../../src/render/camera.js';
+import { WebGLMatrixBuilder } from '../../../src/render/matrix/webgl.js';
+import { buildMatrices } from '../../../src/render/matrix/builders.js';
 import { mat4 } from 'gl-matrix';
 
 function expectMatricesToBeClose(received: mat4, expected: mat4, epsilon = 1e-6) {

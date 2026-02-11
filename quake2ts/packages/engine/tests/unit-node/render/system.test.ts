@@ -1,13 +1,13 @@
-import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
+import { createRenderer, Renderer } from '../../../src/render/renderer.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { mat4, vec3 } from 'gl-matrix';
-import { Camera } from '@quake2ts/engine/render/camera.js';
-import { BspMap } from '@quake2ts/engine/assets/bsp.js';
+import { Camera } from '../../../src/render/camera.js';
+import { BspMap } from '../../../src/assets/bsp.js';
 
 // Import helpers
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { buildTestBsp, BspFixtureOptions } from '@quake2ts/test-utils'; // bspBuilder.js';
-import { parseBsp } from '@quake2ts/engine/assets/bsp.js';
+import { parseBsp } from '../../../src/assets/bsp.js';
 
 describe('Renderer Integration', () => {
     let mockGl: ReturnType<typeof createMockWebGL2Context>;
@@ -27,16 +27,20 @@ describe('Renderer Integration', () => {
         const textureData = new ArrayBuffer(100);
 
         // Mock createImageBitmap
-        global.createImageBitmap = vi.fn().mockResolvedValue({
+        vi.stubGlobal('createImageBitmap', vi.fn().mockResolvedValue({
             width: 64,
             height: 64,
             close: vi.fn()
-        } as unknown as ImageBitmap);
+        }));
 
-        const pic = await renderer.registerPic('test.pcx', textureData);
-        expect(pic).toBeDefined();
-        expect(mockGl.createTexture).toHaveBeenCalled();
-        expect(mockGl.texImage2D).toHaveBeenCalled();
+        try {
+            const pic = await renderer.registerPic('test.pcx', textureData);
+            expect(pic).toBeDefined();
+            expect(mockGl.createTexture).toHaveBeenCalled();
+            expect(mockGl.texImage2D).toHaveBeenCalled();
+        } finally {
+            vi.unstubAllGlobals();
+        }
     });
 
     it('performs a full frame render with a BSP model', () => {

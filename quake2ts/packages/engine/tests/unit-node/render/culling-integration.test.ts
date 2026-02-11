@@ -1,11 +1,11 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createRenderer, Renderer } from '@quake2ts/engine/render/renderer.js';
-import { BspMap, BspLeaf, BspNode, BspVisibility } from '@quake2ts/engine/assets/bsp.js';
-import { Camera } from '@quake2ts/engine/render/camera.js';
-import { FrameRenderOptions } from '@quake2ts/engine/render/frame.js';
-import { RenderableEntity } from '@quake2ts/engine/render/scene.js';
-import { Md2Model } from '@quake2ts/engine/assets/md2.js';
+import { createRenderer, Renderer } from '../../../src/render/renderer.js';
+import { BspMap, BspLeaf, BspNode, BspVisibility } from '../../../src/assets/bsp.js';
+import { Camera } from '../../../src/render/camera.js';
+import { FrameRenderOptions } from '../../../src/render/frame.js';
+import { RenderableEntity } from '../../../src/render/scene.js';
+import { Md2Model } from '../../../src/assets/md2.js';
 
 // Mock WebGL2 Context (Simplified for this test)
 function createMockWebGL2Context() {
