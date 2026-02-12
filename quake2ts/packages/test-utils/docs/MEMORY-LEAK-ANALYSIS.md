@@ -100,6 +100,13 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/render/performance/baselines.test.ts` and `benchmark.ts` to `engine/tests/unit-node/render/performance/`
    - Moved: `engine/tests/integration/render` tests (`animation.test.ts`, `camera-state.test.ts`, `lightstyles.test.ts`, `matrix-builders.test.ts`, `system.test.ts`) to `engine/tests/unit-node/render/`
    - Moved: `engine/tests/integration/render/culling.test.ts` to `engine/tests/unit-node/render/culling-integration.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/lightStyles.test.ts` to `engine/tests/unit-node/render/lightStyleManager.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/lod.test.ts` to `engine/tests/unit-node/render/lod.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/bloom.test.ts` to `engine/tests/unit-node/render/bloom.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/render.resources.test.ts` to `engine/tests/unit-node/render/render.resources.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/render.shaderProgram.test.ts` to `engine/tests/unit-node/render/render.shaderProgram.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/frame.test.ts` to `engine/tests/unit-node/render/frame.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/render.particleSystem.test.ts` to `engine/tests/unit-node/render/render.particleSystem.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
    - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:
