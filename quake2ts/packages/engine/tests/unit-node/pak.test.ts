@@ -1,26 +1,24 @@
 import { describe, expect, it } from 'vitest';
 import { PakArchive, PakParseError, calculatePakChecksum } from '../../src/assets/pak.js';
-import { buildPak, textData } from '@quake2ts/test-utils';
+import { buildPak, textData, createTestPakArchive } from '@quake2ts/test-utils';
 
 describe('PakArchive', () => {
   it('parses valid pak and reads files', () => {
-    const pakBuffer = buildPak([
+    const pak = createTestPakArchive([
       { path: 'maps/base1.bsp', data: textData('bsp data') },
       { path: 'textures/wall.wal', data: textData('wal') },
-    ]);
+    ], 'base.pak');
 
-    const pak = PakArchive.fromArrayBuffer('base.pak', pakBuffer);
     expect(pak.listEntries()).toHaveLength(2);
     expect(new TextDecoder().decode(pak.readFile('maps/base1.bsp'))).toBe('bsp data');
   });
 
   it('normalizes case and deduplicates entries', () => {
-    const pakBuffer = buildPak([
+    const pak = createTestPakArchive([
       { path: 'textures/sky.WAL', data: textData('first') },
       { path: 'Textures/sky.wal', data: textData('second') },
-    ]);
+    ], 'base.pak');
 
-    const pak = PakArchive.fromArrayBuffer('base.pak', pakBuffer);
     expect(pak.listEntries()).toHaveLength(1);
     expect(new TextDecoder().decode(pak.readFile('TEXTURES/SKY.wal'))).toBe('second');
   });
@@ -36,7 +34,7 @@ describe('PakArchive', () => {
     const pakBuffer = buildPak([{ path: 'a.txt', data: textData('data') }]);
     const view = new DataView(pakBuffer);
     const headerSize = 12;
-    const directoryEntrySize = 64;
+    // const directoryEntrySize = 64; // Unused
     const dirOffset = view.getInt32(4, true);
     // Corrupt first entry length
     view.setInt32(dirOffset + 60, 9999, true);

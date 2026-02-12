@@ -1,8 +1,7 @@
 import 'fake-indexeddb/auto';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { PakArchive, calculatePakChecksum } from '../../src/assets/pak.js';
 import { PakIndexStore } from '../../src/assets/pakIndexStore.js';
-import { buildPak, textData } from '@quake2ts/test-utils';
+import { createTestPakArchive, textData } from '@quake2ts/test-utils';
 
 describe('PakIndexStore', () => {
   let store: PakIndexStore;
@@ -13,9 +12,8 @@ describe('PakIndexStore', () => {
   });
 
   it('persists pak validation entries and finds them by checksum', async () => {
-    const pakBuffer = buildPak([{ path: 'maps/base1.bsp', data: textData('world') }]);
-    const archive = PakArchive.fromArrayBuffer('pak0.pak', pakBuffer);
-    const checksum = calculatePakChecksum(pakBuffer);
+    const archive = createTestPakArchive([{ path: 'maps/base1.bsp', data: textData('world') }], 'pak0.pak');
+    const checksum = archive.checksum;
 
     const persisted = await store.persist(archive);
     expect(persisted?.checksum).toBe(checksum);
@@ -27,9 +25,9 @@ describe('PakIndexStore', () => {
   });
 
   it('lists stored indexes ordered by newest first and removes by name', async () => {
-    const pakA = PakArchive.fromArrayBuffer('pak0.pak', buildPak([{ path: 'textures/a.wal', data: textData('a') }]));
-    const pakB = PakArchive.fromArrayBuffer('pak1.pak', buildPak([{ path: 'textures/b.wal', data: textData('b') }]));
-    const pakAReloaded = PakArchive.fromArrayBuffer('pak0.pak', buildPak([{ path: 'textures/a2.wal', data: textData('a2') }]));
+    const pakA = createTestPakArchive([{ path: 'textures/a.wal', data: textData('a') }], 'pak0.pak');
+    const pakB = createTestPakArchive([{ path: 'textures/b.wal', data: textData('b') }], 'pak1.pak');
+    const pakAReloaded = createTestPakArchive([{ path: 'textures/a2.wal', data: textData('a2') }], 'pak0.pak');
 
     await store.persist(pakA);
     await new Promise((resolve) => setTimeout(resolve, 2));
@@ -50,7 +48,7 @@ describe('PakIndexStore', () => {
     // @ts-expect-error - simulate environment without IndexedDB
     delete (globalThis as { indexedDB?: IDBFactory }).indexedDB;
 
-    const archive = PakArchive.fromArrayBuffer('pak2.pak', buildPak([{ path: 'maps/test.bsp', data: textData('x') }]));
+    const archive = createTestPakArchive([{ path: 'maps/test.bsp', data: textData('x') }], 'pak2.pak');
     const unavailable = new PakIndexStore('no-indexdb');
     const persistResult = await unavailable.persist(archive);
     const lookup = await unavailable.find('pak2.pak');
