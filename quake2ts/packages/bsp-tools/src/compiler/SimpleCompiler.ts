@@ -269,12 +269,12 @@ export class SimpleCompiler {
 
     const windings: Winding[] = [];
     for (let i = 0; i < 6; i++) {
-      let w = baseWindingForPlane(planes[i].normal, planes[i].dist);
+      let w: Winding | null = baseWindingForPlane(planes[i].normal, planes[i].dist);
       for (let j = 0; j < 6; j++) {
         if (i === j) continue;
         // Keep BACK of other planes (since they point OUT of the box)
-        w = this.clipWindingOrNull(w, planes[j].normal, planes[j].dist, false);
         if (!w) break;
+        w = this.clipWindingOrNull(w, planes[j].normal, planes[j].dist, false);
       }
       if (w) windings.push(w);
     }
@@ -354,8 +354,10 @@ export class SimpleCompiler {
 
       for (const w of volume) {
         const split = splitWinding(w, plane.normal, plane.dist);
-        if (split.front) frontVolume.push(split.front);
-        if (split.back) backVolume.push(split.back);
+        const f = split.front;
+        const b = split.back;
+        if (f) frontVolume.push(f);
+        if (b) backVolume.push(b);
       }
 
       // Also, splitting the volume generates a new face on the plane (the "cap").
@@ -497,8 +499,10 @@ export class SimpleCompiler {
 
     for (const w of volume) {
       const split = splitWinding(w, plane.normal, plane.dist);
-      if (split.front) frontVolume.push(split.front);
-      if (split.back) backVolume.push(split.back);
+      const f = split.front;
+      const b = split.back;
+      if (f) frontVolume.push(f);
+      if (b) backVolume.push(b);
     }
 
     // Front child is Outside (Empty Leaf)
