@@ -1,9 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { AudioRegistry, AudioRegistryError } from '../../../src/assets/audio.js';
-import { buildPak } from '@quake2ts/test-utils'; // pakBuilder.js';
-import { PakArchive } from '../../../src/assets/pak.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
-import { buildWav } from '@quake2ts/test-utils'; // wavBuilder.js';
+import { buildWav, createTestPakArchive } from '@quake2ts/test-utils';
 import type { OggAudio } from '../../../src/assets/ogg.js';
 
 const mockOgg: OggAudio = {
@@ -28,11 +26,10 @@ describe('Audio registry', () => {
     0x4f, 0x67, 0x67, 0x53, // "OggS" capture pattern
     0x00,
   ]);
-  const pakBuffer = buildPak([
+  const pak = createTestPakArchive([
     { path: 'sound/weapons/blaster.wav', data: new Uint8Array(wavBuffer) },
     { path: 'music/example.ogg', data: oggBuffer },
-  ]);
-  const pak = PakArchive.fromArrayBuffer('base.pak', pakBuffer);
+  ], 'base.pak');
   const vfs = new VirtualFileSystem([pak]);
   const registry = new AudioRegistry(vfs, { cacheSize: 4 });
 
@@ -48,7 +45,7 @@ describe('Audio registry', () => {
   });
 
   it('rejects unknown audio formats', async () => {
-    const badPak = PakArchive.fromArrayBuffer('bad.pak', buildPak([{ path: 'sound/bad.txt', data: new Uint8Array([1, 2, 3]) }]));
+    const badPak = createTestPakArchive([{ path: 'sound/bad.txt', data: new Uint8Array([1, 2, 3]) }], 'bad.pak');
     const badVfs = new VirtualFileSystem([badPak]);
     const badRegistry = new AudioRegistry(badVfs);
     await expect(badRegistry.load('sound/bad.txt')).rejects.toBeInstanceOf(AudioRegistryError);

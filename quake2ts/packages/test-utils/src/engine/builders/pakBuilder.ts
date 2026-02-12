@@ -1,3 +1,5 @@
+import { PakArchive } from '@quake2ts/engine';
+
 export interface PakEntrySpec {
   path: string;
   data: Uint8Array;
@@ -47,4 +49,14 @@ export function buildPak(entries: PakEntrySpec[]): ArrayBuffer {
 
 export function textData(text: string): Uint8Array {
   return new TextEncoder().encode(text);
+}
+
+/**
+ * Creates a PakArchive instance for testing.
+ * @param entries - List of files to include in the PAK.
+ * @param name - Optional name for the PAK archive (default: 'test.pak').
+ */
+export function createTestPakArchive(entries: PakEntrySpec[], name: string = 'test.pak'): PakArchive {
+  const buffer = buildPak(entries);
+  return PakArchive.fromArrayBuffer(name, buffer);
 }

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { AssetDependencyError, AssetManager } from '../../src/assets/manager.js';
 import { PakArchive } from '../../src/assets/pak.js';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { buildPak, textData, buildMd2, buildWav } from '@quake2ts/test-utils';
+import { createTestPakArchive, textData, buildMd2, buildWav } from '@quake2ts/test-utils';
 
 const preparedTexture = {
   width: 1,
@@ -34,12 +34,11 @@ function makeMd2Pak(): PakArchive {
 
   const wav = buildWav({ sampleRate: 11025, channels: 1, samples: [0, 0.1, -0.1] });
 
-  const pakBuffer = buildPak([
+  return createTestPakArchive([
     { path: 'models/player/tris.md2', data: new Uint8Array(md2Buffer) },
     { path: 'sound/player/step.wav', data: new Uint8Array(wav) },
     { path: 'textures/player/walk.wal', data: textData('dummy texture placeholder') },
-  ]);
-  return PakArchive.fromArrayBuffer('assets.pak', pakBuffer);
+  ], 'assets.pak');
 }
 
 describe('AssetManager and dependency tracking', () => {

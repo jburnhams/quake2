@@ -1,19 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { VirtualFileSystem } from '../../src/assets/vfs.js';
-import { PakArchive } from '../../src/assets/pak.js';
-import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
+import { createTestPakArchive, textData } from '@quake2ts/test-utils';
 
 describe('VirtualFileSystem', () => {
-  function makePak(name: string, entries: { path: string; data: string }[]): PakArchive {
-    return PakArchive.fromArrayBuffer(
-      name,
-      buildPak(entries.map((entry) => ({ path: entry.path, data: textData(entry.data) }))),
-    );
-  }
-
   it('mounts paks and resolves files case-insensitively', async () => {
     const vfs = new VirtualFileSystem();
-    vfs.mountPak(makePak('base.pak', [{ path: 'maps/base1.bsp', data: 'world' }]));
+    vfs.mountPak(createTestPakArchive([{ path: 'maps/base1.bsp', data: textData('world') }], 'base.pak'));
 
     expect(vfs.hasFile('MAPS/BASE1.BSP')).toBe(true);
     await expect(vfs.readFile('maps/base1.bsp').then((data) => new TextDecoder().decode(data))).resolves.toBe('world');
@@ -21,8 +13,8 @@ describe('VirtualFileSystem', () => {
   });
 
   it('applies override order with later mounts winning', async () => {
-    const base = makePak('base.pak', [{ path: 'textures/wall.wal', data: 'base' }]);
-    const mod = makePak('mod.pak', [{ path: 'textures/wall.wal', data: 'modded' }]);
+    const base = createTestPakArchive([{ path: 'textures/wall.wal', data: textData('base') }], 'base.pak');
+    const mod = createTestPakArchive([{ path: 'textures/wall.wal', data: textData('modded') }], 'mod.pak');
     const vfs = new VirtualFileSystem([base, mod]);
 
     await expect(vfs.readFile('textures/wall.wal').then((data) => new TextDecoder().decode(data))).resolves.toBe('modded');
@@ -30,11 +22,11 @@ describe('VirtualFileSystem', () => {
   });
 
   it('lists directories and files', () => {
-    const pak = makePak('base.pak', [
-      { path: 'maps/base1.bsp', data: 'world' },
-      { path: 'maps/base2.bsp', data: 'world2' },
-      { path: 'textures/wall.wal', data: 'wal' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'maps/base1.bsp', data: textData('world') },
+      { path: 'maps/base2.bsp', data: textData('world2') },
+      { path: 'textures/wall.wal', data: textData('wal') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const listing = vfs.list('maps');
 
@@ -43,11 +35,11 @@ describe('VirtualFileSystem', () => {
   });
 
   it('finds files by extension', () => {
-    const pak = makePak('base.pak', [
-      { path: 'sound/explosion.wav', data: 'boom' },
-      { path: 'maps/test.bsp', data: 'world' },
-      { path: 'textures/wall.WAL', data: 'wal' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'sound/explosion.wav', data: textData('boom') },
+      { path: 'maps/test.bsp', data: textData('world') },
+      { path: 'textures/wall.WAL', data: textData('wal') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
 
     expect(vfs.findByExtension('.bsp').map((f) => f.path)).toEqual(['maps/test.bsp']);
@@ -57,7 +49,7 @@ describe('VirtualFileSystem', () => {
   // NEW TESTS
 
   it('getFileMetadata returns correct metadata with offset', () => {
-    const pak = makePak('base.pak', [{ path: 'test.txt', data: 'hello' }]);
+    const pak = createTestPakArchive([{ path: 'test.txt', data: textData('hello') }], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const meta = vfs.getFileMetadata('test.txt');
 
@@ -69,11 +61,11 @@ describe('VirtualFileSystem', () => {
   });
 
   it('listByExtension supports multiple extensions', () => {
-    const pak = makePak('base.pak', [
-      { path: 'a.txt', data: '' },
-      { path: 'b.cfg', data: '' },
-      { path: 'c.dat', data: '' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'a.txt', data: textData('') },
+      { path: 'b.cfg', data: textData('') },
+      { path: 'c.dat', data: textData('') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const results = vfs.listByExtension(['.txt', 'cfg']); // mixed format
 
@@ -82,11 +74,11 @@ describe('VirtualFileSystem', () => {
   });
 
   it('searchFiles finds files by regex', () => {
-    const pak = makePak('base.pak', [
-      { path: 'maps/base1.bsp', data: '' },
-      { path: 'maps/base2.bsp', data: '' },
-      { path: 'textures/wall.wal', data: '' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'maps/base1.bsp', data: textData('') },
+      { path: 'maps/base2.bsp', data: textData('') },
+      { path: 'textures/wall.wal', data: textData('') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const results = vfs.searchFiles(/base\d/);
 
@@ -95,8 +87,8 @@ describe('VirtualFileSystem', () => {
   });
 
   it('getPakInfo returns mounted pak metadata', () => {
-    const pak1 = makePak('pak0.pak', [{ path: 'a', data: '' }]);
-    const pak2 = makePak('pak1.pak', [{ path: 'b', data: '' }, { path: 'c', data: '' }]);
+    const pak1 = createTestPakArchive([{ path: 'a', data: textData('') }], 'pak0.pak');
+    const pak2 = createTestPakArchive([{ path: 'b', data: textData('') }, { path: 'c', data: textData('') }], 'pak1.pak');
     const vfs = new VirtualFileSystem([pak1, pak2]);
 
     const info = vfs.getPakInfo();
@@ -108,12 +100,12 @@ describe('VirtualFileSystem', () => {
   });
 
   it('getDirectoryTree returns hierarchical structure', () => {
-    const pak = makePak('base.pak', [
-      { path: 'root.txt', data: '' },
-      { path: 'env/sky/up.pcx', data: '' },
-      { path: 'env/sky/down.pcx', data: '' },
-      { path: 'maps/start.bsp', data: '' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'root.txt', data: textData('') },
+      { path: 'env/sky/up.pcx', data: textData('') },
+      { path: 'env/sky/down.pcx', data: textData('') },
+      { path: 'maps/start.bsp', data: textData('') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const tree = vfs.getDirectoryTree();
 
@@ -129,14 +121,14 @@ describe('VirtualFileSystem', () => {
   });
 
   it('readTextFile reads file as UTF-8 string', async () => {
-    const pak = makePak('base.pak', [{ path: 'readme.txt', data: 'Hello World' }]);
+    const pak = createTestPakArchive([{ path: 'readme.txt', data: textData('Hello World') }], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const content = await vfs.readTextFile('readme.txt');
     expect(content).toBe('Hello World');
   });
 
   it('readBinaryFile reads file as Uint8Array', async () => {
-    const pak = makePak('base.pak', [{ path: 'data.bin', data: 'BIN' }]);
+    const pak = createTestPakArchive([{ path: 'data.bin', data: textData('BIN') }], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     const content = await vfs.readBinaryFile('data.bin');
     expect(content).toBeInstanceOf(Uint8Array);
@@ -145,7 +137,7 @@ describe('VirtualFileSystem', () => {
 
   it('streams file content in chunks', async () => {
     const dataStr = '0123456789'.repeat(10); // 100 bytes
-    const pak = makePak('base.pak', [{ path: 'stream.txt', data: dataStr }]);
+    const pak = createTestPakArchive([{ path: 'stream.txt', data: textData(dataStr) }], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
 
     const stream = vfs.streamFile('stream.txt', 10); // 10 bytes per chunk
@@ -166,18 +158,18 @@ describe('VirtualFileSystem', () => {
   });
 
   it('mountPak returns the PakArchive instance', () => {
-    const pak = makePak('base.pak', [{ path: 'test.txt', data: 'hello' }]);
+    const pak = createTestPakArchive([{ path: 'test.txt', data: textData('hello') }], 'base.pak');
     const vfs = new VirtualFileSystem();
     const result = vfs.mountPak(pak);
     expect(result).toBe(pak);
   });
 
   it('findByExtension supports array of extensions', () => {
-    const pak = makePak('base.pak', [
-      { path: 'a.txt', data: '' },
-      { path: 'b.cfg', data: '' },
-      { path: 'c.dat', data: '' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'a.txt', data: textData('') },
+      { path: 'b.cfg', data: textData('') },
+      { path: 'c.dat', data: textData('') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     // @ts-ignore
     const results = vfs.findByExtension(['.txt', 'cfg']); // mixed format
@@ -187,11 +179,11 @@ describe('VirtualFileSystem', () => {
   });
 
   it('findByExtension supports regex', () => {
-    const pak = makePak('base.pak', [
-      { path: 'maps/base1.bsp', data: '' },
-      { path: 'maps/base2.bsp', data: '' },
-      { path: 'textures/wall.wal', data: '' },
-    ]);
+    const pak = createTestPakArchive([
+      { path: 'maps/base1.bsp', data: textData('') },
+      { path: 'maps/base2.bsp', data: textData('') },
+      { path: 'textures/wall.wal', data: textData('') },
+    ], 'base.pak');
     const vfs = new VirtualFileSystem([pak]);
     // @ts-ignore
     const results = vfs.findByExtension(/base\d/);
