@@ -2,6 +2,7 @@
   "files": [],
   "references": [
     { "path": "./packages/shared" },
+    { "path": "./packages/bsp-tools" },
     { "path": "./packages/engine" },
     { "path": "./packages/game" },
     { "path": "./packages/cgame" },
