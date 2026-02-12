@@ -105,7 +105,6 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/bloom.test.ts` to `engine/tests/unit-node/render/bloom.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/render.resources.test.ts` to `engine/tests/unit-node/render/render.resources.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/render.shaderProgram.test.ts` to `engine/tests/unit-node/render/render.shaderProgram.test.ts`
-   - Moved: `engine/tests/unit-jsdom/render/debugMode.test.ts` to `engine/tests/unit-node/render/debugMode.test.ts` (skipped due to mocking issues)
    - Moved: `engine/tests/unit-jsdom/render/frame.test.ts` to `engine/tests/unit-node/render/frame.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/render.particleSystem.test.ts` to `engine/tests/unit-node/render/render.particleSystem.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
