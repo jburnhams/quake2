@@ -148,6 +148,7 @@ export interface BspData {
   readonly visibility: BspVisibility | undefined;
   readonly areas: readonly BspArea[];
   readonly areaPortals: readonly BspAreaPortal[];
+  readonly rawLumps?: ReadonlyMap<number, Uint8Array>;
 }
 
 export enum BspLump {

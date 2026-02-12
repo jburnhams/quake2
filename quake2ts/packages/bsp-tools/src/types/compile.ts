@@ -32,9 +32,9 @@ export interface MapBrush {
 }
 
 /** BSP brush after CSG (may be fragmented) */
-export interface BspBrush {
+export interface CompileBrush {
   original: MapBrush;
   sides: CompileSide[];
   bounds: Bounds3;
-  next?: BspBrush;  // Linked list for fragments
+  next?: CompileBrush;  // Linked list for fragments
 }

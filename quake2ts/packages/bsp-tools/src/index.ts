@@ -8,3 +8,4 @@ export * from './parser/mapToBuilder.js';
 export * from './builder/types.js';
 export * from './builder/defaults.js';
 export * from './builder/BspBuilder.js';
+export * from './output/bspWriter.js';

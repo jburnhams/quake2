@@ -103,6 +103,7 @@
   },
   "devDependencies": {
     "@napi-rs/canvas": "^0.1.88",
+    "@quake2ts/bsp-tools": "workspace:*",
     "@quake2ts/engine": "workspace:^",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/server": "workspace:*",
@@ -126,6 +127,7 @@
     "webgpu": "^0.3.8"
   },
   "dependencies": {
+    "@quake2ts/bsp-tools": "workspace:*",
     "upng-js": "^2.1.0"
   }
 }

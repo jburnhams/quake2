@@ -316,6 +316,9 @@ importers:
 
   packages/test-utils:
     dependencies:
+      '@quake2ts/bsp-tools':
+        specifier: workspace:*
+        version: link:../bsp-tools
       upng-js:
         specifier: ^2.1.0
         version: 2.1.0
