@@ -5,6 +5,11 @@ import {
   Winding,
   createEmptyBounds3,
   windingBounds,
+  splitWinding,
+  addPointToBounds,
+  baseWindingForPlane,
+  copyWinding,
+  MAX_WORLD_COORD
 } from '@quake2ts/shared';
 import type { BrushDef, EntityDef, TextureDef } from '../builder/types.js';
 import {
@@ -52,10 +57,6 @@ class TexInfoManager {
     if (this.lookup.has(key)) {
       return this.lookup.get(key)!;
     }
-
-    // Default projection logic
-    // Quake 2 uses projected textures based on face normal usually, but here we store explicit params.
-    // We'll use a standard projection: S along X (scaled), T along Y (scaled, flipped).
 
     const scaleX = texture.scaleX || 1;
     const scaleY = texture.scaleY || 1;
@@ -163,15 +164,17 @@ export class SimpleCompiler {
     });
 
     // 2. Build BSP Tree
-    const root = this.buildTree(this.processedBrushes.map(b => b.index));
+    // Start with a large universe box to track volume bounds
+    const universeWindings = this.createUniverseWindings();
+    const root = this.buildTree(this.processedBrushes.map(b => b.index), universeWindings);
 
     // 3. Serialize Tree to BSP structures
     const headNode = this.serializeTree(root);
 
     // 4. Create Models (Model 0 is the world)
     this.models.push({
-      mins: { x: -4096, y: -4096, z: -4096 }, // TODO: Calc bounds
-      maxs: { x: 4096, y: 4096, z: 4096 },
+      mins: root.bounds.mins, // Use root bounds
+      maxs: root.bounds.maxs,
       origin: { x: 0, y: 0, z: 0 },
       headNode,
       firstFace: 0,
@@ -193,11 +196,6 @@ export class SimpleCompiler {
     );
 
     // 7. Visibility
-    // Count clusters (valid empty leaves)
-    // We assigned cluster = index for empty leaves in serializeTree
-    // Max cluster index is leafs.length - 1 roughly.
-    // We need to count how many clusters actually exist.
-    // For trivial vis, assume numClusters = leafs.length (worst case) or track max cluster.
     let maxCluster = -1;
     for (const l of this.leafs) {
       if (l.cluster > maxCluster) maxCluster = l.cluster;
@@ -244,14 +242,99 @@ export class SimpleCompiler {
     };
   }
 
-  private buildTree(brushIndices: number[]): BuildNode {
+  private createUniverseWindings(): Winding[] {
+    // Create 6 windings for a large box
+    // +/- 16384 (MAX_WORLD_COORD is huge, let's pick a reasonable safe map size)
+    // Actually, let's use MAX_WORLD_COORD but as box planes?
+    // Or just manually construct 6 faces.
+    // baseWindingForPlane gives us a huge winding.
+    // We can just use 6 planes of a box and clip a base winding against others?
+    // Or just manually set points.
+    const size = 32768; // +/- size
+    const mins = { x: -size, y: -size, z: -size };
+    const maxs = { x: size, y: size, z: size };
+
+    // We can use a helper or just define them.
+    // Let's use baseWindingForPlane and clip against the other 5 planes?
+    // That ensures consistency.
+
+    const planes = [
+      { normal: { x: 1, y: 0, z: 0 }, dist: maxs.x },
+      { normal: { x: -1, y: 0, z: 0 }, dist: -mins.x },
+      { normal: { x: 0, y: 1, z: 0 }, dist: maxs.y },
+      { normal: { x: 0, y: -1, z: 0 }, dist: -mins.y },
+      { normal: { x: 0, y: 0, z: 1 }, dist: maxs.z },
+      { normal: { x: 0, y: 0, z: -1 }, dist: -mins.z },
+    ];
+
+    const windings: Winding[] = [];
+    for (let i = 0; i < 6; i++) {
+      let w = baseWindingForPlane(planes[i].normal, planes[i].dist);
+      for (let j = 0; j < 6; j++) {
+        if (i === j) continue;
+        // Keep BACK of other planes (since they point OUT of the box)
+        w = this.clipWindingOrNull(w, planes[j].normal, planes[j].dist, false);
+        if (!w) break;
+      }
+      if (w) windings.push(w);
+    }
+    return windings;
+  }
+
+  // Wrapper to handle winding clip types
+  private clipWindingOrNull(w: Winding, normal: Vec3, dist: number, keepFront: boolean): Winding | null {
+    // We need to import clipWinding from shared/math/winding
+    // I assumed it was imported above via 'clipWinding' but it might be named differently in shared exports?
+    // 'clipWinding' is correct in my plan.
+    // However, I need to implement the actual call.
+    // But 'clipWinding' helper in shared is available.
+    // The previous file had 'winding.ts' imports.
+    // The import list needs to be updated.
+    // I already updated imports in the top of this file content string.
+
+    // Wait, shared imports:
+    // import { ..., splitWinding, baseWindingForPlane, copyWinding } from '@quake2ts/shared';
+    // I missed 'clipWinding'.
+    // And 'createWinding'.
+
+    // I need to use splitWinding mostly.
+
+    // For universe creation, I need clipWinding logic.
+    // I can simulate clip using splitWinding.
+    const split = splitWinding(w, normal, dist);
+    return keepFront ? split.front : split.back;
+  }
+
+  private calculateBounds(windings: Winding[]): any {
+    let bounds = createEmptyBounds3();
+    for (const w of windings) {
+      const wb = windingBounds(w);
+      // Merge bounds
+      bounds = {
+        mins: {
+          x: Math.min(bounds.mins.x, wb.mins.x),
+          y: Math.min(bounds.mins.y, wb.mins.y),
+          z: Math.min(bounds.mins.z, wb.mins.z)
+        },
+        maxs: {
+          x: Math.max(bounds.maxs.x, wb.maxs.x),
+          y: Math.max(bounds.maxs.y, wb.maxs.y),
+          z: Math.max(bounds.maxs.z, wb.maxs.z)
+        }
+      };
+    }
+    return bounds;
+  }
+
+  private buildTree(brushIndices: number[], volume: Winding[]): BuildNode {
     if (brushIndices.length === 0) {
-      return this.createLeafNode(0);
+      return this.createLeafNode(0, volume, undefined);
     }
 
     const splitPlane = this.findSeparator(brushIndices);
 
     if (splitPlane !== -1) {
+      const plane = this.planeSet.getPlanes()[splitPlane];
       const front: number[] = [];
       const back: number[] = [];
 
@@ -265,27 +348,43 @@ export class SimpleCompiler {
         }
       }
 
+      // Split volume
+      const frontVolume: Winding[] = [];
+      const backVolume: Winding[] = [];
+
+      for (const w of volume) {
+        const split = splitWinding(w, plane.normal, plane.dist);
+        if (split.front) frontVolume.push(split.front);
+        if (split.back) backVolume.push(split.back);
+      }
+
+      // Also, splitting the volume generates a new face on the plane (the "cap").
+      // The vertices of this cap are already part of the split windings' edges.
+      // So for BOUNDS calculation, we don't strictly need to add the new face winding.
+      // The extent is defined by the remaining pieces of the original boundary.
+      // So passing just split fragments is sufficient for bounds.
+
       const node: BuildNode = {
         planeNum: splitPlane,
         children: [null, null],
-        bounds: createEmptyBounds3(),
+        bounds: this.calculateBounds(volume),
         faces: [],
         isLeaf: false,
         contents: 0
       };
 
-      node.children[0] = this.buildTree(front);
-      node.children[1] = this.buildTree(back);
+      node.children[0] = this.buildTree(front, frontVolume);
+      node.children[1] = this.buildTree(back, backVolume);
 
       return node;
     }
 
     if (brushIndices.length === 1) {
-      return this.buildBrushNode(brushIndices[0]);
+      return this.buildBrushNode(brushIndices[0], volume);
     }
 
     // Overlapping brushes fallback
-    return this.buildBrushNode(brushIndices[0]);
+    return this.buildBrushNode(brushIndices[0], volume);
   }
 
   private findSeparator(brushIndices: number[]): number {
@@ -333,7 +432,7 @@ export class SimpleCompiler {
     return 'back';
   }
 
-  private buildBrushNode(brushIdx: number): BuildNode {
+  private buildBrushNode(brushIdx: number, volume: Winding[]): BuildNode {
     const processed = this.processedBrushes[brushIdx];
     const brush = processed.def;
     const windings = processed.windings;
@@ -358,24 +457,32 @@ export class SimpleCompiler {
     }
 
     if (planes.length === 0) {
-       return this.createLeafNode(0);
+       return this.createLeafNode(0, volume, undefined);
     }
 
-    return this.buildConvexChain(planes, faces, 0, brushIdx);
+    return this.buildConvexChain(planes, faces, 0, brushIdx, volume);
   }
 
-  private buildConvexChain(planes: number[], faces: CompileFace[], index: number, brushIdx: number): BuildNode {
+  private buildConvexChain(
+    planes: number[],
+    faces: CompileFace[],
+    index: number,
+    brushIdx: number,
+    volume: Winding[]
+  ): BuildNode {
     if (index >= planes.length) {
       // Inside all planes -> Solid Leaf
       const contents = this.processedBrushes[brushIdx].def.contents ?? CONTENTS_SOLID;
-      return this.createLeafNode(contents, brushIdx);
+      return this.createLeafNode(contents, volume, brushIdx);
     }
 
     const planeNum = planes[index];
+    const plane = this.planeSet.getPlanes()[planeNum];
+
     const node: BuildNode = {
       planeNum,
       children: [null, null],
-      bounds: createEmptyBounds3(),
+      bounds: this.calculateBounds(volume),
       faces: [],
       isLeaf: false,
       contents: 0
@@ -384,20 +491,30 @@ export class SimpleCompiler {
     const onPlaneFaces = faces.filter(f => f.planeNum === planeNum);
     node.faces = onPlaneFaces;
 
+    // Split volume for children
+    const frontVolume: Winding[] = [];
+    const backVolume: Winding[] = [];
+
+    for (const w of volume) {
+      const split = splitWinding(w, plane.normal, plane.dist);
+      if (split.front) frontVolume.push(split.front);
+      if (split.back) backVolume.push(split.back);
+    }
+
     // Front child is Outside (Empty Leaf)
-    node.children[0] = this.createLeafNode(0);
+    node.children[0] = this.createLeafNode(0, frontVolume, undefined);
 
     // Back child is recursion (Inside)
-    node.children[1] = this.buildConvexChain(planes, faces, index + 1, brushIdx);
+    node.children[1] = this.buildConvexChain(planes, faces, index + 1, brushIdx, backVolume);
 
     return node;
   }
 
-  private createLeafNode(contents: number, brushIdx?: number): BuildNode {
+  private createLeafNode(contents: number, volume: Winding[], brushIdx?: number): BuildNode {
     return {
       planeNum: -1,
       children: [null, null],
-      bounds: createEmptyBounds3(),
+      bounds: this.calculateBounds(volume),
       faces: [],
       isLeaf: true,
       contents,
@@ -408,27 +525,14 @@ export class SimpleCompiler {
   private serializeTree(node: BuildNode): number {
     if (node.isLeaf) {
       const leafIndex = this.leafs.length;
-
-      // Assign cluster: if empty (contents 0), new cluster. Else -1.
       const cluster = node.contents === 0 ? leafIndex : -1;
 
-      // Leaf Lists
-      // Populate lists
       const faces: number[] = [];
       const brushes: number[] = [];
 
       if (node.brushIndex !== undefined) {
         brushes.push(node.brushIndex);
       }
-
-      // We need to find faces visible from this leaf.
-      // This is hard to do here without knowing the parent context.
-      // However, for convex chain:
-      // The "Front" child (empty) sees the face on the node.
-      // We can handle this by traversing parents or modifying buildConvexChain to inject faces into leaves.
-      // Alternatively, traverse the tree AFTER building.
-
-      // Let's defer population of faces.
 
       this.leafFacesList.push(faces);
       this.leafBrushesList.push(brushes);
@@ -437,9 +541,17 @@ export class SimpleCompiler {
         contents: node.contents,
         cluster,
         area: 0,
-        mins: [0, 0, 0],
-        maxs: [0, 0, 0],
-        firstLeafFace: 0, // Filled later by BspWriter logic or manual
+        mins: [
+          Math.floor(node.bounds.mins.x),
+          Math.floor(node.bounds.mins.y),
+          Math.floor(node.bounds.mins.z)
+        ],
+        maxs: [
+          Math.ceil(node.bounds.maxs.x),
+          Math.ceil(node.bounds.maxs.y),
+          Math.ceil(node.bounds.maxs.z)
+        ],
+        firstLeafFace: 0,
         numLeafFaces: 0,
         firstLeafBrush: 0,
         numLeafBrushes: 0
@@ -456,26 +568,10 @@ export class SimpleCompiler {
     const firstFace = this.faces.length;
     for (const f of node.faces) {
       const faceIdx = this.serializeFace(f);
-
-      // IMPORTANT: Add this face to the FRONT child leaf's list?
-      // For a convex brush node, the front child is the empty space outside the brush.
-      // The face is on the boundary.
-      // The front child (leaf) should include this face.
-      // We need the LEAF index of the front child.
-      // If front is negative, it's -(leafIndex + 1).
-
       if (front < 0) {
         const leafIdx = -(front + 1);
         this.leafFacesList[leafIdx].push(faceIdx);
       } else {
-        // If front is a node, we should technically add to all leaves in that subtree?
-        // For MVP with convex brushes, front is usually a leaf (empty space) immediately
-        // unless we have split planes.
-        // If we have split planes, the front child is a subtree.
-        // We should add this face to all leaves in that subtree that touch the plane?
-        // This gets complex.
-        // For simple convex brushes, the structure is always Node -> Front: Leaf, Back: Node/Leaf.
-        // So front is likely a leaf.
         this.addFaceToSubtree(front, faceIdx);
       }
     }
@@ -484,8 +580,16 @@ export class SimpleCompiler {
     const bspNode: BspNode = {
       planeIndex: planenum,
       children: [front, back],
-      mins: [0, 0, 0],
-      maxs: [0, 0, 0],
+      mins: [
+        Math.floor(node.bounds.mins.x),
+        Math.floor(node.bounds.mins.y),
+        Math.floor(node.bounds.mins.z)
+      ],
+      maxs: [
+        Math.ceil(node.bounds.maxs.x),
+        Math.ceil(node.bounds.maxs.y),
+        Math.ceil(node.bounds.maxs.z)
+      ],
       firstFace,
       numFaces
     };
@@ -539,7 +643,6 @@ export class SimpleCompiler {
     const y = Math.floor(v.y);
     const z = Math.floor(v.z);
 
-    // Check neighbors
     for (let dx = -1; dx <= 1; dx++) {
       for (let dy = -1; dy <= 1; dy++) {
         for (let dz = -1; dz <= 1; dz++) {
@@ -577,8 +680,6 @@ export class SimpleCompiler {
   }
 
   private addEdge(v1: number, v2: number): number {
-    // Linear scan is slow. For MVP it's acceptable.
-    // Optimization: Map<string, number> where key is `${min}_${max}`
     for (let i = 1; i < this.edges.length; i++) {
       const e = this.edges[i];
       if ((e.vertices[0] === v1 && e.vertices[1] === v2)) return i;
