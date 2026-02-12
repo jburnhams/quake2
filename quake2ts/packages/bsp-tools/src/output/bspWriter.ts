@@ -51,6 +51,13 @@ export class BspWriter {
     // Pop is unused/padding usually
     lumps.set(BspLump.Pop, new Uint8Array(0));
 
+    // Override with raw lumps if present
+    if (data.rawLumps) {
+      for (const [lump, lumpData] of data.rawLumps) {
+        lumps.set(lump, lumpData);
+      }
+    }
+
     // 2. Calculate Layout
     let cursor = HEADER_SIZE;
     const lumpInfos = new Map<BspLump, { offset: number; length: number }>();

@@ -354,7 +354,16 @@ export class BspBuilder {
   build(): BuildResult {
     const start = performance.now();
 
-    const compiler = new SimpleCompiler(this.brushes, this.entities);
+    // Construct worldspawn entity
+    const worldspawn: EntityDef = {
+      classname: 'worldspawn',
+      properties: Object.fromEntries(this.worldspawnProps)
+    };
+
+    // Combine with other entities
+    const allEntities = [worldspawn, ...this.entities];
+
+    const compiler = new SimpleCompiler(this.brushes, allEntities);
     const result = compiler.compile();
 
     return {
