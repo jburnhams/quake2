@@ -1,6 +1,7 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import * as CGame from '@quake2ts/cgame';
+import { createMockEngineImports, createMockEngineHost } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/cgame', () => ({
@@ -116,25 +117,11 @@ describe('ClientExports Message Parsing', () => {
         (CGame.GetCGameAPI as any).mockReturnValue(mockCg);
 
         mockImports = {
-            engine: {
-                trace: vi.fn(() => ({})),
-                renderer: {} as any,
-                assets: {} as any,
-                cmd: {} as any
-            } as any,
-            host: {
-                cvars: {
-                    get: vi.fn(),
-                    list: vi.fn(() => []),
-                    register: vi.fn(),
-                    setValue: vi.fn(),
-                },
-                commands: {
-                    register: vi.fn(),
-                    execute: vi.fn(),
-                }
-            } as any
-        };
+            engine: createMockEngineImports({
+                cmd: { executeText: vi.fn() }
+            }),
+            host: createMockEngineHost()
+        } as ClientImports;
 
         client = createClient(mockImports);
     });
