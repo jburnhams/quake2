@@ -107,6 +107,11 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/render.shaderProgram.test.ts` to `engine/tests/unit-node/render/render.shaderProgram.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/frame.test.ts` to `engine/tests/unit-node/render/frame.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/render.particleSystem.test.ts` to `engine/tests/unit-node/render/render.particleSystem.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/renderer.test.ts` to `engine/tests/unit-node/render/renderer.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/bsp.test.ts` to `engine/tests/unit-node/render/bsp.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/skybox.test.ts` to `engine/tests/unit-node/render/skybox.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/bspPipeline.test.ts` to `engine/tests/unit-node/render/bspPipeline.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/bspPipelineDlights.test.ts` to `engine/tests/unit-node/render/bspPipelineDlights.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
    - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:
