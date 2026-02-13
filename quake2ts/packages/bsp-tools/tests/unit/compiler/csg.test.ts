@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { splitBrush } from '../../../src/compiler/csg.js';
+import { splitBrush, calculateBounds } from '../../../src/compiler/csg.js';
 import { PlaneSet } from '../../../src/compiler/planes.js';
 import { box } from '../../../src/builder/primitives.js';
 import { generateBrushWindings } from '../../../src/compiler/brushProcessing.js';
-import { windingBounds, createEmptyBounds3 } from '@quake2ts/shared';
+import { createEmptyBounds3 } from '@quake2ts/shared';
 import type { CompileBrush, CompileSide, MapBrush } from '../../../src/types/compile.js';
 
 describe('splitBrush', () => {
@@ -25,40 +25,15 @@ describe('splitBrush', () => {
         });
     });
 
+    const bounds = calculateBounds(sides);
+
     const mapBrush: MapBrush = {
         entityNum: 0,
         brushNum: 0,
         sides,
-        bounds: createEmptyBounds3(),
+        bounds,
         contents: 1
     };
-
-    // Calculate bounds
-    let bounds = createEmptyBounds3();
-    let first = true;
-    for (const side of sides) {
-        if (side.winding) {
-            const wb = windingBounds(side.winding);
-             if (first) {
-                bounds = wb;
-                first = false;
-            } else {
-                bounds = {
-                  mins: {
-                    x: Math.min(bounds.mins.x, wb.mins.x),
-                    y: Math.min(bounds.mins.y, wb.mins.y),
-                    z: Math.min(bounds.mins.z, wb.mins.z)
-                  },
-                  maxs: {
-                    x: Math.max(bounds.maxs.x, wb.maxs.x),
-                    y: Math.max(bounds.maxs.y, wb.maxs.y),
-                    z: Math.max(bounds.maxs.z, wb.maxs.z)
-                  }
-                };
-            }
-        }
-    }
-    mapBrush.bounds = bounds;
 
     return {
         original: mapBrush,
@@ -116,9 +91,6 @@ describe('splitBrush', () => {
     expect(result.front).toBeNull();
     expect(result.back).not.toBeNull();
     // In current implementation, if front is empty, we return back: brush (same object reference)
-    // Wait, let's verify if my implementation returns the same object or creates a copy.
-    // "if (frontSides.length === 0) { return { front: null, back: brush }; }"
-    // So it returns the same brush object.
     expect(result.back).toBe(brush);
   });
 

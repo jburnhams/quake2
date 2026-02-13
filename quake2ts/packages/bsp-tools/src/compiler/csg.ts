@@ -148,30 +148,21 @@ export function splitBrush(
   return { front: frontBrush, back: backBrush };
 }
 
-function calculateBounds(sides: CompileSide[]): Bounds3 {
-  let bounds = createEmptyBounds3();
-  let first = true;
-  for (const side of sides) {
-    if (side.winding) {
-      const wb = windingBounds(side.winding);
-      if (first) {
-        bounds = wb;
-        first = false;
-      } else {
-        bounds = {
-          mins: {
-            x: Math.min(bounds.mins.x, wb.mins.x),
-            y: Math.min(bounds.mins.y, wb.mins.y),
-            z: Math.min(bounds.mins.z, wb.mins.z)
-          },
-          maxs: {
-            x: Math.max(bounds.maxs.x, wb.maxs.x),
-            y: Math.max(bounds.maxs.y, wb.maxs.y),
-            z: Math.max(bounds.maxs.z, wb.maxs.z)
-          }
-        };
+export function calculateBounds(sides: CompileSide[]): Bounds3 {
+  return sides.reduce((bounds, side) => {
+    if (!side.winding) return bounds;
+    const wb = windingBounds(side.winding);
+    return {
+      mins: {
+        x: Math.min(bounds.mins.x, wb.mins.x),
+        y: Math.min(bounds.mins.y, wb.mins.y),
+        z: Math.min(bounds.mins.z, wb.mins.z)
+      },
+      maxs: {
+        x: Math.max(bounds.maxs.x, wb.maxs.x),
+        y: Math.max(bounds.maxs.y, wb.maxs.y),
+        z: Math.max(bounds.maxs.z, wb.maxs.z)
       }
-    }
-  }
-  return bounds;
+    };
+  }, createEmptyBounds3());
 }
