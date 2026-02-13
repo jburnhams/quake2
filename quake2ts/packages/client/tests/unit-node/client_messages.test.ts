@@ -118,7 +118,7 @@ describe('ClientExports Message Parsing', () => {
 
         mockImports = {
             engine: createMockEngineImports({
-                cmd: {} as any
+                cmd: { executeText: vi.fn() }
             }),
             host: createMockEngineHost()
         } as ClientImports;
