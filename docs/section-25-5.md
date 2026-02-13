@@ -38,8 +38,8 @@ CSG splits overlapping brushes into non-overlapping fragments, keeping only the 
 
 ### 2.1 Split Brush by Plane
 
-- [ ] Create `src/compiler/csg.ts`
-- [ ] Implement `splitBrush()`
+- [x] Create `src/compiler/csg.ts`
+- [x] Implement `splitBrush()`
 
 **File: `src/compiler/csg.ts`**
 ```typescript
@@ -75,9 +75,9 @@ export function splitBrush(
 
 ### 2.2 Tests
 
-- [ ] Test: Split box by center plane → two valid boxes
-- [ ] Test: Split box by plane outside → original + null
-- [ ] Test: Split box by corner plane → two valid pieces
+- [x] Test: Split box by center plane → two valid boxes
+- [x] Test: Split box by plane outside → original + null
+- [x] Test: Split box by corner plane → two valid pieces
 - [ ] Test: Split already-split brush → further fragments
 
 ---

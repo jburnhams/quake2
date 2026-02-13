@@ -1,14 +1,13 @@
-import type { Vec3, Bounds3 } from '@quake2ts/shared';
+import type { Vec3, Bounds3, Winding } from '@quake2ts/shared';
 
-// TODO: Implement Winding type properly in section 25-2
-export type Winding = any;
+export type { Winding };
 
 /** Internal plane during compilation (extends runtime plane) */
 export interface CompilePlane {
   normal: Vec3;
   dist: number;
   type: number;
-  signbits: number;
+  signbits?: number;
   hashChain?: number;  // For plane deduplication
 }
 
