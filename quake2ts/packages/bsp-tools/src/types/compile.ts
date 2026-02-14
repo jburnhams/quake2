@@ -35,5 +35,5 @@ export interface CompileBrush {
   original: MapBrush;
   sides: CompileSide[];
   bounds: Bounds3;
-  next?: CompileBrush;  // Linked list for fragments
+  next: CompileBrush | null;  // Linked list for fragments
 }

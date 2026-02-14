@@ -78,15 +78,15 @@ export function splitBrush(
 - [x] Test: Split box by center plane → two valid boxes
 - [x] Test: Split box by plane outside → original + null
 - [x] Test: Split box by corner plane → two valid pieces
-- [ ] Test: Split already-split brush → further fragments
+- [x] Test: Split already-split brush → further fragments (Covered by subtractBrush tests)
 
 ---
 
-## 3. Brush Fragment Management
+## 3. Brush Fragment Management (COMPLETED)
 
 ### 3.1 Brush List Operations
 
-- [ ] Implement brush list utilities
+- [x] Implement brush list utilities
 
 ```typescript
 /** Linked list of brush fragments */
@@ -103,7 +103,7 @@ export function mergeBrushLists(a: BrushList, b: BrushList): BrushList;
 
 ### 3.2 Brush Bounds Update
 
-- [ ] Implement bounds recalculation after split
+- [x] Implement bounds recalculation after split
 
 ```typescript
 /**
@@ -118,9 +118,9 @@ export function updateBrushBounds(brush: BspBrush): void;
 
 ## 4. CSG Processing
 
-### 4.1 Subtract Brush
+### 4.1 Subtract Brush (COMPLETED)
 
-- [ ] Implement brush subtraction
+- [x] Implement brush subtraction
 
 ```typescript
 /**
@@ -177,9 +177,9 @@ export function processCsg(
 
 ### 4.3 Tests
 
-- [ ] Test: Two non-overlapping boxes → unchanged
-- [ ] Test: Two overlapping boxes → fragments, no overlap
-- [ ] Test: Box inside box → inner removed or outer carved
+- [x] Test: Two non-overlapping boxes → unchanged (Covered by subtractBrush test)
+- [x] Test: Two overlapping boxes → fragments, no overlap (Covered by subtractBrush test)
+- [x] Test: Box inside box → inner removed or outer carved (Covered by subtractBrush test)
 - [ ] Test: Complex overlap → valid fragments
 
 ---
@@ -257,7 +257,7 @@ Non-solid brushes (water, lava, etc.) don't participate in normal CSG.
 
 ### 7.1 Bounds Culling
 
-- [ ] Implement fast bounds check before expensive CSG
+- [x] Implement fast bounds check before expensive CSG (Implemented as boundsIntersect in subtractBrush)
 
 ```typescript
 /**
@@ -363,8 +363,8 @@ export function validateCsgResult(
 
 ## Verification Checklist
 
-- [ ] `splitBrush` produces valid fragments
-- [ ] `subtractBrush` removes correct volume
+- [x] `splitBrush` produces valid fragments
+- [x] `subtractBrush` removes correct volume
 - [ ] `processCsg` handles all brush combinations
 - [ ] Bevel planes added correctly
 - [ ] Content types respected
