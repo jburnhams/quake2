@@ -136,16 +136,29 @@ export function splitBrush(
   const frontBrush: CompileBrush = {
     original: brush.original,
     sides: frontSides,
-    bounds: calculateBounds(frontSides)
+    bounds: calculateBounds(frontSides),
+    next: null
   };
 
   const backBrush: CompileBrush = {
     original: brush.original,
     sides: backSides,
-    bounds: calculateBounds(backSides)
+    bounds: calculateBounds(backSides),
+    next: null
   };
 
-  return { front: frontBrush, back: backBrush };
+  return {
+    front: isBrushValid(frontBrush) ? frontBrush : null,
+    back: isBrushValid(backBrush) ? backBrush : null
+  };
+}
+
+function isBrushValid(brush: CompileBrush): boolean {
+  const b = brush.bounds;
+  if (b.maxs.x - b.mins.x < 0.1) return false;
+  if (b.maxs.y - b.mins.y < 0.1) return false;
+  if (b.maxs.z - b.mins.z < 0.1) return false;
+  return true;
 }
 
 export function calculateBounds(sides: CompileSide[]): Bounds3 {
@@ -165,4 +178,152 @@ export function calculateBounds(sides: CompileSide[]): Bounds3 {
       }
     };
   }, createEmptyBounds3());
+}
+
+/**
+ * Updates the bounds of a brush based on its sides/windings.
+ * This is an alias for calculateBounds but updates the brush in place.
+ */
+export function updateBrushBounds(brush: CompileBrush): void {
+  brush.bounds = calculateBounds(brush.sides);
+}
+
+// -----------------------------------------------------------------------------
+// Brush List Management
+// -----------------------------------------------------------------------------
+
+/**
+ * A linked list of brushes.
+ * Useful for managing fragments during CSG operations.
+ */
+export interface BrushList {
+  head: CompileBrush | null;
+  tail: CompileBrush | null;
+  count: number;
+}
+
+/**
+ * Creates a new empty brush list.
+ */
+export function createBrushList(): BrushList {
+  return { head: null, tail: null, count: 0 };
+}
+
+/**
+ * Adds a brush to the end of the list.
+ */
+export function addBrush(list: BrushList, brush: CompileBrush): void {
+  brush.next = null; // Ensure it's not pointing to anything
+  if (!list.head) {
+    list.head = brush;
+    list.tail = brush;
+  } else {
+    // List has elements, append to tail
+    // This is safe because list.tail is guaranteed to be non-null if list.head is non-null
+    list.tail!.next = brush;
+    list.tail = brush;
+  }
+  list.count++;
+}
+
+/**
+ * Counts the number of brushes in the list by traversing it.
+ * Use list.count for cached value.
+ */
+export function countBrushes(list: BrushList): number {
+  let count = 0;
+  for (let b = list.head; b; b = b.next) {
+    count++;
+  }
+  return count;
+}
+
+/**
+ * Frees a brush list (clears references).
+ * In JS/TS this just clears the head/tail, letting GC handle the nodes if not referenced elsewhere.
+ */
+export function freeBrushList(list: BrushList): void {
+  list.head = null;
+  list.tail = null;
+  list.count = 0;
+}
+
+/**
+ * Frees a single brush.
+ * In JS/TS this is mostly a no-op but useful for API parity or pooling future-proofing.
+ */
+export function freeBrush(brush: CompileBrush): void {
+  brush.next = null;
+  // Could clear sides/windings if aggressive cleanup needed
+}
+
+// -----------------------------------------------------------------------------
+// CSG Operations
+// -----------------------------------------------------------------------------
+
+/**
+ * Subtracts brush B from brush A.
+ * Returns a linked list of fragments of A that are OUTSIDE of B.
+ * If A is entirely inside B, returns null.
+ * If A is entirely outside B, returns A (or a copy of A).
+ *
+ * This operation consumes A (it may be split into fragments).
+ * B is only read.
+ *
+ * @param a The brush to be subtracted from.
+ * @param b The subtractor brush.
+ * @param planeSet The PlaneSet for looking up plane data.
+ * @returns The head of the resulting fragment list.
+ */
+export function subtractBrush(
+  a: CompileBrush,
+  b: CompileBrush,
+  planeSet: PlaneSet
+): CompileBrush | null {
+  // If bounds don't intersect, A is completely outside B
+  // This is a quick optimization check
+  if (!boundsIntersect(a.bounds, b.bounds)) {
+    return a;
+  }
+
+  const frontList = createBrushList();
+  let insideBrush: CompileBrush | null = a;
+
+  const planes = planeSet.getPlanes();
+
+  for (const side of b.sides) {
+    if (!insideBrush) break;
+
+    const plane = planes[side.planeNum];
+
+    // Split the current inside portion by the plane of B's side.
+    // The plane normal points OUT of B.
+    // So FRONT is OUTSIDE B.
+    // BACK is INSIDE B (at least relative to this plane).
+    const split = splitBrush(insideBrush, side.planeNum, plane, planeSet, side.texInfo);
+
+    if (split.front) {
+      // The front part is definitely outside B because it is in front of one of B's planes.
+      addBrush(frontList, split.front);
+    }
+
+    // Continue processing the back part (which is inside this plane) against other planes.
+    insideBrush = split.back;
+  }
+
+  // Whatever remains in insideBrush is inside ALL planes of B, so it is inside the volume of B.
+  // Since we are subtracting B from A, we discard this inside portion.
+  // (In C code this would be explicitly freed)
+  if (insideBrush) {
+    freeBrush(insideBrush);
+  }
+
+  return frontList.head;
+}
+
+function boundsIntersect(a: Bounds3, b: Bounds3): boolean {
+  if (a.maxs.x < b.mins.x || a.mins.x > b.maxs.x) return false;
+  if (a.maxs.y < b.mins.y || a.mins.y > b.maxs.y) return false;
+  if (a.maxs.z < b.mins.z || a.mins.z > b.maxs.z) return false;
+  return true;
 }
