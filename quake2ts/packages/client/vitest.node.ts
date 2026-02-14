@@ -9,6 +9,7 @@ export default defineConfig({
       { find: '@quake2ts/game', replacement: path.resolve(__dirname, '../game/src/index.ts') },
       { find: '@quake2ts/cgame', replacement: path.resolve(__dirname, '../cgame/src/index.ts') },
       { find: '@quake2ts/server', replacement: path.resolve(__dirname, '../server/src/index.ts') },
+      { find: '@quake2ts/bsp-tools', replacement: path.resolve(__dirname, '../bsp-tools/src/index.ts') },
       { find: '@quake2ts/test-utils', replacement: path.resolve(__dirname, '../test-utils/src/index.ts') },
       // Self-reference aliases
       { find: /^@quake2ts\/client$/, replacement: path.resolve(__dirname, 'src/index.ts') },

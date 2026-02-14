@@ -3,6 +3,10 @@ import { createClient, ClientExports, ClientImports, ClientMode } from '@quake2t
 import { DemoPlaybackController, EngineImports } from '@quake2ts/engine';
 import { ClientNetworkHandler } from '@quake2ts/client/demo/handler.js';
 import { DemoControls } from '@quake2ts/client/ui/demo-controls.js';
+import { GetCGameAPI } from '@quake2ts/cgame';
+import { Init_Hud } from '@quake2ts/client/hud.js';
+import { createEmptyEntityState } from '@quake2ts/engine';
+import { resetCommonClientMocks } from '../test-helpers.js';
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
@@ -79,9 +83,7 @@ vi.mock('@quake2ts/client/hud.js', () => ({
     Draw_Hud: vi.fn()
 }));
 
-vi.mock('@quake2ts/cgame', () => {
-  return {
-    __esModule: true,
+vi.mock('@quake2ts/cgame', () => ({
     ClientPrediction: class {
         setAuthoritative = vi.fn();
         enqueueCommand = vi.fn();
@@ -101,8 +103,30 @@ vi.mock('@quake2ts/cgame', () => {
         ParseConfigString: vi.fn(),
         ShowSubtitle: vi.fn()
     })
-  }
-});
+}));
+
+// Also mock relative path for cgame as vitest might resolve alias
+vi.mock('../../../cgame/src/index.ts', () => ({
+    ClientPrediction: class {
+        setAuthoritative = vi.fn();
+        enqueueCommand = vi.fn();
+        getPredictedState = vi.fn();
+        decayError = vi.fn();
+    },
+    interpolatePredictionState: vi.fn(),
+    ViewEffects: class {
+        sample = vi.fn();
+    },
+    GetCGameAPI: vi.fn().mockReturnValue({
+        Init: vi.fn(),
+        Shutdown: vi.fn(),
+        DrawHUD: vi.fn(),
+        ParseCenterPrint: vi.fn(),
+        NotifyMessage: vi.fn(),
+        ParseConfigString: vi.fn(),
+        ShowSubtitle: vi.fn()
+    })
+}));
 
 vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
     MenuSystem: class {
@@ -116,6 +140,20 @@ vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
     }
 }));
 
+// Mock BrowserWebSocketNetDriver to avoid WebSocket dependency
+// This allows MultiplayerConnection to be instantiated normally but with a mocked driver
+vi.mock('../../../src/net/browserWsDriver.ts', () => ({
+    BrowserWebSocketNetDriver: class {
+        connect = vi.fn().mockResolvedValue(undefined);
+        disconnect = vi.fn();
+        send = vi.fn();
+        onMessage = vi.fn();
+        onClose = vi.fn();
+        onError = vi.fn();
+        isConnected = vi.fn().mockReturnValue(false);
+    }
+}));
+
 describe('Demo Playback Integration', () => {
     let client: ClientExports;
     let mockEngine: EngineImports & { renderer: any, cmd: any };
@@ -123,6 +161,19 @@ describe('Demo Playback Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+        resetCommonClientMocks();
+
+        // Mock localStorage if missing (for Node environment)
+        if (typeof localStorage === 'undefined') {
+            global.localStorage = {
+                getItem: vi.fn(),
+                setItem: vi.fn(),
+                removeItem: vi.fn(),
+                clear: vi.fn(),
+                length: 0,
+                key: vi.fn()
+            } as any;
+        }
 
         mockRenderer = {
             width: 800,

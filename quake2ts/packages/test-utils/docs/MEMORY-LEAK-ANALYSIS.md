@@ -93,6 +93,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `client/tests/integration/menu_lifecycle.test.ts` to `client/tests/unit-node/integration/menu_lifecycle.test.ts`
    - Moved: `client/tests/integration/save-menu.test.ts` to `client/tests/unit-node/integration/save-menu.test.ts`
    - Moved: `client/tests/integration/wiring.test.ts` to `client/tests/unit-node/integration/wiring.test.ts` (with mocked localStorage)
+   - Moved: `client/tests/integration/demo/demo-playback-integration.test.ts` to `client/tests/unit-node/integration/demo-playback-integration.test.ts` (mocked Driver/WebSocket)
+   - Moved: `client/tests/integration/demo/demo-recording-integration.test.ts` to `client/tests/unit-node/integration/demo-recording-integration.test.ts` (mocked Driver/WebSocket)
    - Moved: `engine/tests/unit-jsdom/render/render-options.test.ts` to `engine/tests/unit-node/render/`
    - Moved: `engine/tests/unit-jsdom/render/rendererStats.test.ts` to `engine/tests/unit-node/render/`
    - Moved: `game/tests/render/headless.test.ts` to `game/tests/unit-node/render/`
@@ -114,9 +116,6 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/bspPipelineDlights.test.ts` to `engine/tests/unit-node/render/bspPipelineDlights.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
-   - **Note**: The following tests require JSDOM due to complex mocking of `cgame` and `MultiplayerConnection` which fails in the Node environment. Attempts to move them to `unit-jsdom` also faced mocking resolution issues, so they remain in `integration` for now:
-     - `client/tests/integration/demo/demo-playback-integration.test.ts`
-     - `client/tests/integration/demo/demo-recording-integration.test.ts`
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
 5. Configure node tests with `environment: 'node'` in vitest config
