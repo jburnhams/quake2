@@ -16,6 +16,8 @@ export default defineConfig({
 
       { find: '@quake2ts/test-utils/src/engine/mocks/webgpu', replacement: path.resolve(__dirname, 'packages/test-utils/src/engine/mocks/webgpu.ts') },
       { find: '@quake2ts/test-utils/src/setup/webgpu', replacement: path.resolve(__dirname, 'packages/test-utils/src/setup/webgpu.ts') },
+      { find: '@quake2ts/test-utils/mocks/projectiles', replacement: path.resolve(__dirname, 'packages/test-utils/src/game/mocks/projectiles.ts') },
+      { find: '@quake2ts/test-utils/mocks/damage', replacement: path.resolve(__dirname, 'packages/test-utils/src/game/mocks/damage.ts') },
       { find: '@quake2ts/test-utils', replacement: path.resolve(__dirname, 'packages/test-utils/src/index.ts') },
       { find: '@quake2ts/bsp-tools', replacement: path.resolve(__dirname, 'packages/bsp-tools/src/index.ts') },
     ],

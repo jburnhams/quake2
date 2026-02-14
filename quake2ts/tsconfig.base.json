@@ -12,6 +12,10 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@quake2ts/test-utils/mocks/*": ["packages/test-utils/src/game/mocks/*"]
+    }
   }
 }

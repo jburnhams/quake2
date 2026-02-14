@@ -17,18 +17,16 @@ import {
 } from '@quake2ts/test-utils';
 
 // Mock projectiles
-vi.mock('../../src/entities/projectiles.js', () => ({
-    createBlasterBolt: vi.fn(),
-    createRocket: vi.fn(),
-    createGrenade: vi.fn(),
-    createBfgBall: vi.fn()
-}));
+vi.mock('../../src/entities/projectiles.js', async () => {
+    const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
+    return createMockProjectiles();
+});
 
 // Mock T_Damage
-vi.mock('../../src/combat/damage.js', () => ({
-    T_Damage: vi.fn(),
-    T_RadiusDamage: vi.fn()
-}));
+vi.mock('../../src/combat/damage.js', async () => {
+    const { createMockDamage } = await import('@quake2ts/test-utils/mocks/damage');
+    return createMockDamage();
+});
 
 type MutableGame = {
     -readonly [P in keyof GameExports]: GameExports[P];
