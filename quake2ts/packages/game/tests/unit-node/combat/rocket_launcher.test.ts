@@ -10,7 +10,6 @@ import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2t
 
 // Mock projectiles
 vi.mock('../../../src/entities/projectiles.js', async () => {
-    // @ts-ignore
     const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
     return createMockProjectiles();
 });
