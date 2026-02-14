@@ -8,14 +8,19 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventor
 import * as projectiles from '../../../src/entities/projectiles.js';
 import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
+// Mock projectiles
+vi.mock('../../../src/entities/projectiles.js', async () => {
+    // @ts-ignore
+    const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
+    return createMockProjectiles();
+});
+
 describe('Rocket Launcher', () => {
     afterEach(() => {
         vi.restoreAllMocks();
     });
 
     it('should consume 1 rocket and spawn a projectile', () => {
-        const createRocket = vi.spyOn(projectiles, 'createRocket');
-
         const { game } = createTestGame({
             config: { random: firingRandom }
         });
@@ -42,7 +47,7 @@ describe('Rocket Launcher', () => {
         // Rocket base damage 100 + 17 = 117
         const expectedDamage = 117;
 
-        expect(createRocket).toHaveBeenCalledWith(
+        expect(projectiles.createRocket).toHaveBeenCalledWith(
             game.entities,
             player,
             expect.anything(),

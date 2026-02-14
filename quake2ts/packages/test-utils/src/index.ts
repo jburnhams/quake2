@@ -15,6 +15,8 @@ export * from './game/helpers/save.js';
 export * from './game/mocks/ai.js';
 export * from './game/mocks/combat.js';
 export * from './game/mocks/items.js';
+export * from './game/mocks/projectiles.js';
+export * from './game/mocks/damage.js';
 // Removed export * from './game/mocks.js';
 export * from './server/mocks/transport.js';
 export * from './server/mockTransport.js';
@@ -124,6 +126,8 @@ export type { MockCollisionEntityIndex } from './server/mocks/physics.js';
 // Game Types
 export type { MockAI, MockMonsterAI } from './game/mocks/ai.js';
 export type { MockDamageInfo, MockWeapon } from './game/mocks/combat.js';
+export type { MockProjectiles } from './game/mocks/projectiles.js';
+export type { MockDamage } from './game/mocks/damage.js';
 export type { PhysicsScenario } from './game/helpers/physics.js';
 export type { MockSaveGame, SaveGameDiff } from './game/helpers/save.js';
 export type { MockEngine, MockGame, TestContext, MockImportsAndEngine } from './game/helpers.js';
