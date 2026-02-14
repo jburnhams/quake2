@@ -207,23 +207,16 @@ describe('Demo Recording Integration', () => {
 
     it('should set demo recorder on multiplayer connection', () => {
         expect(client.multiplayer).toBeDefined();
-        // Since we are not mocking MultiplayerConnection, we can't check spy on setDemoRecorder easily
-        // unless we spy on prototype or check internal state.
-        // But DemoRecorder IS mocked.
-        // And MultiplayerConnection calls setDemoRecorder(recorder).
-
-        // Wait, I can spy on client.multiplayer.setDemoRecorder?
-        // No, createClient called it already during initialization.
-
-        // However, we can check if recorder IS set on multiplayer.
-        // But `multiplayer` property is private in MultiplayerConnection class?
-        // No, `setDemoRecorder` sets `private demoRecorder`.
-
-        // But `DemoRecorder` constructor was called.
+        // Verify that the DemoRecorder constructor was called during client initialization
         expect(DemoRecorder).toHaveBeenCalled();
 
-        // We can verify that we can start recording via client, which delegates to multiplayer
-        // client.startRecording -> multiplayer.isConnected() -> demoRecorder.startRecording()
+        // Indirectly verify that the recorder was set on the multiplayer connection
+        // by attempting to start recording (simulating a connected state) and verifying
+        // that the mock recorder's startRecording method is invoked.
+        // This confirms the plumbing from client -> multiplayer -> recorder is intact.
+        vi.spyOn(client.multiplayer, 'isConnected').mockReturnValue(true);
+        client.startRecording('test_setup.dm2');
+        expect(mockRecorderInstance.startRecording).toHaveBeenCalledWith('test_setup.dm2');
     });
 
     it('should start recording when connected', () => {
