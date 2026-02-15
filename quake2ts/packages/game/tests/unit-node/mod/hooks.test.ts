@@ -1,28 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createGame, GameExports } from '../../../src/index.js';
-import { createTestContext } from '@quake2ts/test-utils';
-import type { GameImports } from '../../../src/index.js';
 import { ModAPI } from '../../../src/mod.js';
+import { createTestGame } from '@quake2ts/test-utils';
 
 describe('Mod Initialization Hooks', () => {
     it('should allow setting and calling onModInit', () => {
-        const { entities: mockEntities } = createTestContext();
-        const engine = mockEntities.engine;
-        const imports: Partial<GameImports> = {
-            trace: vi.fn(() => ({
-                fraction: 1,
-                ent: null,
-                allsolid: false,
-                startsolid: false,
-                endpos: { x: 0, y: 0, z: 0 },
-                plane: null,
-                surfaceFlags: 0,
-                contents: 0
-            })),
-            pointcontents: vi.fn(() => 0),
-        };
-        const options = { gravity: { x: 0, y: 0, z: -800 } };
-        const game = createGame(imports, engine, options);
+        const { game } = createTestGame();
 
         const modInitSpy = vi.fn();
         game.onModInit = modInitSpy;
@@ -43,11 +25,7 @@ describe('Mod Initialization Hooks', () => {
     });
 
     it('should allow setting and calling onModShutdown', () => {
-        const { entities: mockEntities } = createTestContext();
-        const engine = mockEntities.engine;
-        const imports: Partial<GameImports> = {}; // Minimal imports
-        const options = { gravity: { x: 0, y: 0, z: -800 } };
-        const game = createGame(imports, engine, options);
+        const { game } = createTestGame();
 
         const modShutdownSpy = vi.fn();
         game.onModShutdown = modShutdownSpy;

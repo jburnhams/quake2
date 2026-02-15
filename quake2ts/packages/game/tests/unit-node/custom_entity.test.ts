@@ -1,16 +1,13 @@
 import { EntitySystem, SpawnFunction } from '@quake2ts/game';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext, spawnEntityFromDictionary } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntityFromDictionary } from '@quake2ts/test-utils';
 
 describe('Custom Entity Registration', () => {
   let context: EntitySystem;
-  let testContext: ReturnType<typeof createTestContext>;
 
   beforeEach(() => {
-    testContext = createTestContext();
-    context = testContext.entities;
-
-    // createTestContext provides a default registry via createMockGame, so we don't need to overwrite it.
+    const { game } = createTestGame();
+    context = game.entities;
   });
 
   it('should allow registering a custom spawn function', () => {

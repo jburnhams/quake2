@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
-import { AssetManager, Renderer } from '@quake2ts/engine';
 import { createMockEngineHost, createMockEngineImports, createMockLocalStorage, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Client FOV and Zoom', () => {
@@ -22,14 +21,7 @@ describe('Client FOV and Zoom', () => {
         })
     });
 
-    // Setup assets
-    (mockEngine.assets.loadMd2Model as Mock).mockResolvedValue({});
-    (mockEngine.assets.loadMd3Model as Mock).mockResolvedValue({});
-    (mockEngine.assets.loadSprite as Mock).mockResolvedValue({});
-    (mockEngine.assets.loadSound as Mock).mockResolvedValue({});
-    (mockEngine.assets.loadTexture as Mock).mockResolvedValue({});
-
-    // Setup renderer
+    // Setup renderer overrides specific to this test
     (mockEngine.renderer.registerPic as Mock).mockResolvedValue({ width: 32, height: 32 });
     (mockEngine.renderer.registerTexture as Mock).mockReturnValue({ width: 64, height: 64 });
     (mockEngine.renderer.getPerformanceReport as Mock).mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 });
@@ -37,7 +29,6 @@ describe('Client FOV and Zoom', () => {
     const mockHost = createMockEngineHost();
 
     // Capture command callbacks
-    // We spy on the mock implementation to capture the callback
     (mockHost.commands.register as Mock).mockImplementation((name: string, callback: any) => {
         if (name === '+zoom') zoomStartCallback = callback;
         if (name === '-zoom') zoomEndCallback = callback;
