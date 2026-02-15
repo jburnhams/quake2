@@ -354,9 +354,7 @@ export function processCsg(
 ): CompileBrush[] {
   // We'll maintain a linked list of output brushes
   let head: CompileBrush | null = null;
-  // We don't strictly need tail if we don't optimize append, but append is frequent.
-  // However, since we modify the list in place, tracking tail is tricky.
-  // We'll just traverse to find tail or keep it simple.
+  let tail: CompileBrush | null = null;
 
   const verbose = options?.verbose ?? false;
   const preserveDetail = options?.preserveDetail ?? false;
@@ -422,6 +420,11 @@ export function processCsg(
 
              // Update 'prev' to be the last fragment
              prev = f;
+
+             // If 'current' was the tail, we need to update tail to point to the last fragment
+             if (current === tail) {
+               tail = f;
+             }
            }
         } else {
            // A is completely inside B. Remove A.
@@ -429,6 +432,10 @@ export function processCsg(
              prev.next = next;
            } else {
              head = next;
+           }
+           // If A was the tail, update tail to prev
+           if (current === tail) {
+             tail = prev;
            }
            // 'prev' stays same (points to node before A).
         }
@@ -450,11 +457,19 @@ export function processCsg(
 
     if (!head) {
       head = newBrush;
+      tail = newBrush;
     } else {
-      // Find tail
-      let t = head;
-      while (t.next) t = t.next;
-      t.next = newBrush;
+      // Use tail pointer for O(1) append
+      if (tail) {
+        tail.next = newBrush;
+        tail = newBrush;
+      } else {
+        // Fallback should theoretically not happen if logic is correct, but for safety:
+        let t = head;
+        while (t.next) t = t.next;
+        t.next = newBrush;
+        tail = newBrush;
+      }
     }
   }
 
