@@ -1,20 +1,13 @@
 import type { Vec3 } from '@quake2ts/shared';
-import { dotVec3, vec3Equals } from '@quake2ts/shared';
-
-export interface CompilePlane {
-  normal: Vec3;
-  dist: number;
-  type: number;
-  hashChain?: number;
-}
-
-// Plane types
-export const PLANE_X = 0;
-export const PLANE_Y = 1;
-export const PLANE_Z = 2;
-export const PLANE_ANYX = 3;
-export const PLANE_ANYY = 4;
-export const PLANE_ANYZ = 5;
+import {
+  type CompilePlane,
+  PLANE_X,
+  PLANE_Y,
+  PLANE_Z,
+  PLANE_ANYX,
+  PLANE_ANYY,
+  PLANE_ANYZ
+} from '../types/index.js';
 
 const PLANE_HASH_SIZE = 1024;
 

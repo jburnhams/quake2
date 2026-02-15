@@ -373,12 +373,12 @@ export function processCsg(
 
     // We iterate over the EXISTING output list and modify it (subtract 'brush' from 'current').
 
-    let current = head;
+    let current: CompileBrush | null = head;
     let prev: CompileBrush | null = null;
 
     while (current) {
-      const a = current;
-      const next = current.next; // Save next because current might be modified/removed
+      const a = current as CompileBrush;
+      const next = a.next; // Save next because current might be modified/removed
 
       const aIsDetail = (a.original.contents & CONTENTS_DETAIL) !== 0;
 
