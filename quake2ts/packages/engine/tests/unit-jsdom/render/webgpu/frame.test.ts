@@ -46,6 +46,7 @@ const mockDevice = {
     createView: vi.fn(() => ({})),
     destroy: vi.fn(),
   })),
+  createSampler: vi.fn(() => ({})),
   queue: {
     submit: vi.fn(),
   },
