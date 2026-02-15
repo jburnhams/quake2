@@ -4,7 +4,7 @@ import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameTraceResult } from '../../../src/imports.js';
 import { GameEngine } from '../../../src/index.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
 
 describe('Collision Physics', () => {
   let system: EntitySystem;
@@ -13,9 +13,9 @@ describe('Collision Physics', () => {
   let engine: GameEngine;
 
   beforeEach(() => {
-    const context = createTestContext();
-    engine = context.engine;
-    system = context.entities;
+    const { game, engine: mockEngine } = createTestGame();
+    system = game.entities;
+    engine = mockEngine as unknown as GameEngine;
 
     // Spy on findInBox to control what checkTriggers sees
     vi.spyOn(system, 'findInBox').mockImplementation(() => []);
