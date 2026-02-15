@@ -7,6 +7,7 @@ export * from './shared/math.js';
 export * from './shared/collision.js';
 export * from './shared/factories.js';
 export * from './shared/md2.js';
+export * from './bsp/helpers.js';
 export * from './game/factories.js';
 export * from './game/helpers.js';
 export * from './game/helpers/spawn.js';

@@ -327,3 +327,158 @@ function boundsIntersect(a: Bounds3, b: Bounds3): boolean {
   if (a.maxs.z < b.mins.z || a.mins.z > b.maxs.z) return false;
   return true;
 }
+
+export interface CsgOptions {
+  /** Keep detail brushes separate (don't let them cut structural brushes) */
+  preserveDetail?: boolean;
+
+  /** Verbose logging */
+  verbose?: boolean;
+}
+
+const CONTENTS_DETAIL = 0x8000000;
+
+/**
+ * Process all brushes with CSG.
+ * Splits overlapping brushes and removes hidden portions.
+ *
+ * @param brushes The input list of brushes (MapBrush converted to CompileBrush).
+ * @param planeSet The PlaneSet used for splitting.
+ * @param options CSG options.
+ * @returns A list of non-overlapping fragments.
+ */
+export function processCsg(
+  brushes: CompileBrush[],
+  planeSet: PlaneSet,
+  options?: CsgOptions
+): CompileBrush[] {
+  // We'll maintain a linked list of output brushes
+  let head: CompileBrush | null = null;
+  let tail: CompileBrush | null = null;
+
+  const verbose = options?.verbose ?? false;
+  const preserveDetail = options?.preserveDetail ?? false;
+
+  for (let i = 0; i < brushes.length; i++) {
+    const brush = brushes[i];
+
+    // In standard Q2 CSG:
+    // New brush (brush) cuts existing brushes (in the list).
+    // Existing brushes DO NOT cut the new brush.
+    // The new brush is added "on top" (conceptually, filling the space).
+
+    const isDetail = (brush.original.contents & CONTENTS_DETAIL) !== 0;
+
+    // We iterate over the EXISTING output list and modify it (subtract 'brush' from 'current').
+
+    let current: CompileBrush | null = head;
+    let prev: CompileBrush | null = null;
+
+    while (current) {
+      const a = current as CompileBrush;
+      const next = a.next; // Save next because current might be modified/removed
+
+      const aIsDetail = (a.original.contents & CONTENTS_DETAIL) !== 0;
+
+      // Should we subtract 'brush' from 'a'?
+      // If preserveDetail is on:
+      // - If 'brush' is detail and 'a' is structural: NO. Detail doesn't cut structural.
+      // - Otherwise: YES.
+
+      let shouldSubtract = true;
+      if (preserveDetail) {
+        if (isDetail && !aIsDetail) {
+          shouldSubtract = false;
+        }
+      }
+
+      if (shouldSubtract && boundsIntersect(a.bounds, brush.bounds)) {
+        // Subtract brush (b) from a
+        // result is a list of fragments of a that are OUTSIDE brush
+        const fragmentsHead = subtractBrush(a, brush, planeSet);
+
+        if (fragmentsHead) {
+           // A was split or preserved (if no overlap after all).
+           // If fragmentsHead is exactly 'a' (same object), nothing changed.
+           if (fragmentsHead === a) {
+             // No change
+             prev = current;
+           } else {
+             // 'a' was split into fragments. Replace 'a' with fragmentsHead.
+             if (prev) {
+               prev.next = fragmentsHead;
+             } else {
+               head = fragmentsHead;
+             }
+
+             // Find the new tail of this fragment chain to connect to 'next'
+             let f = fragmentsHead;
+             while (f.next) {
+               f = f.next;
+             }
+             f.next = next; // Reconnect to rest of list
+
+             // Update 'prev' to be the last fragment
+             prev = f;
+
+             // If 'current' was the tail, we need to update tail to point to the last fragment
+             if (current === tail) {
+               tail = f;
+             }
+           }
+        } else {
+           // A is completely inside B. Remove A.
+           if (prev) {
+             prev.next = next;
+           } else {
+             head = next;
+           }
+           // If A was the tail, update tail to prev
+           if (current === tail) {
+             tail = prev;
+           }
+           // 'prev' stays same (points to node before A).
+        }
+      } else {
+        // No overlap or skipped, keep A
+        prev = current;
+      }
+
+      current = next;
+    }
+
+    // Finally add 'brush' to the end of the list
+    // We make a shallow copy of 'brush' to safely modify 'next'
+    // without affecting the input array's objects (if they are reused).
+    const newBrush: CompileBrush = {
+      ...brush,
+      next: null
+    };
+
+    if (!head) {
+      head = newBrush;
+      tail = newBrush;
+    } else {
+      // Use tail pointer for O(1) append
+      if (tail) {
+        tail.next = newBrush;
+        tail = newBrush;
+      } else {
+        // Fallback should theoretically not happen if logic is correct, but for safety:
+        let t = head;
+        while (t.next) t = t.next;
+        t.next = newBrush;
+        tail = newBrush;
+      }
+    }
+  }
+
+  // Convert linked list back to array
+  const result: CompileBrush[] = [];
+  let c = head;
+  while (c) {
+    result.push(c);
+    c = c.next;
+  }
+  return result;
+}

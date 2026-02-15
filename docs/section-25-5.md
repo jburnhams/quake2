@@ -144,7 +144,7 @@ export function subtractBrush(
 
 ### 4.2 CSG for Brush List
 
-- [ ] Implement CSG processing for all brushes
+- [x] Implement CSG processing for all brushes
 
 ```typescript
 export interface CsgOptions {
@@ -180,7 +180,7 @@ export function processCsg(
 - [x] Test: Two non-overlapping boxes → unchanged (Covered by subtractBrush test)
 - [x] Test: Two overlapping boxes → fragments, no overlap (Covered by subtractBrush test)
 - [x] Test: Box inside box → inner removed or outer carved (Covered by subtractBrush test)
-- [ ] Test: Complex overlap → valid fragments
+- [x] Test: Complex overlap → valid fragments
 
 ---
 
@@ -249,7 +249,7 @@ Non-solid brushes (water, lava, etc.) don't participate in normal CSG.
 
 - [ ] Test: CONTENTS_SOLID participates in CSG
 - [ ] Test: CONTENTS_WATER doesn't subtract from solid
-- [ ] Test: Detail brushes marked correctly
+- [x] Test: Detail brushes marked correctly
 
 ---
 
@@ -365,7 +365,7 @@ export function validateCsgResult(
 
 - [x] `splitBrush` produces valid fragments
 - [x] `subtractBrush` removes correct volume
-- [ ] `processCsg` handles all brush combinations
+- [x] `processCsg` handles all brush combinations
 - [ ] Bevel planes added correctly
 - [ ] Content types respected
 - [ ] Spatial optimization reduces comparisons
