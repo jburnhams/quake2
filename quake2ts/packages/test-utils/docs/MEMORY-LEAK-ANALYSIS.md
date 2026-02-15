@@ -114,6 +114,15 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/skybox.test.ts` to `engine/tests/unit-node/render/skybox.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/bspPipeline.test.ts` to `engine/tests/unit-node/render/bspPipeline.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/bspPipelineDlights.test.ts` to `engine/tests/unit-node/render/bspPipelineDlights.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/dlight.test.ts` to `engine/tests/unit-node/render/dlight.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/gizmo.test.ts` to `engine/tests/unit-node/render/gizmo.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/gpuProfiler.test.ts` to `engine/tests/unit-node/render/gpuProfiler.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/lighting.test.ts` to `engine/tests/unit-node/render/lighting.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/materialLoader.test.ts` to `engine/tests/unit-node/render/materialLoader.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/bspNative.test.ts` to `engine/tests/unit-node/render/bspNative.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/md2PipelineDlights.test.ts` to `engine/tests/unit-node/render/md2PipelineDlights.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/instancing.test.ts` to `engine/tests/unit-node/render/instancing.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/md3Pipeline.test.ts` to `engine/tests/unit-node/render/md3Pipeline.test.ts`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
 4. Update test scripts in `package.json` to run both test suites

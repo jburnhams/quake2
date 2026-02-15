@@ -167,7 +167,19 @@ describe('DebugMode Integration', () => {
     it('should trigger debug rendering in renderFrame', () => {
         renderer.setDebugMode(DebugMode.BoundingBoxes);
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] }
+            camera: {
+                viewProjectionMatrix: new Float32Array(16),
+                viewMatrix: new Float32Array(16),
+                position: [0, 0, 0]
+            },
+            cameraState: {
+                position: [0, 0, 0],
+                angles: [0, 0, 0],
+                fov: 90,
+                aspect: 1,
+                near: 1,
+                far: 1000
+            }
         } as any;
         const entities = [{
             type: 'md3',
@@ -189,7 +201,19 @@ describe('DebugMode Integration', () => {
 
     it('should handle PVSClusters mode without crashing', () => {
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] },
+            camera: {
+                viewProjectionMatrix: new Float32Array(16),
+                viewMatrix: new Float32Array(16),
+                position: [0, 0, 0]
+            },
+            cameraState: {
+                position: [0, 0, 0],
+                angles: [0, 0, 0],
+                fov: 90,
+                aspect: 1,
+                near: 1,
+                far: 1000
+            },
             world: {
                 // map must have structure expected by renderer loop
                 map: {
@@ -197,7 +221,17 @@ describe('DebugMode Integration', () => {
                     planes: [{ normal: [0,0,1], dist: 0, type: 0 }],
                     leafs: [{ cluster: 0, mins: [0,0,0], maxs: [0,0,0] }],
                     visibility: { numClusters: 1, clusters: [{ pvs: new Uint8Array(1) }] },
-                    entities: { worldspawn: { properties: { light: '255' } } }
+                    entities: { worldspawn: { properties: { light: '255' } } },
+                    faces: [],
+                    leaffaces: [],
+                    leafbrushes: [],
+                    edges: [],
+                    surfedges: [],
+                    models: [],
+                    brushes: [],
+                    brushsides: [],
+                    lightmaps: [],
+                    vis: new Uint8Array(0)
                 },
                 surfaces: []
             }
@@ -209,14 +243,36 @@ describe('DebugMode Integration', () => {
 
     it('should handle Lightmaps mode without crashing', () => {
         const options = {
-            camera: { viewProjectionMatrix: new Float32Array(16), viewMatrix: new Float32Array(16), position: [0, 0, 0] },
+            camera: {
+                viewProjectionMatrix: new Float32Array(16),
+                viewMatrix: new Float32Array(16),
+                position: [0, 0, 0]
+            },
+            cameraState: {
+                position: [0, 0, 0],
+                angles: [0, 0, 0],
+                fov: 90,
+                aspect: 1,
+                near: 1,
+                far: 1000
+            },
             world: {
                 map: {
                     nodes: [{ planeIndex: 0, children: [-1, -1], mins: [0,0,0], maxs: [0,0,0] }],
                     planes: [{ normal: [0,0,1], dist: 0, type: 0 }],
                     leafs: [{ cluster: 0, mins: [0,0,0], maxs: [0,0,0] }],
                     visibility: { numClusters: 1, clusters: [{ pvs: new Uint8Array(1) }] },
-                    entities: { worldspawn: { properties: { light: '255' } } }
+                    entities: { worldspawn: { properties: { light: '255' } } },
+                    faces: [],
+                    leaffaces: [],
+                    leafbrushes: [],
+                    edges: [],
+                    surfedges: [],
+                    models: [],
+                    brushes: [],
+                    brushsides: [],
+                    lightmaps: [],
+                    vis: new Uint8Array(0)
                 },
                 surfaces: []
             }
