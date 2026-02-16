@@ -15,10 +15,16 @@ import {
   InputAction,
   createDefaultBindings,
   type GamepadLike,
-} from '@quake2ts/client/index.js';
+  type InputSource,
+} from '../../src/index.js';
+import { TestInputSource } from '@quake2ts/test-utils';
 
 function createController(): InputController {
-  return new InputController({}, createDefaultBindings());
+  const controller = new InputController({}, createDefaultBindings());
+  const source = new TestInputSource();
+  // Bind test source to verify input wiring (even if tests manually trigger handlers)
+  controller.bindInputSource(source as unknown as InputSource);
+  return controller;
 }
 
 describe('InputBindings', () => {
