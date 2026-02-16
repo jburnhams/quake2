@@ -4,6 +4,9 @@ import {
   createPlayerWeaponStates
 } from '@quake2ts/game';
 
+// Re-export factories from game package
+export { createPlayerInventory, createPlayerWeaponStates };
+
 export type FactoryOverrides<T> = Partial<T> & Record<string, any>;
 
 /**
