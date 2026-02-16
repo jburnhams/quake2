@@ -251,11 +251,19 @@ describe('WebGL Adapter Integration', () => {
         expect(mockBspBind).toHaveBeenCalled();
         const callArgs = mockBspBind.mock.calls[0][0];
 
-        // The bspPipeline receives modelViewProjection.
-        // Since we are rendering a static world (identity model matrix), this should equal ViewProjection.
-        const receivedVP = callArgs.modelViewProjection;
+        // The bspPipeline now calculates matrices from cameraState internally
+        // So modelViewProjection passed to bind() might be undefined unless overridden
+        const receivedState = callArgs.cameraState;
 
-        expectToBeCloseToMat4(receivedVP, camera.viewProjectionMatrix);
+        expect(receivedState).toBeDefined();
+        // Check position
+        expect(receivedState.position[0]).toBeCloseTo(camera.position[0]);
+        expect(receivedState.position[1]).toBeCloseTo(camera.position[1]);
+        expect(receivedState.position[2]).toBeCloseTo(camera.position[2]);
+        // Check angles
+        expect(receivedState.angles[0]).toBeCloseTo(camera.angles[0]);
+        expect(receivedState.angles[1]).toBeCloseTo(camera.angles[1]);
+        expect(receivedState.angles[2]).toBeCloseTo(camera.angles[2]);
     });
 
     test('explicit CameraState overrides Camera object in rendering pipeline', () => {
@@ -297,14 +305,8 @@ describe('WebGL Adapter Integration', () => {
 
         expect(mockBspBind).toHaveBeenCalled();
         const callArgs = mockBspBind.mock.calls[0][0];
-        const receivedVP = callArgs.modelViewProjection;
 
-        // Calculate expected matrix from explicit state
-        const tempCam = new Camera(800, 600);
-        tempCam.setPosition(100, 0, 0);
-        tempCam.setRotation(0, 0, 0);
-        tempCam.setPerspective(90, 800/600, 0.1, 1000);
-
-        expectToBeCloseToMat4(receivedVP, tempCam.viewProjectionMatrix);
+        // Verify explicit state was passed
+        expect(callArgs.cameraState).toBe(explicitState);
     });
 });
