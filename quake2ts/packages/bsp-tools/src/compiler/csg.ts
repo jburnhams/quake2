@@ -6,6 +6,16 @@ import {
   baseWindingForPlane,
   chopWindingByPlanes,
   windingPlane,
+  CONTENTS_DETAIL,
+  CONTENTS_SOLID,
+  CONTENTS_WINDOW,
+  CONTENTS_LAVA,
+  CONTENTS_SLIME,
+  CONTENTS_WATER,
+  CONTENTS_MIST,
+  CONTENTS_ORIGIN,
+  CONTENTS_PLAYERCLIP,
+  CONTENTS_MONSTERCLIP,
   type Winding,
   type Vec3,
   type Bounds3
@@ -336,8 +346,6 @@ export interface CsgOptions {
   verbose?: boolean;
 }
 
-const CONTENTS_DETAIL = 0x8000000;
-
 /**
  * Process all brushes with CSG.
  * Splits overlapping brushes and removes hidden portions.
@@ -481,4 +489,101 @@ export function processCsg(
     c = c.next;
   }
   return result;
+}
+
+// -----------------------------------------------------------------------------
+// Bevel Planes
+// -----------------------------------------------------------------------------
+
+/**
+ * Adds axial bevel planes to a brush if they are missing.
+ * Bevel planes improve collision detection by providing axial separating planes
+ * for convex brushes that are nearly axial or have complex shapes.
+ *
+ * @param brush The brush to add bevels to.
+ * @param planeSet The PlaneSet used to find/add planes.
+ */
+export function addBoxBevels(brush: CompileBrush, planeSet: PlaneSet): void {
+  const { mins, maxs } = brush.bounds;
+  const planes = planeSet.getPlanes();
+
+  // Define the 6 axial planes that form the AABB
+  const axes = [
+    { normal: { x: 1, y: 0, z: 0 }, dist: maxs.x },
+    { normal: { x: -1, y: 0, z: 0 }, dist: -mins.x },
+    { normal: { x: 0, y: 1, z: 0 }, dist: maxs.y },
+    { normal: { x: 0, y: -1, z: 0 }, dist: -mins.y },
+    { normal: { x: 0, y: 0, z: 1 }, dist: maxs.z },
+    { normal: { x: 0, y: 0, z: -1 }, dist: -mins.z }
+  ];
+
+  for (const axis of axes) {
+    let found = false;
+    for (const side of brush.sides) {
+      const p = planes[side.planeNum];
+      // Check if plane is close to axis
+      if (
+        Math.abs(p.normal.x - axis.normal.x) < 0.0001 &&
+        Math.abs(p.normal.y - axis.normal.y) < 0.0001 &&
+        Math.abs(p.normal.z - axis.normal.z) < 0.0001 &&
+        Math.abs(p.dist - axis.dist) < 0.01
+      ) {
+        found = true;
+        break;
+      }
+    }
+
+    if (!found) {
+      // Add bevel plane
+      const planeNum = planeSet.findOrAdd(axis.normal, axis.dist);
+      brush.sides.push({
+        planeNum,
+        texInfo: 0, // No texture for bevels
+        visible: false,
+        tested: false,
+        bevel: true,
+        // Winding is not needed for bevel planes as they are outside/tangent
+        // and only used for collision, not rendering or splitting?
+        // Actually they might be used for splitting in BSP tree, but they don't have windings to split.
+        // If used as splitter, we generate windings for children.
+        winding: undefined
+      });
+    }
+  }
+}
+
+/**
+ * Placeholder for edge bevel generation.
+ * Currently not implemented as box bevels cover most collision cases.
+ */
+export function addEdgeBevels(brush: CompileBrush, planeSet: PlaneSet): void {
+  // TODO: Implement edge bevels for non-axial sharp edges
+  // This involves cross products of edge vectors with axes.
+}
+
+// -----------------------------------------------------------------------------
+// Contents
+// -----------------------------------------------------------------------------
+
+/**
+ * Combines content flags.
+ */
+export function combineContents(a: number, b: number): number {
+  return a | b;
+}
+
+/**
+ * Checks if a brush should be processed for CSG.
+ * Filters out origin brushes and other non-geometric entities if necessary.
+ */
+export function isCsgBrush(brush: CompileBrush): boolean {
+  // Filter out origin brushes
+  if ((brush.original.contents & CONTENTS_ORIGIN) !== 0) {
+    return false;
+  }
+  // Filter out completely empty/invalid brushes?
+  if (brush.sides.length < 4) {
+    return false;
+  }
+  return true;
 }

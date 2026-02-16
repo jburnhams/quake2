@@ -7,11 +7,14 @@ import {
   countBrushes,
   freeBrushList,
   subtractBrush,
-  processCsg
+  processCsg,
+  addBoxBevels,
+  isCsgBrush,
+  combineContents
 } from '../../../src/compiler/csg.js';
 import { PlaneSet } from '../../../src/compiler/planes.js';
-import { box } from '../../../src/builder/primitives.js';
-import { createEmptyBounds3 } from '@quake2ts/shared';
+import { box, wedge } from '../../../src/builder/primitives.js';
+import { createEmptyBounds3, CONTENTS_SOLID, CONTENTS_ORIGIN } from '@quake2ts/shared';
 import { createCompileBrush } from '@quake2ts/test-utils';
 import type { CompileBrush } from '../../../src/types/compile.js';
 
@@ -364,5 +367,69 @@ describe('processCsg', () => {
     expect(outA).toBeDefined();
     expect(outA!.bounds.maxs.x).toBeCloseTo(32);
     expect(outA!.bounds.mins.x).toBeCloseTo(-32);
+  });
+});
+
+describe('addBoxBevels', () => {
+  it('does not add bevels to an axial box (already has them)', () => {
+    const planeSet = new PlaneSet();
+    const b = box({ origin: { x: 0, y: 0, z: 0 }, size: { x: 64, y: 64, z: 64 } });
+    const brush = createCompileBrush(b, planeSet);
+
+    const initialSideCount = brush.sides.length; // 6
+    addBoxBevels(brush, planeSet);
+
+    expect(brush.sides.length).toBe(initialSideCount);
+  });
+
+  it('adds bevels to a brush with missing axial planes', () => {
+    const planeSet = new PlaneSet();
+    // Wedge (ramp) is missing the top axial plane (it has a slope instead)
+    const b = wedge({
+      origin: { x: 0, y: 0, z: 0 },
+      size: { x: 64, y: 64, z: 64 },
+      direction: 'north'
+    });
+    const brush = createCompileBrush(b, planeSet);
+
+    // Initial sides: 5 (Bottom, Left, Right, Back, Slope)
+    // Missing: Top (Z max), Front (Y max - actually Y max is the high end? No, wedge slope goes from low to high)
+    // Wedge geometry:
+    // If direction is North (Y+), ramp goes up towards North? Or down?
+    // Usually a wedge fills the box bounds.
+    // It cuts the box with a plane.
+    // Result has 5 sides.
+    // Missing 1 axial side (replaced by slope).
+    // So addBoxBevels should add 1 bevel plane.
+
+    const initialSideCount = brush.sides.length;
+    addBoxBevels(brush, planeSet);
+
+    // Should have added at least 1 bevel
+    expect(brush.sides.length).toBeGreaterThan(initialSideCount);
+
+    // Verify added side is bevel
+    const bevels = brush.sides.filter(s => s.bevel);
+    expect(bevels.length).toBeGreaterThan(0);
+    expect(bevels[0].visible).toBe(false);
+    expect(bevels[0].winding).toBeUndefined();
+  });
+});
+
+describe('contents', () => {
+  it('combineContents returns OR of flags', () => {
+    expect(combineContents(1, 2)).toBe(3);
+  });
+
+  it('isCsgBrush returns true for solid brush', () => {
+    const b = box({ origin: { x: 0, y: 0, z: 0 }, size: { x: 64, y: 64, z: 64 }, contents: CONTENTS_SOLID });
+    const brush = createCompileBrush(b, new PlaneSet(), b.contents);
+    expect(isCsgBrush(brush)).toBe(true);
+  });
+
+  it('isCsgBrush returns false for origin brush', () => {
+    const b = box({ origin: { x: 0, y: 0, z: 0 }, size: { x: 64, y: 64, z: 64 }, contents: CONTENTS_ORIGIN });
+    const brush = createCompileBrush(b, new PlaneSet(), b.contents);
+    expect(isCsgBrush(brush)).toBe(false);
   });
 });
