@@ -123,8 +123,13 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/md2PipelineDlights.test.ts` to `engine/tests/unit-node/render/md2PipelineDlights.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/instancing.test.ts` to `engine/tests/unit-node/render/instancing.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/md3Pipeline.test.ts` to `engine/tests/unit-node/render/md3Pipeline.test.ts`
+   - Moved: `engine/tests/render/integration/webgl-adapter.test.ts` to `engine/tests/unit-node/render/webgl-adapter.test.ts`
+   - Deleted: `engine/tests/render/adapters/webglCamera.test.ts` (obsolete/covered by matrix-builders)
+   - Deleted: `engine/tests/integration/setup.ts` (unused)
+   - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
+   - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
 5. Configure node tests with `environment: 'node'` in vitest config
