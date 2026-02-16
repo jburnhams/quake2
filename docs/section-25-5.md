@@ -184,71 +184,48 @@ export function processCsg(
 
 ---
 
-## 5. Bevel Planes
+## 5. Bevel Planes (PARTIALLY COMPLETED)
 
 ### 5.1 Box Bevels
 
-- [ ] Implement box bevel plane addition
+- [x] Implement box bevel plane addition
 
 ```typescript
-/**
- * Add axial bevel planes to a brush
- * These help with collision detection
- */
-export function addBoxBevels(brush: BspBrush, planeSet: PlaneSet): void;
+export function addBoxBevels(brush: CompileBrush, planeSet: PlaneSet): void;
 ```
-
-Bevel planes are axis-aligned planes at brush edges. They improve collision behavior.
-
-**Reference**: `q2tools/src/map.c` lines 300-380 (`AddBrushBevels`)
+(Implemented in `src/compiler/csg.ts`)
 
 ### 5.2 Edge Bevels
 
 - [ ] Implement edge bevel planes
-
-```typescript
-/**
- * Add edge bevel planes for non-axial edges
- */
-export function addEdgeBevels(brush: BspBrush, planeSet: PlaneSet): void;
-```
-
-**Reference**: `q2tools/src/map.c` lines 300-380
+(Deferred - Box bevels cover most collision cases. Edge bevels optimize sliding along sharp non-axial edges.)
 
 ### 5.3 Tests
 
-- [ ] Test: Box gets 6 bevel planes (already has them)
-- [ ] Test: Wedge gets additional bevel planes
+- [x] Test: Box gets 6 bevel planes (already has them)
+- [x] Test: Wedge gets additional bevel planes
 - [ ] Test: Bevel planes don't change brush volume
 
 ---
 
-## 6. Brush Contents
+## 6. Brush Contents (COMPLETED)
 
 ### 6.1 Content Types
 
-- [ ] Ensure content flags are propagated through CSG
+- [x] Ensure content flags are propagated through CSG
+- [x] Implement `combineContents` helper
+- [x] Implement `isCsgBrush` helper
 
 ```typescript
-/**
- * Determine combined contents of brush fragments
- */
 export function combineContents(a: number, b: number): number;
-
-/**
- * Check if brush should be processed for CSG
- */
-export function isCsgBrush(brush: BspBrush): boolean;
+export function isCsgBrush(brush: CompileBrush): boolean;
 ```
-
-Non-solid brushes (water, lava, etc.) don't participate in normal CSG.
-
-**Reference**: `q2tools/src/csg.c` lines 30-40
+(Implemented in `src/compiler/csg.ts`)
 
 ### 6.2 Tests
 
-- [ ] Test: CONTENTS_SOLID participates in CSG
-- [ ] Test: CONTENTS_WATER doesn't subtract from solid
+- [x] Test: CONTENTS_SOLID participates in CSG
+- [x] Test: CONTENTS_WATER doesn't subtract from solid (Managed via brush order)
 - [x] Test: Detail brushes marked correctly
 
 ---
