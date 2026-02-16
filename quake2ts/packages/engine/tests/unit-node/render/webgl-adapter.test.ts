@@ -256,14 +256,11 @@ describe('WebGL Adapter Integration', () => {
         const receivedState = callArgs.cameraState;
 
         expect(receivedState).toBeDefined();
-        // Check position
-        expect(receivedState.position[0]).toBeCloseTo(camera.position[0]);
-        expect(receivedState.position[1]).toBeCloseTo(camera.position[1]);
-        expect(receivedState.position[2]).toBeCloseTo(camera.position[2]);
-        // Check angles
-        expect(receivedState.angles[0]).toBeCloseTo(camera.angles[0]);
-        expect(receivedState.angles[1]).toBeCloseTo(camera.angles[1]);
-        expect(receivedState.angles[2]).toBeCloseTo(camera.angles[2]);
+        // Check position and angles
+        for (let i = 0; i < 3; i++) {
+            expect(receivedState.position[i]).toBeCloseTo(camera.position[i]);
+            expect(receivedState.angles[i]).toBeCloseTo(camera.angles[i]);
+        }
     });
 
     test('explicit CameraState overrides Camera object in rendering pipeline', () => {
