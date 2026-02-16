@@ -523,9 +523,9 @@ export function addBoxBevels(brush: CompileBrush, planeSet: PlaneSet): void {
       const p = planes[side.planeNum];
       // Check if plane is close to axis
       if (
-        Math.abs(p.normal.x - axis.normal.x) < 0.01 &&
-        Math.abs(p.normal.y - axis.normal.y) < 0.01 &&
-        Math.abs(p.normal.z - axis.normal.z) < 0.01 &&
+        Math.abs(p.normal.x - axis.normal.x) < 0.0001 &&
+        Math.abs(p.normal.y - axis.normal.y) < 0.0001 &&
+        Math.abs(p.normal.z - axis.normal.z) < 0.0001 &&
         Math.abs(p.dist - axis.dist) < 0.01
       ) {
         found = true;
