@@ -1,5 +1,4 @@
 import { createRenderer } from '../../../src/render/renderer.js';
-import { renderFrame } from '../../../src/render/frame.js'; // Import the singleton spy
 import { DebugMode } from '../../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
@@ -97,8 +96,27 @@ vi.mock('../../../src/render/md3Pipeline.js', async (importOriginal) => {
     };
 });
 
-// Use manual mock for frame.js
-vi.mock('../../../src/render/frame.js');
+// Explicitly mock frame.js to ensure createFrameRenderer returns a valid object
+const mockRenderFrame = vi.fn().mockReturnValue({
+    drawCalls: 0,
+    vertexCount: 0,
+    batches: 0,
+    facesDrawn: 0,
+    skyDrawn: false,
+    viewModelDrawn: false,
+    fps: 60,
+    shaderSwitches: 0,
+    visibleSurfaces: 0,
+    culledSurfaces: 0,
+    visibleEntities: 0,
+    culledEntities: 0
+});
+
+vi.mock('../../../src/render/frame.js', () => ({
+    createFrameRenderer: vi.fn(() => ({
+        renderFrame: mockRenderFrame
+    }))
+}));
 
 // Mock DebugRenderer
 const mockDebugRenderer = {
@@ -147,8 +165,8 @@ describe('DebugMode Integration', () => {
         mockGl = createMockWebGL2Context();
         renderer = createRenderer(mockGl as any);
 
-        // Ensure renderFrame returns valid stats to avoid issues
-        (renderFrame as any).mockReturnValue({
+        // Reset mock return value just in case
+        mockRenderFrame.mockReturnValue({
             drawCalls: 0,
             vertexCount: 0,
             batches: 0,
@@ -231,7 +249,8 @@ describe('DebugMode Integration', () => {
                     brushes: [],
                     brushsides: [],
                     lightmaps: [],
-                    vis: new Uint8Array(0)
+                    vis: new Uint8Array(0),
+                    areas: [] // Added to prevent undefined access
                 },
                 surfaces: []
             }
@@ -272,7 +291,8 @@ describe('DebugMode Integration', () => {
                     brushes: [],
                     brushsides: [],
                     lightmaps: [],
-                    vis: new Uint8Array(0)
+                    vis: new Uint8Array(0),
+                    areas: [] // Added to prevent undefined access
                 },
                 surfaces: []
             }
