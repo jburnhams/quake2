@@ -3,6 +3,7 @@ import {
   createEmptyBounds3,
   CONTENTS_SOLID
 } from '@quake2ts/shared';
+import { ON_EPSILON } from '../types/index.js';
 import type { CompileBrush, CompilePlane } from '../types/compile.js';
 import type { PlaneSet } from './planes.js';
 import {
@@ -42,6 +43,32 @@ export interface SplitCandidate {
   splitCount: number;
 }
 
+enum BrushPlaneRelation {
+  Front,
+  Back,
+  Spanning,
+  OnPlane
+}
+
+function classifyBrushAgainstPlane(brush: CompileBrush, plane: CompilePlane): BrushPlaneRelation {
+  let front = false;
+  let back = false;
+
+  for (const s of brush.sides) {
+    if (!s.winding) continue;
+    for (const p of s.winding.points) {
+      const d = (p.x * plane.normal.x) + (p.y * plane.normal.y) + (p.z * plane.normal.z) - plane.dist;
+      if (d > ON_EPSILON) front = true;
+      if (d < -ON_EPSILON) back = true;
+    }
+  }
+
+  if (front && back) return BrushPlaneRelation.Spanning;
+  if (front) return BrushPlaneRelation.Front;
+  if (back) return BrushPlaneRelation.Back;
+  return BrushPlaneRelation.OnPlane;
+}
+
 /**
  * Selects the best split plane from the set of planes used by the brushes.
  * Prioritizes axial planes and balanced splits.
@@ -67,26 +94,12 @@ export function selectSplitPlane(
       let splitCount = 0;
 
       for (const b of brushes) {
-        let front = false;
-        let back = false;
-
-        for (const s of b.sides) {
-          if (!s.winding) continue;
-          // Check winding points against plane
-          for (const p of s.winding.points) {
-            const d = (p.x * plane.normal.x) + (p.y * plane.normal.y) + (p.z * plane.normal.z) - plane.dist;
-            if (d > 0.01) front = true;
-            if (d < -0.01) back = true;
-          }
-        }
-
-        if (front && back) splitCount++;
-        else if (front) frontCount++;
-        else if (back) backCount++;
+        const relation = classifyBrushAgainstPlane(b, plane);
+        if (relation === BrushPlaneRelation.Spanning) splitCount++;
+        else if (relation === BrushPlaneRelation.Front) frontCount++;
+        else if (relation === BrushPlaneRelation.Back) backCount++;
         else {
-          // Coplanar or empty? Treat as front for stability?
-          // Usually if neither front nor back, it's ON the plane.
-          // We can put it on front.
+          // OnPlane -> Front
           frontCount++;
         }
       }
@@ -138,26 +151,16 @@ export function partitionBrushes(
   const plane = planeSet.getPlanes()[planeNum];
 
   for (const brush of brushes) {
-    let isFront = false;
-    let isBack = false;
+    const relation = classifyBrushAgainstPlane(brush, plane);
 
-    for (const s of brush.sides) {
-      if (!s.winding) continue;
-      for (const p of s.winding.points) {
-        const d = (p.x * plane.normal.x) + (p.y * plane.normal.y) + (p.z * plane.normal.z) - plane.dist;
-        if (d > 0.01) isFront = true;
-        if (d < -0.01) isBack = true;
-      }
-    }
-
-    if (isFront && isBack) {
+    if (relation === BrushPlaneRelation.Spanning) {
       // Split
       const split = splitBrush(brush, planeNum, plane, planeSet);
       if (split.front) front.push(split.front);
       if (split.back) back.push(split.back);
-    } else if (isFront) {
+    } else if (relation === BrushPlaneRelation.Front) {
       front.push(brush);
-    } else if (isBack) {
+    } else if (relation === BrushPlaneRelation.Back) {
       back.push(brush);
     } else {
       // On plane. Usually put on front side.
