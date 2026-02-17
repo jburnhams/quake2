@@ -28,25 +28,15 @@ describe('Client FOV and Zoom', () => {
 
     const mockHost = createMockEngineHost();
 
-    // Capture command callbacks
-    (mockHost.commands.register as Mock).mockImplementation((name: string, callback: any) => {
-        if (name === '+zoom') zoomStartCallback = callback;
-        if (name === '-zoom') zoomEndCallback = callback;
-    });
-
-    // Helper for Cvars
-    (mockHost.cvars.register as Mock).mockImplementation((def: any) => {
-         return {
-            name: def.name,
-            defaultValue: def.defaultValue,
-            string: def.defaultValue,
-            number: parseFloat(def.defaultValue),
-            onChange: def.onChange
-        };
-    });
-
     client = createClient({ engine: mockEngine, host: mockHost } as unknown as ClientImports);
     await client.Init();
+
+    // Capture command callbacks from spy
+    const registerCalls = (mockHost.commands.register as Mock).mock.calls;
+    const zoomStartCall = registerCalls.find((c: any[]) => c[0] === '+zoom');
+    zoomStartCallback = zoomStartCall ? zoomStartCall[1] : undefined;
+    const zoomEndCall = registerCalls.find((c: any[]) => c[0] === '-zoom');
+    zoomEndCallback = zoomEndCall ? zoomEndCall[1] : undefined;
   });
 
   it('should zoom in when +zoom is executed', () => {
