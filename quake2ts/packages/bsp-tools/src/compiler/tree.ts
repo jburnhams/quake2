@@ -121,7 +121,7 @@ export function selectSplitPlane(
       let score = -(splitCount * 4) - (balance * 1); // Reduced balance penalty slightly
 
       if (plane.type < 3) { // Axial planes
-        score += 100; // Strong preference for axial
+        score += 5; // Preference for axial
       }
 
       if (!bestCandidate || score > bestCandidate.score) {
