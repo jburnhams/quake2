@@ -15,7 +15,7 @@ import {
 import { PlaneSet } from '../../../src/compiler/planes.js';
 import { box, wedge } from '../../../src/builder/primitives.js';
 import { createEmptyBounds3, CONTENTS_SOLID, CONTENTS_ORIGIN } from '@quake2ts/shared';
-import { createCompileBrush } from '@quake2ts/test-utils';
+import { createCompileBrush } from './helpers.js';
 import type { CompileBrush } from '../../../src/types/compile.js';
 
 describe('splitBrush', () => {
