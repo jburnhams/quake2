@@ -118,37 +118,25 @@ vi.mock('../../../src/render/debug.js', () => ({
     },
 }));
 
-// Mock culling and traversal using vi.importActual to preserve exports
-vi.mock('../../../src/render/culling.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../../src/render/culling.js')>();
-    return {
-        ...actual,
-        boxIntersectsFrustum: vi.fn().mockReturnValue(true),
-        extractFrustumPlanes: vi.fn().mockReturnValue([]),
-        transformAabb: vi.fn().mockImplementation((min, max, mat) => {
-            return { mins: {x:-10,y:-10,z:-10}, maxs: {x:10,y:10,z:10} };
-        })
-    };
-});
+// Mock culling and traversal explicitly without vi.importActual to be safe
+vi.mock('../../../src/render/culling.js', () => ({
+    boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+    extractFrustumPlanes: vi.fn().mockReturnValue([]),
+    transformAabb: vi.fn().mockImplementation((min, max, mat) => {
+        return { mins: {x:-10,y:-10,z:-10}, maxs: {x:10,y:10,z:10} };
+    })
+}));
 
-vi.mock('../../../src/render/bspTraversal.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../../src/render/bspTraversal.js')>();
-    return {
-        ...actual,
-        findLeafForPoint: vi.fn().mockReturnValue(0),
-        isClusterVisible: vi.fn().mockReturnValue(true),
-        gatherVisibleFaces: vi.fn().mockReturnValue([]),
-        calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
-    };
-});
+vi.mock('../../../src/render/bspTraversal.js', () => ({
+    findLeafForPoint: vi.fn().mockReturnValue(0),
+    isClusterVisible: vi.fn().mockReturnValue(true),
+    gatherVisibleFaces: vi.fn().mockReturnValue([]), // Return empty array
+    calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
+}));
 
-vi.mock('../../../src/render/light.js', async (importOriginal) => {
-    const actual = await importOriginal<typeof import('../../../src/render/light.js')>();
-    return {
-        ...actual,
-        calculateEntityLight: vi.fn().mockReturnValue(1.0),
-    };
-});
+vi.mock('../../../src/render/light.js', () => ({
+    calculateEntityLight: vi.fn().mockReturnValue(1.0),
+}));
 
 describe('DebugMode Integration', () => {
     let mockGl: MockWebGL2RenderingContext;
