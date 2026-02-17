@@ -83,6 +83,8 @@ export function selectSplitPlane(
 
   for (const brush of brushes) {
     for (const side of brush.sides) {
+      if (!side.winding || side.bevel) continue;
+
       const planeNum = side.planeNum;
       if (testedPlanes.has(planeNum)) continue;
       testedPlanes.add(planeNum);
