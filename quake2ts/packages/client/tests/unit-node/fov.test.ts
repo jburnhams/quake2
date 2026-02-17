@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
 import { EngineImports, Renderer } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager, createMockEngineHost, createMockLocalStorage } from '@quake2ts/test-utils';
+import { createMockRenderer, createMockAssetManager, createMockEngineHost, createMockLocalStorage, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Client FOV and View', () => {
   let client: ClientExports;
@@ -56,32 +56,15 @@ describe('Client FOV and View', () => {
   it('should update FOV when cvar changes', () => {
     const initialFrame = {
       state: {
-        origin: { x: 0, y: 0, z: 0 },
-        viewAngles: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        pmFlags: 0,
-        waterLevel: 0,
+        ...createPlayerStateFactory({
+            origin: { x: 0, y: 0, z: 0 },
+            viewAngles: { x: 0, y: 0, z: 0 },
+            velocity: { x: 0, y: 0, z: 0 },
+        }),
         health: 100,
         armor: 0,
         ammo: 0,
-        blend: [0, 0, 0, 0],
-        stats: [],
-        kick_angles: { x: 0, y: 0, z: 0 },
-        gunoffset: { x: 0, y: 0, z: 0 },
-        gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0,
-        client: {
-            inventory: {
-                armor: null,
-                items: new Set(),
-                ammo: { counts: [] },
-                keys: new Set(),
-                powerups: new Map()
-            },
-            weapon: {
-                state: 0
-            }
-        }
+        client: createPlayerClientFactory()
       } as any,
       timeMs: 100,
       serverFrame: 1
@@ -102,32 +85,15 @@ describe('Client FOV and View', () => {
   it('should clamp FOV values', () => {
      const initialFrame = {
       state: {
-        origin: { x: 0, y: 0, z: 0 },
-        viewAngles: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        pmFlags: 0,
-        waterLevel: 0,
+        ...createPlayerStateFactory({
+            origin: { x: 0, y: 0, z: 0 },
+            viewAngles: { x: 0, y: 0, z: 0 },
+            velocity: { x: 0, y: 0, z: 0 },
+        }),
         health: 100,
         armor: 0,
         ammo: 0,
-        blend: [0, 0, 0, 0],
-        stats: [],
-        kick_angles: { x: 0, y: 0, z: 0 },
-        gunoffset: { x: 0, y: 0, z: 0 },
-        gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0,
-        client: {
-            inventory: {
-                armor: null,
-                items: new Set(),
-                ammo: { counts: [] },
-                keys: new Set(),
-                powerups: new Map()
-            },
-            weapon: {
-                state: 0
-            }
-        }
+        client: createPlayerClientFactory()
       } as any,
       timeMs: 100,
       serverFrame: 1

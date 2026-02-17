@@ -114,7 +114,7 @@ describe('ClientExports Message Parsing', () => {
             ParseConfigString: vi.fn(),
             NotifyMessage: vi.fn(),
         };
-        (CGame.GetCGameAPI as any).mockReturnValue(mockCg);
+        vi.mocked(CGame.GetCGameAPI).mockReturnValue(mockCg);
 
         mockImports = {
             engine: createMockEngineImports({
