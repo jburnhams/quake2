@@ -10,7 +10,7 @@ import {
   buildMd3VertexData,
   interpolateMd3Tag,
 } from '../../../src/render/md3Pipeline.js';
-import { buildMd3 } from '@quake2ts/test-utils'; // md3Builder.js';
+import { buildMd3 } from '@quake2ts/test-utils';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 import { mat4FromBasis } from '@quake2ts/shared';
 

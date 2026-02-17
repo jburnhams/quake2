@@ -8,7 +8,7 @@ import {
   buildMd2Geometry,
   buildMd2VertexData,
 } from '../../../src/render/md2Pipeline.js';
-import { buildMd2 } from '@quake2ts/test-utils'; // md2Builder.js';
+import { buildMd2 } from '@quake2ts/test-utils';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 const baseMd2 = parseMd2(
