@@ -41,8 +41,8 @@ Leaf           Leaf
 
 ### 2.1 Selection Criteria
 
-- [ ] Create `src/compiler/tree.ts`
-- [ ] Implement split plane selection
+- [x] Create `src/compiler/tree.ts`
+- [x] Implement split plane selection
 
 **File: `src/compiler/tree.ts`**
 ```typescript
@@ -89,10 +89,10 @@ if (plane.type < 3) score += 5;
 
 ### 2.2 Tests
 
-- [ ] Test: Single brush → no split needed
-- [ ] Test: Two separate brushes → splits between them
-- [ ] Test: Prefers axial planes when equivalent
-- [ ] Test: Minimizes splits when possible
+- [x] Test: Single brush → no split needed
+- [x] Test: Two separate brushes → splits between them
+- [x] Test: Prefers axial planes when equivalent
+- [x] Test: Minimizes splits when possible
 
 ---
 
@@ -100,7 +100,7 @@ if (plane.type < 3) score += 5;
 
 ### 3.1 Recursive Tree Construction
 
-- [ ] Implement recursive tree builder
+- [x] Implement recursive tree builder
 
 ```typescript
 export interface TreeNode {
@@ -155,7 +155,7 @@ buildTree(brushes):
 
 ### 3.2 Brush Partitioning
 
-- [ ] Implement brush partitioning by plane
+- [x] Implement brush partitioning by plane
 
 ```typescript
 export interface PartitionResult {
@@ -176,11 +176,11 @@ export function partitionBrushes(
 
 ### 3.3 Tests
 
-- [ ] Test: Empty input → empty leaf
-- [ ] Test: Single brush → leaf with brush
-- [ ] Test: Two brushes → tree with two leaves
-- [ ] Test: Recursion depth limited
-- [ ] Test: All brushes reachable from tree
+- [x] Test: Empty input → empty leaf
+- [x] Test: Single brush → leaf with brush
+- [x] Test: Two brushes → tree with two leaves
+- [x] Test: Recursion depth limited
+- [x] Test: All brushes reachable from tree
 
 ---
 
@@ -485,8 +485,8 @@ export interface CompileResult {
 
 ## Verification Checklist
 
-- [ ] Split plane selection produces balanced trees
-- [ ] Tree building handles all brush configurations
+- [x] Split plane selection produces balanced trees
+- [x] Tree building handles all brush configurations
 - [ ] Face extraction produces correct faces
 - [ ] T-junction fixing eliminates cracks
 - [ ] Node/leaf numbering correct
