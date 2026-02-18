@@ -1,10 +1,10 @@
 import { vi } from 'vitest';
 import { VertexBuffer, IndexBuffer, BufferUsage } from '@quake2ts/engine';
 import { ShaderProgram, ShaderSources } from '@quake2ts/engine';
-import { createMockWebGL2Context } from './webgl.js';
+import { createMockWebGL2Context, createMockShaderProgram } from './webgl.js';
 
 // Export these for use in other mocks
-export { VertexBuffer, IndexBuffer, ShaderProgram };
+export { VertexBuffer, IndexBuffer, ShaderProgram, createMockShaderProgram };
 
 /**
  * Creates a mock VertexBuffer with an optional data array.
