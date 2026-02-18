@@ -1,4 +1,5 @@
-import { createRenderer } from '../../../src/render/renderer.js';
+// Remove static import of createRenderer to allow module resetting
+// import { createRenderer } from '../../../src/render/renderer.js';
 import { renderFrame } from '../../../src/render/frame.js'; // Import the singleton spy
 import { DebugMode } from '../../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
@@ -93,7 +94,7 @@ vi.mock('../../../src/render/debug.js', () => ({
     },
 }));
 
-// Mock culling and traversal inline to ensure implementation is present
+// Mock culling and traversal inline
 vi.mock('../../../src/render/culling.js', () => {
     const mockTransformAabb = vi.fn((min, max, mat) => {
         return {
@@ -131,7 +132,13 @@ describe('DebugMode Integration', () => {
 
     beforeEach(async () => {
         vi.clearAllMocks();
+        // Reset modules to ensure mocks are applied to fresh imports
+        vi.resetModules();
+
         mockGl = createMockWebGL2Context();
+
+        // Dynamically import createRenderer to pick up the mocks
+        const { createRenderer } = await import('../../../src/render/renderer.js');
         renderer = createRenderer(mockGl as any);
 
         // Ensure renderFrame returns valid stats to avoid issues
