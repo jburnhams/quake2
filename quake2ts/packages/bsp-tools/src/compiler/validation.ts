@@ -9,7 +9,11 @@ import {
   dotVec3,
   subtractVec3,
   crossVec3,
-  windingPlane
+  windingPlane,
+  lengthVec3,
+  scaleVec3,
+  normalizeVec3,
+  distance
 } from '@quake2ts/shared';
 import type { CompileBrush } from '../types/compile.js';
 
@@ -21,6 +25,11 @@ export interface CsgValidation {
     outputFragments: number;
     degenerateBrushes: number;
   };
+}
+
+interface BrushGeometryCache {
+  uniqueVertices: Vec3[];
+  uniqueEdges: Vec3[];
 }
 
 /**
@@ -43,13 +52,28 @@ export function validateCsgResult(
     }
   }
 
-  // 2. Check for overlaps between output brushes
-  // This is O(N^2), so we might want to skip for large sets or use spatial hash
-  // For validation, O(N^2) is acceptable for reasonable N (e.g. < 1000)
+  // 2. Pre-compute geometry cache for valid brushes
+  // This avoids re-extracting vertices/edges O(N^2) times
+  const geometryCache = new Map<CompileBrush, BrushGeometryCache>();
+  // Only cache valid brushes to save time, invalid ones skipped or treated specially
+  for (const brush of output) {
+    if (isBrushValid(brush)) {
+      geometryCache.set(brush, computeBrushGeometry(brush));
+    }
+  }
+
+  // 3. Check for overlaps between output brushes
+  // This is O(N^2), so we might want to skip for large sets
   if (output.length < 500) {
     for (let i = 0; i < output.length; i++) {
+      const b1 = output[i];
+      if (!isBrushValid(b1)) continue;
+
       for (let j = i + 1; j < output.length; j++) {
-        if (brushesOverlap(output[i], output[j])) {
+        const b2 = output[j];
+        if (!isBrushValid(b2)) continue;
+
+        if (brushesOverlap(b1, b2, geometryCache)) {
           errors.push(`Output brushes ${i} and ${j} overlap`);
           // Limit errors
           if (errors.length > 10) {
@@ -79,26 +103,87 @@ function isBrushValid(brush: CompileBrush): boolean {
   // Check bounds volume
   const b = brush.bounds;
   if (b.maxs.x <= b.mins.x || b.maxs.y <= b.mins.y || b.maxs.z <= b.mins.z) {
-    // Zero or negative volume
     return false;
   }
 
   return true;
 }
 
-function brushesOverlap(a: CompileBrush, b: CompileBrush): boolean {
+function computeBrushGeometry(brush: CompileBrush): BrushGeometryCache {
+  const uniqueVertices: Vec3[] = [];
+  const uniqueEdges: Vec3[] = [];
+
+  for (const s of brush.sides) {
+    if (!s.winding) continue;
+
+    // Process vertices
+    for (let i = 0; i < s.winding.numPoints; i++) {
+      const p = s.winding.points[i];
+      let found = false;
+      // Simple linear scan for uniqueness (N is small, usually < 20)
+      for (const v of uniqueVertices) {
+        if (distance(p, v) < 0.001) {
+          found = true;
+          break;
+        }
+      }
+      if (!found) {
+        uniqueVertices.push(p);
+      }
+    }
+
+    // Process edges
+    for (let i = 0; i < s.winding.numPoints; i++) {
+      const p1 = s.winding.points[i];
+      const p2 = s.winding.points[(i + 1) % s.winding.numPoints];
+
+      const diff = subtractVec3(p2, p1);
+      const len = lengthVec3(diff);
+      if (len < 0.001) continue; // Skip degenerate edges
+
+      const dir = scaleVec3(diff, 1/len);
+
+      // Check if already present (or opposite)
+      let found = false;
+      for (const existing of uniqueEdges) {
+        const d = Math.abs(dotVec3(dir, existing));
+        if (d > 0.999) {
+          found = true;
+          break;
+        }
+      }
+
+      if (!found) {
+        uniqueEdges.push(dir);
+      }
+    }
+  }
+
+  return { uniqueVertices, uniqueEdges };
+}
+
+function brushesOverlap(
+  a: CompileBrush,
+  b: CompileBrush,
+  cache: Map<CompileBrush, BrushGeometryCache>
+): boolean {
   // 1. AABB check
   if (!boundsIntersect(a.bounds, b.bounds)) return false;
 
+  const geomA = cache.get(a)!;
+  const geomB = cache.get(b)!;
+
   // 2. Precise check (Separating Axis Theorem for convex polyhedra)
-  // If there exists a separating plane, they don't overlap.
-  // The separating plane must be one of the face planes of A or B.
+  // If there exists a separating axis, they don't overlap.
 
-  // Check if any plane of A separates B
-  if (isSeparatedByPlanes(a, b)) return false;
+  // A. Check if any face plane of A separates B
+  if (isSeparatedByPlanes(a, geomB.uniqueVertices)) return false;
 
-  // Check if any plane of B separates A
-  if (isSeparatedByPlanes(b, a)) return false;
+  // B. Check if any face plane of B separates A
+  if (isSeparatedByPlanes(b, geomA.uniqueVertices)) return false;
+
+  // C. Check axes formed by cross products of edges from A and B
+  if (isSeparatedByEdges(geomA, geomB)) return false;
 
   // If neither separates, they overlap
   return true;
@@ -111,47 +196,84 @@ function boundsIntersect(a: Bounds3, b: Bounds3): boolean {
   return true;
 }
 
-function isSeparatedByPlanes(source: CompileBrush, target: CompileBrush): boolean {
-  // Check if any plane of 'source' separates 'target' entirely to the "front" (outside)
-  // Brushes are convex intersections of half-spaces (insides).
-  // Inside is "back" side of plane (distance < 0 relative to normal pointing out).
-  // "Front" is outside.
-  // If target is entirely in front of ANY plane of source, then they are disjoint.
+function isSeparatedByPlanes(source: CompileBrush, targetVertices: Vec3[]): boolean {
+  // Check if any plane of 'source' separates 'targetVertices' entirely to the "front" (outside)
 
   for (const side of source.sides) {
     if (!side.winding) continue;
 
     // Construct plane from winding
+    // Note: Ideally we should cache planes too if performance critical,
+    // but windingPlane is relatively cheap (cross product).
     const plane = windingPlane(side.winding);
 
-    // Check if ALL points of target are in FRONT of this plane
+    // Check if ALL vertices of target are in FRONT of this plane
     let allFront = true;
 
-    // Check all vertices of target
-    for (const ts of target.sides) {
-      if (!ts.winding) continue;
-      for (const p of ts.winding.points) {
-        // Calculate distance to plane
-        const d = dotVec3(p, plane.normal) - plane.dist;
+    for (const p of targetVertices) {
+      // Calculate distance to plane
+      const d = dotVec3(p, plane.normal) - plane.dist;
 
-        // If distance is negative (or zero within epsilon), it's behind/on plane (inside)
-        // We want strict separation (or touching?)
-        // If they just touch, they don't overlap volume-wise.
-        // So allow d > -epsilon.
-        // If d < -epsilon, then point is inside.
-        if (d < -0.01) {
-          allFront = false;
-          break;
-        }
+      // If distance is negative (or zero within epsilon), it's behind/on plane (inside)
+      if (d < -0.01) {
+        allFront = false;
+        break;
       }
-      if (!allFront) break;
     }
 
     if (allFront) {
-      // Found a separating plane!
       return true;
     }
   }
+
+  return false;
+}
+
+function isSeparatedByEdges(geomA: BrushGeometryCache, geomB: BrushGeometryCache): boolean {
+  const edgesA = geomA.uniqueEdges;
+  const edgesB = geomB.uniqueEdges;
+
+  for (const eA of edgesA) {
+    for (const eB of edgesB) {
+      // Axis is cross product
+      const axisUnnormalized = crossVec3(eA, eB);
+      const len = lengthVec3(axisUnnormalized);
+
+      // If edges are parallel, cross product is zero length. Skip.
+      if (len < 0.001) continue;
+
+      const axis = scaleVec3(axisUnnormalized, 1/len); // normalize
+
+      // Project both brushes onto axis and check for overlap
+      if (isSeparatedOnAxis(geomA.uniqueVertices, geomB.uniqueVertices, axis)) return true;
+    }
+  }
+
+  return false;
+}
+
+function isSeparatedOnAxis(vertsA: Vec3[], vertsB: Vec3[], axis: Vec3): boolean {
+  let minA = Infinity, maxA = -Infinity;
+  let minB = Infinity, maxB = -Infinity;
+
+  // Project A
+  for (const p of vertsA) {
+    const d = dotVec3(p, axis);
+    if (d < minA) minA = d;
+    if (d > maxA) maxA = d;
+  }
+
+  // Project B
+  for (const p of vertsB) {
+    const d = dotVec3(p, axis);
+    if (d < minB) minB = d;
+    if (d > maxB) maxB = d;
+  }
+
+  // Check overlap of [minA, maxA] and [minB, maxB]
+  // Allow slight epsilon for touching
+  // Separation means gap > epsilon
+  if (maxA < minB - 0.001 || maxB < minA - 0.001) return true;
 
   return false;
 }
