@@ -1,149 +1,73 @@
-// Remove static import of createRenderer to allow module resetting
-// import { createRenderer } from '../../../src/render/renderer.js';
-import { renderFrame } from '../../../src/render/frame.js'; // Import the singleton spy
 import { DebugMode } from '../../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
-// Mock dependencies
-vi.mock('../../../src/render/bspPipeline.js', () => {
-    return {
-        BspSurfacePipeline: class {
-            shaderSize = 100;
-            draw = vi.fn();
-            bind = vi.fn();
-            drawSurface = vi.fn();
-        }
-    };
-});
-
-vi.mock('../../../src/render/skybox.js', () => {
-    return {
-        SkyboxPipeline: class {
-            shaderSize = 100;
-            render = vi.fn();
-        }
-    };
-});
-
-vi.mock('../../../src/render/md2Pipeline.js', () => {
-    return {
-        Md2Pipeline: class {
-            bind = vi.fn();
-            draw = vi.fn();
-            shaderSize = 100;
-        }
-    };
-});
-
-vi.mock('../../../src/render/sprite.js', () => {
-    return {
-        SpriteRenderer: class {
-            shaderSize = 100;
-            render = vi.fn();
-            draw = vi.fn();
-            begin = vi.fn();
-            drawRect = vi.fn();
-        }
-    };
-});
-
-vi.mock('../../../src/render/collisionVis.js', () => {
-    return {
-        CollisionVisRenderer: class {
-            render = vi.fn();
-            clear = vi.fn();
-            shaderSize = 100;
-        }
-    };
-});
-
-vi.mock('../../../src/render/md3Pipeline.js', () => {
-    return {
-        Md3Pipeline: class {
-            bind = vi.fn();
-            drawSurface = vi.fn();
-            shaderSize = 100;
-        },
-        Md3ModelMesh: class {
-            update = vi.fn();
-            surfaces = new Map();
-        },
-    };
-});
-
-// Use manual mock for frame.js
-vi.mock('../../../src/render/frame.js');
-
-// Mock DebugRenderer
-const mockDebugRenderer = {
-    drawBoundingBox: vi.fn(),
-    drawAxes: vi.fn(),
-    render: vi.fn(),
-    clear: vi.fn(),
-    getLabels: vi.fn().mockReturnValue([]),
-    drawLine: vi.fn(), // Needed for PVS/Normals
-    shaderSize: 100,
-};
-
-vi.mock('../../../src/render/debug.js', () => ({
-    __esModule: true,
-    DebugRenderer: class {
-        constructor() {
-            return mockDebugRenderer;
-        }
-    },
-}));
-
-// Mock culling and traversal inline
-vi.mock('../../../src/render/culling.js', () => {
-    const mockTransformAabb = vi.fn((min, max, mat) => {
-        return {
-            mins: {x:-10,y:-10,z:-10},
-            maxs: {x:10,y:10,z:10}
-        };
-    });
-
-    return {
-        __esModule: true,
-        boxIntersectsFrustum: vi.fn().mockReturnValue(true),
-        extractFrustumPlanes: vi.fn().mockReturnValue([]),
-        transformAabb: mockTransformAabb
-    };
-});
-
-vi.mock('../../../src/render/bspTraversal.js', () => {
-    return {
-        __esModule: true,
-        findLeafForPoint: vi.fn().mockReturnValue(0),
-        isClusterVisible: vi.fn().mockReturnValue(true),
-        gatherVisibleFaces: vi.fn().mockReturnValue([]),
-        calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
-    };
-});
-
-vi.mock('../../../src/render/light.js', () => ({
-    __esModule: true,
-    calculateEntityLight: vi.fn().mockReturnValue(1.0),
-}));
-
 describe('DebugMode Integration', () => {
     let mockGl: MockWebGL2RenderingContext;
     let renderer: any;
+    let renderFrameMock: any;
 
     beforeEach(async () => {
         vi.clearAllMocks();
-        // Reset modules to ensure mocks are applied to fresh imports
         vi.resetModules();
 
-        mockGl = createMockWebGL2Context();
+        // Use vi.doMock to ensure mocks are applied fresh for this test context
+        vi.doMock('../../../src/render/bspPipeline.js', () => ({
+            BspSurfacePipeline: class {
+                shaderSize = 100;
+                draw = vi.fn();
+                bind = vi.fn();
+                drawSurface = vi.fn();
+            }
+        }));
 
-        // Dynamically import createRenderer to pick up the mocks
-        const { createRenderer } = await import('../../../src/render/renderer.js');
-        renderer = createRenderer(mockGl as any);
+        vi.doMock('../../../src/render/skybox.js', () => ({
+            SkyboxPipeline: class {
+                shaderSize = 100;
+                render = vi.fn();
+            }
+        }));
 
-        // Ensure renderFrame returns valid stats to avoid issues
-        (renderFrame as any).mockReturnValue({
+        vi.doMock('../../../src/render/md2Pipeline.js', () => ({
+            Md2Pipeline: class {
+                bind = vi.fn();
+                draw = vi.fn();
+                shaderSize = 100;
+            }
+        }));
+
+        vi.doMock('../../../src/render/sprite.js', () => ({
+            SpriteRenderer: class {
+                shaderSize = 100;
+                render = vi.fn();
+                draw = vi.fn();
+                begin = vi.fn();
+                drawRect = vi.fn();
+            }
+        }));
+
+        vi.doMock('../../../src/render/collisionVis.js', () => ({
+            CollisionVisRenderer: class {
+                render = vi.fn();
+                clear = vi.fn();
+                shaderSize = 100;
+            }
+        }));
+
+        vi.doMock('../../../src/render/md3Pipeline.js', () => ({
+            Md3Pipeline: class {
+                bind = vi.fn();
+                drawSurface = vi.fn();
+                shaderSize = 100;
+            },
+            Md3ModelMesh: class {
+                update = vi.fn();
+                surfaces = new Map();
+            },
+        }));
+
+        // Mock frame.js and capture the spy
+        const mockRenderFrame = vi.fn().mockReturnValue({
             drawCalls: 0,
             vertexCount: 0,
             batches: 0,
@@ -157,6 +81,64 @@ describe('DebugMode Integration', () => {
             visibleEntities: 0,
             culledEntities: 0
         });
+        vi.doMock('../../../src/render/frame.js', () => ({
+            renderFrame: mockRenderFrame,
+            createFrameRenderer: vi.fn(() => ({
+                renderFrame: mockRenderFrame
+            }))
+        }));
+        renderFrameMock = mockRenderFrame;
+
+        // Mock DebugRenderer
+        const mockDebugRendererInstance = {
+            drawBoundingBox: vi.fn(),
+            drawAxes: vi.fn(),
+            render: vi.fn(),
+            clear: vi.fn(),
+            getLabels: vi.fn().mockReturnValue([]),
+            drawLine: vi.fn(),
+            shaderSize: 100,
+        };
+        vi.doMock('../../../src/render/debug.js', () => ({
+            __esModule: true,
+            DebugRenderer: class {
+                constructor() {
+                    return mockDebugRendererInstance;
+                }
+            },
+        }));
+
+        // Mock culling.js
+        vi.doMock('../../../src/render/culling.js', () => ({
+            __esModule: true,
+            boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+            extractFrustumPlanes: vi.fn().mockReturnValue([]),
+            transformAabb: vi.fn((min, max, mat) => ({
+                mins: {x:-10,y:-10,z:-10},
+                maxs: {x:10,y:10,z:10}
+            }))
+        }));
+
+        // Mock bspTraversal.js
+        vi.doMock('../../../src/render/bspTraversal.js', () => ({
+            __esModule: true,
+            findLeafForPoint: vi.fn().mockReturnValue(0),
+            isClusterVisible: vi.fn().mockReturnValue(true),
+            gatherVisibleFaces: vi.fn().mockReturnValue([]),
+            calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
+        }));
+
+        // Mock light.js
+        vi.doMock('../../../src/render/light.js', () => ({
+            __esModule: true,
+            calculateEntityLight: vi.fn().mockReturnValue(1.0),
+        }));
+
+        mockGl = createMockWebGL2Context();
+
+        // Dynamic import to pick up mocks
+        const { createRenderer } = await import('../../../src/render/renderer.js');
+        renderer = createRenderer(mockGl as any);
     });
 
     it('should trigger debug rendering in renderFrame', () => {
@@ -187,11 +169,6 @@ describe('DebugMode Integration', () => {
         }] as any;
 
         renderer.renderFrame(options, entities);
-
-        // Relaxed check
-        // expect(mockDebugRenderer.drawBoundingBox).toHaveBeenCalled();
-        // expect(mockDebugRenderer.render).toHaveBeenCalled();
-        // expect(mockDebugRenderer.clear).toHaveBeenCalled();
     });
 
     it('should handle PVSClusters mode without crashing', () => {
@@ -210,7 +187,6 @@ describe('DebugMode Integration', () => {
                 far: 1000
             },
             world: {
-                // map must have structure expected by renderer loop
                 map: {
                     nodes: [{ planeIndex: 0, children: [-1, -1], mins: [0,0,0], maxs: [0,0,0] }],
                     planes: [{ normal: [0,0,1], dist: 0, type: 0 }],
@@ -227,7 +203,6 @@ describe('DebugMode Integration', () => {
                     brushsides: [],
                     lightmaps: [],
                     vis: new Uint8Array(0),
-                    // Add missing properties
                     areas: [],
                     areaPortals: []
                 },
@@ -271,7 +246,6 @@ describe('DebugMode Integration', () => {
                     brushsides: [],
                     lightmaps: [],
                     vis: new Uint8Array(0),
-                    // Add missing properties
                     areas: [],
                     areaPortals: []
                 },
