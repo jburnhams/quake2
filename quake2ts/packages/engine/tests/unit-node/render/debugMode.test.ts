@@ -87,6 +87,7 @@ const mockDebugRenderer = {
 };
 
 vi.mock('../../../src/render/debug.js', () => ({
+    __esModule: true,
     DebugRenderer: class {
         constructor() {
             return mockDebugRenderer;
