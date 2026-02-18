@@ -4,18 +4,30 @@ import { DebugMode } from '../../../src/render/debugMode.js';
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { createMockWebGL2Context, MockWebGL2RenderingContext } from '@quake2ts/test-utils';
 
+// Hoist mocks to ensure they are available before imports
+const mocks = vi.hoisted(() => {
+    return {
+        transformAabb: vi.fn().mockImplementation((min, max, mat) => {
+            return { mins: {x:-10,y:-10,z:-10}, maxs: {x:10,y:10,z:10} };
+        }),
+        boxIntersectsFrustum: vi.fn().mockReturnValue(true),
+        extractFrustumPlanes: vi.fn().mockReturnValue([]),
+        findLeafForPoint: vi.fn().mockReturnValue(0),
+        isClusterVisible: vi.fn().mockReturnValue(true),
+        gatherVisibleFaces: vi.fn().mockReturnValue([]),
+        calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
+        calculateEntityLight: vi.fn().mockReturnValue(1.0),
+    };
+});
+
 // Mock dependencies
 vi.mock('../../../src/render/bspPipeline.js', () => {
     return {
         BspSurfacePipeline: class {
-            constructor() {
-                return {
-                    shaderSize: 100,
-                    draw: vi.fn(),
-                    bind: vi.fn(),
-                    drawSurface: vi.fn()
-                };
-            }
+            shaderSize = 100;
+            draw = vi.fn();
+            bind = vi.fn();
+            drawSurface = vi.fn();
         }
     };
 });
@@ -23,12 +35,8 @@ vi.mock('../../../src/render/bspPipeline.js', () => {
 vi.mock('../../../src/render/skybox.js', () => {
     return {
         SkyboxPipeline: class {
-            constructor() {
-                return {
-                    shaderSize: 100,
-                    render: vi.fn()
-                };
-            }
+            shaderSize = 100;
+            render = vi.fn();
         }
     };
 });
@@ -36,13 +44,9 @@ vi.mock('../../../src/render/skybox.js', () => {
 vi.mock('../../../src/render/md2Pipeline.js', () => {
     return {
         Md2Pipeline: class {
-            constructor() {
-                return {
-                    bind: vi.fn(),
-                    draw: vi.fn(),
-                    shaderSize: 100
-                };
-            }
+            bind = vi.fn();
+            draw = vi.fn();
+            shaderSize = 100;
         }
     };
 });
@@ -50,12 +54,11 @@ vi.mock('../../../src/render/md2Pipeline.js', () => {
 vi.mock('../../../src/render/sprite.js', () => {
     return {
         SpriteRenderer: class {
-            constructor() {
-                return {
-                    shaderSize: 100,
-                    render: vi.fn()
-                };
-            }
+            shaderSize = 100;
+            render = vi.fn();
+            draw = vi.fn(); // Added draw
+            begin = vi.fn(); // Added begin
+            drawRect = vi.fn(); // Added drawRect
         }
     };
 });
@@ -63,36 +66,23 @@ vi.mock('../../../src/render/sprite.js', () => {
 vi.mock('../../../src/render/collisionVis.js', () => {
     return {
         CollisionVisRenderer: class {
-            constructor() {
-                return {
-                    render: vi.fn(),
-                    clear: vi.fn(),
-                    shaderSize: 100
-                };
-            }
+            render = vi.fn();
+            clear = vi.fn();
+            shaderSize = 100;
         }
     };
 });
 
-// Properly mock Md3Pipeline and Md3ModelMesh
-vi.mock('../../../src/render/md3Pipeline.js', async (importOriginal) => {
+vi.mock('../../../src/render/md3Pipeline.js', () => {
     return {
         Md3Pipeline: class {
-            constructor() {
-                return {
-                    bind: vi.fn(),
-                    drawSurface: vi.fn(),
-                    shaderSize: 100
-                };
-            }
+            bind = vi.fn();
+            drawSurface = vi.fn();
+            shaderSize = 100;
         },
         Md3ModelMesh: class {
-            constructor() {
-                return {
-                    update: vi.fn(),
-                    surfaces: new Map(), // Mock empty surfaces
-                };
-            }
+            update = vi.fn();
+            surfaces = new Map();
         },
     };
 });
@@ -108,6 +98,7 @@ const mockDebugRenderer = {
     clear: vi.fn(),
     getLabels: vi.fn().mockReturnValue([]),
     drawLine: vi.fn(), // Needed for PVS/Normals
+    shaderSize: 100,
 };
 
 vi.mock('../../../src/render/debug.js', () => ({
@@ -118,24 +109,25 @@ vi.mock('../../../src/render/debug.js', () => ({
     },
 }));
 
-// Mock culling and traversal
+// Mock culling and traversal using hoisted mocks
 vi.mock('../../../src/render/culling.js', () => ({
-    boxIntersectsFrustum: vi.fn().mockReturnValue(true),
-    extractFrustumPlanes: vi.fn().mockReturnValue([]),
-    transformAabb: vi.fn().mockImplementation((min, max, mat) => {
-        return { mins: {x:-10,y:-10,z:-10}, maxs: {x:10,y:10,z:10} };
-    })
+    __esModule: true,
+    boxIntersectsFrustum: mocks.boxIntersectsFrustum,
+    extractFrustumPlanes: mocks.extractFrustumPlanes,
+    transformAabb: mocks.transformAabb
 }));
 
 vi.mock('../../../src/render/bspTraversal.js', () => ({
-    findLeafForPoint: vi.fn().mockReturnValue(0),
-    isClusterVisible: vi.fn().mockReturnValue(true),
-    gatherVisibleFaces: vi.fn().mockReturnValue([]),
-    calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),
+    __esModule: true,
+    findLeafForPoint: mocks.findLeafForPoint,
+    isClusterVisible: mocks.isClusterVisible,
+    gatherVisibleFaces: mocks.gatherVisibleFaces,
+    calculateReachableAreas: mocks.calculateReachableAreas,
 }));
 
 vi.mock('../../../src/render/light.js', () => ({
-    calculateEntityLight: vi.fn().mockReturnValue(1.0),
+    __esModule: true,
+    calculateEntityLight: mocks.calculateEntityLight,
 }));
 
 describe('DebugMode Integration', () => {
@@ -231,7 +223,10 @@ describe('DebugMode Integration', () => {
                     brushes: [],
                     brushsides: [],
                     lightmaps: [],
-                    vis: new Uint8Array(0)
+                    vis: new Uint8Array(0),
+                    // Add missing properties to avoid crashes if real code is hit
+                    areas: [],
+                    areaPortals: []
                 },
                 surfaces: []
             }
@@ -272,7 +267,10 @@ describe('DebugMode Integration', () => {
                     brushes: [],
                     brushsides: [],
                     lightmaps: [],
-                    vis: new Uint8Array(0)
+                    vis: new Uint8Array(0),
+                    // Add missing properties
+                    areas: [],
+                    areaPortals: []
                 },
                 surfaces: []
             }
