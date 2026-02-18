@@ -1,6 +1,14 @@
 import { FrameRenderer, RenderModeConfig } from '../../../src/render/frame.js';
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createMockWebGL2Context } from '@quake2ts/test-utils';
+import {
+    createMockWebGL2Context,
+    createMockBspPipeline,
+    createMockSkyboxPipeline,
+    createMockMd2Pipeline,
+    createMockSpritePipeline,
+    createMockMd3Pipeline,
+    createMockFrameRenderer
+} from '@quake2ts/test-utils';
 import { Md3ModelMesh, Md3Pipeline } from '../../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../../src/render/resources.js';
 import path from 'path';
@@ -15,8 +23,7 @@ describe('Renderer', () => {
         vi.clearAllMocks();
 
         // Use doMock to leverage test-utils dynamically
-        vi.doMock('../../../src/render/bspPipeline', async () => {
-            const { createMockBspPipeline } = await import('@quake2ts/test-utils');
+        vi.doMock('../../../src/render/bspPipeline', () => {
             return {
                 BspSurfacePipeline: class {
                     constructor() {
@@ -26,8 +33,7 @@ describe('Renderer', () => {
             };
         });
 
-        vi.doMock('../../../src/render/skybox', async () => {
-            const { createMockSkyboxPipeline } = await import('@quake2ts/test-utils');
+        vi.doMock('../../../src/render/skybox', () => {
             return {
                 SkyboxPipeline: class {
                     constructor() {
@@ -39,8 +45,7 @@ describe('Renderer', () => {
             };
         });
 
-        vi.doMock('../../../src/render/md2Pipeline', async () => {
-            const { createMockMd2Pipeline } = await import('@quake2ts/test-utils');
+        vi.doMock('../../../src/render/md2Pipeline', () => {
             return {
                 Md2Pipeline: class {
                     constructor() {
@@ -50,8 +55,7 @@ describe('Renderer', () => {
             };
         });
 
-        vi.doMock('../../../src/render/sprite', async () => {
-            const { createMockSpritePipeline } = await import('@quake2ts/test-utils');
+        vi.doMock('../../../src/render/sprite', () => {
             return {
                 SpriteRenderer: class {
                     constructor() {
@@ -89,10 +93,9 @@ describe('Renderer', () => {
         });
 
         // Prepare mock for MD3 pipeline to spy on it
-        const { createMockMd3Pipeline } = await import('@quake2ts/test-utils');
         mockMd3Pipeline = createMockMd3Pipeline({ shaderSize: 100 });
 
-        vi.doMock('../../../src/render/md3Pipeline', async () => {
+        vi.doMock('../../../src/render/md3Pipeline', () => {
             return {
                 Md3Pipeline: class {
                     constructor() {
@@ -114,8 +117,7 @@ describe('Renderer', () => {
         });
 
         // Frame renderer mock using test-utils
-        vi.doMock('../../../src/render/frame.js', async () => {
-            const { createMockFrameRenderer } = await import('@quake2ts/test-utils');
+        vi.doMock('../../../src/render/frame.js', () => {
             const mockFrameRenderer = createMockFrameRenderer({
                 renderFrame: vi.fn((...args) => {
                     console.log('MockFrameRenderer.renderFrame called with:', args);

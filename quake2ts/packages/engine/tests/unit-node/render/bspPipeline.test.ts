@@ -30,6 +30,8 @@ const mockLocations = {
   'u_dlights[0].intensity': { id: 17 },
 };
 
+import { createMockShaderProgram } from '@quake2ts/test-utils';
+
 describe('bspPipeline', () => {
   let BspSurfacePipeline: typeof import('../../../src/render/bspPipeline.js').BspSurfacePipeline;
   let deriveSurfaceRenderState: typeof import('../../../src/render/bspPipeline.js').deriveSurfaceRenderState;
@@ -40,9 +42,7 @@ describe('bspPipeline', () => {
   beforeEach(async () => {
     vi.resetModules();
 
-    vi.doMock('../../../src/render/shaderProgram', async () => {
-      const { createMockShaderProgram } = await import('@quake2ts/test-utils');
-
+    vi.doMock('../../../src/render/shaderProgram', () => {
       const mockProgram = createMockShaderProgram({
         getUniformLocation: vi.fn((name: string) => (mockLocations as any)[name] || { id: 999 }),
         sourceSize: 100
