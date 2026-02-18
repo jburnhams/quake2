@@ -1,4 +1,6 @@
-# Section 25-5: CSG Operations
+# Section 25-5: CSG Operations (COMPLETED)
+
+**Summary**: Implemented CSG operations including brush splitting, subtraction, and processing. Added face merging and validation utilities. Verified with comprehensive unit and integration tests. WASM comparison and advanced optimizations (spatial hash, edge bevels) are deferred.
 
 ## Overview
 
@@ -243,33 +245,21 @@ export function isCsgBrush(brush: CompileBrush): boolean;
 export function brushesMightOverlap(a: BspBrush, b: BspBrush): boolean;
 ```
 
-### 7.2 Spatial Acceleration
+### 7.2 Spatial Acceleration (Deferred)
 
 - [ ] Implement spatial hash for brush queries
-
-```typescript
-export class BrushSpatialIndex {
-  constructor(brushes: BspBrush[], cellSize?: number);
-
-  /**
-   * Find brushes that might overlap given bounds
-   */
-  query(bounds: Bounds3): BspBrush[];
-}
-```
-
-### 7.3 Tests
-
 - [ ] Test: Spatial index returns correct candidates
 - [ ] Test: Performance improvement on large brush sets
 
+Note: For current map sizes, O(N^2) bounds check is sufficient.
+
 ---
 
-## 8. Merge Coplanar Faces
+## 8. Merge Coplanar Faces (COMPLETED)
 
 ### 8.1 Face Merging
 
-- [ ] Implement coplanar face merging
+- [x] Implement coplanar face merging
 
 ```typescript
 /**
@@ -287,17 +277,17 @@ export function mergeCoplanarFaces(faces: CompileFace[]): CompileFace[];
 
 ### 8.2 Tests
 
-- [ ] Test: Two adjacent squares → one rectangle
-- [ ] Test: Different textures → no merge
-- [ ] Test: Different planes → no merge
+- [x] Test: Two adjacent squares → one rectangle
+- [x] Test: Different textures → no merge
+- [x] Test: Different planes → no merge
 
 ---
 
-## 9. Validation
+## 9. Validation (COMPLETED)
 
 ### 9.1 Post-CSG Validation
 
-- [ ] Implement validation after CSG
+- [x] Implement validation after CSG
 
 ```typescript
 export interface CsgValidation {
@@ -323,13 +313,13 @@ export function validateCsgResult(
 
 ---
 
-## 10. Integration Tests
+## 10. Integration Tests (COMPLETED)
 
 ### 10.1 Real Map Scenarios
 
-- [ ] Test: Room with pillar (pillar carves through floor/ceiling)
-- [ ] Test: Doorway cut through wall
-- [ ] Test: Overlapping detail brushes
+- [x] Test: Room with pillar (pillar carves through floor/ceiling)
+- [x] Test: Doorway cut through wall
+- [x] Test: Overlapping detail brushes
 
 ### 10.2 WASM Comparison
 
@@ -343,9 +333,9 @@ export function validateCsgResult(
 - [x] `splitBrush` produces valid fragments
 - [x] `subtractBrush` removes correct volume
 - [x] `processCsg` handles all brush combinations
-- [ ] Bevel planes added correctly
-- [ ] Content types respected
-- [ ] Spatial optimization reduces comparisons
-- [ ] Face merging reduces face count
-- [ ] WASM comparison passes
-- [ ] Performance acceptable (<1s for 1000 brushes)
+- [x] Bevel planes added correctly (Box bevels implemented)
+- [x] Content types respected
+- [ ] Spatial optimization reduces comparisons (Deferred)
+- [x] Face merging reduces face count
+- [ ] WASM comparison passes (Deferred)
+- [x] Performance acceptable (<1s for 1000 brushes)

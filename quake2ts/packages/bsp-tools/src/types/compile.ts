@@ -37,3 +37,14 @@ export interface CompileBrush {
   bounds: Bounds3;
   next: CompileBrush | null;  // Linked list for fragments
 }
+
+/** Face structure for merging and tree construction */
+export interface CompileFace {
+  planeNum: number;
+  texInfo: number;
+  winding: Winding;
+  contents: number;
+  original?: CompileSide; // Reference to original brush side or previous face
+  next: CompileFace | null;
+  merged?: boolean;
+}

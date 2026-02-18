@@ -12,3 +12,5 @@ export * from './output/bspWriter.js';
 export * from './compiler/planes.js';
 export * from './compiler/brushProcessing.js';
 export * from './compiler/csg.js';
+export * from './compiler/faces.js';
+export * from './compiler/validation.js';
