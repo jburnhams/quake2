@@ -126,6 +126,13 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/render/integration/webgl-adapter.test.ts` to `engine/tests/unit-node/render/webgl-adapter.test.ts`
    - Deleted: `engine/tests/render/adapters/webglCamera.test.ts` (obsolete/covered by matrix-builders)
    - Deleted: `engine/tests/integration/setup.ts` (unused)
+   - Moved: `engine/tests/unit-jsdom/render/lightCulling.test.ts` to `engine/tests/unit-node/render/lightCulling.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/render.md2Pipeline.test.ts` to `engine/tests/unit-node/render/md2Pipeline.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/render.md3Pipeline.test.ts` to `engine/tests/unit-node/render/md3Pipeline.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/debugMode.test.ts` to `engine/tests/unit-node/render/debugMode.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/postProcess.test.ts` to `engine/tests/unit-node/render/postProcess.test.ts`
+   - Deleted: `engine/tests/unit-jsdom/render/render.bspPipeline.test.ts` (redundant with `bspPipeline.test.ts`)
+   - Deleted: `engine/tests/unit-jsdom/render/render.skybox.test.ts` (redundant with `skybox.test.ts`)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
