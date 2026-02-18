@@ -1,6 +1,6 @@
 import { vi } from 'vitest';
 import { legacyFn } from '../../vitest-compat.js';
-import { WebGLContextState } from '@quake2ts/engine';
+import { WebGLContextState, ShaderProgram } from '@quake2ts/engine';
 
 interface ShaderRecord {
   readonly id: number;
@@ -281,4 +281,26 @@ export function createMockWebGLContextState(canvas?: HTMLCanvasElement): WebGLCo
         onRestored: vi.fn(() => vi.fn()),
         dispose: vi.fn()
     };
+}
+
+/**
+ * Creates a mock ShaderProgram implementation.
+ * Useful for testing pipelines that instantiate ShaderProgram directly.
+ *
+ * @param overrides Optional overrides for the mock implementation
+ * @returns A mock object satisfying the ShaderProgram interface requirements
+ */
+export function createMockShaderProgram(overrides?: Partial<ShaderProgram>): ShaderProgram {
+  return {
+    getUniformLocation: vi.fn((name: string) => ({ id: 999 })),
+    getAttributeLocation: vi.fn((name: string) => 0),
+    use: vi.fn(),
+    dispose: vi.fn(),
+    sourceSize: 100,
+    gl: createMockWebGL2Context() as unknown as WebGL2RenderingContext,
+    vertexShader: {} as WebGLShader,
+    fragmentShader: {} as WebGLShader,
+    program: {} as WebGLProgram,
+    ...overrides
+  } as unknown as ShaderProgram;
 }

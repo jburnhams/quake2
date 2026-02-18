@@ -1,10 +1,10 @@
 import { vi } from 'vitest';
 import { VertexBuffer, IndexBuffer, BufferUsage } from '@quake2ts/engine';
 import { ShaderProgram, ShaderSources } from '@quake2ts/engine';
-import { createMockWebGL2Context } from './webgl.js';
+import { createMockWebGL2Context, createMockShaderProgram } from './webgl.js';
 
 // Export these for use in other mocks
-export { VertexBuffer, IndexBuffer, ShaderProgram };
+export { VertexBuffer, IndexBuffer, ShaderProgram, createMockShaderProgram };
 
 /**
  * Creates a mock VertexBuffer with an optional data array.
@@ -46,33 +46,6 @@ export function createMockIndexBuffer(data?: Uint16Array, usage?: BufferUsage): 
   return ib;
 }
 
-/**
- * Creates a mock ShaderProgram with optional overrides.
- */
-export function createMockShaderProgram(overrides?: Partial<ShaderProgram>): ShaderProgram {
-  const gl = createMockWebGL2Context() as unknown as WebGL2RenderingContext;
-
-  // Create a minimal valid program using the static create method
-  const dummySources: ShaderSources = {
-    vertex: '#version 300 es\nvoid main() {}',
-    fragment: '#version 300 es\nvoid main() {}'
-  };
-
-  const program = ShaderProgram.create(gl, dummySources);
-
-  // Spy on methods
-  vi.spyOn(program, 'use');
-  vi.spyOn(program, 'getUniformLocation');
-  vi.spyOn(program, 'getAttributeLocation');
-  vi.spyOn(program, 'dispose');
-
-  // Apply overrides if provided
-  if (overrides) {
-    Object.assign(program, overrides);
-  }
-
-  return program;
-}
 
 /**
  * Helper to create a mock ShaderProgram with custom source code.
