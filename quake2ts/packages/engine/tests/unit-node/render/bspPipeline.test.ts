@@ -1,12 +1,5 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
-import {
-  BspSurfacePipeline,
-  deriveSurfaceRenderState,
-  resolveLightStyles,
-  BSP_SURFACE_VERTEX_SOURCE,
-  BSP_SURFACE_FRAGMENT_SOURCE
-} from '../../../src/render/bspPipeline.js';
 import {
   SURF_FLOWING,
   SURF_SKY,
@@ -37,54 +30,42 @@ const mockLocations = {
   'u_dlights[0].intensity': { id: 17 },
 };
 
-vi.mock('../../../src/render/shaderProgram', () => {
-  // Hardcode locations in the mock to avoid hoisting issues accessing outer variables
-  const locations: any = {
-    u_modelViewProjection: { id: 1 },
-    u_texScroll: { id: 2 },
-    u_lightmapScroll: { id: 3 },
-    u_lightStyleFactors: { id: 4 },
-    u_alpha: { id: 5 },
-    u_applyLightmap: { id: 6 },
-    u_warp: { id: 7 },
-    u_diffuseMap: { id: 8 },
-    u_lightmapAtlas: { id: 9 },
-    u_time: { id: 10 },
-    u_renderMode: { id: 11 },
-    u_solidColor: { id: 12 },
-    u_styleLayerMapping: { id: 13 },
-    u_numDlights: { id: 14 },
-    'u_dlights[0].position': { id: 15 },
-    'u_dlights[0].color': { id: 16 },
-    'u_dlights[0].intensity': { id: 17 },
-  };
-
-  const getUniformLocation = vi.fn(
-    (name: string) => {
-        return locations[name] || { id: 999 };
-    }
-  );
-  const use = vi.fn();
-  const dispose = vi.fn();
-
-  const ShaderProgram = vi.fn(() => ({
-    getUniformLocation,
-    use,
-    dispose,
-    sourceSize: 100,
-  }));
-
-  ShaderProgram.create = vi.fn(() => ({
-    getUniformLocation,
-    use,
-    dispose,
-    sourceSize: 100,
-  }));
-
-  return { ShaderProgram };
-});
-
 describe('bspPipeline', () => {
+  let BspSurfacePipeline: typeof import('../../../src/render/bspPipeline.js').BspSurfacePipeline;
+  let deriveSurfaceRenderState: typeof import('../../../src/render/bspPipeline.js').deriveSurfaceRenderState;
+  let resolveLightStyles: typeof import('../../../src/render/bspPipeline.js').resolveLightStyles;
+  let BSP_SURFACE_VERTEX_SOURCE: string;
+  let BSP_SURFACE_FRAGMENT_SOURCE: string;
+
+  beforeEach(async () => {
+    vi.resetModules();
+
+    vi.doMock('../../../src/render/shaderProgram', async () => {
+      const { createMockShaderProgram } = await import('@quake2ts/test-utils');
+
+      const mockProgram = createMockShaderProgram({
+        getUniformLocation: vi.fn((name: string) => (mockLocations as any)[name] || { id: 999 }),
+        sourceSize: 100
+      });
+
+      const ShaderProgram = vi.fn(() => mockProgram);
+      (ShaderProgram as any).create = vi.fn(() => mockProgram);
+
+      return { ShaderProgram };
+    });
+
+    const mod = await import('../../../src/render/bspPipeline.js');
+    BspSurfacePipeline = mod.BspSurfacePipeline;
+    deriveSurfaceRenderState = mod.deriveSurfaceRenderState;
+    resolveLightStyles = mod.resolveLightStyles;
+    BSP_SURFACE_VERTEX_SOURCE = mod.BSP_SURFACE_VERTEX_SOURCE;
+    BSP_SURFACE_FRAGMENT_SOURCE = mod.BSP_SURFACE_FRAGMENT_SOURCE;
+  });
+
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   describe('resolveLightStyles', () => {
     it('should resolve default light styles', () => {
       const styles = resolveLightStyles();
@@ -143,7 +124,7 @@ describe('bspPipeline', () => {
 
   describe('BspSurfacePipeline', () => {
     const createMockGl = () => createMockWebGL2Context({
-      getUniformLocation: vi.fn((_, name) => mockLocations[name] || { id: 999 }),
+      getUniformLocation: vi.fn((_, name) => (mockLocations as any)[name] || { id: 999 }),
       uniform1i: vi.fn((...args) => console.log('uniform1i:', args)),
     } as any);
 

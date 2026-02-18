@@ -5,140 +5,140 @@ import { Md3ModelMesh, Md3Pipeline } from '../../../src/render/md3Pipeline.js';
 import { Texture2D } from '../../../src/render/resources.js';
 import path from 'path';
 
-// Mock the pipeline dependencies to prevent WebGL calls
-vi.mock('../../../src/render/bspPipeline', () => {
-    return {
-        BspSurfacePipeline: class {
-            constructor() {
-                return { shaderSize: 100 };
-            }
-        }
-    };
-});
-
-vi.mock('../../../src/render/skybox', () => {
-    return {
-        SkyboxPipeline: class {
-            constructor() {
-                return { shaderSize: 100 };
-            }
-        },
-        computeSkyScroll: vi.fn(),
-        removeViewTranslation: vi.fn(),
-    };
-});
-
-vi.mock('../../../src/render/md2Pipeline', () => {
-    return {
-        Md2Pipeline: class {
-            constructor() {
-                return { shaderSize: 100 };
-            }
-        }
-    };
-});
-
-vi.mock('../../../src/render/sprite', () => {
-    return {
-        SpriteRenderer: class {
-            constructor() {
-                return { shaderSize: 100 };
-            }
-        }
-    };
-});
-
-// Mock PVS/BSP traversal to avoid complex map data setup
-vi.mock('../../../src/render/bspTraversal', () => ({
-    findLeafForPoint: vi.fn().mockReturnValue(0), // Return a valid leaf index
-    isClusterVisible: vi.fn().mockReturnValue(true),
-    gatherVisibleFaces: vi.fn().mockReturnValue([]),
-}));
-// Mock light calculation to avoid map entity access
-vi.mock('../../../src/render/light', () => ({
-    calculateEntityLight: vi.fn().mockReturnValue(1.0),
-}));
-
-// Mock CollisionVisRenderer as it is also instantiated in createRenderer
-vi.mock('../../../src/render/collisionVis', () => {
-    return {
-        CollisionVisRenderer: class {
-            constructor() {
-                return {
-                    render: vi.fn(),
-                    clear: vi.fn(),
-                    shaderSize: 100
-                };
-            }
-        }
-    };
-});
-
-const mockMd3Pipeline = {
-    bind: vi.fn(),
-    drawSurface: vi.fn(),
-    shaderSize: 100
-};
-
-// Properly mocked Md3ModelMesh with geometry.vertices for stats tracking
-vi.mock('../../../src/render/md3Pipeline', async () => {
-    return {
-        Md3Pipeline: class {
-            constructor() {
-                return mockMd3Pipeline;
-            }
-        },
-        Md3ModelMesh: class {
-            constructor() {
-                return {
-                    surfaces: new Map([['test', {
-                        geometry: { vertices: new Array(10) }, // Mock 10 vertices
-                        update: vi.fn()
-                    }]]),
-                    update: vi.fn(),
-                };
-            }
-        },
-    };
-});
-
-// Use vi.hoisted to ensure mockFrameRenderer is available in the mock factory
-const { mockFrameRenderer } = vi.hoisted(() => {
-    const mockFrameRenderer: FrameRenderer = {
-        renderFrame: vi.fn((...args) => {
-            console.log('MockFrameRenderer.renderFrame called with:', args);
-            return {
-                drawCalls: 0,
-                vertexCount: 0,
-                batches: 0,
-                facesDrawn: 0,
-                skyDrawn: false,
-                viewModelDrawn: false,
-                fps: 60,
-                shaderSwitches: 0,
-                visibleSurfaces: 0,
-                culledSurfaces: 0,
-                visibleEntities: 0,
-                culledEntities: 0
-            };
-        }),
-    };
-    return { mockFrameRenderer };
-});
-
 describe('Renderer', () => {
     let mockGl: WebGL2RenderingContext;
-    let createRenderer: any;
+    let createRenderer: typeof import('../../../src/render/renderer.js').createRenderer;
+    let mockMd3Pipeline: Md3Pipeline;
 
     beforeEach(async () => {
         vi.resetModules();
         vi.clearAllMocks();
 
-        // Use absolute path for mocking to avoid resolution issues
-        const framePath = path.resolve(__dirname, '../../../src/render/frame.js');
-        vi.doMock(framePath, () => ({
-            createFrameRenderer: vi.fn(() => mockFrameRenderer),
+        // Use doMock to leverage test-utils dynamically
+        vi.doMock('../../../src/render/bspPipeline', async () => {
+            const { createMockBspPipeline } = await import('@quake2ts/test-utils');
+            return {
+                BspSurfacePipeline: class {
+                    constructor() {
+                        return createMockBspPipeline({ shaderSize: 100 });
+                    }
+                }
+            };
+        });
+
+        vi.doMock('../../../src/render/skybox', async () => {
+            const { createMockSkyboxPipeline } = await import('@quake2ts/test-utils');
+            return {
+                SkyboxPipeline: class {
+                    constructor() {
+                        return createMockSkyboxPipeline({ shaderSize: 100 });
+                    }
+                },
+                computeSkyScroll: vi.fn(),
+                removeViewTranslation: vi.fn(),
+            };
+        });
+
+        vi.doMock('../../../src/render/md2Pipeline', async () => {
+            const { createMockMd2Pipeline } = await import('@quake2ts/test-utils');
+            return {
+                Md2Pipeline: class {
+                    constructor() {
+                        return createMockMd2Pipeline({ shaderSize: 100 });
+                    }
+                }
+            };
+        });
+
+        vi.doMock('../../../src/render/sprite', async () => {
+            const { createMockSpritePipeline } = await import('@quake2ts/test-utils');
+            return {
+                SpriteRenderer: class {
+                    constructor() {
+                        return createMockSpritePipeline({ shaderSize: 100 });
+                    }
+                }
+            };
+        });
+
+        // Mock PVS/BSP traversal to avoid complex map data setup
+        vi.doMock('../../../src/render/bspTraversal', () => ({
+            findLeafForPoint: vi.fn().mockReturnValue(0), // Return a valid leaf index
+            isClusterVisible: vi.fn().mockReturnValue(true),
+            gatherVisibleFaces: vi.fn().mockReturnValue([]),
         }));
+
+        // Mock light calculation to avoid map entity access
+        vi.doMock('../../../src/render/light', () => ({
+            calculateEntityLight: vi.fn().mockReturnValue(1.0),
+        }));
+
+        vi.doMock('../../../src/render/collisionVis', () => {
+            return {
+                CollisionVisRenderer: class {
+                    constructor() {
+                        return {
+                            render: vi.fn(),
+                            clear: vi.fn(),
+                            shaderSize: 100,
+                            dispose: vi.fn()
+                        };
+                    }
+                }
+            };
+        });
+
+        // Prepare mock for MD3 pipeline to spy on it
+        const { createMockMd3Pipeline } = await import('@quake2ts/test-utils');
+        mockMd3Pipeline = createMockMd3Pipeline({ shaderSize: 100 });
+
+        vi.doMock('../../../src/render/md3Pipeline', async () => {
+            return {
+                Md3Pipeline: class {
+                    constructor() {
+                        return mockMd3Pipeline;
+                    }
+                },
+                Md3ModelMesh: class {
+                    constructor() {
+                        return {
+                            surfaces: new Map([['test', {
+                                geometry: { vertices: new Array(10) }, // Mock 10 vertices
+                                update: vi.fn()
+                            }]]),
+                            update: vi.fn(),
+                        };
+                    }
+                },
+            };
+        });
+
+        // Frame renderer mock using test-utils
+        vi.doMock('../../../src/render/frame.js', async () => {
+            const { createMockFrameRenderer } = await import('@quake2ts/test-utils');
+            const mockFrameRenderer = createMockFrameRenderer({
+                renderFrame: vi.fn((...args) => {
+                    console.log('MockFrameRenderer.renderFrame called with:', args);
+                    return {
+                        drawCalls: 0,
+                        vertexCount: 0,
+                        batches: 0,
+                        facesDrawn: 0,
+                        skyDrawn: false,
+                        viewModelDrawn: false,
+                        fps: 60,
+                        shaderSwitches: 0,
+                        visibleSurfaces: 0,
+                        culledSurfaces: 0,
+                        visibleEntities: 0,
+                        culledEntities: 0
+                    };
+                }),
+            });
+            return {
+                createFrameRenderer: vi.fn(() => mockFrameRenderer),
+            };
+        });
 
         const mod = await import('../../../src/render/renderer.js');
         createRenderer = mod.createRenderer;
@@ -163,9 +163,6 @@ describe('Renderer', () => {
         expect(mockGl.disable).toHaveBeenCalled();
         expect(mockGl.enable).toHaveBeenCalled();
         expect(mockGl.depthMask).toHaveBeenCalled();
-
-        // Relaxed check due to mocking issues
-        // expect(mockFrameRenderer.renderFrame).toHaveBeenCalled();
     });
 
     it('should render an MD3 entity', () => {

@@ -282,3 +282,20 @@ export function createMockWebGLContextState(canvas?: HTMLCanvasElement): WebGLCo
         dispose: vi.fn()
     };
 }
+
+/**
+ * Creates a mock ShaderProgram implementation.
+ * Useful for testing pipelines that instantiate ShaderProgram directly.
+ *
+ * @param overrides Optional overrides for the mock implementation
+ * @returns A mock object satisfying the ShaderProgram interface requirements
+ */
+export function createMockShaderProgram(overrides?: Partial<any>): any {
+  return {
+    getUniformLocation: vi.fn((name: string) => ({ id: 999 })),
+    use: vi.fn(),
+    dispose: vi.fn(),
+    sourceSize: 100,
+    ...overrides
+  };
+}

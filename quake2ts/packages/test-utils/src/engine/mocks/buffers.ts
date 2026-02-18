@@ -46,33 +46,6 @@ export function createMockIndexBuffer(data?: Uint16Array, usage?: BufferUsage): 
   return ib;
 }
 
-/**
- * Creates a mock ShaderProgram with optional overrides.
- */
-export function createMockShaderProgram(overrides?: Partial<ShaderProgram>): ShaderProgram {
-  const gl = createMockWebGL2Context() as unknown as WebGL2RenderingContext;
-
-  // Create a minimal valid program using the static create method
-  const dummySources: ShaderSources = {
-    vertex: '#version 300 es\nvoid main() {}',
-    fragment: '#version 300 es\nvoid main() {}'
-  };
-
-  const program = ShaderProgram.create(gl, dummySources);
-
-  // Spy on methods
-  vi.spyOn(program, 'use');
-  vi.spyOn(program, 'getUniformLocation');
-  vi.spyOn(program, 'getAttributeLocation');
-  vi.spyOn(program, 'dispose');
-
-  // Apply overrides if provided
-  if (overrides) {
-    Object.assign(program, overrides);
-  }
-
-  return program;
-}
 
 /**
  * Helper to create a mock ShaderProgram with custom source code.
