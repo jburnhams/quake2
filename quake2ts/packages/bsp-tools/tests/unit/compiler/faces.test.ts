@@ -2,13 +2,18 @@ import { describe, it, expect } from 'vitest';
 import {
   type Winding,
   createWinding,
-  windingArea
+  windingArea,
+  createEmptyBounds3
 } from '@quake2ts/shared';
 import {
   mergeCoplanarFaces,
-  tryMergeWinding
+  tryMergeWinding,
+  extractFaces,
+  assignFacesToNodes,
+  fixTJunctions
 } from '../../../src/compiler/faces';
-import type { CompileFace } from '../../../src/types/compile';
+import type { CompileFace, CompilePlane, CompileBrush, CompileSide } from '../../../src/types/compile';
+import type { TreeElement, TreeNode, TreeLeaf } from '../../../src/compiler/tree';
 
 describe('faces', () => {
   describe('tryMergeWinding', () => {
@@ -45,56 +50,9 @@ describe('faces', () => {
 
       // Verify area (1x1 + 1x1 = 2)
       expect(windingArea(merged!)).toBeCloseTo(2.0);
-
-      // Verify points (should be 0,0 to 2,1)
-      // Winding order preserved
-      // w1: (0,1)->(1,1)->(1,0)->(0,0)
-      // w2: (1,1)->(2,1)->(2,0)->(1,0)
-      // Shared: (1,1)->(1,0) in w1 matches (1,0)->(1,1) (reversed) in w2?
-      // w2 edge is (1,0)->(1,1)? No, (1,1) is first, (1,0) is last.
-      // w2: (1,1), (2,1), (2,0), (1,0).
-      // Edge (1,0)->(1,1) is valid.
-      // So yes, they share edge.
     });
 
     it('does not merge if result is concave (L-shape)', () => {
-      // Square 1: (0,0) to (1,1)
-      const w1: Winding = {
-        numPoints: 4,
-        points: [
-          { x: 0, y: 1, z: 0 },
-          { x: 1, y: 1, z: 0 },
-          { x: 1, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 }
-        ]
-      };
-
-      // Square 2: (1,1) to (2,2) - touching at corner (1,1) but no shared edge?
-      // Wait, let's make them share an edge but form L.
-      // Square 3: (0,1) to (1,2) - above w1.
-      // Shared edge y=1.
-
-      // w3: (0,2), (1,2), (1,1), (0,1).
-      // w1: (0,1), (1,1), (1,0), (0,0).
-      // w1 edge (1,1)->(0,1) matches w3 edge (0,1)->(1,1)?
-      // w3 has (0,1)->(0,2)->(1,2)->(1,1).
-      // w3 edge (1,1)->(0,1) is last->first.
-      // w1 edge (0,1)->(1,1).
-      // Yes.
-
-      // Merged w1+w3 is 1x2 vertical rectangle (convex).
-
-      // Concave case:
-      // w1 (0,0)-(1,1)
-      // w2 (1,0)-(2,1) (Right of w1)
-      // w3 (0,1)-(1,2) (Above w1)
-
-      // Try merge (w1+w2) + w3? No, pair merge.
-      // Try merge (Rectangle 0,0-2,1) + (Square 0,1-1,2).
-      // Result is L-shape (0,0-2,1 plus 0,1-1,2).
-      // Vertices: (0,0)->(2,0)->(2,1)->(1,1)->(1,2)->(0,2)->(0,0).
-      // (1,1) is a reflex vertex.
-
       const rectW: Winding = {
         numPoints: 4,
         points: [
@@ -115,39 +73,13 @@ describe('faces', () => {
         ]
       }; // 1x1 above left part
 
-      // Shared edge: (0,1)->(1,1) in squareW matches (1,1)->? No.
-      // rectW: (0,1)->(2,1)->(2,0)->(0,0).
-      // squareW: (0,2)->(1,2)->(1,1)->(0,1).
-      // squareW edge (1,1)->(0,1).
-      // rectW edge?
-      // rectW goes (0,1)->(2,1).
-      // Does rectW contain (1,1)? No, only (0,1) and (2,1).
-      // So they don't share an edge explicitly if vertices don't match.
-      // tryMergeWinding requires vertex match.
-      // So this case (T-junction) will return null because no shared edge found.
-
       const normal = { x: 0, y: 0, z: 1 };
       expect(tryMergeWinding(rectW, squareW, normal)).toBeNull();
-
-      // Construct explicit L-shape with shared edge
-      // Poly1: (0,0), (2,0), (2,1), (1,1), (1,2), (0,2). (L-shape)
-      // Split into two convex polys?
-      // P1: (0,0)-(2,1) rect. P2: (0,1)-(1,2) rect.
-      // They don't share edge vertices exactly.
-
-      // Valid L-shape construction requires splitting diagonal?
-      // Let's just trust that the function returns null if no shared edge vertices found.
     });
   });
 
   describe('mergeCoplanarFaces', () => {
     it('merges a grid of 4 squares into 1', () => {
-      // 2x2 grid
-      // Top-Left: (0,1)-(1,2)
-      // Top-Right: (1,1)-(2,2)
-      // Bot-Left: (0,0)-(1,1)
-      // Bot-Right: (1,0)-(2,1)
-
       const tl = {
         numPoints: 4,
         points: [{x:0,y:2,z:0}, {x:1,y:2,z:0}, {x:1,y:1,z:0}, {x:0,y:1,z:0}]
@@ -166,10 +98,10 @@ describe('faces', () => {
       };
 
       const faces: CompileFace[] = [
-        { winding: tl, planeNum: 0, texInfo: 0, contents: 0, next: null },
-        { winding: tr, planeNum: 0, texInfo: 0, contents: 0, next: null },
-        { winding: bl, planeNum: 0, texInfo: 0, contents: 0, next: null },
-        { winding: br, planeNum: 0, texInfo: 0, contents: 0, next: null }
+        { winding: tl, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null },
+        { winding: tr, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null },
+        { winding: bl, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null },
+        { winding: br, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null }
       ];
 
       const merged = mergeCoplanarFaces(faces);
@@ -183,6 +115,7 @@ describe('faces', () => {
       const f1 = {
         winding: { numPoints: 4, points: [] } as any as Winding, // dummy
         planeNum: 0,
+        side: 0,
         texInfo: 0,
         contents: 0,
         next: null
@@ -190,6 +123,7 @@ describe('faces', () => {
       const f2 = {
         winding: { numPoints: 4, points: [] } as any as Winding,
         planeNum: 0,
+        side: 0,
         texInfo: 1, // diff texture
         contents: 0,
         next: null
@@ -197,6 +131,162 @@ describe('faces', () => {
 
       const merged = mergeCoplanarFaces([f1, f2]);
       expect(merged.length).toBe(2);
+    });
+  });
+
+  describe('extractFaces', () => {
+    it('extracts faces from a simple tree', () => {
+      // Create a brush side winding (Square on Z=0)
+      const w: Winding = {
+        numPoints: 4,
+        points: [
+          { x: 0, y: 10, z: 0 },
+          { x: 10, y: 10, z: 0 },
+          { x: 10, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 }
+        ]
+      };
+
+      const side: CompileSide = {
+        planeNum: 0,
+        texInfo: 0,
+        winding: w,
+        visible: true,
+        tested: false,
+        bevel: false
+      };
+
+      const brush: CompileBrush = {
+        original: { sides: [], bounds: createEmptyBounds3(), contents: 1, entityNum: 0, brushNum: 0 },
+        sides: [side],
+        bounds: createEmptyBounds3(),
+        next: null
+      };
+      brush.original.sides = [side]; // cyclic ref logic in map parser, here manual
+
+      // Create tree: Root splits on Z=0 (Plane 0).
+      // Front child (Z>0) is Empty Leaf.
+      // Back child (Z<0) is Solid Leaf.
+
+      const planes: CompilePlane[] = [
+        { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
+      ];
+
+      const emptyLeaf: TreeLeaf = {
+        contents: 0, // Empty
+        brushes: [brush],
+        bounds: createEmptyBounds3()
+      };
+
+      const solidLeaf: TreeLeaf = {
+        contents: 1, // Solid
+        brushes: [],
+        bounds: createEmptyBounds3()
+      };
+
+      // Note: brush is in empty leaf? No, brush spans.
+      // But for this test, let's say the brush is in the empty leaf.
+      // extractFaces iterates brushes found in the tree.
+
+      const root: TreeNode = {
+        planeNum: 0,
+        children: [emptyLeaf, solidLeaf],
+        bounds: createEmptyBounds3()
+      };
+
+      const faces = extractFaces(root, planes);
+
+      // The winding is on Z=0.
+      // splitWinding(w, Z=0) -> if on plane, puts on front?
+      // If on front, it goes to emptyLeaf.
+      // emptyLeaf contents=0 -> visible.
+      // So we expect 1 face.
+
+      expect(faces.length).toBe(1);
+      expect(faces[0].planeNum).toBe(0);
+      expect(faces[0].winding.numPoints).toBe(4);
+    });
+  });
+
+  describe('assignFacesToNodes', () => {
+    it('assigns extracted faces to the correct node', () => {
+      const w: Winding = {
+        numPoints: 4,
+        points: [
+          { x: 0, y: 10, z: 0 },
+          { x: 10, y: 10, z: 0 },
+          { x: 10, y: 0, z: 0 },
+          { x: 0, y: 0, z: 0 }
+        ]
+      };
+      const face: CompileFace = {
+        planeNum: 0,
+        side: 0,
+        texInfo: 0,
+        winding: w,
+        contents: 0,
+        next: null
+      };
+
+      const planes: CompilePlane[] = [
+        { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
+      ];
+
+      const root: TreeNode = {
+        planeNum: 0,
+        children: [
+            { contents: 0, brushes: [], bounds: createEmptyBounds3() } as TreeLeaf,
+            { contents: 1, brushes: [], bounds: createEmptyBounds3() } as TreeLeaf
+        ],
+        bounds: createEmptyBounds3()
+      };
+
+      const map = assignFacesToNodes([face], root, planes);
+
+      // Face is on Z=0, node plane is Z=0. Should be assigned to root.
+      expect(map.has(root)).toBe(true);
+      expect(map.get(root)!.length).toBe(1);
+    });
+  });
+
+  describe('fixTJunctions', () => {
+    it('adds vertices to fix T-junctions', () => {
+      // Face 1: (0,0)-(2,0)-(2,1)-(0,1)
+      const w1 = {
+        numPoints: 4,
+        points: [
+            { x: 0, y: 1, z: 0 },
+            { x: 2, y: 1, z: 0 },
+            { x: 2, y: 0, z: 0 },
+            { x: 0, y: 0, z: 0 }
+        ]
+      };
+
+      // Face 2: (1,1)-(1,2)-(2,2)-(2,1)
+      // Vertex (1,1) is on top edge of Face 1 (0,1)-(2,1).
+      const w2 = {
+        numPoints: 4,
+        points: [
+            { x: 1, y: 2, z: 0 },
+            { x: 2, y: 2, z: 0 },
+            { x: 2, y: 1, z: 0 },
+            { x: 1, y: 1, z: 0 }
+        ]
+      };
+
+      const f1: CompileFace = { winding: w1, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null };
+      const f2: CompileFace = { winding: w2, planeNum: 0, side: 0, texInfo: 0, contents: 0, next: null };
+
+      fixTJunctions([f1, f2]);
+
+      // Face 1 should now have 5 points (vertex added at 1,1)
+      expect(f1.winding.numPoints).toBe(5);
+
+      // Verify (1,1) is in points
+      const hasPoint = f1.winding.points.some(p =>
+        Math.abs(p.x - 1) < 0.01 && Math.abs(p.y - 1) < 0.01 && Math.abs(p.z - 0) < 0.01
+      );
+      expect(hasPoint).toBe(true);
     });
   });
 });

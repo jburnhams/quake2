@@ -188,8 +188,8 @@ export function partitionBrushes(
 
 ### 4.1 Extract Visible Faces
 
-- [ ] Create `src/compiler/faces.ts`
-- [ ] Implement face extraction from tree
+- [x] Create `src/compiler/faces.ts`
+- [x] Implement face extraction from tree
 
 **File: `src/compiler/faces.ts`**
 ```typescript
@@ -222,7 +222,7 @@ export function extractFaces(
 
 ### 4.2 Face Assignment to Nodes
 
-- [ ] Implement face-to-node assignment
+- [x] Implement face-to-node assignment
 
 ```typescript
 /**
@@ -239,9 +239,9 @@ export function assignFacesToNodes(
 
 ### 4.3 Tests
 
-- [ ] Test: Box produces 6 faces
-- [ ] Test: Interior faces removed
-- [ ] Test: Faces on correct side of planes
+- [x] Test: Box produces 6 faces
+- [x] Test: Interior faces removed
+- [x] Test: Faces on correct side of planes
 
 ---
 
@@ -260,7 +260,7 @@ When edges meet at points not shared by adjacent faces, rendering artifacts (cra
 
 ### 5.2 Fix T-Junctions
 
-- [ ] Implement T-junction fixing
+- [x] Implement T-junction fixing
 
 ```typescript
 /**
@@ -283,9 +283,9 @@ export function fixTJunctions(
 
 ### 5.3 Tests
 
-- [ ] Test: Adjacent faces share edge vertices
-- [ ] Test: No T-junctions after fix
-- [ ] Test: Face windings still valid
+- [x] Test: Adjacent faces share edge vertices
+- [x] Test: No T-junctions after fix
+- [x] Test: Face windings still valid
 
 ---
 

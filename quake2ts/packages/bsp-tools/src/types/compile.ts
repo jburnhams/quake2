@@ -41,6 +41,7 @@ export interface CompileBrush {
 /** Face structure for merging and tree construction */
 export interface CompileFace {
   planeNum: number;
+  side: number;
   texInfo: number;
   winding: Winding;
   contents: number;
