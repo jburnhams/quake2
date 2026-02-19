@@ -131,6 +131,8 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/render.md3Pipeline.test.ts` to `engine/tests/unit-node/render/md3Pipeline.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/debugMode.test.ts` to `engine/tests/unit-node/render/debugMode.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/postProcess.test.ts` to `engine/tests/unit-node/render/postProcess.test.ts`
+   - Moved: `engine/tests/unit-jsdom/render/context.test.ts` to `engine/tests/unit-node/render/context.test.ts` (mocked HTMLCanvasElement)
+   - Deleted: `engine/tests/unit-jsdom/render/render.md3Pipeline.test.ts` (redundant with `md3Pipeline.test.ts`)
    - Deleted: `engine/tests/unit-jsdom/render/render.bspPipeline.test.ts` (redundant with `bspPipeline.test.ts`)
    - Deleted: `engine/tests/unit-jsdom/render/render.skybox.test.ts` (redundant with `skybox.test.ts`)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
