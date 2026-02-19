@@ -1,48 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { PostProcessPipeline } from '../../../src/render/postprocessing/pipeline.js';
-
-// Mock WebGL2RenderingContext
-const gl = {
-    createShader: vi.fn(() => ({})),
-    shaderSource: vi.fn(),
-    compileShader: vi.fn(),
-    getShaderParameter: vi.fn(() => true),
-    createProgram: vi.fn(() => ({})),
-    attachShader: vi.fn(),
-    linkProgram: vi.fn(),
-    getProgramParameter: vi.fn(() => true),
-    useProgram: vi.fn(),
-    getUniformLocation: vi.fn(() => ({})),
-    getAttribLocation: vi.fn(() => 0),
-    bindAttribLocation: vi.fn(),
-    createVertexArray: vi.fn(() => ({})),
-    bindVertexArray: vi.fn(),
-    createBuffer: vi.fn(() => ({})),
-    bindBuffer: vi.fn(),
-    bufferData: vi.fn(),
-    enableVertexAttribArray: vi.fn(),
-    vertexAttribPointer: vi.fn(),
-    activeTexture: vi.fn(),
-    bindTexture: vi.fn(),
-    uniform1i: vi.fn(),
-    uniform1f: vi.fn(),
-    drawArrays: vi.fn(),
-    deleteProgram: vi.fn(),
-    deleteShader: vi.fn(),
-    deleteVertexArray: vi.fn(),
-    deleteBuffer: vi.fn(),
-    TRIANGLES: 0x0004,
-    TRIANGLE_STRIP: 0x0005,
-    ARRAY_BUFFER: 0x8892,
-    STATIC_DRAW: 0x88E4,
-    FLOAT: 0x1406,
-    TEXTURE0: 0x84C0,
-    TEXTURE_2D: 0x0DE1,
-} as unknown as WebGL2RenderingContext;
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 describe('PostProcessPipeline', () => {
+    let gl: WebGL2RenderingContext;
+
     beforeEach(() => {
         vi.clearAllMocks();
+        gl = createMockWebGL2Context() as unknown as WebGL2RenderingContext;
     });
 
     it('should initialize correctly', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { Camera } from '@quake2ts/engine';
+import { createMockCamera } from '@quake2ts/test-utils';
 import { ViewSample } from '../../src/view/effects.js';
 import { updateCamera } from '../../src/view/camera.js';
 import { vec3 } from 'gl-matrix';
@@ -7,10 +7,7 @@ import { Vec3 } from '@quake2ts/shared';
 
 describe('View', () => {
     it('should update camera with view effects', () => {
-        const mockCamera = {
-            bobAngles: vec3.create(),
-            bobOffset: vec3.create(),
-        } as unknown as Camera;
+        const mockCamera = createMockCamera();
 
         const mockViewSample: ViewSample = {
             angles: { x: 1, y: 2, z: 3 },

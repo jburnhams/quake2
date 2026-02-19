@@ -3,82 +3,22 @@ import { createRenderer } from '../../../src/render/renderer';
 import { Camera } from '../../../src/render/camera';
 import { CameraState } from '../../../src/render/types/camera';
 import { mat4, vec3 } from 'gl-matrix';
+import { createMockWebGL2Context } from '@quake2ts/test-utils';
 
 // Mock WebGL2RenderingContext
-const gl = {
-    getExtension: vi.fn(),
-    createProgram: vi.fn(() => ({})),
-    createShader: vi.fn(() => ({})),
-    shaderSource: vi.fn(),
-    compileShader: vi.fn(),
-    getShaderParameter: vi.fn(() => true),
-    getProgramParameter: vi.fn(() => true),
-    attachShader: vi.fn(),
-    linkProgram: vi.fn(),
-    useProgram: vi.fn(),
-    getUniformLocation: vi.fn(() => ({})),
-    getAttribLocation: vi.fn(() => 0),
-    bindAttribLocation: vi.fn(),
-    createBuffer: vi.fn(() => ({})),
-    bindBuffer: vi.fn(),
-    bufferData: vi.fn(),
-    createVertexArray: vi.fn(() => ({})),
-    bindVertexArray: vi.fn(),
-    enableVertexAttribArray: vi.fn(),
-    vertexAttribPointer: vi.fn(),
-    vertexAttribIPointer: vi.fn(),
-    drawElements: vi.fn(),
-    drawArrays: vi.fn(),
-    createFramebuffer: vi.fn(() => ({})),
-    deleteFramebuffer: vi.fn(),
-    createTexture: vi.fn(() => ({})),
-    bindTexture: vi.fn(),
-    texImage2D: vi.fn(),
-    texParameteri: vi.fn(),
-    activeTexture: vi.fn(),
-    enable: vi.fn(),
-    disable: vi.fn(),
-    depthMask: vi.fn(),
-    blendFunc: vi.fn(),
-    clearColor: vi.fn(),
-    clear: vi.fn(),
-    uniformMatrix4fv: vi.fn(),
-    uniform1i: vi.fn(),
-    uniform1f: vi.fn(),
-    uniform2f: vi.fn(),
-    uniform3f: vi.fn(),
-    uniform4f: vi.fn(),
-    uniform3fv: vi.fn(),
-    uniform4fv: vi.fn(),
-    createQuery: vi.fn(() => ({})),
-    beginQuery: vi.fn(),
-    endQuery: vi.fn(),
-    getQueryParameter: vi.fn(),
-    getParameter: vi.fn(),
-    deleteQuery: vi.fn(),
-    viewport: vi.fn(),
-    deleteShader: vi.fn(),
-    deleteProgram: vi.fn(),
-    canvas: { width: 800, height: 600 },
-    // Constants
-    STATIC_DRAW: 0x88E4,
-    DYNAMIC_DRAW: 0x88E8,
-    ARRAY_BUFFER: 0x8892,
-    ELEMENT_ARRAY_BUFFER: 0x8893,
-    FLOAT: 0x1406,
-    TRIANGLES: 0x0004,
-    LINES: 0x0001,
-    COLOR_BUFFER_BIT: 0x4000,
-    DEPTH_BUFFER_BIT: 0x0100,
-    SRC_ALPHA: 0x0302,
-    ONE_MINUS_SRC_ALPHA: 0x0303,
-    DEPTH_TEST: 0x0B71,
-    BLEND: 0x0BE2,
-    TEXTURE_2D: 0x0DE1,
-    TEXTURE0: 0x84C0,
-    QUERY_RESULT_AVAILABLE: 0x8867,
-    QUERY_RESULT: 0x8866,
-} as unknown as WebGL2RenderingContext;
+const glMock = createMockWebGL2Context();
+// Override strictly for this test which expects loose behavior (returning objects/0 instead of null/-1)
+glMock.getUniformLocation = vi.fn(() => ({}));
+glMock.getAttribLocation = vi.fn(() => 0);
+glMock.createProgram = vi.fn(() => ({}));
+glMock.createShader = vi.fn(() => ({}));
+glMock.createBuffer = vi.fn(() => ({}));
+glMock.createVertexArray = vi.fn(() => ({}));
+glMock.createFramebuffer = vi.fn(() => ({}));
+glMock.createTexture = vi.fn(() => ({}));
+glMock.createQuery = vi.fn(() => ({}));
+
+const gl = glMock as unknown as WebGL2RenderingContext;
 
 // Mock dependencies
 const mockBspBind = vi.fn(() => ({}));
