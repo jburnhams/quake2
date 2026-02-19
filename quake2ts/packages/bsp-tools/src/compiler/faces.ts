@@ -8,15 +8,16 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  copyWinding
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileFace, CompilePlane } from '../types/compile.js';
+import type { TreeElement, TreeNode, TreeLeaf } from './tree.js';
+import { isLeaf } from './tree.js';
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
- *
- * @param faces The list of faces to merge.
- * @returns A new list of merged faces.
  */
 export function mergeCoplanarFaces(faces: CompileFace[]): CompileFace[] {
   if (faces.length < 2) return faces;
@@ -59,7 +60,6 @@ export function mergeCoplanarFaces(faces: CompileFace[]): CompileFace[] {
           const newWinding = tryMergeWinding(f1.winding, f2.winding, plane.normal);
 
           if (newWinding) {
-            // Success! Replace f1 with new face, mark f2 as merged
             group[i] = {
               ...f1,
               winding: newWinding,
@@ -74,7 +74,6 @@ export function mergeCoplanarFaces(faces: CompileFace[]): CompileFace[] {
       }
 
       if (changed) {
-        // Remove merged faces from active set
         const active: CompileFace[] = [];
         for (const f of group) {
             if (!f.merged) active.push(f);
@@ -94,20 +93,14 @@ export function mergeCoplanarFaces(faces: CompileFace[]): CompileFace[] {
   return mergedFaces;
 }
 
-/**
- * Tries to merge two windings.
- * Returns the merged winding if they share an edge and the result is convex.
- * Returns null otherwise.
- */
 export function tryMergeWinding(
   w1: Winding,
   w2: Winding,
   normal: Vec3
 ): Winding | null {
-  let start1 = -1; // Index of start of shared edge in w1 (p1)
-  let start2 = -1; // Index of start of shared edge in w2 (p2)
+  let start1 = -1;
+  let start2 = -1;
 
-  // Find shared edge (p1->p2 in w1 matches p2->p1 in w2)
   for (let i = 0; i < w1.numPoints; i++) {
     const p1 = w1.points[i];
     const p2 = w1.points[(i + 1) % w1.numPoints];
@@ -116,7 +109,6 @@ export function tryMergeWinding(
       const p3 = w2.points[j];
       const p4 = w2.points[(j + 1) % w2.numPoints];
 
-      // Check if edge (p1, p2) == (p4, p3) (reversed)
       if (pointsMatch(p1, p4) && pointsMatch(p2, p3)) {
         start1 = i;
         start2 = j;
@@ -127,24 +119,14 @@ export function tryMergeWinding(
   }
 
   if (start1 === -1) {
-    return null; // No shared edge
+    return null;
   }
 
-  // Construct new point list
   const newPoints: Vec3[] = [];
-
-  // 1. Add points from w1, starting AFTER the shared edge (p2), going around to p1
-  // Indices: (start1 + 1) ... start1
   const p2_idx = (start1 + 1) % w1.numPoints;
   for (let k = 0; k < w1.numPoints; k++) {
     newPoints.push(copyVec3(w1.points[(p2_idx + k) % w1.numPoints]));
   }
-  // List starts with p2 (B), ends with p1 (A).
-
-  // 2. Add points from w2, EXCLUDING the shared edge points (p1 and p2)
-  // Shared edge in w2 is p2(start2) -> p1(start2+1).
-  // We want points starting AFTER p1, going around to BEFORE p2.
-  // Indices: (start2 + 2) ... (start2 - 1)
   const w2_start_idx = (start2 + 2) % w2.numPoints;
   const w2_count = w2.numPoints - 2;
 
@@ -152,17 +134,8 @@ export function tryMergeWinding(
     newPoints.push(copyVec3(w2.points[(w2_start_idx + k) % w2.numPoints]));
   }
 
-  // Check convexity before creating winding
-  // Use a temporary winding or just check points
-  // Wait, isConvex expects points, but removeColinearPoints expects winding.
-  // We should simplify first? No, simplify removes collinear points which helps convexity check (avoids false concavity on straight lines).
-  // But standard convexity check handles collinear (dot product ~0).
-
-  // Create temporary winding
   const tempW = createWinding(newPoints.length);
   tempW.points = newPoints;
-
-  // Simplify
   const simplifiedW = removeColinearPoints(tempW);
 
   if (!isConvex(simplifiedW.points, normal)) {
@@ -187,22 +160,225 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
     const e1 = subtractVec3(p1, p0);
     const e2 = subtractVec3(p2, p1);
 
-    const c = crossVec3(e2, e1); // Quake CW: e2 x e1 points IN (opposite to normal) ?
-
-    // In Quake coordinates (Z up):
-    // Standard winding is CW?
-    // Let's rely on standard: if dot product with normal is negative, it's a reflex angle (concave).
-    // Actually, strictly speaking for CW winding, (p1-p0)x(p2-p0) aligns with normal?
-    // Shared windingPlane uses (p2-p0) x (p1-p0).
-    // So (p2-p1) x (p1-p0) -> e2 x e1.
-    // This should align with normal.
-    // So dot > 0 is convex.
-
+    const c = crossVec3(e2, e1);
     const dot = dotVec3(c, normal);
 
-    // Allow small negative for epsilon errors
     if (dot < -0.01) return false;
   }
 
   return true;
+}
+
+/**
+ * Extract visible faces from the BSP tree.
+ */
+export function extractFaces(
+  tree: TreeElement,
+  planes: CompilePlane[]
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+  const allBrushes = new Set<any>();
+  collectBrushes(tree, allBrushes);
+
+  for (const brush of allBrushes) {
+    for (const side of brush.sides) {
+      if (!side.winding || !side.visible) continue;
+      if (side.bevel) continue;
+
+      clipSideIntoTree(side.winding, side, tree, planes, faces);
+    }
+  }
+
+  return faces;
+}
+
+function collectBrushes(node: TreeElement, set: Set<any>) {
+  if (isLeaf(node)) {
+    for (const b of node.brushes) set.add(b);
+  } else {
+    collectBrushes(node.children[0], set);
+    collectBrushes(node.children[1], set);
+  }
+}
+
+function clipSideIntoTree(
+  w: Winding,
+  side: any,
+  node: TreeElement,
+  planes: CompilePlane[],
+  outFaces: CompileFace[]
+) {
+  if (isLeaf(node)) {
+    if (node.contents === 0) { // Empty leaf
+         const face: CompileFace = {
+           planeNum: side.planeNum,
+           side: 0,
+           texInfo: side.texInfo,
+           winding: copyWinding(w),
+           contents: side.contents ?? 0,
+           next: null
+         };
+         outFaces.push(face);
+    }
+    return;
+  }
+
+  const plane = planes[node.planeNum];
+  const split = splitWinding(w, plane.normal, plane.dist);
+
+  if (split.front) {
+    clipSideIntoTree(split.front, side, node.children[0], planes, outFaces);
+  }
+  if (split.back) {
+    clipSideIntoTree(split.back, side, node.children[1], planes, outFaces);
+  }
+}
+
+/**
+ * Assigns faces to the BSP nodes that they lie upon.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<TreeNode, CompileFace[]> {
+  const map = new Map<TreeNode, CompileFace[]>();
+
+  // Recursively distribute faces
+  distributeFaces(faces, tree, planes, map);
+
+  return map;
+}
+
+function distributeFaces(
+  faces: CompileFace[],
+  node: TreeElement,
+  planes: CompilePlane[],
+  map: Map<TreeNode, CompileFace[]>
+) {
+  if (isLeaf(node)) {
+    // Leaves don't store faces in the map (they are stored in leaf.faces usually, but here we return map for nodes)
+    return;
+  }
+
+  const plane = planes[node.planeNum];
+  const onNode: CompileFace[] = [];
+  const front: CompileFace[] = [];
+  const back: CompileFace[] = [];
+
+  for (const f of faces) {
+    // Check if face is on plane
+    // We can check all points
+    let isFront = false;
+    let isBack = false;
+
+    for (const p of f.winding.points) {
+      const d = dotVec3(p, plane.normal) - plane.dist;
+      if (d > 0.01) isFront = true;
+      if (d < -0.01) isBack = true;
+    }
+
+    if (!isFront && !isBack) {
+      // On plane
+      onNode.push(f);
+    } else if (isFront && !isBack) {
+      front.push(f);
+    } else if (!isFront && isBack) {
+      back.push(f);
+    } else {
+      // Spanning?
+      // Should not happen if faces were extracted from this tree!
+      // But if it does, split it.
+      const split = splitWinding(f.winding, plane.normal, plane.dist);
+      if (split.front) {
+          const ff = { ...f, winding: split.front };
+          front.push(ff);
+      }
+      if (split.back) {
+          const bf = { ...f, winding: split.back };
+          back.push(bf);
+      }
+    }
+  }
+
+  if (onNode.length > 0) {
+    map.set(node, onNode);
+  }
+
+  distributeFaces(front, node.children[0], planes, map);
+  distributeFaces(back, node.children[1], planes, map);
+}
+
+export function fixTJunctions(
+  faces: CompileFace[]
+): void {
+  // Collect all vertices
+  const vertices: Vec3[] = [];
+  for (const f of faces) {
+    for (const p of f.winding.points) {
+      vertices.push(p);
+    }
+  }
+
+  for (const f of faces) {
+    const w = f.winding;
+    let modified = false;
+    const newPoints: Vec3[] = [];
+
+    for (let i = 0; i < w.numPoints; i++) {
+      const p1 = w.points[i];
+      const p2 = w.points[(i + 1) % w.numPoints];
+
+      newPoints.push(p1);
+
+      // Check for vertices on this edge
+      const splits: { t: number, v: Vec3 }[] = [];
+
+      for (const v of vertices) {
+         if (isPointOnEdge(v, p1, p2)) {
+           const t = distance(p1, v) / distance(p1, p2);
+           splits.push({ t, v });
+         }
+      }
+
+      // Sort splits by distance from p1
+      splits.sort((a, b) => a.t - b.t);
+
+      for (const split of splits) {
+         // Avoid duplicates
+         const last = newPoints[newPoints.length - 1];
+         if (distance(last, split.v) > 0.01) {
+             newPoints.push(split.v);
+         }
+      }
+    }
+
+    // Update winding if points added
+    if (newPoints.length > w.numPoints) {
+       // Filter close points (loop closing)
+       const uniquePoints: Vec3[] = [];
+       for(let k=0; k<newPoints.length; k++) {
+           const p = newPoints[k];
+           const prev = uniquePoints.length > 0 ? uniquePoints[uniquePoints.length-1] : newPoints[newPoints.length-1];
+           if (distance(p, prev) > 0.01) {
+               uniquePoints.push(p);
+           }
+       }
+
+       if (uniquePoints.length >= 3) {
+           f.winding = createWinding(uniquePoints.length);
+           f.winding.points = uniquePoints;
+       }
+    }
+  }
+}
+
+function isPointOnEdge(v: Vec3, e1: Vec3, e2: Vec3): boolean {
+  const epsilon = 0.1;
+  const d1 = distance(v, e1);
+  const d2 = distance(v, e2);
+  const len = distance(e1, e2);
+
+  if (d1 < epsilon || d2 < epsilon) return false;
+  return Math.abs(d1 + d2 - len) < epsilon;
 }
