@@ -29,7 +29,9 @@
     "build:types": "tsc -b",
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
-    "test:unit": "vitest run"
+    "test:unit": "vitest run",
+    "test:unit:node": "vitest run",
+    "test:unit:jsdom": "echo 'No jsdom tests'"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*"
