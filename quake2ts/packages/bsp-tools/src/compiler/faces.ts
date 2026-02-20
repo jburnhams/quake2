@@ -8,9 +8,14 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  CONTENTS_SOLID
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import { ON_EPSILON } from '../types/index.js';
+import { type TreeElement, isLeaf } from './tree.js';
+import type { PlaneSet } from './planes.js';
+import type { CompileBrush, CompileFace, CompilePlane } from '../types/compile.js';
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
@@ -205,4 +210,190 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
   }
 
   return true;
+}
+
+/**
+ * Extracts visible faces from the BSP tree brushes.
+ * Clips all brush faces into the tree and keeps fragments that face empty space.
+ */
+export function extractFaces(
+  tree: TreeElement,
+  planeSet: PlaneSet
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+  const planes = planeSet.getPlanes();
+
+  // 1. Collect all unique brushes from the tree
+  const brushes = new Set<CompileBrush>();
+  collectBrushes(tree, brushes);
+
+  // 2. Process each brush
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      if (!side.winding) continue;
+
+      const fragments = clipFaceToTree(
+        side.winding,
+        side,
+        brush,
+        tree,
+        planes
+      );
+
+      faces.push(...fragments);
+    }
+  }
+
+  return faces;
+}
+
+function collectBrushes(node: TreeElement, set: Set<CompileBrush>) {
+  if (isLeaf(node)) {
+    for (const b of node.brushes) {
+      set.add(b);
+    }
+  } else {
+    collectBrushes(node.children[0], set);
+    collectBrushes(node.children[1], set);
+  }
+}
+
+function clipFaceToTree(
+  w: Winding,
+  side: any,
+  brush: CompileBrush,
+  node: TreeElement,
+  planes: CompilePlane[]
+): CompileFace[] {
+  if (isLeaf(node)) {
+    // If the leaf is not solid (empty), the face is visible
+    if ((node.contents & CONTENTS_SOLID) === 0) {
+      return [{
+        planeNum: side.planeNum,
+        texInfo: side.texInfo,
+        winding: w,
+        contents: brush.original.contents,
+        next: null
+      }];
+    }
+    return [];
+  }
+
+  // Node
+  const plane = planes[node.planeNum];
+
+  // Classify winding against plane first to handle coplanar correctly
+  const relation = classifyWinding(w, plane);
+  const faces: CompileFace[] = [];
+
+  if (relation === 2) { // On Plane
+    const sidePlane = planes[side.planeNum];
+    const dot = dotVec3(sidePlane.normal, plane.normal);
+    if (dot > 0) {
+      faces.push(...clipFaceToTree(w, side, brush, node.children[0], planes));
+    } else {
+      faces.push(...clipFaceToTree(w, side, brush, node.children[1], planes));
+    }
+  } else if (relation === 0) { // Front
+    faces.push(...clipFaceToTree(w, side, brush, node.children[0], planes));
+  } else if (relation === 1) { // Back
+    faces.push(...clipFaceToTree(w, side, brush, node.children[1], planes));
+  } else { // Split
+    const split = splitWinding(w, plane.normal, plane.dist, ON_EPSILON);
+    if (split.front) {
+      faces.push(...clipFaceToTree(split.front, side, brush, node.children[0], planes));
+    }
+    if (split.back) {
+      faces.push(...clipFaceToTree(split.back, side, brush, node.children[1], planes));
+    }
+  }
+
+  return faces;
+}
+
+/**
+ * Assigns faces to the leaves they reside in (or border).
+ * This populates the `faces` array in TreeLeaf.
+ */
+export function assignFacesToLeaves(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planeSet: PlaneSet
+): void {
+  const planes = planeSet.getPlanes();
+
+  for (const face of faces) {
+    filterFaceIntoTree(face, tree, planes);
+  }
+}
+
+function filterFaceIntoTree(
+  face: CompileFace,
+  node: TreeElement,
+  planes: CompilePlane[]
+): void {
+  if (isLeaf(node)) {
+    if (!node.faces) node.faces = [];
+    node.faces.push(face);
+    return;
+  }
+
+  const plane = planes[node.planeNum];
+  const relation = classifyWinding(face.winding, plane);
+
+  if (relation === 2) { // On Plane
+    const facePlane = planes[face.planeNum];
+    const dot = dotVec3(facePlane.normal, plane.normal);
+    if (dot > 0) {
+      filterFaceIntoTree(face, node.children[0], planes);
+    } else {
+      filterFaceIntoTree(face, node.children[1], planes);
+    }
+  } else if (relation === 0) { // Front
+    filterFaceIntoTree(face, node.children[0], planes);
+  } else if (relation === 1) { // Back
+    filterFaceIntoTree(face, node.children[1], planes);
+  } else { // Split
+    const split = splitWinding(face.winding, plane.normal, plane.dist, ON_EPSILON);
+    if (split.front) {
+      // Create new face fragment? Or just reuse face?
+      // filterFaceIntoTree modifies the leaf list, adding `face`.
+      // If we reuse `face`, we add the SAME object to multiple leaves.
+      // This is generally okay for references, but if we wanted distinct fragments, we should clone.
+      // But `splitWinding` returns new windings.
+      // If we just recurse with the original face, we are adding the original face.
+      // But physically only a part of it is in the leaf.
+      // `extractFaces` created fragments. `assignFacesToLeaves` distributes them.
+      // If a face needs splitting AGAIN (shouldn't if tree hasn't changed), we might need new objects.
+      // But normally `extractFaces` already split them against the tree.
+      // So they should fit in leaves (or be on planes).
+      // So they shouldn't split?
+      // UNLESS we merged them.
+      // If we merged them, they might split.
+      // If they split, we should create new faces for the leaves.
+      // But `CompileFace` object identity might be important?
+      // For now, let's clone the face with new winding.
+
+      const frontFace = { ...face, winding: split.front };
+      filterFaceIntoTree(frontFace, node.children[0], planes);
+    }
+    if (split.back) {
+      const backFace = { ...face, winding: split.back };
+      filterFaceIntoTree(backFace, node.children[1], planes);
+    }
+  }
+}
+
+function classifyWinding(w: Winding, plane: CompilePlane): number {
+  let front = false;
+  let back = false;
+  for (const p of w.points) {
+    const d = dotVec3(p, plane.normal) - plane.dist;
+    if (d > ON_EPSILON) front = true;
+    if (d < -ON_EPSILON) back = true;
+  }
+  if (front && back) return 3; // Cross
+  if (front) return 0; // Front
+  if (back) return 1; // Back
+  return 2; // On Plane
 }
