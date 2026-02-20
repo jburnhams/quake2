@@ -1,28 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { Draw_Hud, Init_Hud } from '@quake2ts/client/hud.js';
+import { Draw_Hud, Init_Hud } from '../../src/hud.js';
 import { Renderer, Pic, AssetManager, PreparedTexture } from '@quake2ts/engine';
 import { PlayerState } from '@quake2ts/shared';
 import { PlayerClient, PowerupId, KeyId, ArmorType, WeaponId } from '@quake2ts/game';
-import { MessageSystem } from '@quake2ts/client/hud/messages.js';
+import { MessageSystem } from '../../src/hud/messages.js';
 import { createMockAssetManager, createMockRenderer, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
-// Mock engine dependencies
-const mockRenderer = createMockRenderer({
-    width: 640,
-    height: 480,
-    // Ensure registerTexture returns a valid object that has 'width' property
-    registerTexture: vi.fn().mockReturnValue({ width: 24, height: 24, name: 'mock' } as any),
-    registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24, name: 'mock' } as any),
-});
-
-// Mock AssetManager using centralized factory from test-utils
-const mockAssetManager = createMockAssetManager({
-    loadTexture: vi.fn().mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' } as PreparedTexture),
-    // Ensure crosshair loading doesn't fail
-    loadSprite: vi.fn().mockResolvedValue({}),
-});
-
 describe('HUD Rendering', () => {
+    let mockRenderer: Renderer;
+    let mockAssetManager: AssetManager;
     let ps: PlayerState;
     let client: PlayerClient;
     let messageSystem: MessageSystem;
@@ -30,11 +16,20 @@ describe('HUD Rendering', () => {
     beforeEach(async () => {
         vi.clearAllMocks();
 
-        // Re-apply return values in beforeEach to persist across tests
-        (mockRenderer.registerTexture as any).mockReturnValue({ width: 24, height: 24, name: 'mock' });
-        (mockRenderer.registerPic as any).mockResolvedValue({ width: 24, height: 24, name: 'mock' });
-        (mockAssetManager.loadTexture as any).mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' });
+        // Create fresh mocks for each test to ensure no state leakage
+        mockRenderer = createMockRenderer({
+            width: 640,
+            height: 480,
+            // Ensure registerTexture returns a valid object that has 'width' property
+            registerTexture: vi.fn().mockReturnValue({ width: 24, height: 24, name: 'mock' } as any),
+            registerPic: vi.fn().mockResolvedValue({ width: 24, height: 24, name: 'mock' } as any),
+        });
 
+        mockAssetManager = createMockAssetManager({
+            loadTexture: vi.fn().mockResolvedValue({ width: 24, height: 24, levels: [], source: 'pcx' } as PreparedTexture),
+            // Ensure crosshair loading doesn't fail
+            loadSprite: vi.fn().mockResolvedValue({}),
+        });
 
         ps = createPlayerStateFactory({
             damageAlpha: 0,
