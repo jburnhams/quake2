@@ -134,13 +134,17 @@ The following high-priority cleanup issues have been resolved:
    - Deleted: `engine/tests/unit-jsdom/render/render.bspPipeline.test.ts` (redundant with `bspPipeline.test.ts`)
    - Deleted: `engine/tests/unit-jsdom/render/render.skybox.test.ts` (redundant with `skybox.test.ts`)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
+   - Moved: `bsp-tools/tests/unit/*` to `bsp-tools/tests/unit-node/`
+   - Moved: `bsp-tools/tests/integration/*` to `bsp-tools/tests/unit-node/integration/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
    - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
+   - Updated `packages/bsp-tools/package.json` with `test:unit:node` and `test:unit:jsdom`
 5. Configure node tests with `environment: 'node'` in vitest config
    - Updated `packages/game/vitest.config.ts` to support split environments
+   - Updated `packages/bsp-tools/vitest.config.ts` to include `unit-node` tests
 
 **Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
 

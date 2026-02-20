@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { BspBuilder } from '../../src/builder/BspBuilder.js';
-import { box } from '../../src/builder/primitives.js';
+import { BspBuilder } from '../../../src/builder/BspBuilder.js';
+import { box } from '../../../src/builder/primitives.js';
 
 describe('SimpleCompiler Integration', () => {
   it('compiles a simple box map', () => {
