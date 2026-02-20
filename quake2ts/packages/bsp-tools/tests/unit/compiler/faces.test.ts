@@ -6,9 +6,18 @@ import {
 } from '@quake2ts/shared';
 import {
   mergeCoplanarFaces,
-  tryMergeWinding
+  tryMergeWinding,
+  extractFaces,
+  assignFacesToLeaves
 } from '../../../src/compiler/faces';
-import type { CompileFace } from '../../../src/types/compile';
+import type { CompileFace, CompileBrush, CompilePlane } from '../../../src/types/compile';
+import {
+  CONTENTS_SOLID,
+  createEmptyBounds3,
+  createWinding
+} from '@quake2ts/shared';
+import type { TreeLeaf, TreeNode } from '../../../src/compiler/tree';
+import type { PlaneSet } from '../../../src/compiler/planes';
 
 describe('faces', () => {
   describe('tryMergeWinding', () => {
@@ -197,6 +206,172 @@ describe('faces', () => {
 
       const merged = mergeCoplanarFaces([f1, f2]);
       expect(merged.length).toBe(2);
+    });
+  });
+
+  describe('extractFaces', () => {
+    it('extracts visible faces and discards hidden ones', () => {
+      // Setup simple tree
+      // Plane 0: X=0. Normal=(1,0,0), Dist=0.
+      // Front: Leaf 0 (Empty)
+      // Back: Leaf 1 (Solid)
+
+      const planeSet = {
+        getPlanes: () => [
+          { normal: { x: 1, y: 0, z: 0 }, dist: 0, type: 0 } as CompilePlane
+        ]
+      } as PlaneSet;
+
+      const leafEmpty: TreeLeaf = {
+        contents: 0,
+        brushes: [],
+        bounds: createEmptyBounds3(),
+        faces: []
+      };
+
+      const leafSolid: TreeLeaf = {
+        contents: CONTENTS_SOLID,
+        brushes: [],
+        bounds: createEmptyBounds3(),
+        faces: []
+      };
+
+      // Brush in Solid leaf (Back of X=0)
+      const brush: CompileBrush = {
+        original: { contents: CONTENTS_SOLID } as any,
+        sides: [
+          // Side 1: X=0 plane (Front face of brush). Normal (1,0,0).
+          // Winding on X=0.
+          {
+            planeNum: 0,
+            texInfo: 0,
+            winding: createWinding(3)
+          } as any
+        ],
+        bounds: createEmptyBounds3(),
+        next: null
+      };
+
+      // Populate winding points
+      brush.sides[0].winding.points = [
+        { x: 0, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 },
+        { x: 0, y: 0, z: 1 }
+      ];
+
+      // Add brush to tree
+      leafSolid.brushes.push(brush);
+
+      const root: TreeNode = {
+        planeNum: 0,
+        children: [leafEmpty, leafSolid],
+        bounds: createEmptyBounds3()
+      };
+
+      const faces = extractFaces(root, planeSet);
+
+      // Should extract 1 face (the X=0 side)
+      // Because it's on X=0, faces Front (Empty).
+      expect(faces.length).toBe(1);
+      expect(faces[0].planeNum).toBe(0);
+    });
+
+    it('discards faces that face into solid', () => {
+       // Same setup but side normal points Back (-1,0,0).
+       // Use Plane 1: Normal (-1,0,0) dist 0. (Equivalent to X=0 facing left)
+
+       const planeSet = {
+        getPlanes: () => [
+          { normal: { x: 1, y: 0, z: 0 }, dist: 0, type: 0 } as CompilePlane,
+          { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0 } as CompilePlane
+        ]
+      } as PlaneSet;
+
+      const leafEmpty: TreeLeaf = { contents: 0, brushes: [], bounds: createEmptyBounds3() };
+      const leafSolid: TreeLeaf = { contents: CONTENTS_SOLID, brushes: [], bounds: createEmptyBounds3() };
+
+      const brush: CompileBrush = {
+        original: { contents: CONTENTS_SOLID } as any,
+        sides: [
+          // Side on X=0 but facing Back.
+          // Plane 1.
+          {
+            planeNum: 1,
+            texInfo: 0,
+            winding: createWinding(3)
+          } as any
+        ],
+        bounds: createEmptyBounds3(),
+        next: null
+      };
+      brush.sides[0].winding.points = [
+        { x: 0, y: 0, z: 1 },
+        { x: 0, y: 1, z: 0 },
+        { x: 0, y: 0, z: 0 }
+      ];
+
+      leafSolid.brushes.push(brush);
+
+      const root: TreeNode = {
+        planeNum: 0, // Split by X=0
+        children: [leafEmpty, leafSolid], // Front is Empty, Back is Solid
+        bounds: createEmptyBounds3()
+      };
+
+      // Brush side is at X=0. Facing -X.
+      // Plane 0 is X=0.
+      // Winding is on plane 0.
+      // Side Plane is 1 (-X).
+      // Dot(Plane0, Plane1) = -1. Anti-aligned.
+      // Logic says: Go Back (children[1]).
+      // children[1] is leafSolid.
+      // leafSolid is SOLID.
+      // So face is discarded.
+
+      const faces = extractFaces(root, planeSet);
+      expect(faces.length).toBe(0);
+    });
+  });
+
+  describe('assignFacesToLeaves', () => {
+    it('assigns faces to correct leaves', () => {
+      // Same tree
+      const planeSet = {
+        getPlanes: () => [
+          { normal: { x: 1, y: 0, z: 0 }, dist: 0, type: 0 } as CompilePlane
+        ]
+      } as PlaneSet;
+
+      const leafEmpty: TreeLeaf = { contents: 0, brushes: [], bounds: createEmptyBounds3(), faces: [] };
+      const leafSolid: TreeLeaf = { contents: CONTENTS_SOLID, brushes: [], bounds: createEmptyBounds3(), faces: [] };
+
+      const root: TreeNode = {
+        planeNum: 0,
+        children: [leafEmpty, leafSolid],
+        bounds: createEmptyBounds3()
+      };
+
+      // Face on X=0 facing Front
+      const face: CompileFace = {
+        planeNum: 0,
+        texInfo: 0,
+        contents: 0,
+        next: null,
+        winding: {
+          numPoints: 3,
+          points: [{x:0,y:0,z:0},{x:0,y:1,z:0},{x:0,y:0,z:1}]
+        }
+      };
+
+      assignFacesToLeaves([face], root, planeSet);
+
+      // Face aligned with plane 0 -> Front child (leafEmpty)
+      expect(leafEmpty.faces).toBeDefined();
+      expect(leafEmpty.faces!.length).toBe(1);
+
+      // Face anti-aligned -> Back child (leafSolid) should be empty
+      // Note: In test setup, faces is [], so it is defined.
+      expect(leafSolid.faces?.length || 0).toBe(0);
     });
   });
 });

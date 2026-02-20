@@ -4,7 +4,7 @@ import {
   CONTENTS_SOLID
 } from '@quake2ts/shared';
 import { ON_EPSILON } from '../types/index.js';
-import type { CompileBrush, CompilePlane } from '../types/compile.js';
+import type { CompileBrush, CompileFace, CompilePlane } from '../types/compile.js';
 import type { PlaneSet } from './planes.js';
 import {
   splitBrush,
@@ -22,6 +22,7 @@ export interface TreeLeaf {
   contents: number;
   brushes: CompileBrush[];
   bounds: Bounds3;
+  faces?: CompileFace[];
 }
 
 export type TreeElement = TreeNode | TreeLeaf;
