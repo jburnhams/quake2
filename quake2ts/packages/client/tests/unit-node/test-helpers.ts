@@ -2,19 +2,12 @@ import { vi } from 'vitest';
 import { GetCGameAPI } from '@quake2ts/cgame';
 import { Init_Hud } from '@quake2ts/client/hud.js';
 import { createEmptyEntityState } from '@quake2ts/engine';
+import { createMockCGameAPI } from '@quake2ts/test-utils';
 
 export function resetCommonClientMocks() {
     // Reset mock return values due to mockReset: true in vitest.node.ts
     if (vi.isMockFunction(GetCGameAPI)) {
-        vi.mocked(GetCGameAPI).mockReturnValue({
-            Init: vi.fn(),
-            Shutdown: vi.fn(),
-            DrawHUD: vi.fn(),
-            ParseCenterPrint: vi.fn(),
-            NotifyMessage: vi.fn(),
-            ParseConfigString: vi.fn(),
-            ShowSubtitle: vi.fn()
-        });
+        vi.mocked(GetCGameAPI).mockReturnValue(createMockCGameAPI());
     }
 
     if (vi.isMockFunction(Init_Hud)) {
