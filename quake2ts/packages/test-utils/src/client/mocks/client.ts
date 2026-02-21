@@ -1,6 +1,16 @@
-import { vi } from 'vitest';
+import { vi, type Mock } from 'vitest';
 
-export function createMockCGameAPI() {
+export interface MockCGameAPI {
+    Init: Mock<any[], any>;
+    Shutdown: Mock<any[], any>;
+    DrawHUD: Mock<any[], any>;
+    ParseCenterPrint: Mock<any[], any>;
+    NotifyMessage: Mock<any[], any>;
+    ParseConfigString: Mock<any[], any>;
+    ShowSubtitle: Mock<any[], any>;
+}
+
+export function createMockCGameAPI(): MockCGameAPI {
     return {
         Init: vi.fn(),
         Shutdown: vi.fn(),
