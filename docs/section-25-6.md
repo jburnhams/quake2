@@ -188,8 +188,8 @@ export function partitionBrushes(
 
 ### 4.1 Extract Visible Faces
 
-- [ ] Create `src/compiler/faces.ts`
-- [ ] Implement face extraction from tree
+- [x] Create `src/compiler/faces.ts`
+- [x] Implement face extraction from tree
 
 **File: `src/compiler/faces.ts`**
 ```typescript
@@ -222,7 +222,7 @@ export function extractFaces(
 
 ### 4.2 Face Assignment to Nodes
 
-- [ ] Implement face-to-node assignment
+- [x] Implement face-to-node assignment
 
 ```typescript
 /**
@@ -239,9 +239,9 @@ export function assignFacesToNodes(
 
 ### 4.3 Tests
 
-- [ ] Test: Box produces 6 faces
-- [ ] Test: Interior faces removed
-- [ ] Test: Faces on correct side of planes
+- [x] Test: Box produces 6 faces (Covered by unit tests)
+- [x] Test: Interior faces removed (Covered by unit tests)
+- [x] Test: Faces on correct side of planes (Covered by unit tests)
 
 ---
 
@@ -487,7 +487,7 @@ export interface CompileResult {
 
 - [x] Split plane selection produces balanced trees
 - [x] Tree building handles all brush configurations
-- [ ] Face extraction produces correct faces
+- [x] Face extraction produces correct faces
 - [ ] T-junction fixing eliminates cracks
 - [ ] Node/leaf numbering correct
 - [ ] Cluster assignment correct

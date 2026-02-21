@@ -2,15 +2,284 @@ import {
   type Winding,
   type Vec3,
   createWinding,
+  copyWinding,
   windingPlane,
   crossVec3,
   dotVec3,
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  windingOnPlaneSide,
+  SIDE_FRONT,
+  SIDE_BACK,
+  SIDE_ON,
+  SIDE_CROSS,
+  CONTENTS_SOLID
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileFace, CompileBrush } from '../types/compile.js';
+import type { TreeElement, TreeNode, TreeLeaf } from './tree.js';
+import { isLeaf } from './tree.js';
+import type { PlaneSet } from './planes.js';
+
+/**
+ * Extracts all visible faces from the brush list by clipping them against the BSP tree.
+ * Faces that end up in solid leaves are discarded.
+ * Faces in empty leaves are kept.
+ */
+export function extractFaces(
+  tree: TreeElement,
+  brushes: CompileBrush[],
+  planeSet: PlaneSet
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      // Skip if side has no winding or is not marked visible (e.g. bevel)
+      if (!side.winding || !side.visible) continue;
+
+      // Skip special contents like ORIGIN (usually handled earlier but good to check)
+      // Actually contents are on the brush.
+
+      // Create initial face from the brush side
+      const face: CompileFace = {
+        planeNum: side.planeNum,
+        side: 0, // Initial side is front of its own plane
+        texInfo: side.texInfo,
+        winding: copyWinding(side.winding),
+        contents: brush.original.contents,
+        original: side,
+        next: null
+      };
+
+      // Clip face into the tree
+      // We start with the face on the "front" of its plane.
+      // But we need to make sure we handle the side correctly.
+      // Brush sides point OUTWARDS (normals point away from solid).
+      // So the face is the boundary between Solid (back) and Empty (front).
+      // We want to keep the part that faces Empty space.
+
+      const fragments = clipFaceToTree(face, tree, planeSet);
+      faces.push(...fragments);
+    }
+  }
+
+  return faces;
+}
+
+/**
+ * Clips a face against the BSP tree.
+ * Returns a list of face fragments that survived (landed in empty leaves).
+ */
+function clipFaceToTree(
+  face: CompileFace,
+  node: TreeElement,
+  planeSet: PlaneSet
+): CompileFace[] {
+  if (isLeaf(node)) {
+    // If leaf is solid, the face is "inside" a solid volume, so it is hidden (culled).
+    // EXCEPT if the face ITSELF is the surface of that solid volume?
+    // No, standard BSP face extraction (CSG-ish):
+    // We take the original brush faces. These faces define the boundary of the solid brush.
+    // If a fragment of such a face ends up inside ANOTHER solid brush (represented by a solid leaf), it is hidden.
+    // If it ends up in an EMPTY leaf, it is visible (surface of the brush facing empty space).
+
+    // Note: If the leaf is the SAME brush's content...
+    // The BSP tree represents the union of all brushes.
+    // A solid leaf means "inside the union of solids".
+    // An empty leaf means "outside".
+    // A face is on the boundary.
+    // If we are strictly INSIDE a solid leaf, we are hidden.
+
+    if (node.contents & CONTENTS_SOLID) {
+      return [];
+    }
+
+    // Empty leaf -> visible fragment
+    return [face];
+  }
+
+  // Interior node
+  const plane = planeSet.getPlanes()[node.planeNum];
+
+  // Classify face winding against split plane
+  // Note: We use a small epsilon to handle coplanar faces robustly.
+  // q2tools uses generic SplitWinding which handles epsilon.
+
+  // Optimization: If face plane is the same as node plane, we don't need to split?
+  // But we need to know which side to go down.
+  // If planes are identical (same normal/dist), face is ON plane.
+  // If planes are opposite, face is ON plane (but flipped).
+
+  const split = splitWinding(face.winding, plane.normal, plane.dist);
+  const fragments: CompileFace[] = [];
+
+  // Special handling for faces coplanar with the split plane
+  // splitWinding returns copies for both front and back if the face is ON the plane.
+  // We need to direct it to only one side based on normal alignment to avoid duplicating
+  // geometry or keeping faces that should be culled/hidden behind the plane.
+
+  const facePlane = planeSet.getPlanes()[face.planeNum];
+  const dot = dotVec3(facePlane.normal, plane.normal);
+
+  // Check if strictly on plane (split returns both)
+  if (split.front && split.back && split.front.numPoints === face.winding.numPoints) {
+      // It's on the plane. Use normal to decide direction.
+      if (dot > 0) {
+          // Face normal aligns with split plane normal -> Front
+          const frontFace = { ...face, winding: split.front };
+          fragments.push(...clipFaceToTree(frontFace, node.children[0], planeSet));
+      } else {
+          // Face normal opposes split plane normal -> Back
+          const backFace = { ...face, winding: split.back };
+          fragments.push(...clipFaceToTree(backFace, node.children[1], planeSet));
+      }
+      return fragments;
+  }
+
+  if (split.front) {
+    const frontFace = { ...face, winding: split.front };
+    fragments.push(...clipFaceToTree(frontFace, node.children[0], planeSet));
+  }
+  if (split.back) {
+    const backFace = { ...face, winding: split.back };
+    fragments.push(...clipFaceToTree(backFace, node.children[1], planeSet));
+  }
+
+  return fragments;
+}
+
+/**
+ * Assigns extracted faces to the appropriate nodes in the BSP tree.
+ * Faces are assigned to the node where they lie on the splitting plane.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planeSet: PlaneSet
+): Map<TreeNode, CompileFace[]> {
+  const assignment = new Map<TreeNode, CompileFace[]>();
+
+  for (const face of faces) {
+    filterFaceIntoTree(face, tree, planeSet, assignment);
+  }
+
+  return assignment;
+}
+
+function filterFaceIntoTree(
+  face: CompileFace,
+  node: TreeElement,
+  planeSet: PlaneSet,
+  assignment: Map<TreeNode, CompileFace[]>
+): void {
+  if (isLeaf(node)) {
+    // Should not happen for visible faces ideally, as they should be caught by a node plane?
+    // BUT, a face might lie on a plane that was never used as a splitter in the tree
+    // (e.g. if the brush was entirely inside a leaf region formed by other splits).
+    // In that case, the face is "floating" in a leaf.
+    // Wait, if it's in an empty leaf, it's visible. But who renders it?
+    // Standard BSP renders faces attached to nodes.
+    // Does Quake 2 have leaf faces? Yes, 'leaffaces' lump.
+    // So faces can be referenced by leaves.
+    // However, for correct sorting, they are usually on nodes.
+
+    // If a face reaches a leaf, it means it was never coplanar with a split plane encountered so far.
+    // We can't attach it to a node.
+    // We leave it unassigned here? Or attach to the leaf?
+    // The function signature returns Map<TreeNode, CompileFace[]>.
+    // Maybe we should just log this or handle it.
+
+    // In q2tools, faces are partitioned down. If they are on the node plane, they stay.
+    // If they go down both sides, they split.
+    // If they reach a leaf... wait.
+    // `MakeFaces` clips to leaves.
+    // Then `FixTJunctions`, `MergeFaces`.
+    // Then... `WriteBSP` -> `RecursiveWriteNode`
+    // Faces are written from the node's face list.
+    // Where are they added to the node?
+    // Ah, `MakeFaces` calls `RecursiveMakeFaces(node, ...)`.
+    // Inside `RecursiveMakeFaces`:
+    //   Calculate side of face vs node plane.
+    //   If SIDE_ON: Add to node->faces. Return.
+    //   If SIDE_FRONT: Recurse front child.
+    //   If SIDE_BACK: Recurse back child.
+    //   If SIDE_CROSS: Split, recurse both.
+
+    // So my `extractFaces` was essentially just finding *surviving fragments*.
+    // But `assignFacesToNodes` needs to *place* them.
+
+    // So `assignFacesToNodes` should walk the tree again with the *surviving* faces.
+    // And if a face reaches a leaf... it means it wasn't captured by any node plane.
+    // This implies the face is coplanar with a plane that wasn't used as a splitter?
+    // But the BSP tree is built from brush planes.
+    // If a face exists, its plane SHOULD exist in the tree path... unless that plane was skipped
+    // (e.g. because it didn't split anything better than others?).
+    // If a brush is in a leaf, its faces are in that leaf.
+    // If we want to render it, we should attach it to the leaf?
+    // But `assignFacesToNodes` returns map to TreeNode.
+
+    // Ideally, we force every face to be on a node?
+    // No, standard Quake 2 engine uses `dleafs` which index into `dleaffaces`.
+    // `dnodes` also index faces?
+    // Let's check `dnode_t`: `firstface`, `numfaces`.
+    // Let's check `dleaf_t`: `firstleafface`, `numleaffaces`.
+
+    // So faces can be on nodes OR leaves?
+    // Actually, `RecursiveWriteNode` writes faces from `node->faces`.
+    // Does it write leaf faces?
+    // `WriteLeaf` writes the `leaffaces` index.
+
+    // It seems faces are stored in a global list. Nodes and leaves just reference them.
+    // BUT, for the compilation process (CSG/Merge), we usually group them by node.
+
+    // For now, I'll follow the pattern:
+    // If OnPlane, add to Node.
+    // If Front/Back/Cross, recurse.
+    // If Leaf, it stays there (assigned to no node).
+    return;
+  }
+
+  const plane = planeSet.getPlanes()[node.planeNum];
+
+  // Determine relationship
+  // We use `windingOnPlaneSide`
+  const side = windingOnPlaneSide(face.winding, plane.normal, plane.dist);
+
+  if (side === SIDE_ON) {
+    // Face is coplanar with node plane.
+    // Add to assignment.
+    if (!assignment.has(node)) {
+      assignment.set(node, []);
+    }
+    assignment.get(node)!.push(face);
+    return;
+  }
+
+  if (side === SIDE_FRONT) {
+    filterFaceIntoTree(face, node.children[0], planeSet, assignment);
+    return;
+  }
+
+  if (side === SIDE_BACK) {
+    filterFaceIntoTree(face, node.children[1], planeSet, assignment);
+    return;
+  }
+
+  // SIDE_CROSS
+  // Split face and recurse
+  const split = splitWinding(face.winding, plane.normal, plane.dist);
+  if (split.front) {
+    const f = { ...face, winding: split.front };
+    filterFaceIntoTree(f, node.children[0], planeSet, assignment);
+  }
+  if (split.back) {
+    const b = { ...face, winding: split.back };
+    filterFaceIntoTree(b, node.children[1], planeSet, assignment);
+  }
+}
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
@@ -152,12 +421,6 @@ export function tryMergeWinding(
     newPoints.push(copyVec3(w2.points[(w2_start_idx + k) % w2.numPoints]));
   }
 
-  // Check convexity before creating winding
-  // Use a temporary winding or just check points
-  // Wait, isConvex expects points, but removeColinearPoints expects winding.
-  // We should simplify first? No, simplify removes collinear points which helps convexity check (avoids false concavity on straight lines).
-  // But standard convexity check handles collinear (dot product ~0).
-
   // Create temporary winding
   const tempW = createWinding(newPoints.length);
   tempW.points = newPoints;
@@ -187,20 +450,10 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
     const e1 = subtractVec3(p1, p0);
     const e2 = subtractVec3(p2, p1);
 
-    const c = crossVec3(e2, e1); // Quake CW: e2 x e1 points IN (opposite to normal) ?
-
-    // In Quake coordinates (Z up):
-    // Standard winding is CW?
-    // Let's rely on standard: if dot product with normal is negative, it's a reflex angle (concave).
-    // Actually, strictly speaking for CW winding, (p1-p0)x(p2-p0) aligns with normal?
-    // Shared windingPlane uses (p2-p0) x (p1-p0).
-    // So (p2-p1) x (p1-p0) -> e2 x e1.
-    // This should align with normal.
-    // So dot > 0 is convex.
+    const c = crossVec3(e2, e1);
 
     const dot = dotVec3(c, normal);
 
-    // Allow small negative for epsilon errors
     if (dot < -0.01) return false;
   }
 
