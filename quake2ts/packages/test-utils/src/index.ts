@@ -70,6 +70,7 @@ export * from './engine/builders/walBuilder.js';
 export * from './engine/builders/wavBuilder.js';
 
 // Client Mocks
+export * from './client/mocks/dependencies.js';
 export * from './client/mocks/input.js';
 export * from './client/helpers/view.js';
 export * from './client/helpers/hud.js';
