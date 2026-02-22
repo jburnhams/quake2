@@ -1,19 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createCGameImport } from '@quake2ts/client/cgameBridge';
-import { CvarRegistry } from '@quake2ts/engine';
-import { createMockClientState, createMockEngineImports } from '@quake2ts/test-utils';
+import { createMockClientState, createMockEngineImports, createMockEngineHost } from '@quake2ts/test-utils';
 
 describe('CGameImport cvar', () => {
-    let mockCvars: CvarRegistry;
     let mockHost: any;
     let mockImports: any;
     let mockState: any;
 
     beforeEach(() => {
-        mockCvars = new CvarRegistry();
-        mockHost = {
-            cvars: mockCvars
-        };
+        mockHost = createMockEngineHost();
         mockImports = {
             host: mockHost,
             engine: createMockEngineImports()
@@ -32,7 +27,7 @@ describe('CGameImport cvar', () => {
     });
 
     it('should return existing cvar if it exists', () => {
-        mockCvars.register({ name: 'test_cvar', defaultValue: '10' });
+        mockHost.cvars.register({ name: 'test_cvar', defaultValue: '10' });
         const cgameImport = createCGameImport(mockImports, mockState);
 
         const result = cgameImport.cvar('test_cvar', '20', 0);
@@ -49,7 +44,7 @@ describe('CGameImport cvar', () => {
         expect((result as any).name).toBe('new_cvar');
         expect((result as any).string).toBe('99');
 
-        const registered = mockCvars.get('new_cvar');
+        const registered = mockHost.cvars.get('new_cvar');
         expect(registered).toBeDefined();
         expect(registered?.string).toBe('99');
     });
@@ -63,7 +58,7 @@ describe('CGameImport cvar', () => {
     });
 
     it('should set cvar value', () => {
-        const cvar = mockCvars.register({ name: 'set_me', defaultValue: '0' });
+        const cvar = mockHost.cvars.register({ name: 'set_me', defaultValue: '0' });
         const cgameImport = createCGameImport(mockImports, mockState);
 
         cgameImport.cvar_set('set_me', '1');

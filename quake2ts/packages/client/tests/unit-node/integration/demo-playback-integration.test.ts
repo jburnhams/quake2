@@ -1,66 +1,27 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports, ClientMode } from '@quake2ts/client/index.js';
-import { DemoPlaybackController, EngineImports } from '@quake2ts/engine';
-import { ClientNetworkHandler } from '@quake2ts/client/demo/handler.js';
 import { DemoControls } from '@quake2ts/client/ui/demo-controls.js';
-import { GetCGameAPI } from '@quake2ts/cgame';
-import { Init_Hud } from '@quake2ts/client/hud.js';
-import { createEmptyEntityState } from '@quake2ts/engine';
 import { resetCommonClientMocks } from '../test-helpers.js';
+import { createMockEngineImports, createMockEngineHost } from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
-    const actual = await vi.importActual('@quake2ts/engine');
+    const actual = await vi.importActual<typeof import('@quake2ts/engine')>('@quake2ts/engine');
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
     return {
         ...actual,
-        DemoPlaybackController: class {
-            loadDemo = vi.fn();
-            setHandler = vi.fn();
-            update = vi.fn();
-            stop = vi.fn();
-            setSpeed = vi.fn();
-            setFrameDuration = vi.fn();
-            getCurrentTime = vi.fn().mockReturnValue(0);
-            getDuration = vi.fn().mockReturnValue(100);
-            getState = vi.fn();
-            getSpeed = vi.fn().mockReturnValue(1);
-            getPlaybackSpeed = vi.fn().mockReturnValue(1);
-            getInterpolationFactor = vi.fn().mockReturnValue(0);
-            play = vi.fn();
-            pause = vi.fn();
-            stepForward = vi.fn();
-            stepBackward = vi.fn();
-            seek = vi.fn();
-            getCurrentFrame = vi.fn().mockReturnValue(0);
-            getTotalFrames = vi.fn().mockReturnValue(100);
-        },
+        DemoPlaybackController: utils.MockDemoPlaybackController,
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
 });
 
-vi.mock('@quake2ts/client/demo/handler.js', () => ({
-    ClientNetworkHandler: class {
-        setView = vi.fn();
-        setCallbacks = vi.fn();
-        getPredictionState = vi.fn().mockReturnValue({
-             origin: { x: 0, y: 0, z: 0 },
-             velocity: { x: 0, y: 0, z: 0 },
-             viewAngles: { x: 0, y: 0, z: 0 },
-             pmFlags: 0,
-             fov: 90,
-             client: {} // Added client property to satisfy rendering condition
-        });
-        getRenderableEntities = vi.fn().mockReturnValue([]);
-        getDemoCamera = vi.fn().mockReturnValue({
-             origin: { x: 0, y: 0, z: 0 },
-             angles: { x: 0, y: 0, z: 0 },
-             fov: 90
-        });
-        latestServerFrame = 100;
-        entities = new Map();
-    }
-}));
+vi.mock('@quake2ts/client/demo/handler.js', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        ClientNetworkHandler: utils.MockClientNetworkHandler
+    };
+});
 
 vi.mock('@quake2ts/client/ui/demo-controls.js', () => ({
     DemoControls: vi.fn(function() {
@@ -83,62 +44,49 @@ vi.mock('@quake2ts/client/hud.js', () => ({
     Draw_Hud: vi.fn()
 }));
 
-vi.mock('@quake2ts/cgame', () => ({
-    ClientPrediction: class {
-        setAuthoritative = vi.fn();
-        enqueueCommand = vi.fn();
-        getPredictedState = vi.fn();
-        decayError = vi.fn();
-    },
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: class {
-        sample = vi.fn();
-    },
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('@quake2ts/cgame', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        ClientPrediction: utils.MockClientPrediction,
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: utils.MockViewEffects,
+        GetCGameAPI: vi.fn().mockReturnValue({
+            Init: vi.fn(),
+            Shutdown: vi.fn(),
+            DrawHUD: vi.fn(),
+            ParseCenterPrint: vi.fn(),
+            NotifyMessage: vi.fn(),
+            ParseConfigString: vi.fn(),
+            ShowSubtitle: vi.fn()
+        })
+    };
+});
 
 // Also mock relative path for cgame as vitest might resolve alias
-vi.mock('../../../cgame/src/index.ts', () => ({
-    ClientPrediction: class {
-        setAuthoritative = vi.fn();
-        enqueueCommand = vi.fn();
-        getPredictedState = vi.fn();
-        decayError = vi.fn();
-    },
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: class {
-        sample = vi.fn();
-    },
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('../../../cgame/src/index.ts', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        ClientPrediction: utils.MockClientPrediction,
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: utils.MockViewEffects,
+        GetCGameAPI: vi.fn().mockReturnValue({
+            Init: vi.fn(),
+            Shutdown: vi.fn(),
+            DrawHUD: vi.fn(),
+            ParseCenterPrint: vi.fn(),
+            NotifyMessage: vi.fn(),
+            ParseConfigString: vi.fn(),
+            ShowSubtitle: vi.fn()
+        })
+    };
+});
 
-vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
-    MenuSystem: class {
-        isActive = vi.fn().mockReturnValue(false);
-        closeAll = vi.fn();
-        pushMenu = vi.fn();
-        render = vi.fn();
-        handleInput = vi.fn();
-        getState = vi.fn().mockReturnValue({});
-        onStateChange = null;
-    }
-}));
+vi.mock('@quake2ts/client/ui/menu/system.js', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        MenuSystem: utils.MockMenuSystem
+    };
+});
 
 // Mock BrowserWebSocketNetDriver to avoid WebSocket dependency
 // This allows MultiplayerConnection to be instantiated normally but with a mocked driver
@@ -156,7 +104,7 @@ vi.mock('../../../src/net/browserWsDriver.ts', () => ({
 
 describe('Demo Playback Integration', () => {
     let client: ClientExports;
-    let mockEngine: EngineImports & { renderer: any, cmd: any };
+    let mockEngine: any;
     let mockRenderer: any;
 
     beforeEach(() => {
@@ -194,42 +142,33 @@ describe('Demo Playback Integration', () => {
             setUnderwaterWarp: vi.fn(),
         };
 
-        mockEngine = {
-            trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
-            assets: {
-                listFiles: vi.fn().mockReturnValue([]),
-                getMap: vi.fn(),
-                loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }), // Mock loadTexture
-            } as any,
+        const engineImports = createMockEngineImports({
             renderer: mockRenderer,
             cmd: {
                 executeText: vi.fn(),
                 register: vi.fn()
-            },
+            } as any,
             audio: {
                 sound: vi.fn(),
                 positioned_sound: vi.fn(),
-                set_music_volume: vi.fn(), // Mock set_music_volume
+                set_music_volume: vi.fn(),
                 play_track: vi.fn(),
                 play_music: vi.fn(),
                 stop_music: vi.fn()
             } as any
-        } as any;
+        });
+
+        // Ensure assets mock behaves correctly
+        engineImports.assets.loadTexture = vi.fn().mockResolvedValue({ width: 32, height: 32 });
+
+        mockEngine = engineImports;
+
+        const host = createMockEngineHost();
+        host.cvars.get = vi.fn().mockReturnValue({ string: '', number: 90 }); // Default override
 
         const imports: ClientImports = {
             engine: mockEngine,
-            host: {
-                cvars: {
-                    get: vi.fn().mockReturnValue({ string: '', number: 90 }),
-                    setValue: vi.fn(),
-                    list: vi.fn().mockReturnValue([]),
-                    register: vi.fn()
-                },
-                commands: {
-                    register: vi.fn(),
-                    execute: vi.fn()
-                }
-            } as any
+            host: host
         };
 
         client = createClient(imports);
@@ -277,7 +216,7 @@ describe('Demo Playback Integration', () => {
             alpha: 1.0,
             latest: null,
             previous: null
-        };
+        } as any;
 
         client.render(sample);
 
@@ -292,7 +231,7 @@ describe('Demo Playback Integration', () => {
     it('should use demo camera and entities during playback', () => {
         client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
 
-        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null });
+        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null } as any);
 
         expect(client.demoHandler.getRenderableEntities).toHaveBeenCalled();
         expect(client.demoHandler.getDemoCamera).toHaveBeenCalled();
@@ -303,7 +242,7 @@ describe('Demo Playback Integration', () => {
         client.startDemoPlayback(new ArrayBuffer(10), 'test.dm2');
 
         // Mock render loop that eventually calls DrawHUD
-        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null });
+        client.render({ nowMs: 1000, alpha: 1.0, latest: null, previous: null } as any);
 
         // Access the mocked instance of DemoControls
         const controlsMock = vi.mocked(DemoControls).mock.results[0].value;
