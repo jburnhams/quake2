@@ -75,7 +75,8 @@ function classifyBrushAgainstPlane(brush: CompileBrush, plane: CompilePlane): Br
  */
 export function selectSplitPlane(
   brushes: CompileBrush[],
-  planeSet: PlaneSet
+  planeSet: PlaneSet,
+  usedPlanes: Set<number>
 ): SplitCandidate | null {
   const planes = planeSet.getPlanes();
   let bestCandidate: SplitCandidate | null = null;
@@ -87,6 +88,7 @@ export function selectSplitPlane(
 
       const planeNum = side.planeNum;
       if (testedPlanes.has(planeNum)) continue;
+      if (usedPlanes.has(planeNum)) continue;
       testedPlanes.add(planeNum);
 
       const plane = planes[planeNum];
@@ -106,22 +108,21 @@ export function selectSplitPlane(
         }
       }
 
-      // Scoring
-      // q2tools: score = 5*axial + (front - back) (?? no, balance)
-      // q2tools: score = -(splitCount * 4) - (balance * 2) (approx)
-
       // Calculate total items on each side (including splits)
       const totalFront = frontCount + splitCount;
       const totalBack = backCount + splitCount;
 
-      // If plane puts everything on one side, it's not a useful splitter
-      if (totalFront === 0 || totalBack === 0) continue;
+      // Allow splits where one side is empty (to carve volume), but avoid planes that don't split anything relative to current volume.
+      // However, usedPlanes prevents picking the same plane again.
+      // If totalFront == brushes.length, we put everything on Front.
+      // If totalBack == brushes.length, we put everything on Back.
+      // In both cases, we make progress by narrowing the half-space, provided we don't reuse the plane.
 
       const balance = Math.abs(totalFront - totalBack);
-      let score = -(splitCount * 4) - (balance * 1); // Reduced balance penalty slightly
+      let score = -(splitCount * 4) - (balance * 1);
 
       if (plane.type < 3) { // Axial planes
-        score += 5; // Preference for axial
+        score += 5;
       }
 
       if (!bestCandidate || score > bestCandidate.score) {
@@ -181,7 +182,8 @@ const MAX_TREE_DEPTH = 1000;
 export function buildTree(
   brushes: CompileBrush[],
   planeSet: PlaneSet,
-  depth: number = 0
+  depth: number = 0,
+  usedPlanes: Set<number> = new Set()
 ): TreeElement {
   if (brushes.length === 0) {
     return {
@@ -203,36 +205,13 @@ export function buildTree(
     };
   }
 
-  // Calculate bounds for this node
   const bounds = calculateBoundsBrushes(brushes);
 
-  // Check if we should stop splitting (e.g. all brushes are solid and convex?)
-  // For now, naive recursive build until no useful split found.
+  const split = selectSplitPlane(brushes, planeSet, usedPlanes);
 
-  // If we only have 1 brush, can we just make it a leaf?
-  // Only if it's convex (which individual CompileBrushes are) and we are happy with 1 brush per leaf.
-  // Standard BSP tries to group brushes if they form a convex volume.
-  // But here we'll just try to split.
-
-  // Optimization: If all brushes have same content and form a convex hull...
-  // checking that is expensive.
-
-  const split = selectSplitPlane(brushes, planeSet);
-
-  // If no split is good (e.g. all splits are terrible, or we can't find a plane that separates anything)
-  // We might just make a leaf.
-  // q2tools allows splitting until no planes left.
-
-  if (!split || (split.frontCount === 0 && split.backCount === 0)) {
-     // No valid split found or plane doesn't divide anything?
-     // If splitCount > 0 but front/back are 0, it means EVERYTHING splits?
-     // That shouldn't happen with axial planes usually unless very weird.
-
-     // Fallback: Create leaf
-     const contents = brushes.length > 0 ? (brushes[0].original.contents) : 0;
-     // Note: mixed contents in a leaf is generally bad, but CSG should have separated them?
-     // Or we just OR them.
-
+  if (!split) {
+     // No valid split found. Create a leaf.
+     // This leaf represents the intersection of all parent half-spaces (solid volume of brushes).
      let combinedContents = 0;
      for (const b of brushes) combinedContents = combineContents(combinedContents, b.original.contents);
 
@@ -245,8 +224,31 @@ export function buildTree(
 
   const { front, back } = partitionBrushes(brushes, split.planeNum, planeSet);
 
-  const frontNode = buildTree(front, planeSet, depth + 1);
-  const backNode = buildTree(back, planeSet, depth + 1);
+  // Pass down used planes + new split plane
+  // Note: we can use the same Set if we clone, or just pass a new Set.
+  // Cloning is safer to avoid polluting sibling branches?
+  // Actually, a plane used in this branch MIGHT be useful in a sibling branch?
+  // If I split by Plane A.
+  // Front child is "In front of A".
+  // Back child is "Behind A".
+  // Plane A is boundary for both.
+  // Can Plane A be used again in Front child?
+  // Everything in Front child is already in front of A.
+  // So using A again puts everything on Front again (or OnPlane).
+  // So it's useless/infinite loop.
+  // So Plane A is "consumed" for both children.
+
+  // So we can accumulate used planes.
+  // But wait, what if Plane B is used in Front child?
+  // Should it be banned in Back child?
+  // No. Plane B might split Back child efficiently.
+  // So usedPlanes should branch.
+
+  const nextUsedPlanes = new Set(usedPlanes);
+  nextUsedPlanes.add(split.planeNum);
+
+  const frontNode = buildTree(front, planeSet, depth + 1, nextUsedPlanes);
+  const backNode = buildTree(back, planeSet, depth + 1, nextUsedPlanes);
 
   return {
     planeNum: split.planeNum,

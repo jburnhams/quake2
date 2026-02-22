@@ -8,9 +8,14 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  copyWinding,
+  CONTENTS_SOLID
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileFace, CompilePlane, MapBrush } from '../types/compile.js';
+import { type TreeElement, type TreeNode, isLeaf } from './tree.js';
+import { ON_EPSILON } from '../types/index.js';
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
@@ -152,12 +157,6 @@ export function tryMergeWinding(
     newPoints.push(copyVec3(w2.points[(w2_start_idx + k) % w2.numPoints]));
   }
 
-  // Check convexity before creating winding
-  // Use a temporary winding or just check points
-  // Wait, isConvex expects points, but removeColinearPoints expects winding.
-  // We should simplify first? No, simplify removes collinear points which helps convexity check (avoids false concavity on straight lines).
-  // But standard convexity check handles collinear (dot product ~0).
-
   // Create temporary winding
   const tempW = createWinding(newPoints.length);
   tempW.points = newPoints;
@@ -187,16 +186,7 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
     const e1 = subtractVec3(p1, p0);
     const e2 = subtractVec3(p2, p1);
 
-    const c = crossVec3(e2, e1); // Quake CW: e2 x e1 points IN (opposite to normal) ?
-
-    // In Quake coordinates (Z up):
-    // Standard winding is CW?
-    // Let's rely on standard: if dot product with normal is negative, it's a reflex angle (concave).
-    // Actually, strictly speaking for CW winding, (p1-p0)x(p2-p0) aligns with normal?
-    // Shared windingPlane uses (p2-p0) x (p1-p0).
-    // So (p2-p1) x (p1-p0) -> e2 x e1.
-    // This should align with normal.
-    // So dot > 0 is convex.
+    const c = crossVec3(e2, e1);
 
     const dot = dotVec3(c, normal);
 
@@ -205,4 +195,167 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
   }
 
   return true;
+}
+
+/**
+ * Extract renderable faces from BSP tree.
+ * Traverses the tree to find all original brushes, then clips their sides
+ * into the tree to find visible fragments (those landing in empty leaves).
+ */
+export function extractFaces(
+  tree: TreeElement,
+  planes: CompilePlane[]
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+  const brushes = collectBrushes(tree);
+
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      if (!side.winding || !side.visible || side.bevel) continue;
+
+      // Clip face into tree
+      clipFaceToTree(
+        side.winding,
+        tree,
+        planes,
+        side.planeNum,
+        side.texInfo,
+        brush.contents,
+        faces
+      );
+    }
+  }
+
+  return faces;
+}
+
+function collectBrushes(tree: TreeElement): Set<MapBrush> {
+  const brushes = new Set<MapBrush>();
+  function traverse(node: TreeElement) {
+    if (isLeaf(node)) {
+      for (const b of node.brushes) {
+        brushes.add(b.original);
+      }
+    } else {
+      traverse(node.children[0]);
+      traverse(node.children[1]);
+    }
+  }
+  traverse(tree);
+  return brushes;
+}
+
+function clipFaceToTree(
+  w: Winding,
+  node: TreeElement,
+  planes: CompilePlane[],
+  planeNum: number,
+  texInfo: number,
+  contents: number,
+  outFaces: CompileFace[]
+) {
+  // console.log(`Clipping face plane ${planeNum} against node ${isLeaf(node) ? 'LEAF' : 'NODE ' + node.planeNum}`);
+  if (isLeaf(node)) {
+    // If leaf is empty (not solid), face is visible
+    // console.log(`Leaf reached. Contents: ${node.contents}. Face visible? ${(node.contents & CONTENTS_SOLID) === 0}`);
+    if ((node.contents & CONTENTS_SOLID) === 0) {
+      outFaces.push({
+        planeNum,
+        side: 0, // Will be set correctly in assignFacesToNodes or here?
+                 // Usually means front side of plane.
+                 // Brush sides face OUT. If brush side plane points OUT, it's side 0.
+        texInfo,
+        winding: copyWinding(w),
+        contents,
+        next: null
+      });
+    }
+    return;
+  }
+
+  const nodePlane = planes[node.planeNum];
+
+  // Optimization: if face plane is the same as node plane
+  if (planeNum === node.planeNum) {
+    // Determine which side of the face is "front".
+    // For brush sides, the normal points OUT.
+    // The node plane splits space.
+    // If the brush side aligns with the node plane, the "front" of the face looks into the Front child.
+    // The "back" of the face is inside the brush (Solid).
+    // So we only need to check the Front child for visibility.
+    clipFaceToTree(w, node.children[0], planes, planeNum, texInfo, contents, outFaces);
+    return;
+  }
+
+  // If face plane is opposite to node plane (same geometry, flipped normal)?
+  // We don't easily know this without checking normals or having opposite plane mapping.
+  // But generally unique planes are used.
+
+  const split = splitWinding(w, nodePlane.normal, nodePlane.dist, ON_EPSILON);
+
+  if (split.front) {
+    clipFaceToTree(split.front, node.children[0], planes, planeNum, texInfo, contents, outFaces);
+  }
+  if (split.back) {
+    clipFaceToTree(split.back, node.children[1], planes, planeNum, texInfo, contents, outFaces);
+  }
+}
+
+/**
+ * Assign faces to nodes for front-to-back rendering.
+ * Faces are assigned to the node that splits the plane the face lies on.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<TreeNode, CompileFace[]> {
+  const map = new Map<TreeNode, CompileFace[]>();
+
+  function distribute(node: TreeElement, nodeFaces: CompileFace[]) {
+    if (isLeaf(node)) return;
+
+    const onFaces: CompileFace[] = [];
+    const frontFaces: CompileFace[] = [];
+    const backFaces: CompileFace[] = [];
+    const plane = planes[node.planeNum];
+
+    for (const f of nodeFaces) {
+      if (f.planeNum === node.planeNum) {
+        f.side = 0;
+        onFaces.push(f);
+      } else {
+        // Check side
+        let isFront = false;
+        let isBack = false;
+        for (const p of f.winding.points) {
+            const val = dotVec3(p, plane.normal) - plane.dist;
+            if (val > ON_EPSILON) isFront = true;
+            if (val < -ON_EPSILON) isBack = true;
+        }
+
+        if (isBack && !isFront) {
+            backFaces.push(f);
+        } else if (isFront && !isBack) {
+            frontFaces.push(f);
+        } else {
+             // Spanning or OnPlane.
+             // If spanning, we should probably split, but faces are assumed clipped.
+             // If OnPlane (ambiguous), default to front.
+             // If spanning (epsilon issues), default to front.
+             frontFaces.push(f);
+        }
+      }
+    }
+
+    if (onFaces.length > 0) {
+      map.set(node, onFaces);
+    }
+
+    distribute(node.children[0], frontFaces);
+    distribute(node.children[1], backFaces);
+  }
+
+  distribute(tree, faces);
+  return map;
 }
