@@ -41,10 +41,13 @@ export interface CompileBrush {
 /** Face structure for merging and tree construction */
 export interface CompileFace {
   planeNum: number;
+  side: number; // 0 = front, 1 = back
   texInfo: number;
   winding: Winding;
   contents: number;
   original?: CompileSide; // Reference to original brush side or previous face
   next: CompileFace | null;
   merged?: boolean;
+  lightmapOffset?: number;
+  lightmapSize?: [number, number];
 }

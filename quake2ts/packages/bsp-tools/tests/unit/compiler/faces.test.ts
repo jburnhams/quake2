@@ -2,13 +2,20 @@ import { describe, it, expect } from 'vitest';
 import {
   type Winding,
   createWinding,
-  windingArea
+  windingArea,
+  CONTENTS_SOLID
 } from '@quake2ts/shared';
 import {
   mergeCoplanarFaces,
-  tryMergeWinding
+  tryMergeWinding,
+  extractFaces,
+  assignFacesToNodes
 } from '../../../src/compiler/faces';
 import type { CompileFace } from '../../../src/types/compile';
+import { buildTree, isLeaf, type TreeNode } from '../../../src/compiler/tree';
+import { PlaneSet } from '../../../src/compiler/planes';
+import { box } from '../../../src/builder/primitives';
+import { createCompileBrush } from './helpers';
 
 describe('faces', () => {
   describe('tryMergeWinding', () => {
@@ -45,55 +52,13 @@ describe('faces', () => {
 
       // Verify area (1x1 + 1x1 = 2)
       expect(windingArea(merged!)).toBeCloseTo(2.0);
-
-      // Verify points (should be 0,0 to 2,1)
-      // Winding order preserved
-      // w1: (0,1)->(1,1)->(1,0)->(0,0)
-      // w2: (1,1)->(2,1)->(2,0)->(1,0)
-      // Shared: (1,1)->(1,0) in w1 matches (1,0)->(1,1) (reversed) in w2?
-      // w2 edge is (1,0)->(1,1)? No, (1,1) is first, (1,0) is last.
-      // w2: (1,1), (2,1), (2,0), (1,0).
-      // Edge (1,0)->(1,1) is valid.
-      // So yes, they share edge.
     });
 
     it('does not merge if result is concave (L-shape)', () => {
-      // Square 1: (0,0) to (1,1)
-      const w1: Winding = {
-        numPoints: 4,
-        points: [
-          { x: 0, y: 1, z: 0 },
-          { x: 1, y: 1, z: 0 },
-          { x: 1, y: 0, z: 0 },
-          { x: 0, y: 0, z: 0 }
-        ]
-      };
-
-      // Square 2: (1,1) to (2,2) - touching at corner (1,1) but no shared edge?
-      // Wait, let's make them share an edge but form L.
-      // Square 3: (0,1) to (1,2) - above w1.
-      // Shared edge y=1.
-
-      // w3: (0,2), (1,2), (1,1), (0,1).
-      // w1: (0,1), (1,1), (1,0), (0,0).
-      // w1 edge (1,1)->(0,1) matches w3 edge (0,1)->(1,1)?
-      // w3 has (0,1)->(0,2)->(1,2)->(1,1).
-      // w3 edge (1,1)->(0,1) is last->first.
-      // w1 edge (0,1)->(1,1).
-      // Yes.
-
-      // Merged w1+w3 is 1x2 vertical rectangle (convex).
-
       // Concave case:
-      // w1 (0,0)-(1,1)
-      // w2 (1,0)-(2,1) (Right of w1)
-      // w3 (0,1)-(1,2) (Above w1)
-
-      // Try merge (w1+w2) + w3? No, pair merge.
-      // Try merge (Rectangle 0,0-2,1) + (Square 0,1-1,2).
-      // Result is L-shape (0,0-2,1 plus 0,1-1,2).
-      // Vertices: (0,0)->(2,0)->(2,1)->(1,1)->(1,2)->(0,2)->(0,0).
-      // (1,1) is a reflex vertex.
+      // w1 (0,0)-(2,1)
+      // w2 (0,1)-(1,2)
+      // See original test for logic details
 
       const rectW: Winding = {
         numPoints: 4,
@@ -115,39 +80,14 @@ describe('faces', () => {
         ]
       }; // 1x1 above left part
 
-      // Shared edge: (0,1)->(1,1) in squareW matches (1,1)->? No.
-      // rectW: (0,1)->(2,1)->(2,0)->(0,0).
-      // squareW: (0,2)->(1,2)->(1,1)->(0,1).
-      // squareW edge (1,1)->(0,1).
-      // rectW edge?
-      // rectW goes (0,1)->(2,1).
-      // Does rectW contain (1,1)? No, only (0,1) and (2,1).
-      // So they don't share an edge explicitly if vertices don't match.
-      // tryMergeWinding requires vertex match.
-      // So this case (T-junction) will return null because no shared edge found.
-
       const normal = { x: 0, y: 0, z: 1 };
       expect(tryMergeWinding(rectW, squareW, normal)).toBeNull();
-
-      // Construct explicit L-shape with shared edge
-      // Poly1: (0,0), (2,0), (2,1), (1,1), (1,2), (0,2). (L-shape)
-      // Split into two convex polys?
-      // P1: (0,0)-(2,1) rect. P2: (0,1)-(1,2) rect.
-      // They don't share edge vertices exactly.
-
-      // Valid L-shape construction requires splitting diagonal?
-      // Let's just trust that the function returns null if no shared edge vertices found.
     });
   });
 
   describe('mergeCoplanarFaces', () => {
     it('merges a grid of 4 squares into 1', () => {
       // 2x2 grid
-      // Top-Left: (0,1)-(1,2)
-      // Top-Right: (1,1)-(2,2)
-      // Bot-Left: (0,0)-(1,1)
-      // Bot-Right: (1,0)-(2,1)
-
       const tl = {
         numPoints: 4,
         points: [{x:0,y:2,z:0}, {x:1,y:2,z:0}, {x:1,y:1,z:0}, {x:0,y:1,z:0}]
@@ -197,6 +137,65 @@ describe('faces', () => {
 
       const merged = mergeCoplanarFaces([f1, f2]);
       expect(merged.length).toBe(2);
+    });
+  });
+
+  describe('extractFaces', () => {
+    it('extracts faces from a simple box', () => {
+      // 1. Create a box brush
+      const bDef = box({
+        origin: { x: 0, y: 0, z: 0 },
+        size: { x: 64, y: 64, z: 64 }
+      });
+      const planeSet = new PlaneSet();
+      const brush = createCompileBrush(bDef, planeSet, CONTENTS_SOLID);
+
+      // 2. Build tree
+      const tree = buildTree([brush], planeSet);
+
+      // Verify tree is not just a leaf
+      expect(isLeaf(tree)).toBe(false);
+
+      const faces = extractFaces(tree, planeSet.getPlanes());
+
+      // Should have 6 visible faces (the outer walls) because they face the void (Empty)
+      expect(faces.length).toBe(6);
+
+      // Verify faces
+      // Size 64x64 = 4096
+      for (const f of faces) {
+        expect(windingArea(f.winding)).toBeCloseTo(4096);
+      }
+    });
+  });
+
+  describe('assignFacesToNodes', () => {
+    it('assigns faces to correct nodes', () => {
+       const bDef = box({
+        origin: { x: 0, y: 0, z: 0 },
+        size: { x: 64, y: 64, z: 64 }
+       });
+       const planeSet = new PlaneSet();
+       const brush = createCompileBrush(bDef, planeSet, CONTENTS_SOLID);
+       const tree = buildTree([brush], planeSet);
+       const faces = extractFaces(tree, planeSet.getPlanes());
+
+       const assigned = assignFacesToNodes(faces, tree, planeSet.getPlanes());
+
+       // Traverse tree and count assigned faces
+       let count = 0;
+       const traverse = (node: any) => {
+           if (isLeaf(node)) return;
+           if (assigned.has(node)) {
+               count += assigned.get(node)!.length;
+           }
+           traverse(node.children[0]);
+           traverse(node.children[1]);
+       };
+       traverse(tree);
+
+       // All 6 faces should be assigned to nodes
+       expect(count).toBe(6);
     });
   });
 });
