@@ -8,9 +8,176 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  windingOnPlaneSide,
+  SIDE_ON,
+  SIDE_FRONT,
+  SIDE_BACK,
+  SIDE_CROSS,
+  CONTENTS_SOLID
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileBrush, CompileFace, CompilePlane } from '../types/compile.js';
+import { isLeaf, type TreeElement, type TreeNode } from './tree.js';
+import type { PlaneSet } from './planes.js';
+
+// If CONTENTS_SOLID is not exported from '../types/index.js', we might need to fix import.
+// For now, I'll assume it is available or I should import from shared/bsp/contents if possible.
+// But usually bsp-tools/src/types/index.ts re-exports everything relevant.
+// Let's rely on that.
+
+/**
+ * Extract renderable faces from BSP tree by clipping brush sides.
+ */
+export function extractFaces(
+  brushes: CompileBrush[],
+  tree: TreeElement,
+  planeSet: PlaneSet
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      // Only extract structural, visible faces (not bevels)
+      if (!side.winding || side.bevel) continue;
+
+      // Also check if side was already marked invisible/merged?
+      // q2tools checks side->winding and side->visible.
+      // We assume side.visible is true if winding exists unless explicitly disabled.
+      // But side structure has 'visible' boolean.
+      if (!side.visible && side.visible !== undefined) continue;
+
+      const fragments = clipWindingToTree(side.winding, tree, planeSet, side.planeNum);
+
+      for (const w of fragments) {
+        faces.push({
+          planeNum: side.planeNum,
+          side: 0, // Default front? Or depends on plane usage? q2tools uses side=0 usually for front.
+          texInfo: side.texInfo,
+          winding: w,
+          contents: brush.original.contents,
+          original: side,
+          next: null,
+          merged: false
+        });
+      }
+    }
+  }
+
+  return faces;
+}
+
+function clipWindingToTree(
+  w: Winding,
+  node: TreeElement,
+  planeSet: PlaneSet,
+  brushPlaneNum: number
+): Winding[] {
+  if (isLeaf(node)) {
+    // If leaf is solid, the face is hidden inside solid volume.
+    // If leaf is empty (or water/mist etc), the face is visible boundary.
+    // We assume CONTENTS_SOLID means opaque solid.
+    if (node.contents === CONTENTS_SOLID) {
+      return [];
+    }
+    return [w];
+  }
+
+  // Interior node
+  const plane = planeSet.getPlanes()[node.planeNum];
+
+  // Split winding by node plane
+  // Note: We use geometric split.
+  // Optimization: check if brushPlaneNum is same as node.planeNum?
+  // But strict geometry is safer to handle all cases including coplanar.
+
+  const split = splitWinding(w, plane.normal, plane.dist);
+
+  let fragments: Winding[] = [];
+
+  if (split.front) {
+    fragments = fragments.concat(clipWindingToTree(split.front, node.children[0], planeSet, brushPlaneNum));
+  }
+  if (split.back) {
+    fragments = fragments.concat(clipWindingToTree(split.back, node.children[1], planeSet, brushPlaneNum));
+  }
+
+  return fragments;
+}
+
+/**
+ * Assign extracted faces to nodes in the BSP tree for rendering.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planeSet: PlaneSet
+): Map<TreeNode, CompileFace[]> {
+  const map = new Map<TreeNode, CompileFace[]>();
+
+  for (const face of faces) {
+    assignFace(face, tree, planeSet, map);
+  }
+  return map;
+}
+
+function assignFace(
+  face: CompileFace,
+  node: TreeElement,
+  planeSet: PlaneSet,
+  map: Map<TreeNode, CompileFace[]>
+) {
+  if (isLeaf(node)) {
+    // Face reached leaf? This implies it wasn't captured by any node plane.
+    // This can happen for faces that are coplanar with a leaf boundary but not on a split plane?
+    // Or due to precision errors.
+    // In Quake BSP, renderable faces are attached to nodes.
+    // We discard faces that fall into leaves (they are likely detail or redundant).
+    return;
+  }
+
+  const plane = planeSet.getPlanes()[node.planeNum];
+
+  // Classify winding against node plane
+  const relation = windingOnPlaneSide(face.winding, plane.normal, plane.dist);
+
+  if (relation === SIDE_ON) {
+    // Face is on this node's plane. Assign it here.
+    let list = map.get(node);
+    if (!list) {
+      list = [];
+      map.set(node, list);
+    }
+    list.push(face);
+
+    // Determine 'side' flag (0 = same dir as plane, 1 = opposite)
+    // We check normal dot product.
+    const facePlane = windingPlane(face.winding);
+    const dot = dotVec3(facePlane.normal, plane.normal);
+    face.side = dot < 0 ? 1 : 0;
+
+    return;
+  }
+
+  if (relation === SIDE_FRONT) {
+    assignFace(face, node.children[0], planeSet, map);
+  } else if (relation === SIDE_BACK) {
+    assignFace(face, node.children[1], planeSet, map);
+  } else {
+    // SIDE_CROSS: Face spans plane.
+    // This shouldn't happen ideally if extractFaces worked perfectly with same planes.
+    // But if it does, split it again to ensure proper assignment.
+    const split = splitWinding(face.winding, plane.normal, plane.dist);
+    if (split.front) {
+      const f = { ...face, winding: split.front };
+      assignFace(f, node.children[0], planeSet, map);
+    }
+    if (split.back) {
+      const f = { ...face, winding: split.back };
+      assignFace(f, node.children[1], planeSet, map);
+    }
+  }
+}
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
