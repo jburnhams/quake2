@@ -75,7 +75,8 @@ function classifyBrushAgainstPlane(brush: CompileBrush, plane: CompilePlane): Br
  */
 export function selectSplitPlane(
   brushes: CompileBrush[],
-  planeSet: PlaneSet
+  planeSet: PlaneSet,
+  usedPlanes: Set<number>
 ): SplitCandidate | null {
   const planes = planeSet.getPlanes();
   let bestCandidate: SplitCandidate | null = null;
@@ -86,7 +87,9 @@ export function selectSplitPlane(
       if (!side.winding || side.bevel) continue;
 
       const planeNum = side.planeNum;
-      if (testedPlanes.has(planeNum)) continue;
+
+      // Skip if already checked in this loop OR already used in ancestry
+      if (testedPlanes.has(planeNum) || usedPlanes.has(planeNum)) continue;
       testedPlanes.add(planeNum);
 
       const plane = planes[planeNum];
@@ -114,8 +117,8 @@ export function selectSplitPlane(
       const totalFront = frontCount + splitCount;
       const totalBack = backCount + splitCount;
 
-      // If plane puts everything on one side, it's not a useful splitter
-      if (totalFront === 0 || totalBack === 0) continue;
+      // Allow splits where one side is empty (to define convex hulls)
+      // provided the plane is valid.
 
       const balance = Math.abs(totalFront - totalBack);
       let score = -(splitCount * 4) - (balance * 1); // Reduced balance penalty slightly
@@ -181,7 +184,8 @@ const MAX_TREE_DEPTH = 1000;
 export function buildTree(
   brushes: CompileBrush[],
   planeSet: PlaneSet,
-  depth: number = 0
+  depth: number = 0,
+  usedPlanes: Set<number> = new Set()
 ): TreeElement {
   if (brushes.length === 0) {
     return {
@@ -206,33 +210,11 @@ export function buildTree(
   // Calculate bounds for this node
   const bounds = calculateBoundsBrushes(brushes);
 
-  // Check if we should stop splitting (e.g. all brushes are solid and convex?)
-  // For now, naive recursive build until no useful split found.
+  const split = selectSplitPlane(brushes, planeSet, usedPlanes);
 
-  // If we only have 1 brush, can we just make it a leaf?
-  // Only if it's convex (which individual CompileBrushes are) and we are happy with 1 brush per leaf.
-  // Standard BSP tries to group brushes if they form a convex volume.
-  // But here we'll just try to split.
-
-  // Optimization: If all brushes have same content and form a convex hull...
-  // checking that is expensive.
-
-  const split = selectSplitPlane(brushes, planeSet);
-
-  // If no split is good (e.g. all splits are terrible, or we can't find a plane that separates anything)
-  // We might just make a leaf.
-  // q2tools allows splitting until no planes left.
-
-  if (!split || (split.frontCount === 0 && split.backCount === 0)) {
-     // No valid split found or plane doesn't divide anything?
-     // If splitCount > 0 but front/back are 0, it means EVERYTHING splits?
-     // That shouldn't happen with axial planes usually unless very weird.
-
-     // Fallback: Create leaf
+  // If no split found, create leaf
+  if (!split) {
      const contents = brushes.length > 0 ? (brushes[0].original.contents) : 0;
-     // Note: mixed contents in a leaf is generally bad, but CSG should have separated them?
-     // Or we just OR them.
-
      let combinedContents = 0;
      for (const b of brushes) combinedContents = combineContents(combinedContents, b.original.contents);
 
@@ -245,8 +227,12 @@ export function buildTree(
 
   const { front, back } = partitionBrushes(brushes, split.planeNum, planeSet);
 
-  const frontNode = buildTree(front, planeSet, depth + 1);
-  const backNode = buildTree(back, planeSet, depth + 1);
+  // Pass updated usedPlanes to children
+  const nextUsedPlanes = new Set(usedPlanes);
+  nextUsedPlanes.add(split.planeNum);
+
+  const frontNode = buildTree(front, planeSet, depth + 1, nextUsedPlanes);
+  const backNode = buildTree(back, planeSet, depth + 1, nextUsedPlanes);
 
   return {
     planeNum: split.planeNum,
