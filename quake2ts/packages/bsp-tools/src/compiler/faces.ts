@@ -8,9 +8,248 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  clipWindingEpsilon,
+  copyWinding,
+  hasAnyContents,
+  MASK_OPAQUE
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileFace, CompileBrush, CompilePlane } from '../types/compile.js';
+import {
+  type TreeElement,
+  type TreeNode,
+  type TreeLeaf,
+  isLeaf
+} from './tree.js';
+import { PlaneSet } from './planes.js';
+
+// Re-export mergeCoplanarFaces and tryMergeWinding (keeping existing code)
+// ... (I will include the existing code here)
+
+/**
+ * Extracts visible faces from the BSP tree.
+ * Iterates over all brushes in the tree leaves, clips their faces to the tree,
+ * and retains fragments that border transparent content.
+ */
+export function extractFaces(
+  tree: TreeElement,
+  planes: CompilePlane[]
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+
+  // 1. Collect all brushes from the tree
+  const brushes = collectBrushes(tree);
+
+  // 2. Process each brush
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      if (!side.winding) continue;
+
+      // We only care about sides that are on the boundary of the brush.
+      // (Which they all are).
+
+      // Clip the face winding into the tree to find visible fragments
+      const visibleWindings = clipFaceToTree(side.winding, tree, planes);
+
+      for (const w of visibleWindings) {
+        // Create a face for each visible fragment
+        const face: CompileFace = {
+          planeNum: side.planeNum,
+          texInfo: side.texInfo,
+          winding: w,
+          contents: brush.original.contents,
+          original: side,
+          next: null
+        };
+        faces.push(face);
+      }
+    }
+  }
+
+  return faces;
+}
+
+function collectBrushes(tree: TreeElement): CompileBrush[] {
+  const brushes: CompileBrush[] = [];
+  const visited = new Set<CompileBrush>();
+
+  function traverse(node: TreeElement) {
+    if (isLeaf(node)) {
+      for (const b of node.brushes) {
+        if (!visited.has(b)) {
+          visited.add(b);
+          brushes.push(b);
+        }
+      }
+    } else {
+      traverse(node.children[0]);
+      traverse(node.children[1]);
+    }
+  }
+
+  traverse(tree);
+  return brushes;
+}
+
+function clipFaceToTree(
+  w: Winding,
+  node: TreeElement,
+  planes: CompilePlane[]
+): Winding[] {
+  // If we reached a leaf, check visibility
+  if (isLeaf(node)) {
+    // If the content in front of the face is opaque, the face is hidden.
+    if (hasAnyContents(node.contents, MASK_OPAQUE)) {
+      return [];
+    }
+    // Otherwise (Empty, Water, Window, etc.), it's visible.
+    return [copyWinding(w)];
+  }
+
+  // It's a node
+  const plane = planes[node.planeNum];
+
+  // Classify winding against node plane
+  // Use a slightly larger epsilon to robustly handle coplanar faces
+  const epsilon = 0.01;
+
+  // We need to know where the winding lies relative to the plane.
+  // Using splitWinding logic.
+
+  // Special handling for faces that are coplanar with the node plane.
+  // If the face normal is parallel to the plane normal, it's coplanar.
+  // The face normal is determined by its plane (side.planeNum).
+  // But we passed just the winding.
+  // Let's re-calculate winding plane or check points.
+  // For robustness, just use splitWinding.
+
+  const split = splitWinding(w, plane.normal, plane.dist, epsilon);
+
+  const res: Winding[] = [];
+
+  // Process Front fragment
+  if (split.front) {
+    res.push(...clipFaceToTree(split.front, node.children[0], planes));
+  }
+
+  // Process Back fragment
+  if (split.back) {
+    res.push(...clipFaceToTree(split.back, node.children[1], planes));
+  }
+
+  // What about coplanar faces (ON)?
+  // splitWinding puts them in BOTH front and back if they are strictly ON?
+  // Let's check shared/math/winding.ts implementation I read earlier.
+  // "If counts[SIDE_FRONT] === 0 && counts[SIDE_BACK] === 0 ... both front and back get a copy"
+  // Yes, it duplicates.
+  // But we don't want to duplicate the face into both children.
+  // We want to send it to the side it faces.
+  // So we need to detect if it was put in BOTH (i.e. it was ON).
+
+  // If w was ON, split.front is copy and split.back is copy.
+  // We can check if w matches the plane.
+
+  // Optimization: Check for ON before splitting.
+  // If the winding is coplanar with the node plane...
+  // Calculate dot product of winding normal and plane normal.
+  const wp = windingPlane(w);
+  const dot = dotVec3(wp.normal, plane.normal);
+
+  // If aligned (dot > 0.9 or < -0.9) AND on plane (dist matches)
+  // Check one point
+  const distDiff = Math.abs(dotVec3(w.points[0], plane.normal) - plane.dist);
+
+  if (distDiff < epsilon && Math.abs(dot) > 0.9) {
+    // It is ON the plane.
+    // Send to the side the normal points to.
+    if (dot > 0) {
+      // Normal points same direction as plane normal -> Front
+      return clipFaceToTree(w, node.children[0], planes);
+    } else {
+      // Normal points opposite -> Back
+      return clipFaceToTree(w, node.children[1], planes);
+    }
+  }
+
+  // Not coplanar (or not exactly), proceed with split results
+  return res;
+}
+
+/**
+ * Assigns extracted faces to the nodes of the BSP tree.
+ * Faces that lie on a node's split plane are assigned to that node.
+ * Faces that fall through to leaves are assigned to the leaf.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<TreeElement, CompileFace[]> {
+  const map = new Map<TreeElement, CompileFace[]>();
+
+  function add(element: TreeElement, face: CompileFace) {
+    if (!map.has(element)) {
+      map.set(element, []);
+    }
+    map.get(element)!.push(face);
+  }
+
+  for (const face of faces) {
+    let node = tree;
+    let assigned = false;
+
+    // Traverse down to find the node
+    while (!isLeaf(node)) {
+      const plane = planes[node.planeNum];
+      const facePlane = planes[face.planeNum];
+
+      // Check if face lies on this node's plane
+      // Use plane index comparison first for speed (if normalized)
+      if (face.planeNum === node.planeNum) {
+        // Same plane -> Same direction
+        add(node, face);
+        assigned = true;
+        break;
+      }
+
+      // What if it's the same plane but opposite (flipped)?
+      // CompilePlane doesn't explicitly link flipped planes, but usually we prefer the node that splits it.
+      // If the face is coplanar, it belongs on this node.
+      // Check geometric match.
+
+      const dot = dotVec3(facePlane.normal, plane.normal);
+      const distDiff = Math.abs(facePlane.dist - plane.dist);
+
+      if (distDiff < 0.01 && Math.abs(dot) > 0.99) {
+        // Coplanar.
+        add(node, face);
+        assigned = true;
+        break;
+      }
+
+      // Not on this plane, decide which side to go down.
+      // Since face is a fragment from extractFaces, it shouldn't span the plane.
+      // It must be effectively Front or Back.
+      // Check first point.
+      const p = face.winding.points[0];
+      const d = dotVec3(p, plane.normal) - plane.dist;
+
+      if (d > -0.01) { // Front (bias towards front for On-like cases that aren't split?)
+        node = node.children[0];
+      } else {
+        node = node.children[1];
+      }
+    }
+
+    if (!assigned) {
+      // Reached a leaf
+      add(node, face);
+    }
+  }
+
+  return map;
+}
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
@@ -152,12 +391,6 @@ export function tryMergeWinding(
     newPoints.push(copyVec3(w2.points[(w2_start_idx + k) % w2.numPoints]));
   }
 
-  // Check convexity before creating winding
-  // Use a temporary winding or just check points
-  // Wait, isConvex expects points, but removeColinearPoints expects winding.
-  // We should simplify first? No, simplify removes collinear points which helps convexity check (avoids false concavity on straight lines).
-  // But standard convexity check handles collinear (dot product ~0).
-
   // Create temporary winding
   const tempW = createWinding(newPoints.length);
   tempW.points = newPoints;
@@ -187,16 +420,7 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
     const e1 = subtractVec3(p1, p0);
     const e2 = subtractVec3(p2, p1);
 
-    const c = crossVec3(e2, e1); // Quake CW: e2 x e1 points IN (opposite to normal) ?
-
-    // In Quake coordinates (Z up):
-    // Standard winding is CW?
-    // Let's rely on standard: if dot product with normal is negative, it's a reflex angle (concave).
-    // Actually, strictly speaking for CW winding, (p1-p0)x(p2-p0) aligns with normal?
-    // Shared windingPlane uses (p2-p0) x (p1-p0).
-    // So (p2-p1) x (p1-p0) -> e2 x e1.
-    // This should align with normal.
-    // So dot > 0 is convex.
+    const c = crossVec3(e2, e1);
 
     const dot = dotVec3(c, normal);
 
