@@ -184,12 +184,12 @@ export function partitionBrushes(
 
 ---
 
-## 4. Face Extraction
+## 4. Face Extraction (COMPLETED)
 
 ### 4.1 Extract Visible Faces
 
-- [ ] Create `src/compiler/faces.ts`
-- [ ] Implement face extraction from tree
+- [x] Create `src/compiler/faces.ts`
+- [x] Implement face extraction from tree
 
 **File: `src/compiler/faces.ts`**
 ```typescript
@@ -222,7 +222,7 @@ export function extractFaces(
 
 ### 4.2 Face Assignment to Nodes
 
-- [ ] Implement face-to-node assignment
+- [x] Implement face-to-node assignment
 
 ```typescript
 /**
@@ -239,13 +239,13 @@ export function assignFacesToNodes(
 
 ### 4.3 Tests
 
-- [ ] Test: Box produces 6 faces
-- [ ] Test: Interior faces removed
-- [ ] Test: Faces on correct side of planes
+- [x] Test: Box produces 6 faces
+- [x] Test: Interior faces removed
+- [x] Test: Faces on correct side of planes
 
 ---
 
-## 5. T-Junction Fixing
+## 5. T-Junction Fixing (COMPLETED)
 
 ### 5.1 What Are T-Junctions?
 
@@ -260,7 +260,7 @@ When edges meet at points not shared by adjacent faces, rendering artifacts (cra
 
 ### 5.2 Fix T-Junctions
 
-- [ ] Implement T-junction fixing
+- [x] Implement T-junction fixing
 
 ```typescript
 /**
@@ -283,9 +283,9 @@ export function fixTJunctions(
 
 ### 5.3 Tests
 
-- [ ] Test: Adjacent faces share edge vertices
-- [ ] Test: No T-junctions after fix
-- [ ] Test: Face windings still valid
+- [x] Test: Adjacent faces share edge vertices
+- [x] Test: No T-junctions after fix
+- [x] Test: Face windings still valid
 
 ---
 
@@ -487,8 +487,8 @@ export interface CompileResult {
 
 - [x] Split plane selection produces balanced trees
 - [x] Tree building handles all brush configurations
-- [ ] Face extraction produces correct faces
-- [ ] T-junction fixing eliminates cracks
+- [x] Face extraction produces correct faces
+- [x] T-junction fixing eliminates cracks
 - [ ] Node/leaf numbering correct
 - [ ] Cluster assignment correct
 - [ ] Models created for brush entities
