@@ -3,6 +3,8 @@ import {
   removeViewTranslation,
   computeSkyScroll,
   SkyboxPipeline,
+  SKYBOX_VERTEX_SHADER,
+  SKYBOX_FRAGMENT_SHADER,
 } from '../../../src/render/skybox.js';
 import { mat4, vec3 } from 'gl-matrix';
 import { createMockWebGL2Context } from '@quake2ts/test-utils';
@@ -135,6 +137,13 @@ describe('skybox', () => {
 
       pipeline.draw();
       expect(gl.drawArrays).toHaveBeenCalledWith(gl.TRIANGLES, 0, 36);
+    });
+  });
+
+  describe('Skybox shader sources', () => {
+    it('exposes shader sources for validation', () => {
+      expect(SKYBOX_VERTEX_SHADER).toContain('a_position');
+      expect(SKYBOX_FRAGMENT_SHADER).toContain('samplerCube');
     });
   });
 });
