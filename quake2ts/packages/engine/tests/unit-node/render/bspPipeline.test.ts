@@ -254,6 +254,55 @@ describe('bspPipeline', () => {
         expect(factorsCall[1][3]).toBe(0);
     });
 
+    it('should bind dlights', () => {
+      const gl = createMockGl();
+      const pipeline = new BspSurfacePipeline(gl);
+
+      const dlights = [{
+         origin: { x: 10, y: 20, z: 30 },
+         color: { x: 1, y: 0, z: 0 },
+         intensity: 200,
+         die: 0
+      }];
+
+      pipeline.bind({
+        modelViewProjection: mockMvp,
+        dlights: dlights
+      });
+
+      // Check u_numDlights
+      const numDlightsCall = (gl.uniform1i as any).mock.calls.find(
+          (call: any) => call[0]?.id === mockLocations.u_numDlights.id
+      );
+      expect(numDlightsCall).toBeDefined();
+      expect(numDlightsCall[1]).toBe(1);
+
+      // Check u_dlights[0].position
+      const posCall = (gl.uniform3f as any).mock.calls.find(
+          (call: any) => call[0]?.id === mockLocations['u_dlights[0].position'].id
+      );
+      expect(posCall).toBeDefined();
+      expect(posCall[1]).toBe(10);
+      expect(posCall[2]).toBe(20);
+      expect(posCall[3]).toBe(30);
+
+      // Check u_dlights[0].color
+      const colorCall = (gl.uniform3f as any).mock.calls.find(
+          (call: any) => call[0]?.id === mockLocations['u_dlights[0].color'].id
+      );
+      expect(colorCall).toBeDefined();
+      expect(colorCall[1]).toBe(1);
+      expect(colorCall[2]).toBe(0);
+      expect(colorCall[3]).toBe(0);
+
+      // Check u_dlights[0].intensity
+      const intensityCall = (gl.uniform1f as any).mock.calls.find(
+          (call: any) => call[0]?.id === mockLocations['u_dlights[0].intensity'].id
+      );
+      expect(intensityCall).toBeDefined();
+      expect(intensityCall[1]).toBe(200);
+    });
+
     it('should contain new attributes in vertex shader source', () => {
         expect(BSP_SURFACE_VERTEX_SOURCE).toContain('layout(location = 3) in float a_lightmapStep;');
         expect(BSP_SURFACE_VERTEX_SOURCE).toContain('out float v_lightmapStep;');
