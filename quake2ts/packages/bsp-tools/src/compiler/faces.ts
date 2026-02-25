@@ -8,9 +8,18 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  splitWinding,
+  windingCenter,
+  windingOnPlaneSide,
+  SIDE_FRONT,
+  SIDE_BACK,
+  SIDE_ON,
+  SIDE_CROSS
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import { MASK_OPAQUE, hasAnyContents } from '@quake2ts/shared';
+import type { CompileFace, CompileBrush, CompilePlane } from '../types/compile.js';
+import { type TreeElement, type TreeNode, type TreeLeaf, isLeaf } from './tree.js';
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
@@ -152,12 +161,6 @@ export function tryMergeWinding(
     newPoints.push(copyVec3(w2.points[(w2_start_idx + k) % w2.numPoints]));
   }
 
-  // Check convexity before creating winding
-  // Use a temporary winding or just check points
-  // Wait, isConvex expects points, but removeColinearPoints expects winding.
-  // We should simplify first? No, simplify removes collinear points which helps convexity check (avoids false concavity on straight lines).
-  // But standard convexity check handles collinear (dot product ~0).
-
   // Create temporary winding
   const tempW = createWinding(newPoints.length);
   tempW.points = newPoints;
@@ -188,21 +191,319 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
     const e2 = subtractVec3(p2, p1);
 
     const c = crossVec3(e2, e1); // Quake CW: e2 x e1 points IN (opposite to normal) ?
-
-    // In Quake coordinates (Z up):
-    // Standard winding is CW?
-    // Let's rely on standard: if dot product with normal is negative, it's a reflex angle (concave).
-    // Actually, strictly speaking for CW winding, (p1-p0)x(p2-p0) aligns with normal?
-    // Shared windingPlane uses (p2-p0) x (p1-p0).
-    // So (p2-p1) x (p1-p0) -> e2 x e1.
-    // This should align with normal.
-    // So dot > 0 is convex.
-
     const dot = dotVec3(c, normal);
 
     // Allow small negative for epsilon errors
     if (dot < -0.01) return false;
   }
+
+  return true;
+}
+
+/**
+ * Extracts visible faces from the BSP tree by clipping brush sides against the tree.
+ */
+export function extractFaces(tree: TreeElement, planes: CompilePlane[]): CompileFace[] {
+  const faces: CompileFace[] = [];
+  const brushes = collectBrushes(tree);
+
+  for (const brush of brushes) {
+    for (const side of brush.sides) {
+      if (!side.winding) continue;
+      // Skip bevels? Maybe not, bevels are for collision, not rendering usually.
+      if (side.bevel) continue;
+      // Skip if texinfo is -1 (invisible/skip)
+      // Check validation logic for skipped faces?
+      // Assuming valid faces have valid winding and texinfo.
+
+      const plane = planes[side.planeNum];
+      const visibleWindings = clipFaceToTree(side.winding, tree, planes, plane.normal);
+
+      for (const w of visibleWindings) {
+        if (w.numPoints < 3) continue;
+        faces.push({
+          planeNum: side.planeNum,
+          texInfo: side.texInfo,
+          winding: w,
+          contents: brush.original.contents,
+          next: null,
+          original: side
+        });
+      }
+    }
+  }
+
+  return mergeCoplanarFaces(faces);
+}
+
+function collectBrushes(node: TreeElement): CompileBrush[] {
+  if (isLeaf(node)) return node.brushes;
+  return [...collectBrushes(node.children[0]), ...collectBrushes(node.children[1])];
+}
+
+function clipFaceToTree(
+  w: Winding,
+  node: TreeElement,
+  planes: CompilePlane[],
+  normal: Vec3
+): Winding[] {
+  if (isLeaf(node)) {
+    // If leaf is opaque (SOLID/LAVA/SLIME), face is hidden.
+    // If leaf is transparent (EMPTY/MIST/WATER), face is visible.
+    // Note: WATER is transparent but has content?
+    // MASK_OPAQUE = SOLID | SLIME | LAVA.
+    // So WATER is !OPAQUE, so it is visible.
+    // This allows seeing into water from outside, and out of water.
+    if (hasAnyContents(node.contents, MASK_OPAQUE)) {
+      return [];
+    }
+    return [w];
+  }
+
+  const plane = planes[node.planeNum];
+  const side = windingOnPlaneSide(w, plane.normal, plane.dist);
+
+  if (side === SIDE_FRONT) {
+    return clipFaceToTree(w, node.children[0], planes, normal);
+  }
+  if (side === SIDE_BACK) {
+    return clipFaceToTree(w, node.children[1], planes, normal);
+  }
+  if (side === SIDE_ON) {
+    // Face is coplanar with split plane.
+    // Send to side that matches normal direction.
+    const dot = dotVec3(normal, plane.normal);
+    if (dot > 0) {
+      return clipFaceToTree(w, node.children[0], planes, normal);
+    } else {
+      return clipFaceToTree(w, node.children[1], planes, normal);
+    }
+  }
+
+  // SIDE_CROSS: Split
+  const split = splitWinding(w, plane.normal, plane.dist);
+  let result: Winding[] = [];
+
+  if (split.front) {
+    result = result.concat(clipFaceToTree(split.front, node.children[0], planes, normal));
+  }
+  if (split.back) {
+    result = result.concat(clipFaceToTree(split.back, node.children[1], planes, normal));
+  }
+
+  return result;
+}
+
+/**
+ * Assigns faces to the tree elements (nodes/leaves) they belong to.
+ * This is primarily used to populate leaf faces.
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<TreeElement, CompileFace[]> {
+  const map = new Map<TreeElement, CompileFace[]>();
+
+  for (const face of faces) {
+    assignFaceRecursive(face, tree, planes, map);
+  }
+
+  return map;
+}
+
+function assignFaceRecursive(
+  face: CompileFace,
+  node: TreeElement,
+  planes: CompilePlane[],
+  map: Map<TreeElement, CompileFace[]>
+) {
+  if (isLeaf(node)) {
+    if (!map.has(node)) {
+      map.set(node, []);
+    }
+    map.get(node)!.push(face);
+    return;
+  }
+
+  const plane = planes[node.planeNum];
+  const side = windingOnPlaneSide(face.winding, plane.normal, plane.dist);
+
+  if (side === SIDE_FRONT) {
+    assignFaceRecursive(face, node.children[0], planes, map);
+  } else if (side === SIDE_BACK) {
+    assignFaceRecursive(face, node.children[1], planes, map);
+  } else {
+    // ON or CROSS
+    // Since faces are extracted *from* the tree, they shouldn't cross planes (they were split).
+    // So CROSS shouldn't happen theoretically if precision is perfect.
+    // If ON, it's on the plane.
+    // Standard Q2 practice: face on node plane goes down both sides?
+    // No, faces are surfaces.
+    // If it's ON the plane, it usually means it forms the boundary.
+    // The face itself is "visible" so it must border an empty leaf.
+    // We should send it down the side where it is visible?
+    // But `extractFaces` already verified visibility.
+    // So if it's ON the plane, it effectively belongs to the leaves touching that plane?
+
+    // Actually, `extractFaces` split the faces. So a face passed here is a fragment that fits in a leaf.
+    // So it should NOT cross.
+    // If it says CROSS, it's a precision issue.
+    // If it says ON, we need to decide which side.
+    // But a face on the plane borders both front and back children.
+    // Which leaf does it belong to?
+    // It belongs to the leaf that is NOT opaque?
+    // We don't check contents here.
+
+    // Let's use the center point to guide.
+    const center = windingCenter(face.winding);
+    const dist = dotVec3(center, plane.normal) - plane.dist;
+
+    if (dist > 0) assignFaceRecursive(face, node.children[0], planes, map);
+    else if (dist < 0) assignFaceRecursive(face, node.children[1], planes, map);
+    else {
+       // Exact center on plane.
+       // Use face normal to decide?
+       // If face normal is same as plane normal, it faces Front.
+       // So it is "part of" the Back child's boundary?
+       // Or Front child's boundary?
+       // A face at Z=0 facing Z+ (Up) is the floor of the upper room (Front) and ceiling of lower room (Back).
+       // In Q2, faces are linked to leaves.
+       // If I am in the upper room, I see the floor. So it belongs to Upper Leaf (Front)?
+       // Yes.
+       const faceNormal = planes[face.planeNum].normal; // Assuming face.planeNum refers to global planes
+       // Be careful: face.planeNum is the plane it lies on.
+       // Is it the same as node.planeNum?
+       // If side is ON, yes (or opposite).
+
+       const dot = dotVec3(faceNormal, plane.normal);
+       if (dot > 0) {
+          // Face aligns with plane. It faces Front.
+          // It should be visible from Front.
+          assignFaceRecursive(face, node.children[0], planes, map);
+       } else {
+          // Face opposes plane. It faces Back.
+          // Visible from Back.
+          assignFaceRecursive(face, node.children[1], planes, map);
+       }
+    }
+  }
+}
+
+/**
+ * Resolves T-junctions by adding vertices to face windings where they share edges with other faces.
+ *
+ * @param faces The list of faces to process.
+ * @param epsilon The tolerance for point-on-edge checks.
+ * @returns A new list of faces with T-junctions fixed.
+ */
+export function fixTJunctions(faces: CompileFace[], epsilon: number = 0.1): CompileFace[] {
+  // Collect all unique vertices from all faces
+  // Use a hash map or spatial structure? For O(N^2) naive check, a simple array is fine if N is small.
+  // Actually, we iterate edges and check against other faces' vertices.
+
+  // To avoid modifying faces while reading, we can compute new windings first.
+
+  // 1. Collect all vertices to avoid re-extracting them constantly.
+  // Actually, iterating faces is enough.
+
+  const newFaces = faces.map(f => ({ ...f })); // Shallow copy to update windings
+
+  for (let i = 0; i < newFaces.length; i++) {
+    const face = newFaces[i];
+    const w = face.winding;
+    let modified = false;
+
+    // We need to insert points into edges.
+    // Since inserting points changes indices, we should collect split points for each edge first.
+
+    // Edges are (p[j], p[j+1])
+    const edgeSplits: Map<number, Vec3[]> = new Map(); // edgeIndex -> points
+
+    for (let j = 0; j < w.numPoints; j++) {
+      const p1 = w.points[j];
+      const p2 = w.points[(j + 1) % w.numPoints];
+
+      const splits: Vec3[] = [];
+
+      // Check against all other faces
+      for (let k = 0; k < newFaces.length; k++) {
+        if (i === k) continue;
+        const otherFace = newFaces[k];
+
+        // Optimization: Check bounds overlap?
+        // Or check if faces are adjacent (share a plane or edge)?
+        // T-junctions happen when an edge of Face A contains a vertex of Face B.
+
+        for (const v of otherFace.winding.points) {
+           if (pointOnSegment(v, p1, p2, epsilon)) {
+             // Avoid adding p1 or p2 themselves
+             if (!pointsMatch(v, p1) && !pointsMatch(v, p2)) {
+               // Check if already added
+               if (!splits.some(s => pointsMatch(s, v))) {
+                 splits.push(v);
+               }
+             }
+           }
+        }
+      }
+
+      if (splits.length > 0) {
+        // Sort splits by distance from p1
+        splits.sort((a, b) => distance(p1, a) - distance(p1, b));
+        edgeSplits.set(j, splits);
+        modified = true;
+      }
+    }
+
+    if (modified) {
+      // Rebuild winding
+      const newPoints: Vec3[] = [];
+      for (let j = 0; j < w.numPoints; j++) {
+        newPoints.push(w.points[j]);
+        if (edgeSplits.has(j)) {
+          newPoints.push(...edgeSplits.get(j)!);
+        }
+      }
+
+      const newW = createWinding(newPoints.length);
+      newW.points = newPoints;
+      face.winding = newW;
+    }
+  }
+
+  return newFaces;
+}
+
+function pointOnSegment(p: Vec3, a: Vec3, b: Vec3, epsilon: number): boolean {
+  // Check if p is close to line segment ab
+  // 1. Check if p is collinear
+  // Cross product of (p-a) and (b-a) should be 0 (len < epsilon)
+
+  const ap = subtractVec3(p, a);
+  const ab = subtractVec3(b, a);
+
+  const c = crossVec3(ap, ab);
+  const lenSq = c.x*c.x + c.y*c.y + c.z*c.z;
+
+  // If lenSq is small, they are collinear.
+  // Normalized cross product length = sin(theta).
+  // len(c) = len(ap) * len(ab) * sin(theta).
+  // If len(c) is small, it's close to line.
+
+  // Using a tolerance related to segment length?
+  // Or absolute tolerance?
+  // Quake uses simple epsilon checks usually.
+
+  if (lenSq > epsilon * epsilon) return false;
+
+  // 2. Check if p is between a and b
+  // dot(ap, ab) should be between 0 and dot(ab, ab)
+  const dot = dotVec3(ap, ab);
+  const lenAbSq = dotVec3(ab, ab);
+
+  if (dot < -epsilon) return false;
+  if (dot > lenAbSq + epsilon) return false;
 
   return true;
 }
