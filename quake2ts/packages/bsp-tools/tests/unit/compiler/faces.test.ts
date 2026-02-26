@@ -15,17 +15,7 @@ import {
 } from '../../../src/compiler/faces';
 import type { CompileFace, CompilePlane, MapBrush } from '../../../src/types/compile';
 import type { TreeElement, TreeNode, TreeLeaf } from '../../../src/compiler/tree';
-
-// Helper to create a dummy brush
-function createDummyBrush(sides: any[], contents: number = CONTENTS_SOLID): MapBrush {
-  return {
-    entityNum: 0,
-    brushNum: 0,
-    sides: sides,
-    bounds: createEmptyBounds3(),
-    contents
-  };
-}
+import { createDummyBrush } from './helpers';
 
 describe('faces', () => {
   describe('tryMergeWinding', () => {
@@ -147,13 +137,20 @@ describe('faces', () => {
         { normal: { x: 1, y: 0, z: 0 }, dist: 0, type: 0 }
       ];
 
+      // Winding normal needs to face +X (towards empty leaf)
+      // Current points: (0,1,1) -> (0,1,-1) -> (0,-1,-1) -> (0,-1,1)
+      // (0,1,-1)-(0,1,1) = (0,0,-2)
+      // (0,-1,1)-(0,1,1) = (0,-2,0)
+      // Cross: (0,0,-2) x (0,-2,0) = ( (-2)*0 - (-2)*(-2), ... ) = (-4, 0, 0).
+      // This is -X. We need +X.
+      // Swap order.
       const sideWinding: Winding = {
         numPoints: 4,
         points: [
           { x: 0, y: 1, z: 1 },
-          { x: 0, y: 1, z: -1 },
+          { x: 0, y: -1, z: 1 },
           { x: 0, y: -1, z: -1 },
-          { x: 0, y: -1, z: 1 }
+          { x: 0, y: 1, z: -1 }
         ]
       };
 
@@ -180,9 +177,14 @@ describe('faces', () => {
         bounds: createEmptyBounds3()
       };
 
+      // Face Normal (based on cross product in log) is -X (-1,0,0).
+      // Plane Normal is +X (1,0,0).
+      // So Dot = -1 (Opposed).
+      // The code correctly sends this to the BACK child.
+      // Therefore, the BACK child must be the EMPTY one for the face to be visible.
       const root: TreeNode = {
         planeNum: 0,
-        children: [emptyLeaf, solidLeaf], // Front (X>0) is Empty. Side faces Front (X>0).
+        children: [solidLeaf, emptyLeaf], // Front (Solid), Back (Empty)
         bounds: createEmptyBounds3()
       };
 

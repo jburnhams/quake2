@@ -7,6 +7,7 @@ import {
   dotVec3,
   subtractVec3,
   copyVec3,
+  copyWinding,
   distance,
   removeColinearPoints,
   MASK_OPAQUE,
@@ -15,8 +16,7 @@ import {
   SIDE_FRONT,
   SIDE_BACK,
   SIDE_ON,
-  windingOnPlaneSide,
-  copyWinding
+  windingOnPlaneSide
 } from '@quake2ts/shared';
 import type { CompileFace, CompilePlane, MapBrush } from '../types/compile.js';
 import { type TreeElement, type TreeNode, type TreeLeaf, isLeaf } from './tree.js';
@@ -58,16 +58,22 @@ export function extractFaces(
   return faces;
 }
 
-function collectBrushes(node: TreeElement, result: Set<MapBrush>) {
-  if (isLeaf(node)) {
-    for (const b of node.brushes) {
-      if (b.original) {
-        result.add(b.original);
+function collectBrushes(root: TreeElement, result: Set<MapBrush>) {
+  const stack: TreeElement[] = [root];
+
+  while (stack.length > 0) {
+    const node = stack.pop()!;
+
+    if (isLeaf(node)) {
+      for (const b of node.brushes) {
+        if (b.original) {
+          result.add(b.original);
+        }
       }
+    } else {
+      stack.push(node.children[0]);
+      stack.push(node.children[1]);
     }
-  } else {
-    collectBrushes(node.children[0], result);
-    collectBrushes(node.children[1], result);
   }
 }
 
