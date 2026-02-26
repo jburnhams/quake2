@@ -78,6 +78,7 @@ export * from './client/mocks/download.js';
 export * from './client/mocks/state.js';
 export * from './client/mocks/console.js';
 export * from './client/helpers/prediction.js';
+export * from './client/helpers/common-mocks.js';
 
 // Visual Testing
 export * from './visual/snapshots.js';

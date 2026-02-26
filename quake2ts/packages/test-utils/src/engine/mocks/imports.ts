@@ -2,11 +2,12 @@ import { vi } from 'vitest';
 import type { EngineImports, TraceResult } from '@quake2ts/engine';
 import { createMockRenderer } from './renderer.js';
 import { createMockAssetManager } from './assets.js';
+import { createMockAudioApi } from './audio-api.js';
 import { createTraceMock } from '../../shared/collision.js';
 
 /**
  * Creates a mock EngineImports object for testing client/engine interactions.
- * Includes mocked trace, renderer, and asset manager by default.
+ * Includes mocked trace, renderer, asset manager, audio, and cmd by default.
  */
 export function createMockEngineImports(overrides?: Partial<EngineImports>): EngineImports {
   const defaultTrace = vi.fn().mockReturnValue(createTraceMock({
@@ -19,6 +20,12 @@ export function createMockEngineImports(overrides?: Partial<EngineImports>): Eng
     trace: defaultTrace,
     renderer: createMockRenderer(),
     assets: createMockAssetManager(),
+    audio: createMockAudioApi(),
+    // Added cmd for ClientImports compatibility (Client extends EngineImports with cmd)
+    cmd: {
+        executeText: vi.fn(),
+        register: vi.fn()
+    },
     ...overrides
-  };
+  } as unknown as EngineImports;
 }

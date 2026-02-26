@@ -6,7 +6,14 @@ import { DemoControls } from '@quake2ts/client/ui/demo-controls.js';
 import { GetCGameAPI } from '@quake2ts/cgame';
 import { Init_Hud } from '@quake2ts/client/hud.js';
 import { createEmptyEntityState } from '@quake2ts/engine';
-import { resetCommonClientMocks } from '../test-helpers.js';
+import {
+    createMockCGameAPI,
+    createMockClientPrediction,
+    createMockViewEffects,
+    createMockHudImports,
+    createMockEngineImports,
+    createMockRenderer
+} from '@quake2ts/test-utils';
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
@@ -78,55 +85,31 @@ vi.mock('@quake2ts/client/cgameBridge.js', () => ({
     ClientStateProvider: vi.fn()
 }));
 
-vi.mock('@quake2ts/client/hud.js', () => ({
-    Init_Hud: vi.fn().mockResolvedValue(undefined),
-    Draw_Hud: vi.fn()
-}));
+vi.mock('@quake2ts/client/hud.js', async () => {
+    const { createMockHudImports } = await import('@quake2ts/test-utils');
+    return createMockHudImports();
+});
 
-vi.mock('@quake2ts/cgame', () => ({
-    ClientPrediction: class {
-        setAuthoritative = vi.fn();
-        enqueueCommand = vi.fn();
-        getPredictedState = vi.fn();
-        decayError = vi.fn();
-    },
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: class {
-        sample = vi.fn();
-    },
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('@quake2ts/cgame', async () => {
+    const { createMockClientPrediction, createMockViewEffects, createMockCGameAPI } = await import('@quake2ts/test-utils');
+    return {
+        ClientPrediction: vi.fn(function() { return createMockClientPrediction(); }),
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: vi.fn(function() { return createMockViewEffects(); }),
+        GetCGameAPI: vi.fn(() => createMockCGameAPI())
+    };
+});
 
 // Also mock relative path for cgame as vitest might resolve alias
-vi.mock('../../../cgame/src/index.ts', () => ({
-    ClientPrediction: class {
-        setAuthoritative = vi.fn();
-        enqueueCommand = vi.fn();
-        getPredictedState = vi.fn();
-        decayError = vi.fn();
-    },
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: class {
-        sample = vi.fn();
-    },
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('../../../cgame/src/index.ts', async () => {
+    const { createMockClientPrediction, createMockViewEffects, createMockCGameAPI } = await import('@quake2ts/test-utils');
+    return {
+        ClientPrediction: vi.fn(function() { return createMockClientPrediction(); }),
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: vi.fn(function() { return createMockViewEffects(); }),
+        GetCGameAPI: vi.fn(() => createMockCGameAPI())
+    };
+});
 
 vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
     MenuSystem: class {
@@ -141,7 +124,6 @@ vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
 }));
 
 // Mock BrowserWebSocketNetDriver to avoid WebSocket dependency
-// This allows MultiplayerConnection to be instantiated normally but with a mocked driver
 vi.mock('../../../src/net/browserWsDriver.ts', () => ({
     BrowserWebSocketNetDriver: class {
         connect = vi.fn().mockResolvedValue(undefined);
@@ -161,7 +143,13 @@ describe('Demo Playback Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        resetCommonClientMocks();
+
+        // Restore common mocks cleared by mockReset: true
+        vi.mocked(GetCGameAPI).mockImplementation(() => createMockCGameAPI());
+        vi.mocked(Init_Hud).mockResolvedValue(undefined);
+        if (vi.isMockFunction(createEmptyEntityState)) {
+             vi.mocked(createEmptyEntityState).mockReturnValue({ origin: { x: 0, y: 0, z: 0 } } as any);
+        }
 
         // Mock localStorage if missing (for Node environment)
         if (typeof localStorage === 'undefined') {
@@ -175,46 +163,27 @@ describe('Demo Playback Integration', () => {
             } as any;
         }
 
-        mockRenderer = {
+        mockRenderer = createMockRenderer({
             width: 800,
             height: 600,
-            renderFrame: vi.fn(),
-            begin2D: vi.fn(),
-            end2D: vi.fn(),
-            drawfillRect: vi.fn(),
-            drawString: vi.fn(),
-            drawCenterString: vi.fn(),
-            registerTexture: vi.fn(),
-            registerPic: vi.fn(),
-            getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
-            setGamma: vi.fn(),
-            setBrightness: vi.fn(),
-            setBloom: vi.fn(),
-            setBloomIntensity: vi.fn(),
-            setUnderwaterWarp: vi.fn(),
-        };
+        });
 
-        mockEngine = {
-            trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
+        // Use createMockEngineImports which now includes cmd and audio defaults
+        const engineImports = createMockEngineImports({
+            renderer: mockRenderer,
             assets: {
                 listFiles: vi.fn().mockReturnValue([]),
                 getMap: vi.fn(),
                 loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }), // Mock loadTexture
             } as any,
-            renderer: mockRenderer,
-            cmd: {
-                executeText: vi.fn(),
-                register: vi.fn()
-            },
-            audio: {
-                sound: vi.fn(),
-                positioned_sound: vi.fn(),
-                set_music_volume: vi.fn(), // Mock set_music_volume
-                play_track: vi.fn(),
-                play_music: vi.fn(),
-                stop_music: vi.fn()
-            } as any
-        } as any;
+        });
+
+        // We need to cast because createMockEngineImports returns EngineImports
+        // but Client expects EngineImports & { cmd: ... }
+        // createMockEngineImports now returns an object that HAS cmd, but the type signature might not reflect it
+        // if we import the type from engine.
+        // But functionally it is there.
+        mockEngine = engineImports as any;
 
         const imports: ClientImports = {
             engine: mockEngine,
