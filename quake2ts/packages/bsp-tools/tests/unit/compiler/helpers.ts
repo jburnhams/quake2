@@ -3,6 +3,7 @@ import { calculateBounds } from '../../../src/compiler/csg.js';
 import type { BrushDef } from '../../../src/builder/types.js';
 import type { CompileBrush, CompileSide, MapBrush } from '../../../src/types/compile.js';
 import type { PlaneSet } from '../../../src/compiler/planes.js';
+import { createEmptyBounds3, CONTENTS_SOLID } from '@quake2ts/shared';
 
 export function createCompileBrush(def: BrushDef, planeSet: PlaneSet, contents: number = 1): CompileBrush {
   const windings = generateBrushWindings(def);
@@ -35,5 +36,15 @@ export function createCompileBrush(def: BrushDef, planeSet: PlaneSet, contents: 
     sides,
     bounds,
     next: null
+  };
+}
+
+export function createDummyBrush(sides: any[], contents: number = CONTENTS_SOLID): MapBrush {
+  return {
+    entityNum: 0,
+    brushNum: 0,
+    sides: sides,
+    bounds: createEmptyBounds3(),
+    contents
   };
 }

@@ -7,6 +7,7 @@ import {
   type PlaneSet,
   type BrushDef
 } from '@quake2ts/bsp-tools';
+import { createEmptyBounds3, CONTENTS_SOLID } from '@quake2ts/shared';
 
 /**
  * Creates a CompileBrush from a BrushDef for testing.
@@ -48,5 +49,24 @@ export function createCompileBrush(def: BrushDef, planeSet: PlaneSet, contents: 
     sides,
     bounds,
     next: null
+  };
+}
+
+/**
+ * Creates a dummy MapBrush with specified sides and contents.
+ * Useful for testing face extraction and other compiler stages where
+ * full brush geometry is not needed.
+ *
+ * @param sides Array of CompileSide objects
+ * @param contents Contents flags (default: CONTENTS_SOLID)
+ * @returns A simplified MapBrush
+ */
+export function createDummyBrush(sides: any[], contents: number = CONTENTS_SOLID): MapBrush {
+  return {
+    entityNum: 0,
+    brushNum: 0,
+    sides: sides,
+    bounds: createEmptyBounds3(),
+    contents
   };
 }
