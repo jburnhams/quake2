@@ -1,24 +1,34 @@
-
-import { describe, it, expect } from 'vitest';
-import { T_RadiusDamage } from '../../../src/combat/damage.js';
-import { DamageFlags } from '../../../src/combat/damageFlags.js';
-import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { T_RadiusDamage, DamageFlags, DamageMod, EntitySystem } from '@quake2ts/game';
+import { createEntityFactory, createTestContext, spawnEntity, TestContext } from '@quake2ts/test-utils';
 
 describe('T_RadiusDamage', () => {
+  let entitySystem: EntitySystem;
+  let imports: TestContext['imports'];
+
+  beforeEach(() => {
+    const ctx = createTestContext();
+    entitySystem = ctx.entities;
+    imports = ctx.imports;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('should apply damage to entities within radius', () => {
-    const victim = createEntityFactory({
+    const victim = spawnEntity(entitySystem, createEntityFactory({
       origin: { x: 50, y: 0, z: 0 },
       mass: 200,
       takedamage: true,
       health: 100
-    });
-    const attacker = createEntityFactory({
+    }));
+    const attacker = spawnEntity(entitySystem, createEntityFactory({
       origin: { x: 200, y: 200, z: 200 },
       mass: 200,
       takedamage: true,
       health: 100
-    });
+    }));
     const inflictor = { origin: { x: 0, y: 0, z: 0 } };
 
     const hits = T_RadiusDamage(
@@ -30,7 +40,9 @@ describe('T_RadiusDamage', () => {
       100, // radius
       DamageFlags.NONE,
       DamageMod.ROCKET,
-      0
+      0,
+      {},
+      imports.multicast
     );
 
     expect(hits.length).toBe(1);
@@ -42,12 +54,12 @@ describe('T_RadiusDamage', () => {
 
   it('should apply half damage to attacker (self-damage)', () => {
     // In Quake 2, the attacker takes half damage from their own radius attacks.
-    const attacker = createEntityFactory({
+    const attacker = spawnEntity(entitySystem, createEntityFactory({
       origin: { x: 10, y: 0, z: 0 },
       mass: 200,
       takedamage: true,
       health: 100
-    });
+    }));
     const inflictor = { origin: { x: 0, y: 0, z: 0 } };
 
     // Distance 10. Points = 100 - 0.5 * 10 = 95.
@@ -62,7 +74,9 @@ describe('T_RadiusDamage', () => {
       120,
       DamageFlags.NONE,
       DamageMod.ROCKET,
-      0
+      0,
+      {},
+      imports.multicast
     );
 
     expect(hits.length).toBe(1);

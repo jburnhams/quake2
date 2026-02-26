@@ -1,10 +1,10 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createTestContext, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity, createMonsterEntityFactory, createPlayerEntityFactory, TestContext } from '@quake2ts/test-utils';
 import { EntitySystem, T_Damage, DamageMod } from '@quake2ts/game';
 
 describe('Combat System Unit Tests', () => {
   let entitySystem: EntitySystem;
-  let imports: any;
+  let imports: TestContext['imports'];
 
   beforeEach(() => {
     const ctx = createTestContext();
@@ -39,9 +39,9 @@ describe('Combat System Unit Tests', () => {
     const mod = DamageMod.BLASTER;
 
     const result = T_Damage(
-        target as any,
-        attacker as any,
-        attacker as any,
+        target,
+        attacker, // Inflictor
+        attacker, // Attacker
         dir,
         point,
         dir, // normal
@@ -60,7 +60,7 @@ describe('Combat System Unit Tests', () => {
     expect(result?.take).toBe(20);
 
     // Kill it
-    T_Damage(target as any, attacker as any, attacker as any, dir, point, dir, 100, 100, dflags, mod, 0, imports.multicast);
+    T_Damage(target, attacker, attacker, dir, point, dir, 100, 100, dflags, mod, 0, imports.multicast);
 
     expect(target.health).toBeLessThanOrEqual(0);
     expect(target.die).toHaveBeenCalled();
