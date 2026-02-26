@@ -8,9 +8,172 @@ import {
   subtractVec3,
   copyVec3,
   distance,
-  removeColinearPoints
+  removeColinearPoints,
+  MASK_OPAQUE,
+  hasAnyContents,
+  splitWinding,
+  SIDE_FRONT,
+  SIDE_BACK,
+  SIDE_ON,
+  windingOnPlaneSide,
+  copyWinding
 } from '@quake2ts/shared';
-import type { CompileFace } from '../types/compile.js';
+import type { CompileFace, CompilePlane, MapBrush } from '../types/compile.js';
+import { type TreeElement, type TreeNode, type TreeLeaf, isLeaf } from './tree.js';
+
+/**
+ * Extract renderable faces from BSP tree
+ */
+export function extractFaces(
+  tree: TreeElement,
+  planes: CompilePlane[]
+): CompileFace[] {
+  const faces: CompileFace[] = [];
+  const uniqueBrushes = new Set<MapBrush>();
+
+  // 1. Collect all unique MapBrushes from the tree leaves
+  collectBrushes(tree, uniqueBrushes);
+
+  // 2. For each brush side, clip against tree to find visible fragments
+  for (const brush of uniqueBrushes) {
+    for (const side of brush.sides) {
+      if (!side.winding || !side.visible) continue;
+
+      // Filter this winding into the tree
+      const fragments = filterFaceIntoTree(side.winding, tree, planes);
+
+      for (const w of fragments) {
+        faces.push({
+          planeNum: side.planeNum,
+          texInfo: side.texInfo,
+          winding: w,
+          contents: brush.contents,
+          original: side,
+          next: null
+        });
+      }
+    }
+  }
+
+  return faces;
+}
+
+function collectBrushes(node: TreeElement, result: Set<MapBrush>) {
+  if (isLeaf(node)) {
+    for (const b of node.brushes) {
+      if (b.original) {
+        result.add(b.original);
+      }
+    }
+  } else {
+    collectBrushes(node.children[0], result);
+    collectBrushes(node.children[1], result);
+  }
+}
+
+function filterFaceIntoTree(
+  w: Winding,
+  node: TreeElement,
+  planes: CompilePlane[]
+): Winding[] {
+  if (isLeaf(node)) {
+    // Reached a leaf. Check if it's "transparent" (e.g. air, water)
+    // If NOT opaque, then the face is visible (bordering void/water).
+    if (!hasAnyContents(node.contents, MASK_OPAQUE)) {
+      return [copyWinding(w)];
+    }
+    // Solid/Opaque leaf -> face is hidden
+    return [];
+  }
+
+  // Node
+  const plane = planes[node.planeNum];
+  const side = windingOnPlaneSide(w, plane.normal, plane.dist);
+
+  if (side === SIDE_FRONT) {
+    return filterFaceIntoTree(w, node.children[0], planes);
+  } else if (side === SIDE_BACK) {
+    return filterFaceIntoTree(w, node.children[1], planes);
+  } else if (side === SIDE_ON) {
+    // Face is coplanar with split plane.
+    // Check alignment to decide which side to traverse.
+    const wp = windingPlane(w);
+    const dot = dotVec3(wp.normal, plane.normal);
+
+    if (dot > 0) {
+      // Aligned. Front of face is Node Front.
+      return filterFaceIntoTree(w, node.children[0], planes);
+    } else {
+      // Opposed. Front of face is Node Back.
+      return filterFaceIntoTree(w, node.children[1], planes);
+    }
+  } else {
+    // SIDE_CROSS -> Split
+    const split = splitWinding(w, plane.normal, plane.dist);
+    let result: Winding[] = [];
+    if (split.front) {
+      result = result.concat(filterFaceIntoTree(split.front, node.children[0], planes));
+    }
+    if (split.back) {
+      result = result.concat(filterFaceIntoTree(split.back, node.children[1], planes));
+    }
+    return result;
+  }
+}
+
+/**
+ * Assign faces to nodes for front-to-back rendering
+ */
+export function assignFacesToNodes(
+  faces: CompileFace[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<TreeNode, CompileFace[]> {
+  const map = new Map<TreeNode, CompileFace[]>();
+
+  for (const face of faces) {
+    assignFace(face, tree, planes, map);
+  }
+
+  return map;
+}
+
+function assignFace(
+  face: CompileFace,
+  node: TreeElement,
+  planes: CompilePlane[],
+  map: Map<TreeNode, CompileFace[]>
+) {
+  if (isLeaf(node)) {
+    return;
+  }
+
+  const plane = planes[node.planeNum];
+  const side = windingOnPlaneSide(face.winding, plane.normal, plane.dist);
+
+  if (side === SIDE_ON) {
+    // Found the node!
+    if (!map.has(node)) {
+      map.set(node, []);
+    }
+    map.get(node)!.push(face);
+  } else if (side === SIDE_FRONT) {
+    assignFace(face, node.children[0], planes, map);
+  } else if (side === SIDE_BACK) {
+    assignFace(face, node.children[1], planes, map);
+  } else {
+    // Split
+    const split = splitWinding(face.winding, plane.normal, plane.dist);
+    if (split.front) {
+      const fFront = { ...face, winding: split.front };
+      assignFace(fFront, node.children[0], planes, map);
+    }
+    if (split.back) {
+      const fBack = { ...face, winding: split.back };
+      assignFace(fBack, node.children[1], planes, map);
+    }
+  }
+}
 
 /**
  * Merges adjacent coplanar faces with same texture and contents.
