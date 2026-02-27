@@ -15,7 +15,8 @@ import {
   crossVec3,
   normalizeVec3,
   subtractVec3,
-  MAX_WORLD_COORD
+  MAX_WORLD_COORD,
+  windingPlane
 } from '@quake2ts/shared';
 
 import type { BrushDef, EntityDef, TextureDef } from '../builder/types.js';
@@ -232,9 +233,13 @@ export class BspCompiler {
 
     const finalFaces: BspFace[] = flattened.serializedFaces.map((f, i) => {
       const meta = faceMetadata[i];
+      const facePlane = planes[f.planeNum];
+      const faceWindingPlane = windingPlane(f.winding);
+      const side = dotVec3(faceWindingPlane.normal, facePlane.normal) > 0.99 ? 0 : 1;
+
       return {
         planeIndex: f.planeNum,
-        side: f.side || 0,
+        side: side,
         firstEdge: meta.firstEdge,
         numEdges: meta.numEdges,
         texInfo: f.texInfo,
