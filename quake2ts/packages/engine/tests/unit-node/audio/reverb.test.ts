@@ -1,24 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ReverbSystem, type ReverbPreset } from '../../../src/audio/reverb.js';
-import { type ReverbNode, type GainNodeLike, type ConvolverNodeLike, type AudioParamLike, type AudioBufferLike } from '../../../src/audio/context.js';
-
-// Mocks
-const createMockGain = (): GainNodeLike => ({
-  gain: { value: 1 } as AudioParamLike,
-  connect: vi.fn(),
-});
-
-const createMockConvolver = (): ConvolverNodeLike => ({
-  buffer: null,
-  normalize: true,
-  connect: vi.fn(),
-});
-
-const createMockReverbNode = (): ReverbNode => ({
-  convolver: createMockConvolver(),
-  input: createMockGain(),
-  output: createMockGain(),
-});
+import { type ReverbNode, type AudioBufferLike } from '../../../src/audio/context.js';
+import { createMockConvolverNode, createMockGainNode, FakeConvolverNode, FakeGainNode } from '@quake2ts/test-utils';
 
 const mockBuffer: AudioBufferLike = {
   duration: 1.5
@@ -29,13 +12,17 @@ describe('ReverbSystem', () => {
   let reverbSystem: ReverbSystem;
 
   beforeEach(() => {
-    reverbNode = createMockReverbNode();
+    reverbNode = {
+        convolver: createMockConvolverNode(),
+        input: createMockGainNode(),
+        output: createMockGainNode()
+    };
     reverbSystem = new ReverbSystem(reverbNode);
   });
 
   it('initializes with default gains', () => {
-    expect(reverbNode.input.gain.value).toBe(0.5);
-    expect(reverbNode.output.gain.value).toBe(1.0);
+    expect((reverbNode.input as FakeGainNode).gain.value).toBe(0.5);
+    expect((reverbNode.output as FakeGainNode).gain.value).toBe(1.0);
   });
 
   it('sets preset correctly', () => {
@@ -47,8 +34,8 @@ describe('ReverbSystem', () => {
 
     reverbSystem.setPreset(preset);
 
-    expect(reverbNode.convolver.buffer).toBe(mockBuffer);
-    expect(reverbNode.output.gain.value).toBe(0.8);
+    expect((reverbNode.convolver as FakeConvolverNode).buffer).toBe(mockBuffer);
+    expect((reverbNode.output as FakeGainNode).gain.value).toBe(0.8);
   });
 
   it('clears preset correctly', () => {
@@ -58,8 +45,8 @@ describe('ReverbSystem', () => {
     // Then clear it
     reverbSystem.setPreset(null);
 
-    expect(reverbNode.convolver.buffer).toBeNull();
-    expect(reverbNode.output.gain.value).toBe(1.0);
+    expect((reverbNode.convolver as FakeConvolverNode).buffer).toBeNull();
+    expect((reverbNode.output as FakeGainNode).gain.value).toBe(1.0);
   });
 
   it('updates buffer only when changed', () => {
@@ -69,25 +56,24 @@ describe('ReverbSystem', () => {
       };
 
       reverbSystem.setPreset(preset);
+      expect((reverbNode.convolver as FakeConvolverNode).buffer).toBe(mockBuffer);
 
-      // Spy on the setter if possible, or just reset mock interactions if we were using a proxy
-      // Since we are checking state, let's just ensure it remains set
-
+      // Re-setting same preset shouldn't change anything, just verifying logic holds
       reverbSystem.setPreset(preset);
-      expect(reverbNode.convolver.buffer).toBe(mockBuffer);
+      expect((reverbNode.convolver as FakeConvolverNode).buffer).toBe(mockBuffer);
   });
 
   it('enables and disables reverb', () => {
     // Default enabled
-    expect(reverbNode.input.gain.value).toBe(0.5);
+    expect((reverbNode.input as FakeGainNode).gain.value).toBe(0.5);
 
     // Disable
     reverbSystem.setEnabled(false);
-    expect(reverbNode.input.gain.value).toBe(0);
+    expect((reverbNode.input as FakeGainNode).gain.value).toBe(0);
 
     // Enable
     reverbSystem.setEnabled(true);
-    expect(reverbNode.input.gain.value).toBe(0.5);
+    expect((reverbNode.input as FakeGainNode).gain.value).toBe(0.5);
   });
 
   it('exposes input and output nodes', () => {
