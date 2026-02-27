@@ -1,4 +1,5 @@
 import type { Vec3, Bounds3, Winding } from '@quake2ts/shared';
+import type { BrushDef } from '../builder/types.js';
 
 export type { Winding };
 
@@ -28,6 +29,8 @@ export interface MapBrush {
   sides: CompileSide[];
   bounds: Bounds3;
   contents: number;
+  // Used to reference back to source definition
+  original?: BrushDef;
 }
 
 /** BSP brush after CSG (may be fragmented) */
@@ -47,4 +50,6 @@ export interface CompileFace {
   original?: CompileSide; // Reference to original brush side or previous face
   next: CompileFace | null;
   merged?: boolean;
+  // Added for BSP generation
+  side?: number; // 0 = front, 1 = back
 }
