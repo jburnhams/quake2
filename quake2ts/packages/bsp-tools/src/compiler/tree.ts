@@ -4,12 +4,16 @@ import {
   CONTENTS_SOLID
 } from '@quake2ts/shared';
 import { ON_EPSILON } from '../types/index.js';
-import type { CompileBrush, CompilePlane } from '../types/compile.js';
+import type { CompileBrush, CompileFace, CompilePlane } from '../types/compile.js';
 import type { PlaneSet } from './planes.js';
 import {
   splitBrush,
   combineContents
 } from './csg.js';
+import {
+  type BspNode,
+  type BspLeaf
+} from '../types/bsp.js';
 
 // Tree structures
 export interface TreeNode {
@@ -22,6 +26,9 @@ export interface TreeLeaf {
   contents: number;
   brushes: CompileBrush[];
   bounds: Bounds3;
+  // Filled during flattening
+  cluster?: number;
+  area?: number;
 }
 
 export type TreeElement = TreeNode | TreeLeaf;
@@ -75,7 +82,8 @@ function classifyBrushAgainstPlane(brush: CompileBrush, plane: CompilePlane): Br
  */
 export function selectSplitPlane(
   brushes: CompileBrush[],
-  planeSet: PlaneSet
+  planeSet: PlaneSet,
+  usedPlanes: Set<number>
 ): SplitCandidate | null {
   const planes = planeSet.getPlanes();
   let bestCandidate: SplitCandidate | null = null;
@@ -86,6 +94,7 @@ export function selectSplitPlane(
       if (!side.winding || side.bevel) continue;
 
       const planeNum = side.planeNum;
+      if (usedPlanes.has(planeNum)) continue;
       if (testedPlanes.has(planeNum)) continue;
       testedPlanes.add(planeNum);
 
@@ -106,16 +115,9 @@ export function selectSplitPlane(
         }
       }
 
-      // Scoring
-      // q2tools: score = 5*axial + (front - back) (?? no, balance)
-      // q2tools: score = -(splitCount * 4) - (balance * 2) (approx)
-
       // Calculate total items on each side (including splits)
       const totalFront = frontCount + splitCount;
       const totalBack = backCount + splitCount;
-
-      // If plane puts everything on one side, it's not a useful splitter
-      if (totalFront === 0 || totalBack === 0) continue;
 
       const balance = Math.abs(totalFront - totalBack);
       let score = -(splitCount * 4) - (balance * 1); // Reduced balance penalty slightly
@@ -181,6 +183,7 @@ const MAX_TREE_DEPTH = 1000;
 export function buildTree(
   brushes: CompileBrush[],
   planeSet: PlaneSet,
+  usedPlanes: Set<number> = new Set(),
   depth: number = 0
 ): TreeElement {
   if (brushes.length === 0) {
@@ -206,33 +209,11 @@ export function buildTree(
   // Calculate bounds for this node
   const bounds = calculateBoundsBrushes(brushes);
 
-  // Check if we should stop splitting (e.g. all brushes are solid and convex?)
-  // For now, naive recursive build until no useful split found.
+  const split = selectSplitPlane(brushes, planeSet, usedPlanes);
 
-  // If we only have 1 brush, can we just make it a leaf?
-  // Only if it's convex (which individual CompileBrushes are) and we are happy with 1 brush per leaf.
-  // Standard BSP tries to group brushes if they form a convex volume.
-  // But here we'll just try to split.
-
-  // Optimization: If all brushes have same content and form a convex hull...
-  // checking that is expensive.
-
-  const split = selectSplitPlane(brushes, planeSet);
-
-  // If no split is good (e.g. all splits are terrible, or we can't find a plane that separates anything)
-  // We might just make a leaf.
-  // q2tools allows splitting until no planes left.
-
-  if (!split || (split.frontCount === 0 && split.backCount === 0)) {
-     // No valid split found or plane doesn't divide anything?
-     // If splitCount > 0 but front/back are 0, it means EVERYTHING splits?
-     // That shouldn't happen with axial planes usually unless very weird.
-
+  if (!split) {
+     // No valid split found.
      // Fallback: Create leaf
-     const contents = brushes.length > 0 ? (brushes[0].original.contents) : 0;
-     // Note: mixed contents in a leaf is generally bad, but CSG should have separated them?
-     // Or we just OR them.
-
      let combinedContents = 0;
      for (const b of brushes) combinedContents = combineContents(combinedContents, b.original.contents);
 
@@ -243,10 +224,14 @@ export function buildTree(
      };
   }
 
+  // Add split plane to used set for children
+  const nextUsedPlanes = new Set(usedPlanes);
+  nextUsedPlanes.add(split.planeNum);
+
   const { front, back } = partitionBrushes(brushes, split.planeNum, planeSet);
 
-  const frontNode = buildTree(front, planeSet, depth + 1);
-  const backNode = buildTree(back, planeSet, depth + 1);
+  const frontNode = buildTree(front, planeSet, nextUsedPlanes, depth + 1);
+  const backNode = buildTree(back, planeSet, nextUsedPlanes, depth + 1);
 
   return {
     planeNum: split.planeNum,
@@ -273,4 +258,132 @@ function calculateBoundsBrushes(brushes: CompileBrush[]): Bounds3 {
     };
   }
   return bounds;
+}
+
+export interface FlattenedTree {
+  nodes: BspNode[];
+  leafs: BspLeaf[];
+  leafFacesList: number[][];
+  leafBrushesList: number[][];
+  serializedFaces: CompileFace[];
+}
+
+/**
+ * Flattens the recursive tree structure into linear arrays for BSP output.
+ * Assigns node/leaf indices.
+ *
+ * @param tree The root of the tree.
+ * @param faceMap A map of faces assigned to nodes.
+ * @returns Flattened tree data.
+ */
+export function flattenTree(
+  tree: TreeElement,
+  faceMap: Map<TreeNode, CompileFace[]>
+): FlattenedTree {
+  const nodes: BspNode[] = [];
+  const leafs: BspLeaf[] = [];
+  const leafFacesList: number[][] = [];
+  const leafBrushesList: number[][] = [];
+  const serializedFaces: CompileFace[] = []; // Output faces in tree traversal order
+
+  // Helper to serialize faces for a node
+  // Returns index in serializedFaces array
+  function processNodeFaces(node: TreeNode): { first: number, count: number } {
+    const nodeFaces = faceMap.get(node) || [];
+    if (nodeFaces.length === 0) return { first: 0, count: 0 };
+
+    const first = serializedFaces.length;
+    for (const f of nodeFaces) {
+      serializedFaces.push(f);
+    }
+    return { first, count: nodeFaces.length };
+  }
+
+  // Recursive flattening
+  // Returns node index (positive) or -(leaf index + 1) (negative)
+  function walk(element: TreeElement): number {
+    if (isLeaf(element)) {
+      const leafIndex = leafs.length;
+
+      // Extract unique original brush indices for this leaf
+      const brushes: number[] = [];
+      const brushSet = new Set<number>();
+      for (const b of element.brushes) {
+        if (b.original && b.original.brushNum !== undefined) {
+          const bNum = b.original.brushNum;
+          if (!brushSet.has(bNum)) {
+            brushSet.add(bNum);
+            brushes.push(bNum);
+          }
+        }
+      }
+
+      // Leaves in standard BSP don't usually hold faces for rendering, nodes do.
+      const faces: number[] = [];
+
+      leafFacesList.push(faces);
+      leafBrushesList.push(brushes);
+
+      const leaf: BspLeaf = {
+        contents: element.contents,
+        cluster: -1, // Assigned later
+        area: -1,    // Assigned later
+        mins: [
+          Math.floor(element.bounds.mins.x),
+          Math.floor(element.bounds.mins.y),
+          Math.floor(element.bounds.mins.z)
+        ],
+        maxs: [
+          Math.ceil(element.bounds.maxs.x),
+          Math.ceil(element.bounds.maxs.y),
+          Math.ceil(element.bounds.maxs.z)
+        ],
+        firstLeafFace: 0, // Placeholder, updated later when creating lumps
+        numLeafFaces: faces.length,
+        firstLeafBrush: 0, // Placeholder, updated later
+        numLeafBrushes: brushes.length
+      };
+
+      leafs.push(leaf);
+      return -(leafIndex + 1);
+    }
+
+    const nodeIndex = nodes.length;
+    // Push placeholder
+    nodes.push({} as any);
+
+    const { first, count } = processNodeFaces(element);
+
+    const frontChild = walk(element.children[0]);
+    const backChild = walk(element.children[1]);
+
+    nodes[nodeIndex] = {
+      planeIndex: element.planeNum,
+      children: [frontChild, backChild],
+      mins: [
+        Math.floor(element.bounds.mins.x),
+        Math.floor(element.bounds.mins.y),
+        Math.floor(element.bounds.mins.z)
+      ],
+      maxs: [
+        Math.ceil(element.bounds.maxs.x),
+        Math.ceil(element.bounds.maxs.y),
+        Math.ceil(element.bounds.maxs.z)
+      ],
+      firstFace: first,
+      numFaces: count
+    };
+
+    return nodeIndex;
+  }
+
+  walk(tree);
+
+  return {
+    nodes,
+    leafs,
+    leafFacesList,
+    leafBrushesList,
+    serializedFaces
+  };
 }

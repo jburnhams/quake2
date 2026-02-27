@@ -16,7 +16,8 @@ import {
   SIDE_FRONT,
   SIDE_BACK,
   SIDE_ON,
-  windingOnPlaneSide
+  windingOnPlaneSide,
+  normalizeVec3
 } from '@quake2ts/shared';
 import type { CompileFace, CompilePlane, MapBrush } from '../types/compile.js';
 import { type TreeElement, type TreeNode, type TreeLeaf, isLeaf } from './tree.js';
@@ -374,4 +375,104 @@ function isConvex(points: Vec3[], normal: Vec3): boolean {
   }
 
   return true;
+}
+
+/**
+ * Fixes T-Junctions by ensuring all faces sharing an edge also share the vertices on that edge.
+ * If a vertex from one face lies on the edge of another face, split the edge to include it.
+ *
+ * @param faces The list of faces to process.
+ * @param epsilon Tolerance for vertex colinearity checking.
+ * @returns The modified list of faces (faces are modified in-place, but returned for chaining).
+ */
+export function fixTJunctions(
+  faces: CompileFace[],
+  epsilon: number = 0.1
+): CompileFace[] {
+  let anyChanged = true;
+
+  while (anyChanged) {
+    anyChanged = false;
+
+    for (const face of faces) {
+      if (!face.winding) continue;
+
+      let w = face.winding;
+
+      const newPoints: Vec3[] = [];
+      let faceChanged = false;
+
+      for (let i = 0; i < w.numPoints; i++) {
+        const p1 = w.points[i];
+        const p2 = w.points[(i + 1) % w.numPoints];
+
+        newPoints.push(copyVec3(p1));
+
+        // Candidate points to insert on edge p1->p2
+        const inserts: { t: number, p: Vec3 }[] = [];
+        const edgeVec = subtractVec3(p2, p1);
+        const edgeLen = distance(p1, p2);
+
+        if (edgeLen < epsilon) continue; // Degenerate edge
+
+        const edgeDir = normalizeVec3(edgeVec);
+
+        // Check all other faces
+        for (const otherFace of faces) {
+          if (otherFace === face || !otherFace.winding) continue;
+
+          for (const v of otherFace.winding.points) {
+            // Check if v is on segment p1-p2
+            // It must be collinear and between p1 and p2.
+
+            // 1. Collinear check: Distance to line
+            // Vector p1->v
+            const vVec = subtractVec3(v, p1);
+            // Project vVec onto edgeDir
+            const t = dotVec3(vVec, edgeDir); // distance along line
+
+            // Must be strictly between 0 and length (don't insert if it's already an endpoint)
+            if (t > epsilon && t < edgeLen - epsilon) {
+               // Check perpendicular distance
+               const projected = {
+                 x: p1.x + t * edgeDir.x,
+                 y: p1.y + t * edgeDir.y,
+                 z: p1.z + t * edgeDir.z
+               };
+               if (distance(v, projected) < epsilon) {
+                 // Verify uniqueness in inserts
+                 let known = false;
+                 for (const cand of inserts) {
+                   if (Math.abs(cand.t - t) < epsilon) {
+                     known = true;
+                     break;
+                   }
+                 }
+                 if (!known) {
+                   inserts.push({ t, p: v });
+                 }
+               }
+            }
+          }
+        }
+
+        if (inserts.length > 0) {
+          // Sort by t to insert in order
+          inserts.sort((a, b) => a.t - b.t);
+          for (const ins of inserts) {
+            newPoints.push(copyVec3(ins.p));
+          }
+          faceChanged = true;
+        }
+      }
+
+      if (faceChanged) {
+        face.winding = createWinding(newPoints.length);
+        face.winding.points = newPoints;
+        anyChanged = true; // Loop again to ensure no cascading T-Junctions
+      }
+    }
+  }
+
+  return faces;
 }

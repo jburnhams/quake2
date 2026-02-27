@@ -1,4 +1,6 @@
-# Section 25-0: BSP Generation Tools - Overview
+# Section 25-0: BSP Generation Tools - Overview (IN PROGRESS)
+
+**Summary**: Implementation of the BSP toolchain is well underway. Foundations, winding math, map parsing, primitive building, CSG, and BSP tree construction (including T-junction fixing) are complete. Visibility and advanced Lighting are pending.
 
 ## Purpose
 
@@ -39,16 +41,16 @@ Port the Quake 2 BSP compilation toolchain to TypeScript as `@quake2ts/bsp-tools
 
 ## Document Index
 
-| Section | Title | Dependencies | Parallelizable With |
-|---------|-------|--------------|---------------------|
-| 25-1 | Foundation & Infrastructure | None | - |
-| 25-2 | Winding & Polygon Math | 25-1 | 25-3 |
-| 25-3 | Map Parser | 25-1 | 25-2, 25-4 |
-| 25-4 | Primitive Builder (MVP) | 25-2 | 25-3 |
-| 25-5 | CSG Operations | 25-2 | - |
-| 25-6 | BSP Tree Construction | 25-5 | - |
-| 25-7 | Portals & Visibility | 25-6 | 25-8 |
-| 25-8 | Lighting & Lightmaps | 25-6 | 25-7 |
+| Section | Title | Status |
+|---------|-------|--------|
+| 25-1 | Foundation & Infrastructure | **COMPLETED** |
+| 25-2 | Winding & Polygon Math | **COMPLETED** |
+| 25-3 | Map Parser | **COMPLETED** |
+| 25-4 | Primitive Builder (MVP) | **COMPLETED** |
+| 25-5 | CSG Operations | **COMPLETED** |
+| 25-6 | BSP Tree Construction | **COMPLETED** |
+| 25-7 | Portals & Visibility | Pending |
+| 25-8 | Lighting & Lightmaps | Pending |
 
 ## Key References
 
@@ -83,8 +85,8 @@ Port the Quake 2 BSP compilation toolchain to TypeScript as `@quake2ts/bsp-tools
 
 ## Success Criteria
 
-- [ ] Generate valid BSP from programmatic primitives
-- [ ] Parse and compile standard .map files
+- [x] Generate valid BSP from programmatic primitives
+- [x] Parse and compile standard .map files (Parser implemented, Compiler integration pending optimization)
 - [ ] Output matches WASM reference within floating-point tolerance
 - [ ] Generated BSPs load in quake2ts engine
 - [ ] Performance acceptable for real-time procedural generation of simple maps
