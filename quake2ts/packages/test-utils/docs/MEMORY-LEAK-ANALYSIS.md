@@ -156,10 +156,17 @@ The following high-priority cleanup issues have been resolved:
 - Unit tests often run with `isolate: false` for speed - sharing globals across tests
 
 **Action Items**:
-1. Review isolation settings in all vitest config files
-2. Document trade-offs between isolation and performance
-3. Standardize settings or document intentional differences
-4. Consider `pool: 'forks'` for tests that must have complete isolation
+1. ✅ Review isolation settings in all vitest config files
+2. ✅ Document trade-offs between isolation and performance
+   - Unit tests run with `threads` and `isolate: true` (default) for speed and reasonable isolation.
+   - Integration tests run with `forks` and `isolate: true` for complete process isolation to prevent memory leaks.
+3. ✅ Standardize settings or document intentional differences
+   - `shared`: `isolate: false`, `threads` (stateless utils).
+   - `game`, `engine`, `client`: Unit tests use `threads`, Integration tests use `forks`.
+   - `cgame`: Unit tests use `threads` (no integration tests).
+4. ✅ Consider `pool: 'forks'` for tests that must have complete isolation
+   - Applied to `integration` tests in `game`, `engine`, `client`.
+   - Updated `vitest.integration.ts` files to point to `tests/unit-node/integration/` and use `pool: 'forks'`.
 
 ### 3. WebGPU Environment Cleanup (MEDIUM PRIORITY)
 

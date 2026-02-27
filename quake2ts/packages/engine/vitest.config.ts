@@ -21,7 +21,7 @@ if (isWebGPU) {
 } else if (isWebGL) {
   include = ['tests/webgl/**/*.test.ts'];
 } else if (isIntegration) {
-  include = ['tests/integration/**/*.test.ts'];
+  include = ['tests/unit-node/integration/**/*.test.ts'];
 } else if (isUnitNode) {
   include = ['tests/unit-node/**/*.test.ts'];
 } else if (isUnitJsdom) {
@@ -52,6 +52,7 @@ export default defineConfig({
       '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
       '@quake2ts/client': path.resolve(__dirname, '../client/src/index.ts'),
       '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
+      '@quake2ts/bsp-tools': path.resolve(__dirname, '../bsp-tools/src/index.ts'),
     },
   },
   test: {

@@ -3,8 +3,8 @@ import baseConfig from './vitest.config';
 
 export default mergeConfig(baseConfig, defineConfig({
   test: {
-    include: ['tests/integration/**/*.test.ts'],
-    environment: 'jsdom',
+    include: ['tests/unit-node/integration/**/*.test.ts'],
+    environment: 'node',
     pool: 'forks',
     poolOptions: {
       forks: {

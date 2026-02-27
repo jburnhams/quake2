@@ -10,23 +10,32 @@ export default defineConfig({
       { find: '@quake2ts/cgame', replacement: path.resolve(__dirname, '../cgame/src/index.ts') },
       { find: '@quake2ts/server', replacement: path.resolve(__dirname, '../server/src/index.ts') },
       { find: '@quake2ts/test-utils', replacement: path.resolve(__dirname, '../test-utils/src/index.ts') },
+      { find: '@quake2ts/bsp-tools', replacement: path.resolve(__dirname, '../bsp-tools/src/index.ts') },
       { find: /^@quake2ts\/client$/, replacement: path.resolve(__dirname, 'src/index.ts') },
       { find: /^@quake2ts\/client\/(.*)/, replacement: path.resolve(__dirname, 'src/$1') },
     ],
   },
   test: {
-    environment: 'jsdom',
+    environment: 'node',
     include: [
-      'tests/integration/**/*.test.ts',
+      'tests/unit-node/integration/**/*.test.ts',
     ],
     exclude: [
       '**/node_modules/**',
       '**/dist/**',
-      'tests/unit-node/**',
+      'tests/unit-node/!(integration)/**',
       'tests/unit-jsdom/**',
     ],
     setupFiles: ['./vitest.setup.ts'],
-    pool: 'threads',
+    pool: 'forks',
+    poolOptions: {
+      forks: {
+        maxForks: 1,
+        minForks: 1
+      },
+    },
+    fileParallelism: false,
+    isolate: true,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-integration.xml',
