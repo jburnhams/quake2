@@ -76,18 +76,42 @@ class TexInfoManager {
     return this.texInfos;
   }
 
-  findOrAdd(texture: TextureDef): number {
-    const key = `${texture.name}_${texture.offsetX}_${texture.offsetY}_${texture.rotation}_${texture.scaleX}_${texture.scaleY}`;
+  findOrAdd(texture: TextureDef, normal: Vec3): number {
+    const scaleX = texture.scaleX || 1;
+    const scaleY = texture.scaleY || 1;
+
+    // Calculate base S and T vectors based on face normal
+    // Quake mapping heuristics:
+    let baseS: Vec3;
+    let baseT: Vec3;
+
+    const absX = Math.abs(normal.x);
+    const absY = Math.abs(normal.y);
+    const absZ = Math.abs(normal.z);
+
+    if (absZ >= absX && absZ >= absY) {
+      // Z is dominant: Project onto XY plane
+      baseS = { x: 1, y: 0, z: 0 };
+      baseT = { x: 0, y: -1, z: 0 };
+    } else if (absX >= absY && absX >= absZ) {
+      // X is dominant: Project onto YZ plane
+      baseS = { x: 0, y: 1, z: 0 };
+      baseT = { x: 0, y: 0, z: -1 };
+    } else {
+      // Y is dominant: Project onto XZ plane
+      baseS = { x: 1, y: 0, z: 0 };
+      baseT = { x: 0, y: 0, z: -1 };
+    }
+
+    const s = scaleVec3(baseS, 1 / scaleX);
+    const t = scaleVec3(baseT, 1 / scaleY);
+
+    // Include the generated vectors in the lookup key so orientation matters
+    const key = `${texture.name}_${texture.offsetX}_${texture.offsetY}_${texture.rotation}_${texture.scaleX}_${texture.scaleY}_${s.x},${s.y},${s.z}_${t.x},${t.y},${t.z}`;
 
     if (this.lookup.has(key)) {
       return this.lookup.get(key)!;
     }
-
-    const scaleX = texture.scaleX || 1;
-    const scaleY = texture.scaleY || 1;
-
-    const s: Vec3 = { x: 1 / scaleX, y: 0, z: 0 };
-    const t: Vec3 = { x: 0, y: -1 / scaleY, z: 0 };
 
     const ti: BspTexInfo = {
       s,
@@ -173,8 +197,30 @@ export class BspCompiler {
       type: p.type
     }));
 
+    // Generate BspBrush and BspBrushSide lumps
+    const bspBrushes: BspBrush[] = [];
+    const bspBrushSides: BspBrushSide[] = [];
+
+    for (const mapBrush of this.mapBrushes) {
+      const firstSide = bspBrushSides.length;
+      let numSides = 0;
+
+      for (const side of mapBrush.sides) {
+        bspBrushSides.push({
+          planeIndex: side.planeNum,
+          texInfo: side.texInfo
+        });
+        numSides++;
+      }
+
+      bspBrushes.push({
+        firstSide,
+        numSides,
+        contents: mapBrush.contents
+      });
+    }
+
     // Update BspFaces with edge indices
-    // We first calculate face metadata to determine firstEdge/numEdges
     const faceMetadata: { firstEdge: number, numEdges: number }[] = [];
     let currentEdgeOffset = 0;
 
@@ -257,8 +303,8 @@ export class BspCompiler {
         firstFace: 0,
         numFaces: finalFaces.length
       }], // Model 0
-      brushes: [], // TODO: Populate brushes
-      brushSides: [], // TODO: Populate brushSides
+      brushes: bspBrushes,
+      brushSides: bspBrushSides,
       visibility,
       areas: [],
       areaPortals: []
@@ -271,7 +317,7 @@ export class BspCompiler {
         nodes: flattened.nodes.length,
         leafs: flattened.leafs.length,
         faces: finalFaces.length,
-        brushes: 0,
+        brushes: bspBrushes.length,
         edges: edgeData.edges.length,
         vertices: edgeData.vertices.length
       }
@@ -289,7 +335,7 @@ export class BspCompiler {
 
       for (const sideDef of def.sides) {
         const planeNum = this.planeSet.findOrAdd(sideDef.plane.normal, sideDef.plane.dist);
-        const texInfo = this.texInfoManager.findOrAdd(sideDef.texture);
+        const texInfo = this.texInfoManager.findOrAdd(sideDef.texture, sideDef.plane.normal);
 
         brushPlanes.push({ normal: sideDef.plane.normal, dist: sideDef.plane.dist });
 

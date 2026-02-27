@@ -115,21 +115,9 @@ export function selectSplitPlane(
         }
       }
 
-      // Scoring
-      // q2tools: score = 5*axial + (front - back) (?? no, balance)
-      // q2tools: score = -(splitCount * 4) - (balance * 2) (approx)
-
       // Calculate total items on each side (including splits)
       const totalFront = frontCount + splitCount;
       const totalBack = backCount + splitCount;
-
-      // HULL GENERATION FIX:
-      // If one side is empty, it means this plane is a boundary.
-      // We ALLOW it if we are carving space.
-      // But we should prioritize splits that divide space.
-      // If we don't divide space (front or back is 0), we might infinite loop IF we reuse the plane.
-      // Since we check `usedPlanes`, we won't reuse it.
-      // So allow front=0 or back=0.
 
       const balance = Math.abs(totalFront - totalBack);
       let score = -(splitCount * 4) - (balance * 1); // Reduced balance penalty slightly
@@ -195,19 +183,7 @@ const MAX_TREE_DEPTH = 1000;
 export function buildTree(
   brushes: CompileBrush[],
   planeSet: PlaneSet,
-  usedPlanes: Set<number> = new Set(), // Pass by value (new set for each recursion) or shared set?
-  // Shared set is wrong because different branches can reuse planes?
-  // No, if a plane is used as a splitter in a node, it splits the volume.
-  // Children operate in subspaces.
-  // Can a child reuse a parent's splitter?
-  // If parent split by P. Children are Front(P) and Back(P).
-  // Front(P) is strictly in front. So it can't cross P.
-  // So picking P again would put everything in Front (or Back).
-  // Which is redundant.
-  // So yes, `usedPlanes` should be passed down.
-  // BUT we need to clone it for branches if the decision is local?
-  // No, the volume is defined by the PATH from root.
-  // So `usedPlanes` accumulates down the recursion.
+  usedPlanes: Set<number> = new Set(),
   depth: number = 0
 ): TreeElement {
   if (brushes.length === 0) {
@@ -233,22 +209,7 @@ export function buildTree(
   // Calculate bounds for this node
   const bounds = calculateBoundsBrushes(brushes);
 
-  // Check if we should stop splitting (e.g. all brushes are solid and convex?)
-  // For now, naive recursive build until no useful split found.
-
-  // If we only have 1 brush, can we just make it a leaf?
-  // Only if it's convex (which individual CompileBrushes are) and we are happy with 1 brush per leaf.
-  // Standard BSP tries to group brushes if they form a convex volume.
-  // But here we'll just try to split.
-
-  // Optimization: If all brushes have same content and form a convex hull...
-  // checking that is expensive.
-
   const split = selectSplitPlane(brushes, planeSet, usedPlanes);
-
-  // If no split is good (e.g. all splits are terrible, or we can't find a plane that separates anything)
-  // We might just make a leaf.
-  // q2tools allows splitting until no planes left.
 
   if (!split) {
      // No valid split found.
@@ -302,14 +263,9 @@ function calculateBoundsBrushes(brushes: CompileBrush[]): Bounds3 {
 export interface FlattenedTree {
   nodes: BspNode[];
   leafs: BspLeaf[];
-  leafBrushes: number[]; // Flattened array of brush indices (standard BSP format is indirect via leafBrushes list)
-  leafFaces: number[];   // Flattened array of face indices
-  // The BSP format uses 'leafFaces' and 'leafBrushes' as look-up tables (indices into faces/brushes lumps).
-  // In BspLeaf, firstLeafFace/numLeafFaces index into leafFaces lump.
-  // We'll return arrays of arrays for easier lump construction, or just flattened with offsets.
-  // Let's match BspLeafLists structure: number[][]
   leafFacesList: number[][];
   leafBrushesList: number[][];
+  serializedFaces: CompileFace[];
 }
 
 /**
@@ -318,17 +274,12 @@ export interface FlattenedTree {
  *
  * @param tree The root of the tree.
  * @param faceMap A map of faces assigned to nodes.
- * @param faces The linear array of all faces (already serialized), used to look up indices.
- *              We assume faceMap values are references to objects that we can find indices for?
- *              Or better: faceMap values are INDICES into the faces array if we did that already.
- *              Wait, faces are usually serialized in depth-first order of the tree to optimize cache.
- *              So we should linearize faces HERE.
  * @returns Flattened tree data.
  */
 export function flattenTree(
   tree: TreeElement,
   faceMap: Map<TreeNode, CompileFace[]>
-): FlattenedTree & { serializedFaces: CompileFace[] } {
+): FlattenedTree {
   const nodes: BspNode[] = [];
   const leafs: BspLeaf[] = [];
   const leafFacesList: number[][] = [];
@@ -354,27 +305,20 @@ export function flattenTree(
     if (isLeaf(element)) {
       const leafIndex = leafs.length;
 
-      // TODO: Populate leaf brushes list
-      // We need a mapping from CompileBrush to final brush index.
-      // Since we don't have that here, we'll store temporary indices or references?
-      // For now, let's assume brush indices are stored in CompileBrush.original? No.
-      // We'll just store 0 for now or implement brush indexing later.
-      // Leaf brushes are mainly for collision.
+      // Extract unique original brush indices for this leaf
       const brushes: number[] = [];
-      // element.brushes.forEach(b => brushes.push(???));
+      const brushSet = new Set<number>();
+      for (const b of element.brushes) {
+        if (b.original && b.original.brushNum !== undefined) {
+          const bNum = b.original.brushNum;
+          if (!brushSet.has(bNum)) {
+            brushSet.add(bNum);
+            brushes.push(bNum);
+          }
+        }
+      }
 
-      // Leaf faces are typically Portal-visible faces.
-      // Since we assign faces to Nodes, leafs usually have 0 faces in Quake 2 BSP?
-      // Actually Quake 2 stores faces in Nodes. Leafs reference brushes.
-      // Some engines put faces in leafs too (e.g. for PVS rendering).
-      // Quake 2: Faces are in Nodes. Leafs store visible faces for PVS?
-      // "Faces are stored in nodes" is strictly true for splitting planes.
-      // But for rendering, we walk the tree.
-      // Wait, BspLeaf has 'firstLeafFace' and 'numLeafFaces'.
-      // These are for faces *marked* as being in the leaf (e.g. for collision or detailed visibility).
-      // Standard Q2 compiler might put faces in leafs.
-      // But typically faces are on nodes.
-      // Let's leave leaf faces empty for now unless we need them.
+      // Leaves in standard BSP don't usually hold faces for rendering, nodes do.
       const faces: number[] = [];
 
       leafFacesList.push(faces);
@@ -394,23 +338,15 @@ export function flattenTree(
           Math.ceil(element.bounds.maxs.y),
           Math.ceil(element.bounds.maxs.z)
         ],
-        firstLeafFace: 0, // Placeholder, implies empty
-        numLeafFaces: 0,
-        firstLeafBrush: 0, // Placeholder
-        numLeafBrushes: 0
+        firstLeafFace: 0, // Placeholder, updated later when creating lumps
+        numLeafFaces: faces.length,
+        firstLeafBrush: 0, // Placeholder, updated later
+        numLeafBrushes: brushes.length
       };
 
       leafs.push(leaf);
       return -(leafIndex + 1);
     }
-
-    // It's a Node
-    // Flatten children first? No, Nodes array is usually depth-first order?
-    // Actually recursive:
-    // Index = nodes.length; nodes.push(placeholder);
-    // front = walk(children[0]);
-    // back = walk(children[1]);
-    // update nodes[Index] with front/back.
 
     const nodeIndex = nodes.length;
     // Push placeholder
@@ -448,8 +384,6 @@ export function flattenTree(
     leafs,
     leafFacesList,
     leafBrushesList,
-    leafBrushes: [], // Legacy compat if needed
-    leafFaces: [],   // Legacy compat if needed
     serializedFaces
   };
 }
