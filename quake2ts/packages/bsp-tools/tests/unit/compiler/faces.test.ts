@@ -11,7 +11,8 @@ import {
   mergeCoplanarFaces,
   tryMergeWinding,
   extractFaces,
-  assignFacesToNodes
+  assignFacesToNodes,
+  fixTJunctions
 } from '../../../src/compiler/faces';
 import type { CompileFace, CompilePlane, MapBrush } from '../../../src/types/compile';
 import type { TreeElement, TreeNode, TreeLeaf } from '../../../src/compiler/tree';
@@ -318,6 +319,78 @@ describe('faces', () => {
       expect(map.has(root)).toBe(false);
       expect(map.has(child)).toBe(true);
       expect(map.get(child)![0]).toBe(face);
+    });
+  });
+
+  describe('fixTJunctions', () => {
+    it('splits edge where a vertex from another face touches it', () => {
+      // Face 1: Big rectangle (0,0) to (2,2) at Z=0
+      // 0,2 -- 2,2
+      // |      |
+      // 0,0 -- 2,0
+      const w1: Winding = {
+        numPoints: 4,
+        points: [
+          {x:0, y:2, z:0},
+          {x:2, y:2, z:0},
+          {x:2, y:0, z:0},
+          {x:0, y:0, z:0}
+        ]
+      };
+
+      // Face 2: Small square attached to the right side (2,1)
+      // But let's say Face 2 is perpendicular?
+      // T-junctions happen when meshes meet.
+      // Simpler test: Coplanar adjacent face that introduces a vertex on the shared edge.
+      // Face 1: (0,0)-(0,2)-(2,2)-(2,0)
+      // Face 2: (2,0)-(2,1)-(3,1)-(3,0)
+      // Face 3: (2,1)-(2,2)-(3,2)-(3,1)
+      //
+      // Face 1 shares edge x=2 with Face 2 and Face 3.
+      // Face 2 has vertices (2,0) and (2,1).
+      // Face 3 has vertices (2,1) and (2,2).
+      //
+      // Face 1 has edge (2,0) to (2,2).
+      // Vertex (2,1) from Face 2/3 lies on this edge.
+      // fixTJunctions should split Face 1's edge at (2,1).
+
+      const w2: Winding = {
+        numPoints: 4,
+        points: [
+          {x:2, y:0, z:0},
+          {x:3, y:0, z:0},
+          {x:3, y:1, z:0},
+          {x:2, y:1, z:0}
+        ]
+      };
+
+      const w3: Winding = {
+        numPoints: 4,
+        points: [
+          {x:2, y:1, z:0},
+          {x:3, y:1, z:0},
+          {x:3, y:2, z:0},
+          {x:2, y:2, z:0}
+        ]
+      };
+
+      const f1: CompileFace = { winding: w1, planeNum: 0, texInfo: 0, contents: 0, next: null };
+      const f2: CompileFace = { winding: w2, planeNum: 0, texInfo: 0, contents: 0, next: null };
+      const f3: CompileFace = { winding: w3, planeNum: 0, texInfo: 0, contents: 0, next: null };
+
+      fixTJunctions([f1, f2, f3]);
+
+      // f1 should now have 5 points: (0,2), (2,2), (2,1), (2,0), (0,0)
+      // Original was (0,2), (2,2), (2,0), (0,0) [order depends on input]
+      // Input was: (0,2), (2,2), (2,0), (0,0)
+      // Edge (2,2)->(2,0) is where (2,1) lies.
+      // New order: (0,2), (2,2), (2,1), (2,0), (0,0)
+
+      expect(f1.winding.numPoints).toBe(5);
+
+      // Verify (2,1) is present
+      const hasPoint = f1.winding.points.some(p => Math.abs(p.x - 2) < 0.01 && Math.abs(p.y - 1) < 0.01 && Math.abs(p.z) < 0.01);
+      expect(hasPoint).toBe(true);
     });
   });
 });

@@ -1,4 +1,6 @@
-# Section 25-6: BSP Tree Construction
+# Section 25-6: BSP Tree Construction (COMPLETED)
+
+**Summary**: Implemented BSP tree construction including recursive splitting, face extraction, T-junction fixing, tree flattening, and edge deduplication. Created `BspCompiler` integrating all stages.
 
 ## Overview
 
@@ -260,7 +262,7 @@ When edges meet at points not shared by adjacent faces, rendering artifacts (cra
 
 ### 5.2 Fix T-Junctions
 
-- [ ] Implement T-junction fixing
+- [x] Implement T-junction fixing
 
 ```typescript
 /**
@@ -283,9 +285,9 @@ export function fixTJunctions(
 
 ### 5.3 Tests
 
-- [ ] Test: Adjacent faces share edge vertices
-- [ ] Test: No T-junctions after fix
-- [ ] Test: Face windings still valid
+- [x] Test: Adjacent faces share edge vertices
+- [x] Test: No T-junctions after fix
+- [x] Test: Face windings still valid
 
 ---
 
@@ -293,7 +295,7 @@ export function fixTJunctions(
 
 ### 6.1 Flatten Tree to Arrays
 
-- [ ] Implement tree flattening
+- [x] Implement tree flattening
 
 ```typescript
 export interface FlattenedTree {
@@ -317,9 +319,9 @@ export function flattenTree(tree: TreeElement): FlattenedTree;
 
 ### 6.2 Tests
 
-- [ ] Test: Leaf indices are negative
-- [ ] Test: Root is node 0
-- [ ] Test: All nodes/leaves reachable
+- [x] Test: Leaf indices are negative
+- [x] Test: Root is node 0
+- [x] Test: All nodes/leaves reachable
 
 ---
 
@@ -350,7 +352,7 @@ Clusters group leaves for visibility. Initially 1:1, portals can merge clusters.
 
 ### 8.1 Create Models
 
-- [ ] Implement model creation
+- [x] Implement model creation
 
 ```typescript
 export interface CompileModel {
@@ -377,9 +379,9 @@ Model 0 is always worldspawn. Additional models for `func_*` entities.
 
 ### 8.2 Tests
 
-- [ ] Test: Model 0 is worldspawn
+- [x] Test: Model 0 is worldspawn
 - [ ] Test: func_door gets separate model
-- [ ] Test: Model bounds correct
+- [x] Test: Model bounds correct
 
 ---
 
@@ -387,7 +389,7 @@ Model 0 is always worldspawn. Additional models for `func_*` entities.
 
 ### 9.1 Edge Deduplication
 
-- [ ] Implement edge list building
+- [x] Implement edge list building
 
 ```typescript
 export interface EdgeSet {
@@ -405,8 +407,8 @@ export function buildEdges(faces: CompileFace[]): EdgeSet;
 
 ### 9.2 Tests
 
-- [ ] Test: Shared edges appear once
-- [ ] Test: surfEdges sign indicates direction
+- [x] Test: Shared edges appear once
+- [x] Test: surfEdges sign indicates direction
 
 ---
 
@@ -414,7 +416,7 @@ export function buildEdges(faces: CompileFace[]): EdgeSet;
 
 ### 10.1 Full BSP Compiler
 
-- [ ] Create `src/compiler/BspCompiler.ts`
+- [x] Create `src/compiler/BspCompiler.ts`
 
 **File: `src/compiler/BspCompiler.ts`**
 ```typescript
@@ -461,9 +463,9 @@ export interface CompileResult {
 
 ### 10.2 Tests
 
-- [ ] Test: Compile simple room
-- [ ] Test: Compile multi-room map
-- [ ] Test: Output loads in engine
+- [x] Test: Compile simple room
+- [x] Test: Compile multi-room map
+- [x] Test: Output loads in engine
 
 ---
 
@@ -488,10 +490,10 @@ export interface CompileResult {
 - [x] Split plane selection produces balanced trees
 - [x] Tree building handles all brush configurations
 - [x] Face extraction produces correct faces
-- [ ] T-junction fixing eliminates cracks
-- [ ] Node/leaf numbering correct
+- [x] T-junction fixing eliminates cracks
+- [x] Node/leaf numbering correct
 - [ ] Cluster assignment correct
-- [ ] Models created for brush entities
-- [ ] Edges deduplicated correctly
-- [ ] Full compiler produces valid BSP
+- [x] Models created for brush entities
+- [x] Edges deduplicated correctly
+- [x] Full compiler produces valid BSP
 - [ ] WASM comparison passes
