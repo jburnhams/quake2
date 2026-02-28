@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BinaryWriter, ServerCommand, TempEntity, Vec3 } from '@quake2ts/shared';
-import { writeServerCommand } from '../../src/protocol/write.js';
+import { writeServerCommand } from '../../../src/protocol/write.js';
 import { Entity } from '@quake2ts/game';
 
 describe('writeServerCommand', () => {

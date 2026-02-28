@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { BspCompiler } from '../../src/compiler/BspCompiler.js';
-import { box } from '../../src/builder/primitives.js';
+import { BspCompiler } from '../../../src/compiler/BspCompiler.js';
+import { box } from '../../../src/builder/primitives.js';
 import { CONTENTS_SOLID } from '@quake2ts/shared';
-import type { BrushDef, EntityDef } from '../../src/builder/types.js';
+import type { BrushDef, EntityDef } from '../../../src/builder/types.js';
 
 describe('BspCompiler Integration', () => {
   it('compiles a simple map with overlapping brushes', () => {

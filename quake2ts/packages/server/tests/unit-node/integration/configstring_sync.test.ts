@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer } from '../../src/dedicated.js';
-import { createClient, Client, ClientState } from '../../src/client.js';
+import { DedicatedServer } from '../../../src/dedicated.js';
+import { createClient, Client, ClientState } from '../../../src/client.js';
 import { ServerCommand, ConfigStringIndex, PlayerStat, MAX_CONFIGSTRINGS, BinaryStream, BinaryWriter, NetDriver } from '@quake2ts/shared';
 import { Entity, createGame } from '@quake2ts/game';
 import { createMockTransport, MockTransport, createMockNetDriver, createMockGameExports, createGameStateSnapshotFactory } from '@quake2ts/test-utils';
 
 // Mock dependencies
 // ws mock removed
-vi.mock('../../src/net/nodeWsDriver.js');
+vi.mock('../../../src/net/nodeWsDriver.js');
 vi.mock('@quake2ts/game', async (importOriginal) => {
     const actual = await importOriginal() as any;
     return {

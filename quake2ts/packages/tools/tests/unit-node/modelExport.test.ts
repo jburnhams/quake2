@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { exportMd2ToObj, exportMd3ToGltf } from '../src/modelExport.js';
+import { exportMd2ToObj, exportMd3ToGltf } from '../../src/modelExport.js';
 import { Md2Model, Md3Model } from '@quake2ts/engine';
 import { Vec3 } from '@quake2ts/shared';
 

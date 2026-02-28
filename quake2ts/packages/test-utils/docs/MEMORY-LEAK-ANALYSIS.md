@@ -118,6 +118,10 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/gizmo.test.ts` to `engine/tests/unit-node/render/gizmo.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/gpuProfiler.test.ts` to `engine/tests/unit-node/render/gpuProfiler.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/lighting.test.ts` to `engine/tests/unit-node/render/lighting.test.ts`
+   - Moved: `server/tests/*` tests to `server/tests/unit-node/`
+   - Moved: `bsp-tools/tests/integration/*` tests to `bsp-tools/tests/unit-node/integration/`
+   - Moved: `bsp-tools/tests/unit/*` tests to `bsp-tools/tests/unit-node/`
+   - Moved: `tools/tests/*` tests to `tools/tests/unit-node/`
    - Moved: `engine/tests/unit-jsdom/render/materialLoader.test.ts` to `engine/tests/unit-node/render/materialLoader.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/bspNative.test.ts` to `engine/tests/unit-node/render/bspNative.test.ts`
    - Moved: `engine/tests/unit-jsdom/render/md2PipelineDlights.test.ts` to `engine/tests/unit-node/render/md2PipelineDlights.test.ts`

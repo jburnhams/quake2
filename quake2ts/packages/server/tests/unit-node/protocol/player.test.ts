@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { BinaryWriter } from '@quake2ts/shared';
-import { writePlayerState, ProtocolPlayerState } from '../../src/protocol/player.js';
+import { writePlayerState, ProtocolPlayerState } from '../../../src/protocol/player.js';
 import { parseProtocolPlayerState } from '@quake2ts/test-utils';
 
 describe('writePlayerState', () => {

@@ -10,14 +10,14 @@ import {
 import {
   processCsg,
   subtractBrush
-} from '../../src/compiler/csg';
+} from '../../../src/compiler/csg';
 import {
   PlaneSet
-} from '../../src/compiler/planes';
+} from '../../../src/compiler/planes';
 import {
   validateCsgResult
-} from '../../src/compiler/validation';
-import type { CompileBrush, CompileSide, MapBrush } from '../../src/types/compile';
+} from '../../../src/compiler/validation';
+import type { CompileBrush, CompileSide, MapBrush } from '../../../src/types/compile';
 
 // Helper to create a box brush
 function createBox(mins: number[], maxs: number[], planeSet: PlaneSet, contents: number = CONTENTS_SOLID): CompileBrush {

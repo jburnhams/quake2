@@ -23,7 +23,8 @@
     "build:bundles": "tsup",
     "dev": "tsup --watch",
     "test": "pnpm run test:unit",
-    "test:unit": "TEST_TYPE=unit vitest run",
+    "test:unit": "pnpm run test:unit:node",
+    "test:unit:node": "TEST_TYPE=unit-node vitest run --passWithNoTests",
     "test:integration": "TEST_TYPE=integration vitest run"
   },
   "peerDependencies": {

@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { ClientState } from '../src/client.js';
+import { ClientState } from '../../src/client.js';
 import { UPDATE_BACKUP } from '@quake2ts/shared';
 import { createMockServerClient } from '@quake2ts/test-utils';
 

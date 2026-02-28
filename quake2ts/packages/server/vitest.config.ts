@@ -2,17 +2,20 @@ import { defineConfig } from 'vitest/config';
 import path from 'path';
 
 const isIntegration = process.env.TEST_TYPE === 'integration';
+const isUnitNode = process.env.TEST_TYPE === 'unit-node';
 const isUnit = process.env.TEST_TYPE === 'unit';
 
 const exclude = [
   '**/node_modules/**',
   '**/dist/**',
-  ...(isUnit ? ['**/integration/**', '**/*integration*'] : [])
+  ...((isUnit || isUnitNode) ? ['**/integration/**', '**/*integration*'] : [])
 ];
 
 const include = isIntegration
-  ? ['**/integration/**', '**/*integration*']
-  : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
+  ? ['tests/unit-node/integration/**/*.test.ts', 'tests/**/*integration*.test.ts']
+  : isUnitNode
+    ? ['tests/unit-node/**/*.test.ts']
+    : ['tests/**/*.test.ts', 'test/**/*.test.ts'];
 
 export default defineConfig({
   resolve: {
@@ -30,6 +33,7 @@ export default defineConfig({
     include,
     exclude,
     pool: 'forks',
+    environment: 'node',
     poolOptions: {
       forks: {
         maxForks: 1,
