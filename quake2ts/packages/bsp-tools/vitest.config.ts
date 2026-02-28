@@ -10,7 +10,7 @@ export default defineConfig({
     },
   },
   test: {
-    include: ['tests/unit/**/*.test.ts', 'tests/integration/**/*.test.ts'],
+    include: ['tests/unit-node/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     pool: 'threads',
     // isolate: false, // Enable isolation to prevent mock leakage

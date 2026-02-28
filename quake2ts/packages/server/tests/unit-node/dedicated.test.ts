@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated.js';
+import { DedicatedServer } from '../../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
-import { ClientState } from '../src/client.js';
+import { ClientState } from '../../src/client.js';
 import { UPDATE_BACKUP } from '@quake2ts/shared';
 import {
     createMockTransport,

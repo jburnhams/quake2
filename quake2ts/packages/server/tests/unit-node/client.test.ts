@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createClient, ClientState } from '../src/client.js';
+import { createClient, ClientState } from '../../src/client.js';
 import { NetChan } from '@quake2ts/shared';
 import { createMockNetDriver } from '@quake2ts/test-utils';
 

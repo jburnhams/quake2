@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { replaceBspEntities } from '../src/bspTools.js';
+import { replaceBspEntities } from '../../src/bspTools.js';
 import { BspEntity, serializeEntLump } from '@quake2ts/engine';
 
 describe('bspTools', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { DedicatedServer, createServer } from '../src/dedicated.js';
+import { DedicatedServer, createServer } from '../../src/dedicated.js';
 import { createMockTransport, MockTransport, createTestBspMap } from '@quake2ts/test-utils';
 import { parseBsp } from '@quake2ts/engine';
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { DedicatedServer } from '../src/dedicated.js';
+import { DedicatedServer } from '../../src/dedicated.js';
 import { Entity, Solid, createGame, GameExports } from '@quake2ts/game';
 import { createMockGameExports, createMockCollisionEntityIndex } from '@quake2ts/test-utils';
 

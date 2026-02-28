@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { ClientMessageParser, ClientMessageHandler } from '../src/protocol.js';
+import { ClientMessageParser, ClientMessageHandler } from '../../src/protocol.js';
 import { BinaryWriter, BinaryStream, ClientCommand } from '@quake2ts/shared';
 
 describe('ClientMessageParser', () => {
