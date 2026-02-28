@@ -14,3 +14,4 @@ export * from './compiler/brushProcessing.js';
 export * from './compiler/csg.js';
 export * from './compiler/faces.js';
 export * from './compiler/validation.js';
+export * from './compiler/portals.js';

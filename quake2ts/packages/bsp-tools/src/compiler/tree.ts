@@ -20,6 +20,7 @@ export interface TreeNode {
   planeNum: number;
   children: [TreeElement, TreeElement];
   bounds: Bounds3;
+  parent?: TreeNode;
 }
 
 export interface TreeLeaf {
@@ -29,6 +30,9 @@ export interface TreeLeaf {
   // Filled during flattening
   cluster?: number;
   area?: number;
+  parent?: TreeNode;
+  // Vis flow
+  portals?: any[];
 }
 
 export type TreeElement = TreeNode | TreeLeaf;
@@ -190,7 +194,8 @@ export function buildTree(
     return {
       contents: 0, // Empty
       brushes: [],
-      bounds: createEmptyBounds3()
+      bounds: createEmptyBounds3(),
+      portals: []
     };
   }
 
@@ -202,7 +207,8 @@ export function buildTree(
     return {
       contents: combinedContents,
       brushes: brushes,
-      bounds: calculateBoundsBrushes(brushes)
+      bounds: calculateBoundsBrushes(brushes),
+      portals: []
     };
   }
 
@@ -220,7 +226,8 @@ export function buildTree(
      return {
        contents: combinedContents,
        brushes: brushes,
-       bounds
+       bounds,
+       portals: []
      };
   }
 
@@ -233,11 +240,16 @@ export function buildTree(
   const frontNode = buildTree(front, planeSet, nextUsedPlanes, depth + 1);
   const backNode = buildTree(back, planeSet, nextUsedPlanes, depth + 1);
 
-  return {
+  const node: TreeNode = {
     planeNum: split.planeNum,
     children: [frontNode, backNode],
     bounds
   };
+
+  frontNode.parent = node;
+  backNode.parent = node;
+
+  return node;
 }
 
 function calculateBoundsBrushes(brushes: CompileBrush[]): Bounds3 {
