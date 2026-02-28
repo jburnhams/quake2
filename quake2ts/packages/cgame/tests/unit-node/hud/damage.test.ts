@@ -1,17 +1,11 @@
-import { createMockPlayerState } from "@quake2ts/test-utils";
+import { createMockPlayerState, createMockCGameImport } from '@quake2ts/test-utils';
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Draw_Damage, Init_Damage } from '../../../src/hud/damage';
-import { CGameImport } from '../../../src/types';
 import { PlayerState, Vec3 } from '@quake2ts/shared';
 
 describe('HUD Damage Indicators', () => {
-    const mockCgi = {
-        Draw_RegisterPic: vi.fn(),
-        Draw_GetPicSize: vi.fn(),
-        SCR_DrawColorPic: vi.fn(),
-        Com_Print: vi.fn(),
-    } as unknown as CGameImport;
+    const mockCgi = createMockCGameImport();
 
     const width = 800;
     const height = 600;
