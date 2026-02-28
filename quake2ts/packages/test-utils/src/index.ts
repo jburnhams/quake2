@@ -135,3 +135,4 @@ export type { MockEngine, MockGame, TestContext, MockImportsAndEngine } from './
 export type { SpawnTestEntityOptions } from './game/helpers/spawn.js';
 export * from './game/client.js';
 export * from './client/mocks/test-input-source.js';
+export * from './client/mocks/cgame.js';

@@ -1,3 +1,4 @@
+import { createMockPlayerState } from "@quake2ts/test-utils";
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Draw_Damage, Init_Damage } from '../../../src/hud/damage';
@@ -27,11 +28,11 @@ describe('HUD Damage Indicators', () => {
     });
 
     it('should not draw if no damage indicators', () => {
-        const ps = {
+        const ps = createMockPlayerState({
             damageIndicators: [],
             damageAlpha: 0,
             viewAngles: { x: 0, y: 0, z: 0 } as Vec3
-        } as unknown as PlayerState;
+        });
 
         Draw_Damage(mockCgi, ps, width, height);
         expect(mockCgi.SCR_DrawColorPic).not.toHaveBeenCalled();
@@ -41,14 +42,14 @@ describe('HUD Damage Indicators', () => {
         // Player looking North (Yaw 90)
         // Damage from North (Forward)
 
-        const ps = {
+        const ps = createMockPlayerState({
             damageIndicators: [{
                 direction: { x: 0, y: 1, z: 0 },
                 strength: 1.0
             }],
             damageAlpha: 0,
             viewAngles: { x: 0, y: 90, z: 0 } as Vec3
-        } as unknown as PlayerState;
+        });
 
         Draw_Damage(mockCgi, ps, width, height);
 
@@ -61,14 +62,14 @@ describe('HUD Damage Indicators', () => {
         // Player looking North (Yaw 90)
         // Damage from South (Back)
 
-        const ps = {
+        const ps = createMockPlayerState({
             damageIndicators: [{
                 direction: { x: 0, y: -1, z: 0 },
                 strength: 0.5
             }],
             damageAlpha: 0,
             viewAngles: { x: 0, y: 90, z: 0 } as Vec3
-        } as unknown as PlayerState;
+        });
 
         Draw_Damage(mockCgi, ps, width, height);
 
@@ -85,14 +86,14 @@ describe('HUD Damage Indicators', () => {
         // Player looking North (Yaw 90)
         // Damage from West (Left)
 
-        const ps = {
+        const ps = createMockPlayerState({
             damageIndicators: [{
                 direction: { x: -1, y: 0, z: 0 },
                 strength: 1.0
             }],
             damageAlpha: 0,
             viewAngles: { x: 0, y: 90, z: 0 } as Vec3
-        } as unknown as PlayerState;
+        });
 
         Draw_Damage(mockCgi, ps, width, height);
 
@@ -105,14 +106,14 @@ describe('HUD Damage Indicators', () => {
         // Player looking North (Yaw 90)
         // Damage from East (Right)
 
-        const ps = {
+        const ps = createMockPlayerState({
             damageIndicators: [{
                 direction: { x: 1, y: 0, z: 0 },
                 strength: 1.0
             }],
             damageAlpha: 0,
             viewAngles: { x: 0, y: 90, z: 0 } as Vec3
-        } as unknown as PlayerState;
+        });
 
         Draw_Damage(mockCgi, ps, width, height);
 
