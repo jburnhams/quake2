@@ -38,8 +38,8 @@ Portals are polygons (windings) on leaf boundaries that represent "windows" betw
 
 ### 2.1 Create Initial Portals
 
-- [ ] Create `src/compiler/portals.ts`
-- [ ] Implement portal generation from tree
+- [x] Create `src/compiler/portals.ts`
+- [x] Implement portal generation from tree (Implemented `generatePortals` and basic structural generation. Full qbsp bounds clipping might need refinement depending on engine visual integration tests).
 
 **File: `src/compiler/portals.ts`**
 ```typescript
@@ -84,7 +84,7 @@ makeTreePortals(node):
 
 ### 2.2 Clip Portal to Tree
 
-- [ ] Implement portal clipping through tree
+- [x] Implement portal clipping through tree
 
 ```typescript
 /**
@@ -102,9 +102,9 @@ export function clipPortalToTree(
 
 ### 2.3 Tests
 
-- [ ] Test: Two-room map produces portal between them
-- [ ] Test: Portal winding is valid polygon
-- [ ] Test: Portal references correct leaves
+- [x] Test: Two-room map produces portal between them
+- [x] Test: Portal winding is valid polygon
+- [x] Test: Portal references correct leaves
 - [ ] Test: No portals to solid leaves
 
 ---
