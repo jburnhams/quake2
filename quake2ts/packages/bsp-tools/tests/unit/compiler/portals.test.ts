@@ -6,7 +6,7 @@ import { createEmptyBounds3, CONTENTS_SOLID } from '@quake2ts/shared';
 import { PlaneSet } from '../../../src/compiler/planes.js';
 import { buildTree, isLeaf } from '../../../src/compiler/tree.js';
 import { processCsg } from '../../../src/compiler/csg.js';
-import { createCompileBrush } from './helpers.js';
+import { createCompileBrush } from './helpers.ts';
 import { box } from '../../../src/builder/primitives.js';
 
 describe('Portals', () => {
