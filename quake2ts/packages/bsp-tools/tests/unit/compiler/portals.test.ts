@@ -5,9 +5,45 @@ import { CompilePlane } from '../../../src/types/compile.js';
 import { createEmptyBounds3, CONTENTS_SOLID } from '@quake2ts/shared';
 import { PlaneSet } from '../../../src/compiler/planes.js';
 import { buildTree, isLeaf } from '../../../src/compiler/tree.js';
-import { processCsg } from '../../../src/compiler/csg.js';
-import { createCompileBrush } from './helpers.ts';
+import { processCsg, calculateBounds } from '../../../src/compiler/csg.js';
 import { box } from '../../../src/builder/primitives.js';
+import { generateBrushWindings } from '../../../src/compiler/brushProcessing.js';
+import type { BrushDef } from '../../../src/builder/types.js';
+import type { CompileBrush, CompileSide, MapBrush } from '../../../src/types/compile.js';
+
+export function createCompileBrush(def: BrushDef, planeSet: PlaneSet, contents: number = 1): CompileBrush {
+  const windings = generateBrushWindings(def);
+  const sides: CompileSide[] = [];
+
+  def.sides.forEach((s, i) => {
+    const planeNum = planeSet.findOrAdd(s.plane.normal, s.plane.dist);
+    sides.push({
+      planeNum,
+      texInfo: 0,
+      winding: windings.get(i),
+      visible: true,
+      tested: false,
+      bevel: false
+    });
+  });
+
+  const bounds = calculateBounds(sides);
+
+  const mapBrush: MapBrush = {
+    entityNum: 0,
+    brushNum: 0,
+    sides,
+    bounds,
+    contents
+  };
+
+  return {
+    original: mapBrush,
+    sides,
+    bounds,
+    next: null
+  };
+}
 
 describe('Portals', () => {
   it('generates real portals for a simple room using full CSG and Tree building', () => {
