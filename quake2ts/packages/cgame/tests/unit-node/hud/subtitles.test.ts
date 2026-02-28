@@ -2,10 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SubtitleSystem } from '../../../src/hud/subtitles.js';
 import { CGameImport } from '../../../src/types.js';
 
-const mockCgi = {
-  SCR_DrawCenterString: vi.fn(),
-  CL_ClientTime: vi.fn(),
-} as unknown as CGameImport;
+import { createMockCGameImport } from '@quake2ts/test-utils';
+
+const mockCgi = createMockCGameImport();
 
 describe('SubtitleSystem', () => {
   beforeEach(() => {

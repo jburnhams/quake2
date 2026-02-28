@@ -1,27 +1,26 @@
 import { describe, it, expect, vi } from 'vitest';
 import { Draw_StatusBar } from '../../../src/hud/statusbar.js';
 import { CGameImport } from '../../../src/types.js';
-import { PlayerState, PlayerStat } from '@quake2ts/shared';
+import { PlayerStat } from '@quake2ts/shared';
+import { createMockCGameImport, createMockPlayerState } from '@quake2ts/test-utils';
 import { getHudLayout } from '../../../src/hud/layout.js';
 
 describe('Draw_StatusBar', () => {
   it('should draw health, armor, and ammo from ps.stats', () => {
     // Mock CGameImport
-    const cgi = {
+    const cgi = createMockCGameImport({
       SCR_DrawPic: vi.fn(),
       Draw_GetPicSize: vi.fn(() => ({ width: 10, height: 10 })),
       Draw_RegisterPic: vi.fn((name) => `mock_pic_${name}`),
       SCR_DrawChar: vi.fn(),
-      SCR_DrawColorPic: vi.fn(),
       SCR_MeasureFontString: vi.fn(() => 100),
       SCR_DrawFontString: vi.fn(),
-    } as unknown as CGameImport;
+    });
 
     // Mock PlayerState
-    const ps = {
-      stats: [] as number[],
-      pickupIcon: 'w_shotgun', // Fallback
-    } as unknown as PlayerState;
+    const ps = createMockPlayerState({
+      pickupIcon: 'w_shotgun',
+    });
 
     // Set stats
     ps.stats[PlayerStat.STAT_HEALTH] = 88;
@@ -47,15 +46,13 @@ describe('Draw_StatusBar', () => {
   });
 
   it('should handle missing stats gracefully', () => {
-     const cgi = {
+     const cgi = createMockCGameImport({
       SCR_DrawPic: vi.fn(),
       Draw_GetPicSize: vi.fn(() => ({ width: 10, height: 10 })),
       Draw_RegisterPic: vi.fn(),
-    } as unknown as CGameImport;
+    });
 
-    const ps = {
-      stats: [], // Empty stats
-    } as unknown as PlayerState;
+    const ps = createMockPlayerState();
 
     const layout = getHudLayout(640, 480);
     Draw_StatusBar(cgi, ps, [], 24, 1000, layout);

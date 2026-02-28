@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MessageSystem } from '../../../src/hud/messages.js';
 import type { CGameImport } from '../../../src/types.js';
+import { createMockCGameImport } from '@quake2ts/test-utils';
 
 describe('MessageSystem', () => {
   let messageSystem: MessageSystem;
@@ -8,10 +9,7 @@ describe('MessageSystem', () => {
 
   beforeEach(() => {
     messageSystem = new MessageSystem();
-    mockCgi = {
-      SCR_DrawFontString: vi.fn(),
-      SCR_FontLineHeight: vi.fn().mockReturnValue(12), // Mocking a specific line height
-    } as unknown as CGameImport;
+    mockCgi = createMockCGameImport({ SCR_DrawFontString: vi.fn(), SCR_FontLineHeight: vi.fn().mockReturnValue(12) });
   });
 
   it('should use SCR_FontLineHeight for line spacing in drawNotifications', () => {
