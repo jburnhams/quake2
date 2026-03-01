@@ -57,6 +57,7 @@ export interface TestContext extends SpawnContext {
   game: MockGame;
   engine: MockEngine;
   imports: any; // Added imports to TestContext
+  destroy: () => void;
 }
 
 // -- Factories --
@@ -216,6 +217,12 @@ export function createTestContext(options?: {
   // Ideally we would implement the full interface or use a Proxy,
   // but for tests this mock covers 99% of usage.
   const entities = {
+    destroy: vi.fn(() => {
+      entityList.length = 0;
+      hooks.onEntitySpawn = vi.fn();
+      hooks.onEntityRemove = vi.fn();
+      currentSpawnRegistry = undefined;
+    }),
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
       ent.inUse = true;
@@ -328,6 +335,9 @@ export function createTestContext(options?: {
   game.entities = entities;
 
   return {
+    destroy: () => {
+      (entities as any).destroy();
+    },
     keyValues: {},
     entities,
     game,

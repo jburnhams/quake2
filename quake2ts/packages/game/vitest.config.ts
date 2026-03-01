@@ -44,7 +44,7 @@ export default defineConfig({
     include,
     exclude,
     environment: isUnitNode ? 'node' : 'jsdom',
-    pool: isIntegration ? 'forks' : 'threads',
+    pool: 'forks',
     poolOptions: {
       forks: {
         ...(isIntegration ? { maxForks: 1, minForks: 1 } : {}),

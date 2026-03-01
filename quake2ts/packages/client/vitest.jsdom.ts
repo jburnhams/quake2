@@ -26,7 +26,7 @@ export default defineConfig({
       'tests/integration/**',
     ],
     setupFiles: ['./vitest.setup.ts'],
-    pool: 'threads',
+    pool: 'forks',
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-jsdom.xml',

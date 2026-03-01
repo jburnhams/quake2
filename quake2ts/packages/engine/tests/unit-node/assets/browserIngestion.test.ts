@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 import { ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '../../../src/assets/browserIngestion.js';
@@ -45,29 +44,48 @@ describe('browser ingestion helpers', () => {
 
   it('wires drag and drop to invoke handler with files', () => {
     const handler = vi.fn();
-    const element = document.createElement('div');
+    // Use a mocked HTMLElement
+    const listeners: Record<string, Function> = {};
+    const element = {
+      addEventListener: vi.fn((event, cb) => { listeners[event] = cb; }),
+      removeEventListener: vi.fn((event, cb) => { delete listeners[event]; }),
+      classList: {
+        add: vi.fn(),
+        remove: vi.fn()
+      }
+    } as unknown as HTMLElement;
+
     const cleanup = wireDropTarget(element, handler);
     const file = new File(['pak'], 'pak0.pak');
 
-    const dropEvent = new Event('drop') as DragEvent;
-    Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: createFileList([file]) } });
+    const dropEvent = {
+        preventDefault: vi.fn(),
+        dataTransfer: { files: createFileList([file]) }
+    } as unknown as DragEvent;
 
-    element.dispatchEvent(dropEvent);
+    listeners['drop'](dropEvent);
     cleanup();
 
     expect(handler).toHaveBeenCalledWith([file]);
   });
 
   it('resets file input value after processing', () => {
-    const input = document.createElement('input');
-    input.type = 'file';
+    // Use a mocked HTMLInputElement
+    const listeners: Record<string, Function> = {};
+    const input = {
+      type: 'file',
+      value: 'fakepath',
+      addEventListener: vi.fn((event, cb) => { listeners[event] = cb; }),
+      removeEventListener: vi.fn((event, cb) => { delete listeners[event]; })
+    } as unknown as HTMLInputElement;
+
     const handler = vi.fn();
     const cleanup = wireFileInput(input, handler);
 
     const file = new File(['pak'], 'pak0.pak');
     Object.defineProperty(input, 'files', { value: createFileList([file]), writable: false });
 
-    input.dispatchEvent(new Event('change'));
+    listeners['change']({ target: input });
     cleanup();
 
     expect(handler).toHaveBeenCalledWith(input.files);

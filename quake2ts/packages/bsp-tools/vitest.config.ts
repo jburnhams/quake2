@@ -12,8 +12,8 @@ export default defineConfig({
   test: {
     include: ['tests/unit-node/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
-    pool: 'threads',
-    // isolate: false, // Enable isolation to prevent mock leakage
+    pool: 'forks',
+    isolate: true, // Enable isolation to prevent mock leakage
     environment: 'node',
     reporters: ['default', 'junit'],
     outputFile: {
