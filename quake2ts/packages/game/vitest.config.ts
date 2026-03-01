@@ -44,14 +44,14 @@ export default defineConfig({
     include,
     exclude,
     environment: isUnitNode ? 'node' : 'jsdom',
-    pool: 'forks',
+    pool: isIntegration ? 'forks' : 'threads',
     poolOptions: {
       forks: {
         ...(isIntegration ? { maxForks: 1, minForks: 1 } : {}),
       },
     },
     fileParallelism: !isIntegration,
-    isolate: true,
+    isolate: false,
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,

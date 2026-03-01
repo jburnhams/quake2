@@ -163,7 +163,7 @@ The following high-priority cleanup issues have been resolved:
 ✅ 1. Review isolation settings in all vitest config files
 ✅ 2. Document trade-offs between isolation and performance
 ✅ 3. Standardize settings or document intentional differences
-✅ 4. Consider `pool: 'forks'` for tests that must have complete isolation
+✅ 4. Decided NOT to use `pool: 'forks'` and `isolate: true` across the board, but instead opted to fix the mock leakage properly by standardizing cleanup.
 
 ### 3. WebGPU Environment Cleanup (MEDIUM PRIORITY)
 

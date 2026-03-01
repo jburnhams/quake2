@@ -27,7 +27,8 @@ export default defineConfig({
       'tests/unit-jsdom/**',
       'tests/integration/**',
     ],
-    pool: 'forks',
+    pool: 'threads',
+    isolate: false,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-node.xml',

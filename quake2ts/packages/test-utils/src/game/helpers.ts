@@ -1,4 +1,4 @@
-import { vi, type Mock } from 'vitest';
+import { vi, type Mock, afterEach } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem, createGame, type GameExports, type GameCreateOptions } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3, type RandomGenerator } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
@@ -59,6 +59,22 @@ export interface TestContext extends SpawnContext {
   imports: any; // Added imports to TestContext
   destroy: () => void;
 }
+
+// -- Context Tracking --
+const activeTestContexts: TestContext[] = [];
+
+afterEach(() => {
+  for (const ctx of activeTestContexts) {
+    try {
+      if (ctx && typeof ctx.destroy === 'function') {
+        ctx.destroy();
+      }
+    } catch (e) {
+      // Ignore destruction errors
+    }
+  }
+  activeTestContexts.length = 0;
+});
 
 // -- Factories --
 
@@ -334,7 +350,7 @@ export function createTestContext(options?: {
   // Fix circular reference
   game.entities = entities;
 
-  return {
+  const context = {
     destroy: () => {
       (entities as any).destroy();
     },
@@ -350,6 +366,9 @@ export function createTestContext(options?: {
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),
   } as unknown as TestContext;
+
+  activeTestContexts.push(context);
+  return context;
 }
 
 /**
