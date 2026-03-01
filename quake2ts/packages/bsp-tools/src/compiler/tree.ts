@@ -292,6 +292,7 @@ export function flattenTree(
   tree: TreeElement,
   faceMap: Map<TreeNode, CompileFace[]>
 ): FlattenedTree {
+  let currentCluster = 0;
   const nodes: BspNode[] = [];
   const leafs: BspLeaf[] = [];
   const leafFacesList: number[][] = [];
@@ -336,9 +337,17 @@ export function flattenTree(
       leafFacesList.push(faces);
       leafBrushesList.push(brushes);
 
+      // If contents has CONTENTS_SOLID or similar opaque contents, it gets cluster -1. Otherwise assign a cluster.
+      // Usually in qbsp, any leaf that isn't solid gets a cluster.
+      const isSolid = (element.contents & 1) !== 0; // CONTENTS_SOLID = 1
+      const cluster = isSolid ? -1 : currentCluster++;
+
+      // Actually assign it to the TreeLeaf so portals logic sees it.
+      element.cluster = cluster;
+
       const leaf: BspLeaf = {
         contents: element.contents,
-        cluster: -1, // Assigned later
+        cluster: cluster,
         area: -1,    // Assigned later
         mins: [
           Math.floor(element.bounds.mins.x),

@@ -70,3 +70,7 @@ export function createDummyBrush(sides: any[], contents: number = CONTENTS_SOLID
     contents
   };
 }
+
+// Removing createMockLeaf and createMockPortal from test-utils because `@quake2ts/bsp-tools/src` paths aren't exported
+// in a way that test-utils can resolve them during DTS generation. bsp-tools doesn't export compiler internals
+// (TreeLeaf, Portal) via index.ts, leading to TS2307. We will keep these definitions local to tests that need them.

@@ -43,7 +43,8 @@ import { createBrushList, processCsg, addBoxBevels, updateBrushBounds } from './
 import { buildTree, flattenTree } from './tree.js';
 import { extractFaces, assignFacesToNodes, mergeCoplanarFaces, fixTJunctions } from './faces.js';
 import { buildEdges } from './edges.js';
-import { generateTrivialVis } from './vis.js';
+import { generateTrivialVis, computeVisibility } from './vis.js';
+import { generatePortals } from './portals.js';
 import { serializeEntities } from '../output/entityString.js';
 
 // Lighting logic (currently simple placeholders or partial implementations)
@@ -269,7 +270,43 @@ export class BspCompiler {
     for (const l of flattened.leafs) {
       if (l.cluster > maxCluster) maxCluster = l.cluster;
     }
-    const visibility = generateTrivialVis(maxCluster + 1);
+
+    let visibility: import('../types/bsp.js').BspVisibility | undefined = undefined;
+
+    if (this.options.noVis || maxCluster < 0) {
+      visibility = generateTrivialVis(maxCluster + 1);
+    } else {
+      const portals = generatePortals(
+        root,
+        this.planeSet.getPlanes(),
+        flattened.nodes[0]?.mins ? { x: flattened.nodes[0].mins[0], y: flattened.nodes[0].mins[1], z: flattened.nodes[0].mins[2] } : { x: -4096, y: -4096, z: -4096 },
+        flattened.nodes[0]?.maxs ? { x: flattened.nodes[0].maxs[0], y: flattened.nodes[0].maxs[1], z: flattened.nodes[0].maxs[2] } : { x: 4096, y: 4096, z: 4096 }
+      );
+
+      // Use standard tree leaves if we have them instead of flattened when calling vis
+      const activeLeafs: import('./tree.js').TreeLeaf[] = [];
+      const stack: import('./tree.js').TreeElement[] = [root];
+      const isLeaf = (n: any): n is import('./tree.js').TreeLeaf => !('planeNum' in n);
+      while (stack.length > 0) {
+        const node = stack.pop()!;
+        if (isLeaf(node)) {
+          activeLeafs.push(node);
+        } else {
+          stack.push(node.children[0]);
+          stack.push(node.children[1]);
+        }
+      }
+
+      try {
+        visibility = computeVisibility(portals, activeLeafs, {
+          fast: true, // For MVP we default to fast flood fill
+          onProgress: this.options.verbose ? (p) => console.log(`VIS Progress: ${(p * 100).toFixed(1)}%`) : undefined
+        });
+      } catch (err) {
+        if (this.options.verbose) console.warn('VIS computation failed:', err);
+        throw err;
+      }
+    }
 
     // 13. Entities
     const entityString = serializeEntities(inputEntities);
