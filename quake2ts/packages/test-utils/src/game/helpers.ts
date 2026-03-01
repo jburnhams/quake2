@@ -235,8 +235,8 @@ export function createTestContext(options?: {
   const entities = {
     destroy: vi.fn(() => {
       entityList.length = 0;
-      hooks.onEntitySpawn = vi.fn();
-      hooks.onEntityRemove = vi.fn();
+      // The internal hooks array needs to be cleared directly to prevent memory leaks from registered hooks.
+      (hooks as any).hooks = [];
       currentSpawnRegistry = undefined;
     }),
     spawn: vi.fn(() => {
