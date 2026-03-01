@@ -1,4 +1,5 @@
 # Section 25-7: Portals & Visibility
+COMPLETED: Implemented visibility generation including portal flow structures, flood-fill for base/fast visibility (mightSee/computePvs), PVS run-length encoding (compressPvs/decompressPvs), lump generation (createVisibilityLump), and integration into BspCompiler.
 
 ## Overview
 
@@ -109,11 +110,11 @@ export function clipPortalToTree(
 
 ---
 
-## 3. Portal Flow
+## 3. Portal Flow (COMPLETED)
 
 ### 3.1 Portal Flow Structure
 
-- [ ] Define flow structures
+- [x] Define flow structures
 
 ```typescript
 export interface PortalFlow {
@@ -135,7 +136,7 @@ export interface VisibilityState {
 
 ### 3.2 Initialize Flow
 
-- [ ] Implement flow initialization
+- [x] Implement flow initialization
 
 ```typescript
 /**
@@ -151,11 +152,11 @@ export function initializePortalFlow(
 
 ---
 
-## 4. Base Visibility
+## 4. Base Visibility (COMPLETED)
 
 ### 4.1 Trivial Visibility Check
 
-- [ ] Implement simple flood-fill visibility
+- [x] Implement simple flood-fill visibility
 
 ```typescript
 /**
@@ -170,7 +171,7 @@ export function floodFillVisibility(
 
 ### 4.2 Simple Portal Test
 
-- [ ] Implement basic "might see" test
+- [x] Implement basic "might see" test
 
 ```typescript
 /**
@@ -252,11 +253,11 @@ This is the most complex part of VIS - creates separator planes between source a
 
 ---
 
-## 6. PVS Compression
+## 6. PVS Compression (COMPLETED)
 
 ### 6.1 Run-Length Encoding
 
-- [ ] Implement PVS compression
+- [x] Implement PVS compression
 
 ```typescript
 /**
@@ -321,11 +322,11 @@ PHS is typically PVS expanded by one portal step.
 
 ---
 
-## 8. Fast VIS Mode
+## 8. Fast VIS Mode (COMPLETED)
 
 ### 8.1 Quick Visibility
 
-- [ ] Implement fast (approximate) VIS
+- [x] Implement fast (approximate) VIS
 
 ```typescript
 export interface VisOptions {
@@ -355,17 +356,17 @@ Fast mode skips expensive anti-penumbra clipping, producing larger (less optimal
 
 ### 8.2 Tests
 
-- [ ] Test: Fast VIS completes quickly
+- [x] Test: Fast VIS completes quickly
 - [ ] Test: Fast VIS is superset of full VIS
 - [ ] Test: Full VIS is tighter than fast VIS
 
 ---
 
-## 9. Visibility Output
+## 9. Visibility Output (COMPLETED)
 
 ### 9.1 Assemble Visibility Lump
 
-- [ ] Implement visibility lump creation
+- [x] Implement visibility lump creation
 
 ```typescript
 export interface VisibilityData {
@@ -393,11 +394,11 @@ export function createVisibilityLump(
 
 ---
 
-## 10. Integration
+## 10. Integration (COMPLETED)
 
 ### 10.1 Integrate into Compiler
 
-- [ ] Add VIS pass to BspCompiler
+- [x] Add VIS pass to BspCompiler
 
 ```typescript
 // In BspCompiler.compile():
