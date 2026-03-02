@@ -103,13 +103,13 @@ describe('Portals', () => {
     ];
 
     const leafFront: TreeLeaf = {
-      contents: 1,
+      contents: 0, // Empty leaf
       brushes: [],
       bounds: { mins: { x: 0, y: -100, z: -100 }, maxs: { x: 100, y: 100, z: 100 } }
     };
 
     const leafBack: TreeLeaf = {
-      contents: 1,
+      contents: 0, // Empty leaf
       brushes: [],
       bounds: { mins: { x: -100, y: -100, z: -100 }, maxs: { x: 0, y: 100, z: 100 } }
     };
@@ -139,5 +139,45 @@ describe('Portals', () => {
     // The inner portal should have a winding
     expect(innerPortal?.winding).toBeDefined();
     expect(innerPortal?.winding.numPoints).toBeGreaterThanOrEqual(3);
+  });
+
+  it('generatePortals does not create portals between two solid leaves', () => {
+    const planes: CompilePlane[] = [
+      { normal: { x: 1, y: 0, z: 0 }, dist: 0, type: 0 } // split on YZ plane
+    ];
+
+    const leafFront: TreeLeaf = {
+      contents: CONTENTS_SOLID,
+      brushes: [],
+      bounds: { mins: { x: 0, y: -100, z: -100 }, maxs: { x: 100, y: 100, z: 100 } }
+    };
+
+    const leafBack: TreeLeaf = {
+      contents: CONTENTS_SOLID,
+      brushes: [],
+      bounds: { mins: { x: -100, y: -100, z: -100 }, maxs: { x: 0, y: 100, z: 100 } }
+    };
+
+    const rootNode: TreeNode = {
+      planeNum: 0,
+      children: [leafFront, leafBack],
+      bounds: { mins: { x: -100, y: -100, z: -100 }, maxs: { x: 100, y: 100, z: 100 } }
+    };
+
+    leafFront.parent = rootNode;
+    leafBack.parent = rootNode;
+
+    const portals = generatePortals(rootNode, planes, rootNode.bounds.mins, rootNode.bounds.maxs);
+
+    // Should generate bounding portals on the outside
+    // But no inner portal (planeNum 0) should be generated because both leaves are solid
+    const innerPortal = portals.find(p => p.planeNum === 0);
+    expect(innerPortal).toBeUndefined();
+
+    // The total portal count should be 6 outer bounding portals, but some bounding portals
+    // also shouldn't be created between solid leaves and outside space.
+    // Let's just verify that NO portal references both front and back solid leaves.
+    const solidSolidPortal = portals.find(p => p.nodes[0] === leafFront && p.nodes[1] === leafBack);
+    expect(solidSolidPortal).toBeUndefined();
   });
 });
