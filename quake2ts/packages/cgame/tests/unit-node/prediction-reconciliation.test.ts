@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClientPrediction, defaultPredictionState, PredictionState } from '../../src/prediction/index';
 import type { UserCommand, PmoveTraceFn } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
+import { createTraceMock } from '@quake2ts/test-utils';
 
 describe('ClientPrediction Reconciliation', () => {
   let prediction: ClientPrediction;
@@ -9,7 +10,7 @@ describe('ClientPrediction Reconciliation', () => {
   // The physics engine relies on trace result to update position.
   // If we return { x: 0... }, physics stays at 0.
   // We need a trace that allows movement.
-  const mockTrace: PmoveTraceFn = vi.fn((start, end) => ({
+  const mockTrace: PmoveTraceFn = vi.fn((start, end) => createTraceMock({
       fraction: 1.0,
       endpos: end, // Perfect movement
       plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
