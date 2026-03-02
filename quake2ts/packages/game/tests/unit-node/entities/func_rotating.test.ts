@@ -1,13 +1,8 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { createTestGame, spawnEntity, createEntityFactory } from '@quake2ts/test-utils';
 import type { GameExports } from '../../../src/index.js';
 import type { SpawnContext } from '../../../src/entities/spawn.js';
-
-// Mock T_Damage
-vi.mock('../../../src/combat/damage.js', () => ({
-    T_Damage: vi.fn(),
-}));
 
 describe('func_rotating', () => {
     let game: GameExports;
@@ -26,6 +21,10 @@ describe('func_rotating', () => {
         };
 
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('initializes correctly', () => {
