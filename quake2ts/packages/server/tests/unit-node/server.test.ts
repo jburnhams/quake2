@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer, createServer } from '../../src/dedicated.js';
 import { createMockTransport, MockTransport, createTestBspMap } from '@quake2ts/test-utils';
-import { parseBsp } from '@quake2ts/engine';
 
 // Mock dependencies
 vi.mock('node:fs/promises', () => ({
@@ -10,11 +9,11 @@ vi.mock('node:fs/promises', () => ({
     }
 }));
 
-vi.mock('@quake2ts/engine', () => {
-    return {
-        parseBsp: vi.fn()
-    };
-});
+import { parseBsp } from '@quake2ts/engine';
+
+vi.mock('@quake2ts/engine', () => ({
+    parseBsp: vi.fn()
+}));
 
 describe('DedicatedServer', () => {
     let server: DedicatedServer;

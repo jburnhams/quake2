@@ -14,6 +14,30 @@ function createFileList(files: File[]): FileList {
   return fileList as FileList;
 }
 
+class MockElement {
+  listeners: Record<string, Function[]> = {};
+  value: string = '';
+  type?: string;
+  files?: FileList;
+
+  addEventListener(type: string, listener: Function) {
+    if (!this.listeners[type]) this.listeners[type] = [];
+    this.listeners[type].push(listener);
+  }
+
+  removeEventListener(type: string, listener: Function) {
+    if (this.listeners[type]) {
+      this.listeners[type] = this.listeners[type].filter(l => l !== listener);
+    }
+  }
+
+  dispatchEvent(event: any) {
+    if (this.listeners[event.type]) {
+      this.listeners[event.type].forEach(l => l(event));
+    }
+  }
+}
+
 describe('browser ingestion helpers', () => {
   let vfs: VirtualFileSystem;
 
@@ -44,48 +68,40 @@ describe('browser ingestion helpers', () => {
 
   it('wires drag and drop to invoke handler with files', () => {
     const handler = vi.fn();
-    // Use a mocked HTMLElement
-    const listeners: Record<string, Function> = {};
-    const element = {
-      addEventListener: vi.fn((event, cb) => { listeners[event] = cb; }),
-      removeEventListener: vi.fn((event, cb) => { delete listeners[event]; }),
-      classList: {
-        add: vi.fn(),
-        remove: vi.fn()
-      }
-    } as unknown as HTMLElement;
-
+    const element = new MockElement() as unknown as HTMLElement;
     const cleanup = wireDropTarget(element, handler);
     const file = new File(['pak'], 'pak0.pak');
 
     const dropEvent = {
+        type: 'drop',
         preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
         dataTransfer: { files: createFileList([file]) }
     } as unknown as DragEvent;
 
-    listeners['drop'](dropEvent);
+    element.dispatchEvent(dropEvent);
     cleanup();
 
     expect(handler).toHaveBeenCalledWith([file]);
   });
 
   it('resets file input value after processing', () => {
-    // Use a mocked HTMLInputElement
-    const listeners: Record<string, Function> = {};
-    const input = {
-      type: 'file',
-      value: 'fakepath',
-      addEventListener: vi.fn((event, cb) => { listeners[event] = cb; }),
-      removeEventListener: vi.fn((event, cb) => { delete listeners[event]; })
-    } as unknown as HTMLInputElement;
-
+    const input = new MockElement() as unknown as HTMLInputElement;
+    input.type = 'file';
     const handler = vi.fn();
     const cleanup = wireFileInput(input, handler);
 
     const file = new File(['pak'], 'pak0.pak');
     Object.defineProperty(input, 'files', { value: createFileList([file]), writable: false });
 
-    listeners['change']({ target: input });
+    const changeEvent = {
+        type: 'change',
+        target: input,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+    } as unknown as Event;
+
+    input.dispatchEvent(changeEvent);
     cleanup();
 
     expect(handler).toHaveBeenCalledWith(input.files);
