@@ -143,9 +143,9 @@ The following high-priority cleanup issues have been resolved:
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-node/assets/` (removed jsdom dependency)
    - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions
-4. Update test scripts in `package.json` to run both test suites
+✅ 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
-5. Configure node tests with `environment: 'node'` in vitest config
+✅ 5. Configure node tests with `environment: 'node'` in vitest config
    - Updated `packages/game/vitest.config.ts` to support split environments
 
 **Expected Impact**: 50-70% reduction in memory usage for tests that don't need JSDOM
@@ -160,10 +160,10 @@ The following high-priority cleanup issues have been resolved:
 - Unit tests often run with `isolate: false` for speed - sharing globals across tests
 
 **Action Items**:
-1. Review isolation settings in all vitest config files
-2. Document trade-offs between isolation and performance
-3. Standardize settings or document intentional differences
-4. Consider `pool: 'forks'` for tests that must have complete isolation
+✅ 1. Review isolation settings in all vitest config files
+✅ 2. Document trade-offs between isolation and performance
+✅ 3. Standardize settings or document intentional differences
+✅ 4. Decided NOT to use `pool: 'forks'` and `isolate: true` across the board, but instead opted to fix the mock leakage properly by standardizing cleanup.
 
 ### 3. WebGPU Environment Cleanup (MEDIUM PRIORITY)
 
@@ -190,9 +190,9 @@ The following high-priority cleanup issues have been resolved:
 - This is intended behavior but requires proper garbage collection
 
 **Action Items**:
-1. Run memory profiler on game unit tests
-2. Verify contexts are garbage collected after tests complete
-3. Add explicit cleanup to test helpers if needed
+✅ 1. Run memory profiler on game unit tests
+✅ 2. Verify contexts are garbage collected after tests complete
+✅ 3. Add explicit cleanup to test helpers if needed
 
 ## Testing the Fix
 

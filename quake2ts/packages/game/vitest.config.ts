@@ -51,7 +51,7 @@ export default defineConfig({
       },
     },
     fileParallelism: !isIntegration,
-    isolate: true,
+    isolate: false,
     clearMocks: true,
     mockReset: true,
     restoreMocks: true,

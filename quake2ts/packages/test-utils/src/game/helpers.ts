@@ -1,4 +1,4 @@
-import { vi, type Mock } from 'vitest';
+import { vi, type Mock, afterEach } from 'vitest';
 import { Entity, SpawnRegistry, ScriptHookRegistry, type SpawnContext, type EntitySystem, createGame, type GameExports, type GameCreateOptions } from '@quake2ts/game';
 import { createRandomGenerator, type Vec3, type RandomGenerator } from '@quake2ts/shared';
 import { type BspModel } from '@quake2ts/engine';
@@ -57,7 +57,24 @@ export interface TestContext extends SpawnContext {
   game: MockGame;
   engine: MockEngine;
   imports: any; // Added imports to TestContext
+  destroy: () => void;
 }
+
+// -- Context Tracking --
+const activeTestContexts: TestContext[] = [];
+
+afterEach(() => {
+  for (const ctx of activeTestContexts) {
+    try {
+      if (ctx && typeof ctx.destroy === 'function') {
+        ctx.destroy();
+      }
+    } catch (e) {
+      // Ignore destruction errors
+    }
+  }
+  activeTestContexts.length = 0;
+});
 
 // -- Factories --
 
@@ -216,6 +233,12 @@ export function createTestContext(options?: {
   // Ideally we would implement the full interface or use a Proxy,
   // but for tests this mock covers 99% of usage.
   const entities = {
+    destroy: vi.fn(() => {
+      entityList.length = 0;
+      // The internal hooks array needs to be cleared directly to prevent memory leaks from registered hooks.
+      (hooks as any).hooks = [];
+      currentSpawnRegistry = undefined;
+    }),
     spawn: vi.fn(() => {
       const ent = new Entity(entityList.length + 1);
       ent.inUse = true;
@@ -327,7 +350,10 @@ export function createTestContext(options?: {
   // Fix circular reference
   game.entities = entities;
 
-  return {
+  const context = {
+    destroy: () => {
+      (entities as any).destroy();
+    },
     keyValues: {},
     entities,
     game,
@@ -340,6 +366,9 @@ export function createTestContext(options?: {
     precacheSound: vi.fn(),
     precacheImage: vi.fn(),
   } as unknown as TestContext;
+
+  activeTestContexts.push(context);
+  return context;
 }
 
 /**

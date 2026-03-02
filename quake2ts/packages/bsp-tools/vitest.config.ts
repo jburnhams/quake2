@@ -13,7 +13,10 @@ export default defineConfig({
     include: ['tests/unit-node/**/*.test.ts'],
     exclude: ['**/node_modules/**', '**/dist/**'],
     pool: 'threads',
-    // isolate: false, // Enable isolation to prevent mock leakage
+    isolate: false,
+    clearMocks: true,
+    mockReset: true,
+    restoreMocks: true,
     environment: 'node',
     reporters: ['default', 'junit'],
     outputFile: {

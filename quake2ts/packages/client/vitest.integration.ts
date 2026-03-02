@@ -27,13 +27,14 @@ export default defineConfig({
     ],
     setupFiles: ['./vitest.setup.ts'],
     pool: 'threads',
+    isolate: false,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-integration.xml',
     },
     clearMocks: true,
-    mockReset: false,
-    restoreMocks: false,
+    mockReset: true,
+    restoreMocks: true,
     testTimeout: 20000,
   },
 });

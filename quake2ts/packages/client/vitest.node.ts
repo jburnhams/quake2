@@ -28,6 +28,7 @@ export default defineConfig({
       'tests/integration/**',
     ],
     pool: 'threads',
+    isolate: false,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-node.xml',
