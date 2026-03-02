@@ -141,7 +141,7 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/context.test.ts` to `engine/tests/unit-node/render/context.test.ts` (mocked DOM)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
-   - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-jsdom/assets/`
+   - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-node/assets/` (removed jsdom dependency)
    - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions
 4. Update test scripts in `package.json` to run both test suites
    - Updated `packages/game/package.json` with `test:unit:node` and `test:unit:jsdom`
