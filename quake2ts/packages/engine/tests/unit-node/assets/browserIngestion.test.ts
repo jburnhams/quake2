@@ -1,4 +1,3 @@
-// @vitest-environment jsdom
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 import { ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '../../../src/assets/browserIngestion.js';
@@ -13,6 +12,30 @@ function createFileList(files: File[]): FileList {
     fileList[index] = file;
   });
   return fileList as FileList;
+}
+
+class MockElement {
+  listeners: Record<string, Function[]> = {};
+  value: string = '';
+  type?: string;
+  files?: FileList;
+
+  addEventListener(type: string, listener: Function) {
+    if (!this.listeners[type]) this.listeners[type] = [];
+    this.listeners[type].push(listener);
+  }
+
+  removeEventListener(type: string, listener: Function) {
+    if (this.listeners[type]) {
+      this.listeners[type] = this.listeners[type].filter(l => l !== listener);
+    }
+  }
+
+  dispatchEvent(event: any) {
+    if (this.listeners[event.type]) {
+      this.listeners[event.type].forEach(l => l(event));
+    }
+  }
 }
 
 describe('browser ingestion helpers', () => {
@@ -45,12 +68,16 @@ describe('browser ingestion helpers', () => {
 
   it('wires drag and drop to invoke handler with files', () => {
     const handler = vi.fn();
-    const element = document.createElement('div');
+    const element = new MockElement() as unknown as HTMLElement;
     const cleanup = wireDropTarget(element, handler);
     const file = new File(['pak'], 'pak0.pak');
 
-    const dropEvent = new Event('drop') as DragEvent;
-    Object.defineProperty(dropEvent, 'dataTransfer', { value: { files: createFileList([file]) } });
+    const dropEvent = {
+        type: 'drop',
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+        dataTransfer: { files: createFileList([file]) }
+    } as unknown as DragEvent;
 
     element.dispatchEvent(dropEvent);
     cleanup();
@@ -59,7 +86,7 @@ describe('browser ingestion helpers', () => {
   });
 
   it('resets file input value after processing', () => {
-    const input = document.createElement('input');
+    const input = new MockElement() as unknown as HTMLInputElement;
     input.type = 'file';
     const handler = vi.fn();
     const cleanup = wireFileInput(input, handler);
@@ -67,7 +94,14 @@ describe('browser ingestion helpers', () => {
     const file = new File(['pak'], 'pak0.pak');
     Object.defineProperty(input, 'files', { value: createFileList([file]), writable: false });
 
-    input.dispatchEvent(new Event('change'));
+    const changeEvent = {
+        type: 'change',
+        target: input,
+        preventDefault: vi.fn(),
+        stopPropagation: vi.fn(),
+    } as unknown as Event;
+
+    input.dispatchEvent(changeEvent);
     cleanup();
 
     expect(handler).toHaveBeenCalledWith(input.files);
