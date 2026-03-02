@@ -299,6 +299,8 @@ export function flattenTree(
   const serializedFaces: CompileFace[] = []; // Output faces in tree traversal order
 
   // Helper to serialize faces for a node
+  let numClusters = 0;
+
   // Returns index in serializedFaces array
   function processNodeFaces(node: TreeNode): { first: number, count: number } {
     const nodeFaces = faceMap.get(node) || [];
@@ -336,9 +338,16 @@ export function flattenTree(
       leafFacesList.push(faces);
       leafBrushesList.push(brushes);
 
+      let cluster = -1;
+      // Per AGENTS.md guidelines, assign clusters to non-solid leaves directly during flattenTree
+      if (element.contents !== CONTENTS_SOLID) {
+         cluster = numClusters++;
+         element.cluster = cluster;
+      }
+
       const leaf: BspLeaf = {
         contents: element.contents,
-        cluster: -1, // Assigned later
+        cluster: cluster,
         area: -1,    // Assigned later
         mins: [
           Math.floor(element.bounds.mins.x),

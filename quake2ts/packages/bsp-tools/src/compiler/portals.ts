@@ -1,4 +1,4 @@
-import { Winding, Vec3, Bounds3, addVec3, scaleVec3, createEmptyBounds3, copyWinding, splitWinding, baseWindingForPlane, chopWindingByPlanes, windingBounds } from '@quake2ts/shared';
+import { Winding, Vec3, Bounds3, addVec3, scaleVec3, createEmptyBounds3, copyWinding, splitWinding, baseWindingForPlane, chopWindingByPlanes, windingBounds, hasAnyContents, CONTENTS_SOLID } from '@quake2ts/shared';
 import { CompilePlane } from '../types/compile.js';
 import { TreeNode, TreeLeaf, TreeElement, isLeaf } from './tree.js';
 import { ON_EPSILON } from '../types/index.js';
@@ -178,15 +178,23 @@ function makeTreePortals(node: TreeElement, planes: CompilePlane[], portals: Por
           }
 
           if (w && w.numPoints >= 3) {
-            let finalP: Portal = {
-               winding: w,
-               planeNum: node.planeNum,
-               onNode: node,
-               nodes: [f.leaf, b.leaf],
-               next: [null, null]
-            };
-            portals.push(finalP);
-            addPortalToNodes(finalP, f.leaf, b.leaf);
+            // Do not generate portals between two solid leaves.
+            // Portals represent visible openings between spaces. If both adjacent
+            // leaves are solid, no visibility can pass through.
+            // Reference: q2tools/src/portals.c (Portal_Passable checks)
+            const isFrontSolid = hasAnyContents(f.leaf.contents, CONTENTS_SOLID);
+            const isBackSolid = hasAnyContents(b.leaf.contents, CONTENTS_SOLID);
+            if (!(isFrontSolid && isBackSolid)) {
+              let finalP: Portal = {
+                 winding: w,
+                 planeNum: node.planeNum,
+                 onNode: node,
+                 nodes: [f.leaf, b.leaf],
+                 next: [null, null]
+              };
+              portals.push(finalP);
+              addPortalToNodes(finalP, f.leaf, b.leaf);
+            }
           }
         }
       }

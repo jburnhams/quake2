@@ -105,7 +105,7 @@ export function clipPortalToTree(
 - [x] Test: Two-room map produces portal between them
 - [x] Test: Portal winding is valid polygon
 - [x] Test: Portal references correct leaves
-- [ ] Test: No portals to solid leaves
+- [x] Test: No portals to solid leaves
 
 ---
 
@@ -113,7 +113,7 @@ export function clipPortalToTree(
 
 ### 3.1 Portal Flow Structure
 
-- [ ] Define flow structures
+- [x] Define flow structures
 
 ```typescript
 export interface PortalFlow {
@@ -135,7 +135,7 @@ export interface VisibilityState {
 
 ### 3.2 Initialize Flow
 
-- [ ] Implement flow initialization
+- [x] Implement flow initialization
 
 ```typescript
 /**
@@ -155,7 +155,7 @@ export function initializePortalFlow(
 
 ### 4.1 Trivial Visibility Check
 
-- [ ] Implement simple flood-fill visibility
+- [x] Implement simple flood-fill visibility
 
 ```typescript
 /**
@@ -170,7 +170,7 @@ export function floodFillVisibility(
 
 ### 4.2 Simple Portal Test
 
-- [ ] Implement basic "might see" test
+- [x] Implement basic "might see" test
 
 ```typescript
 /**
