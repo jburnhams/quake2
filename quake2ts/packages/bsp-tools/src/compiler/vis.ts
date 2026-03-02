@@ -157,8 +157,9 @@ export function floodFillVisibility(
   const queue: number[] = [startCluster];
   reachable.set(startCluster);
 
-  while (queue.length > 0) {
-    const cluster = queue.shift()!;
+  let head = 0;
+  while (head < queue.length) {
+    const cluster = queue[head++];
     const flows = state.clusterPortals.get(cluster) || [];
 
     for (const flow of flows) {
