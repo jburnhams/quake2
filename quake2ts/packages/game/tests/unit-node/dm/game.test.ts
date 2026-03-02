@@ -1,43 +1,20 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { Entity, DeadFlag, Solid, MoveType, EntityFlags } from '../../../src/entities/entity.js';
+import { Entity, DeadFlag, Solid, MoveType } from '../../../src/entities/entity.js';
 import { PutClientInServer, Respawn } from '../../../src/dm/game.js';
-import { createTestContext } from '@quake2ts/test-utils';
-import { WeaponId, createPlayerInventory } from '../../../src/inventory/playerInventory.js';
-import { ServerCommand } from '@quake2ts/shared';
-
-// Mock P_PlayerThink
-vi.mock('../../../src/entities/player.js', () => ({
-    P_PlayerThink: vi.fn(),
-    player_pain: vi.fn(),
-    player_die: vi.fn(),
-    player_think: vi.fn()
-}));
+import { createTestContext, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { WeaponId } from '../../../src/inventory/playerInventory.js';
 
 describe('Deathmatch Game Rules', () => {
     let sys: EntitySystem;
     let player: Entity;
     let spawnPoint: Entity;
-    let testEntities: Entity[] = [];
 
     beforeEach(() => {
         const ctx = createTestContext();
         sys = ctx.entities;
         sys.deathmatch = true;
-
-        // Mock sys.spawn to actually return objects we can track
-        sys.spawn = vi.fn().mockImplementation(() => {
-            const e = new Entity(testEntities.length + 1);
-            testEntities.push(e);
-            return e;
-        });
-
-        // Mock forEachEntity to iterate our local list
-        sys.forEachEntity = vi.fn().mockImplementation((cb) => {
-            testEntities.forEach(cb);
-        });
-
-        sys.imports.serverCommand = vi.fn(); // Mock serverCommand
+        sys.imports.serverCommand = vi.fn();
 
         // Setup spawn point
         spawnPoint = sys.spawn();
@@ -46,16 +23,11 @@ describe('Deathmatch Game Rules', () => {
         spawnPoint.angles = { x: 0, y: 45, z: 0 };
 
         // Setup player
-        player = sys.spawn();
-        player.classname = 'player';
-        player.client = {
-            inventory: createPlayerInventory(),
-        } as any; // Partial mock with valid inventory for reset
+        player = spawnEntity(sys, createPlayerEntityFactory());
     });
 
     afterEach(() => {
         vi.clearAllMocks();
-        testEntities = [];
     });
 
     it('PutClientInServer should reset player state', () => {

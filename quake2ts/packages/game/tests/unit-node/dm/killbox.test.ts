@@ -1,38 +1,32 @@
-
 import { describe, it, expect, vi } from 'vitest';
 import { KillBox } from '../../../src/dm/game.js';
 import { Entity, DeadFlag, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, spawnEntity, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('KillBox', () => {
     it('should kill entities occupying the same space', () => {
         const { entities: sys } = createTestContext();
 
         // Attacker (the one spawning/teleporting)
-        const attacker = sys.spawn();
-        attacker.classname = 'player';
+        const attacker = spawnEntity(sys, createPlayerEntityFactory());
+        if (!attacker) throw new Error('Failed to spawn attacker');
         attacker.origin = { x: 100, y: 100, z: 100 };
-        attacker.mins = { x: -16, y: -16, z: -24 };
-        attacker.maxs = { x: 16, y: 16, z: 32 };
-        attacker.client = {} as any; // Mock client
 
         // Victim (standing in the way)
-        const victim = sys.spawn();
-        victim.classname = 'player';
+        const victim = spawnEntity(sys, createPlayerEntityFactory());
+        if (!victim) throw new Error('Failed to spawn victim');
         victim.origin = { x: 100, y: 100, z: 100 };
-        victim.mins = { x: -16, y: -16, z: -24 };
-        victim.maxs = { x: 16, y: 16, z: 32 };
         victim.takedamage = true;
         victim.health = 100;
         victim.solid = Solid.Bbox;
         victim.die = vi.fn();
 
         // Mock trace to detect collision - victim is blocking attacker
-        const traceMock = vi.fn().mockReturnValue({
+        const traceMock = vi.fn().mockReturnValue(createTraceMock({
             fraction: 0, // Immediately hit
             ent: victim,
             startsolid: true
-        });
+        }));
 
         // Setup mock trace on imports
         (sys.imports as any).trace = traceMock;

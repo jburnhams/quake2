@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClientPrediction, PredictionSettings, PredictionState, defaultPredictionState } from '../../../src/index';
 import { PmoveTraceFn, UserCommand, PmFlag, PmType, WaterLevel } from '@quake2ts/shared';
+import { createTraceMock } from '@quake2ts/test-utils';
 
 describe('ClientPrediction Toggling', () => {
     let prediction: ClientPrediction;
@@ -10,7 +11,7 @@ describe('ClientPrediction Toggling', () => {
     const DEFAULT_STATE = defaultPredictionState();
 
     beforeEach(() => {
-        traceFn = vi.fn().mockReturnValue({
+        traceFn = vi.fn().mockReturnValue(createTraceMock({
             fraction: 1.0,
             endpos: { x: 0, y: 0, z: 0 },
             plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
@@ -19,7 +20,7 @@ describe('ClientPrediction Toggling', () => {
             contents: 0,
             allsolid: false,
             startsolid: false
-        });
+        }));
         pointContentsFn = vi.fn().mockReturnValue(0);
         prediction = new ClientPrediction({ trace: traceFn, pointContents: pointContentsFn });
     });

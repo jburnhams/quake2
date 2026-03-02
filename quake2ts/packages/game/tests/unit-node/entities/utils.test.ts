@@ -1,36 +1,29 @@
 import { describe, it, expect, vi } from 'vitest';
 import { touchTriggers, velocityForDamage, clipVelocity } from '../../../src/entities/utils.js';
 import { Entity, Solid } from '../../../src/entities/entity.js';
-import { EntitySystem } from '../../../src/entities/system.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('touchTriggers', () => {
   it('should call touch on overlapping triggers', () => {
-    const ent = {
-      client: {},
-      absmin: { x: 0, y: 0, z: 0 },
-      absmax: { x: 10, y: 10, z: 10 },
-    } as Entity;
+    const ctx = createTestContext();
+    const system = ctx.entities;
 
-    const trigger = {
-      solid: Solid.Trigger,
-      absmin: { x: 5, y: 5, z: 5 },
-      absmax: { x: 15, y: 15, z: 15 },
-      touch: vi.fn(),
-    } as unknown as Entity;
+    const ent = system.spawn();
+    ent.client = {} as any; // Trigger requirement
+    ent.absmin = { x: 0, y: 0, z: 0 };
+    ent.absmax = { x: 10, y: 10, z: 10 };
 
-    const noTouch = {
-        solid: Solid.Trigger,
-        absmin: { x: 20, y: 20, z: 20 },
-        absmax: { x: 30, y: 30, z: 30 },
-        touch: vi.fn(),
-    } as unknown as Entity;
+    const trigger = system.spawn();
+    trigger.solid = Solid.Trigger;
+    trigger.absmin = { x: 5, y: 5, z: 5 };
+    trigger.absmax = { x: 15, y: 15, z: 15 };
+    trigger.touch = vi.fn();
 
-    const system = {
-      forEachEntity: (callback: (ent: Entity) => void) => {
-        callback(trigger);
-        callback(noTouch);
-      },
-    } as unknown as EntitySystem;
+    const noTouch = system.spawn();
+    noTouch.solid = Solid.Trigger;
+    noTouch.absmin = { x: 20, y: 20, z: 20 };
+    noTouch.absmax = { x: 30, y: 30, z: 30 };
+    noTouch.touch = vi.fn();
 
     touchTriggers(ent, system);
 
@@ -39,19 +32,19 @@ describe('touchTriggers', () => {
   });
 
   it('should ignore non-triggers', () => {
-    const ent = { client: {}, absmin: { x: 0, y: 0, z: 0 }, absmax: { x: 10, y: 10, z: 10 } } as Entity;
-    const solid = {
-        solid: Solid.Bsp,
-        absmin: { x: 5, y: 5, z: 5 },
-        absmax: { x: 15, y: 15, z: 15 },
-        touch: vi.fn(),
-    } as unknown as Entity;
+    const ctx = createTestContext();
+    const system = ctx.entities;
 
-    const system = {
-        forEachEntity: (callback: (ent: Entity) => void) => {
-            callback(solid);
-        }
-    } as unknown as EntitySystem;
+    const ent = system.spawn();
+    ent.client = {} as any;
+    ent.absmin = { x: 0, y: 0, z: 0 };
+    ent.absmax = { x: 10, y: 10, z: 10 };
+
+    const solid = system.spawn();
+    solid.solid = Solid.Bsp;
+    solid.absmin = { x: 5, y: 5, z: 5 };
+    solid.absmax = { x: 15, y: 15, z: 15 };
+    solid.touch = vi.fn();
 
     touchTriggers(ent, system);
     expect(solid.touch).not.toHaveBeenCalled();
