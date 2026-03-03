@@ -231,3 +231,120 @@ export function generateTrivialVis(numClusters: number): BspVisibility {
     clusters
   };
 }
+
+/**
+ * Compress visibility bitsets using Quake 2 run-length encoding.
+ *
+ * Format:
+ * - 0x00: Next byte is count of zeroes
+ * - Other: Literal byte (8 bits of visibility)
+ *
+ * Reference: q2tools/src/bspfile.c (CompressVis)
+ */
+export function compressPvs(
+  uncompressed: Uint8Array
+): Uint8Array {
+  const result: number[] = [];
+  const size = uncompressed.length;
+
+  for (let i = 0; i < size; ) {
+    if (uncompressed[i] === 0) {
+      let rep = 1;
+      for (let j = i + 1; j < size; j++) {
+        if (uncompressed[j] === 0 && rep < 255) {
+          rep++;
+        } else {
+          break;
+        }
+      }
+      result.push(0, rep);
+      i += rep;
+    } else {
+      result.push(uncompressed[i]);
+      i++;
+    }
+  }
+
+  return new Uint8Array(result);
+}
+
+/**
+ * Decompress a single cluster's PVS.
+ *
+ * Reference: q2tools/src/bspfile.c (DecompressVis)
+ */
+export function decompressPvs(
+  data: Uint8Array,
+  offset: number,
+  numClusters: number
+): BitSet {
+  const rowBytes = Math.ceil(numClusters / 8);
+  const result = new BitSet(numClusters);
+  let srcIndex = offset;
+  let destIndex = 0;
+
+  while (destIndex < rowBytes && srcIndex < data.length) {
+    const value = data[srcIndex++];
+
+    if (value !== 0) {
+      result.data[destIndex++] = value;
+      continue;
+    }
+
+    // value is 0, so next byte is run length
+    if (srcIndex >= data.length) {
+      break; // truncated
+    }
+
+    const runLength = data[srcIndex++];
+    for (let i = 0; i < runLength && destIndex < rowBytes; i++) {
+      result.data[destIndex++] = 0;
+    }
+  }
+
+  return result;
+}
+
+export interface VisibilityData {
+  numClusters: number;
+  bitOffsets: number[];  // [pvs_offset, phs_offset] per cluster
+  data: Uint8Array;
+}
+
+/**
+ * Creates visibility lump data from raw PVS and PHS bitsets.
+ * Compresses data and builds cluster offsets.
+ *
+ * Reference: q2tools/src/writebsp.c
+ */
+export function createVisibilityLump(
+  pvs: BitSet[],
+  phs: BitSet[],
+  numClusters: number
+): BspVisibility {
+  if (numClusters <= 0) {
+    return { numClusters: 0, clusters: [] };
+  }
+
+  const clusters: BspVisibilityCluster[] = [];
+
+  for (let i = 0; i < numClusters; i++) {
+    // Compress PVS
+    const uncompressedPvs = pvs[i] ? pvs[i].data : new Uint8Array(Math.ceil(numClusters / 8));
+    const compressedPvs = compressPvs(uncompressedPvs);
+
+    // Compress PHS
+    const uncompressedPhs = phs[i] ? phs[i].data : new Uint8Array(Math.ceil(numClusters / 8));
+    const compressedPhs = compressPvs(uncompressedPhs);
+
+    clusters.push({
+      pvs: compressedPvs,
+      phs: compressedPhs
+    });
+  }
+
+  return {
+    numClusters,
+    clusters
+  };
+}

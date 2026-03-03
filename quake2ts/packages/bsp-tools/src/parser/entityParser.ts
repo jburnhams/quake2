@@ -79,6 +79,29 @@ export function parseEntity(tokenizer: MapTokenizer, options?: EntityParseOption
             if (kv.key === 'classname') {
                 classname = kv.value;
             }
+        } else if (token.type === TokenType.OPEN_PAREN) {
+            // Sometimes map editors output brushes without surrounding braces
+            // directly inside the entity block. This is technically non-standard
+            // Q2 map format (which expects nested braces for brushes), but some tools do it.
+            // We can try to parse a brush here.
+            try {
+                brushes.push(parseBrush(tokenizer, 220));
+            } catch (err) {
+                if (options?.skipMalformed) {
+                    const message = err instanceof Error ? err.message : String(err);
+                    options.onWarning?.(`Skipping malformed brush at line ${token.line}: ${message}`, token.line);
+                    // Recover: consume until '}' or another brush start
+                    while (!tokenizer.isAtEnd()) {
+                        const t = tokenizer.peek();
+                        if (t.type === TokenType.CLOSE_BRACE || t.type === TokenType.OPEN_PAREN) {
+                            break;
+                        }
+                        tokenizer.next();
+                    }
+                } else {
+                    throw err;
+                }
+            }
         } else {
              throw new Error(`Unexpected token inside entity: ${TokenType[token.type]} ('${token.value}') at line ${token.line}, column ${token.column}`);
         }
