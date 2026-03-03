@@ -256,7 +256,7 @@ This is the most complex part of VIS - creates separator planes between source a
 
 ### 6.1 Run-Length Encoding
 
-- [ ] Implement PVS compression
+- [x] Implement PVS compression
 
 ```typescript
 /**
@@ -286,9 +286,9 @@ export function decompressPvs(
 
 ### 6.2 Tests
 
-- [ ] Test: Compress → decompress = original
-- [ ] Test: Compression reduces size
-- [ ] Test: Empty PVS compresses well
+- [x] Test: Compress → decompress = original
+- [x] Test: Compression reduces size
+- [x] Test: Empty PVS compresses well
 
 ---
 
@@ -365,7 +365,7 @@ Fast mode skips expensive anti-penumbra clipping, producing larger (less optimal
 
 ### 9.1 Assemble Visibility Lump
 
-- [ ] Implement visibility lump creation
+- [x] Implement visibility lump creation
 
 ```typescript
 export interface VisibilityData {
@@ -388,7 +388,7 @@ export function createVisibilityLump(
 
 ### 9.2 Tests
 
-- [ ] Test: Visibility lump structure correct
+- [x] Test: Visibility lump structure correct
 - [ ] Test: Engine can parse visibility data
 
 ---
@@ -397,7 +397,7 @@ export function createVisibilityLump(
 
 ### 10.1 Integrate into Compiler
 
-- [ ] Add VIS pass to BspCompiler
+- [x] Add VIS pass to BspCompiler
 
 ```typescript
 // In BspCompiler.compile():
@@ -440,8 +440,8 @@ if (!options.noVis) {
 - [ ] Flood fill visits all reachable clusters
 - [ ] Full PVS computation correct
 - [ ] Anti-penumbra tightens visibility
-- [ ] PVS compression/decompression works
+- [x] PVS compression/decompression works
 - [ ] PHS computed correctly
 - [ ] Fast VIS produces valid (if loose) results
-- [ ] Visibility lump correctly formatted
+- [x] Visibility lump correctly formatted
 - [ ] WASM comparison passes
