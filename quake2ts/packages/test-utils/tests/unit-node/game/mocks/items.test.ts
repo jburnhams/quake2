@@ -7,7 +7,7 @@ import {
   createMockArmorItem,
   createMockPowerupItem,
   createMockAmmoItem
-} from '../../../src/game/mocks/items.js';
+} from '../../../../src/game/mocks/items.js';
 import { WeaponId, AmmoItemId } from '@quake2ts/game';
 
 describe('Game Item Mocks', () => {

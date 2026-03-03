@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { createCanvas } from '@napi-rs/canvas';
-import { savePNG } from '../../src/visual/snapshots';
+import { savePNG } from '../../../src/visual/snapshots';
 import fs from 'fs/promises';
 import path from 'path';
 

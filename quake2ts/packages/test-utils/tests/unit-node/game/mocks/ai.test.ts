@@ -3,7 +3,7 @@ import {
     createMockAI,
     createMockMonsterAI,
     createMockMonsterMove
-} from '../../../src/game/mocks/ai';
+} from '../../../../src/game/mocks/ai';
 
 describe('AI Mocks', () => {
     describe('createMockAI', () => {

@@ -6,7 +6,7 @@ import {
     createMockUserInfo,
     serializeUserInfo,
     HandshakeStage
-} from '../../src/server/mocks/connection';
+} from '../../../src/server/mocks/connection';
 import { ClientState } from '@quake2ts/server';
 
 describe('Server Mocks: Connection', () => {
