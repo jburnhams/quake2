@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { setupBrowserEnvironment, teardownBrowserEnvironment } from '../src/setup/browser';
-import { createMockCanvas } from '../src/setup/canvas';
+import { setupBrowserEnvironment, teardownBrowserEnvironment } from '../../src/setup/browser';
+import { createMockCanvas } from '../../src/setup/canvas';
 
 describe('Example Usage', () => {
   describe('Browser Environment', () => {

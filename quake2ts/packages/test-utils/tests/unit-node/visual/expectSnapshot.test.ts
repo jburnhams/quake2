@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { expectSnapshot, getSnapshotPath, savePNG } from '../../src/visual/snapshots';
+import { expectSnapshot, getSnapshotPath, savePNG } from '../../../src/visual/snapshots';
 import fs from 'fs/promises';
 import { existsSync } from 'fs';
 import path from 'path';

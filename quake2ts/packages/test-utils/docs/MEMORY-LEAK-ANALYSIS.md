@@ -140,6 +140,7 @@ The following high-priority cleanup issues have been resolved:
    - Deleted: `engine/tests/unit-jsdom/render/render.md3Pipeline.test.ts` (redundant with `md3Pipeline.test.ts`)
    - Moved: `engine/tests/unit-jsdom/render/context.test.ts` to `engine/tests/unit-node/render/context.test.ts` (mocked DOM)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
+   - Moved: `test-utils/tests/*` tests to `test-utils/tests/unit-node/`
 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-node/assets/` (removed jsdom dependency)
    - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions

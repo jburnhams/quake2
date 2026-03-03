@@ -6,7 +6,7 @@ import {
     createItemEntityFactory,
     createProjectileEntityFactory,
     createTriggerEntityFactory
-} from '../../src/game/factories';
+} from '../../../src/game/factories';
 import { MoveType, Solid, ServerFlags } from '@quake2ts/game';
 
 describe('Entity Factories', () => {

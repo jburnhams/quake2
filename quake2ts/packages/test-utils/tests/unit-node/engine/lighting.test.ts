@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMockDLight, createMockDLightManager, createMockLightmap } from '../../src/engine/mocks/lighting';
+import { createMockDLight, createMockDLightManager, createMockLightmap } from '../../../src/engine/mocks/lighting';
 
 describe('Lighting Mocks', () => {
   describe('createMockDLight', () => {

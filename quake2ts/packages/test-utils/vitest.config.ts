@@ -19,7 +19,7 @@ const include = isWebGPU
   ? ['**/tests/webgpu/**/*.test.ts']
   : isWebGL
     ? ['**/tests/webgl/**/*.test.ts']
-    : ['tests/**/*.test.ts']; // Default pattern for test-utils
+    : ['tests/unit-node/**/*.test.ts']; // Default pattern for test-utils
 
 export default defineConfig({
   resolve: {

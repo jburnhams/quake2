@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { savePNG, loadPNG, captureFramebufferAsPNG } from '../../src/visual/snapshots';
+import { savePNG, loadPNG, captureFramebufferAsPNG } from '../../../src/visual/snapshots';
 import fs from 'fs/promises';
 import path from 'path';
 

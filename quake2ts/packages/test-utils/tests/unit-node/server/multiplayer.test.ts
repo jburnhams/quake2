@@ -5,7 +5,7 @@ import {
     simulatePlayerLeave,
     simulateServerTick,
     simulatePlayerInput
-} from '../../src/server/helpers/multiplayer';
+} from '../../../src/server/helpers/multiplayer';
 import { ClientState } from '@quake2ts/server';
 
 describe('Multiplayer Helpers', () => {
