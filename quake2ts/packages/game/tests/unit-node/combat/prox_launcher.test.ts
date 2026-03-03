@@ -2,7 +2,7 @@
 // Quake II - Prox Launcher Tests
 // =================================================================
 
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createGame } from '../../../src/index.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
@@ -10,8 +10,13 @@ import * as projectiles from '../../../src/entities/projectiles.js';
 import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import * as switching from '../../../src/combat/weapons/switching.js';
 
 describe('Prox Launcher', () => {
+    afterEach(() => {
+        vi.restoreAllMocks();
+    });
+
     it('should fire a prox mine and consume ammo', () => {
         const createProxMine = vi.spyOn(projectiles, 'createProxMine');
 
@@ -39,6 +44,7 @@ describe('Prox Launcher', () => {
 
     it('should not fire if out of ammo', () => {
         const createProxMine = vi.spyOn(projectiles, 'createProxMine');
+        vi.spyOn(switching, 'NoAmmoWeaponChange').mockImplementation(() => {});
 
         const { imports, engine } = createGameImportsAndEngine();
         const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
@@ -55,6 +61,9 @@ describe('Prox Launcher', () => {
             buttons: 1,
         } as any;
         game.entities.finalizeSpawn(player);
+
+        // Mock sound to prevent error
+        game.sound = vi.fn();
 
         fire(game, player, WeaponId.ProxLauncher);
 

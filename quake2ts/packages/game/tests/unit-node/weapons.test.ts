@@ -18,13 +18,13 @@ import {
 
 // Mock projectiles
 vi.mock('../../src/entities/projectiles.js', async () => {
-    const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
+    const { createMockProjectiles } = await import('@quake2ts/test-utils');
     return createMockProjectiles();
 });
 
 // Mock T_Damage
 vi.mock('../../src/combat/damage.js', async () => {
-    const { createMockDamage } = await import('@quake2ts/test-utils/mocks/damage');
+    const { createMockDamage } = await import('@quake2ts/test-utils');
     return createMockDamage();
 });
 
