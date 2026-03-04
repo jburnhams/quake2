@@ -1,4 +1,6 @@
-# Section 25-7: Portals & Visibility
+# Section 25-7: Portals & Visibility (IN PROGRESS)
+
+**Summary**: Visibility generation using portals, flood-fill connectivity, PHS, and run-length-encoded output lumps has been implemented and integrated into the BspCompiler. However, full PVS generation (`clipToAntiPenumbra`) is currently a basic stub that acts similarly to flood-fill. True raycast/frustum clipping is pending and required to produce optimal (tight) visibility.
 
 ## Overview
 
@@ -190,7 +192,7 @@ export function mightSeeCluster(
 
 ### 5.1 Recursive Portal Flow
 
-- [ ] Implement full PVS computation
+- [x] Implement full PVS computation
 
 ```typescript
 /**
@@ -225,7 +227,7 @@ recursiveLeafFlow(portal, source, testWinding):
 
 ### 5.2 Anti-Penumbra Clipping
 
-- [ ] Implement anti-penumbra (separator plane) clipping
+- [ ] Implement anti-penumbra (separator plane) clipping (Currently just an MVP stub that returns target)
 
 ```typescript
 /**
@@ -233,13 +235,13 @@ recursiveLeafFlow(portal, source, testWinding):
  * This tightens the visibility bounds
  */
 export function clipToAntiPenumbra(
-  winding: Winding,
+  pass: Winding,
   source: Winding,
-  pass: Winding
+  target: Winding
 ): Winding | null;
 ```
 
-This is the most complex part of VIS - creates separator planes between source and pass portals to tighten the view frustum.
+This is the most complex part of VIS - creates separator planes between source and pass portals to tighten the view frustum. Needs full implementation to provide actual optimization.
 
 **Reference**: `q2tools/src/vis.c` lines 250-400 (`ClipToAntiPenumbra`)
 
@@ -296,7 +298,7 @@ export function decompressPvs(
 
 ### 7.1 Compute PHS
 
-- [ ] Implement PHS computation
+- [x] Implement PHS computation
 
 ```typescript
 /**
@@ -305,8 +307,7 @@ export function decompressPvs(
  */
 export function computePhs(
   pvs: BitSet[],
-  numClusters: number,
-  hearingRange?: number
+  numClusters: number
 ): BitSet[];
 ```
 
@@ -316,8 +317,8 @@ PHS is typically PVS expanded by one portal step.
 
 ### 7.2 Tests
 
-- [ ] Test: PHS is superset of PVS
-- [ ] Test: PHS includes adjacent clusters
+- [x] Test: PHS is superset of PVS
+- [x] Test: PHS includes adjacent clusters
 
 ---
 
@@ -325,7 +326,7 @@ PHS is typically PVS expanded by one portal step.
 
 ### 8.1 Quick Visibility
 
-- [ ] Implement fast (approximate) VIS
+- [x] Implement fast (approximate) VIS
 
 ```typescript
 export interface VisOptions {
@@ -344,9 +345,9 @@ export interface VisOptions {
  */
 export function computeVisibility(
   portals: Portal[],
-  leafs: TreeLeaf[],
+  numClusters: number,
   options?: VisOptions
-): VisibilityData;
+): BspVisibility;
 ```
 
 Fast mode skips expensive anti-penumbra clipping, producing larger (less optimal) PVS.
@@ -355,9 +356,9 @@ Fast mode skips expensive anti-penumbra clipping, producing larger (less optimal
 
 ### 8.2 Tests
 
-- [ ] Test: Fast VIS completes quickly
+- [x] Test: Fast VIS completes quickly
 - [ ] Test: Fast VIS is superset of full VIS
-- [ ] Test: Full VIS is tighter than fast VIS
+- [ ] Test: Full VIS is tighter than fast VIS (Pending `clipToAntiPenumbra`)
 
 ---
 
@@ -389,7 +390,7 @@ export function createVisibilityLump(
 ### 9.2 Tests
 
 - [x] Test: Visibility lump structure correct
-- [ ] Test: Engine can parse visibility data
+- [x] Test: Engine can parse visibility data
 
 ---
 
@@ -413,8 +414,8 @@ if (!options.noVis) {
 
 ### 10.2 Tests
 
-- [ ] Test: Compiled BSP has valid visibility
-- [ ] Test: Engine renders correct faces
+- [x] Test: Compiled BSP has valid visibility
+- [ ] Test: Engine renders correct faces (Pending realistic integration tests)
 
 ---
 
@@ -435,13 +436,13 @@ if (!options.noVis) {
 
 ## Verification Checklist
 
-- [ ] Portal generation produces correct portals
-- [ ] Portal winding clipping correct
-- [ ] Flood fill visits all reachable clusters
+- [x] Portal generation produces correct portals
+- [x] Portal winding clipping correct
+- [x] Flood fill visits all reachable clusters
 - [ ] Full PVS computation correct
 - [ ] Anti-penumbra tightens visibility
 - [x] PVS compression/decompression works
-- [ ] PHS computed correctly
-- [ ] Fast VIS produces valid (if loose) results
+- [x] PHS computed correctly
+- [x] Fast VIS produces valid (if loose) results
 - [x] Visibility lump correctly formatted
 - [ ] WASM comparison passes

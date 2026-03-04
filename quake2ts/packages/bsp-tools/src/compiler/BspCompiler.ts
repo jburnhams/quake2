@@ -43,7 +43,7 @@ import { createBrushList, processCsg, addBoxBevels, updateBrushBounds } from './
 import { buildTree, flattenTree } from './tree.js';
 import { extractFaces, assignFacesToNodes, mergeCoplanarFaces, fixTJunctions } from './faces.js';
 import { buildEdges } from './edges.js';
-import { generateTrivialVis, createVisibilityLump, initializePortalFlow, floodFillVisibility } from './vis.js';
+import { generateTrivialVis, computeVisibility } from './vis.js';
 import { generatePortals } from './portals.js';
 import { serializeEntities } from '../output/entityString.js';
 
@@ -53,8 +53,10 @@ import { generateFullbrightLighting } from './lighting.js';
 export interface CompilerOptions {
   verbose?: boolean;
   noVis?: boolean;
+  fastVis?: boolean;
   noLighting?: boolean;
   preserveDetail?: boolean;
+  onProgress?: (stage: string, percent: number) => void;
 }
 
 export interface CompileResult {
@@ -293,25 +295,11 @@ export class BspCompiler {
         }
       );
 
-      // 12b. Initialize flow
-      const visState = initializePortalFlow(portals, numClusters);
-
-      // 12c. Compute base/trivial PVS (Flood Fill)
-      // Since full PVS / anti-penumbra clipping is pending,
-      // we'll use flood-fill as our base PVS.
-      const pvsBits = [];
-      const phsBits = [];
-
-      for (let i = 0; i < numClusters; i++) {
-        const reachable = floodFillVisibility(visState, i);
-        pvsBits.push(reachable);
-
-        // PHS is a superset (typically PVS expanded by one portal).
-        // For now, we'll just duplicate PVS. Proper PHS pending.
-        phsBits.push(reachable);
-      }
-
-      visibility = createVisibilityLump(pvsBits, phsBits, numClusters);
+      // 12b. Compute Visibility
+      visibility = computeVisibility(portals, numClusters, {
+        fast: this.options.fastVis,
+        onProgress: (p) => this.options.onProgress?.('vis', p)
+      });
     }
 
     // 13. Entities
