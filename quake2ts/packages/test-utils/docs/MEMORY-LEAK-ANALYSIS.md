@@ -141,7 +141,7 @@ The following high-priority cleanup issues have been resolved:
    - Moved: `engine/tests/unit-jsdom/render/context.test.ts` to `engine/tests/unit-node/render/context.test.ts` (mocked DOM)
    - Cleaned up: `engine/tests/render` and `engine/tests/integration` directories
    - Moved: `test-utils/tests/*` tests to `test-utils/tests/unit-node/`
-3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
+✅ 3. Move DOM-dependent tests to `tests/unit-jsdom/` directories
    - Moved: `engine/tests/integration/browserIngestion.test.ts` to `engine/tests/unit-node/assets/` (removed jsdom dependency)
    - Retained: `client/tests/unit-jsdom/ui/` tests (pakLoader, menu/demo) as they verify DOM interactions
 ✅ 4. Update test scripts in `package.json` to run both test suites
@@ -176,10 +176,10 @@ The following high-priority cleanup issues have been resolved:
 - Tests may not be consistently cleaning up GPU resources
 
 **Action Items**:
-1. Audit WebGPU integration tests for proper cleanup
-2. Ensure all tests using `setupHeadlessWebGPUEnv()` call cleanup
-3. Consider adding automatic cleanup in test lifecycle hooks
-4. Verify `device.destroy()` is called for all created devices
+✅ 1. Audit WebGPU integration tests for proper cleanup
+✅ 2. Ensure all tests using `setupHeadlessWebGPUEnv()` call cleanup
+✅ 3. Consider adding automatic cleanup in test lifecycle hooks
+✅ 4. Verify `device.destroy()` is called for all created devices
 
 ### 4. Test Context Memory Profiling (LOW PRIORITY)
 
