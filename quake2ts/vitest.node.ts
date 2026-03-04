@@ -59,6 +59,12 @@ export default defineConfig({
       '**/webgl/**',
     ],
     pool: 'threads',
+    poolOptions: {
+      threads: {
+        isolate: false,
+      },
+    },
+    isolate: false,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit-node.xml',

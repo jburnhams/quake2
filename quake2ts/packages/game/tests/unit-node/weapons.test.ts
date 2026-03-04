@@ -6,7 +6,6 @@ import { AmmoType } from '../../src/inventory/ammo.js';
 import { DamageMod } from '../../src/combat/damageMods.js';
 import { fireBlaster, fireRailgunShot, fireChaingun, fireRocket, fireHyperBlaster, fireBFG } from '../../src/combat/weapons/firing.js';
 import { createBlasterBolt, createRocket, createBfgBall } from '../../src/entities/projectiles.js';
-import { T_Damage } from '../../src/combat/damage.js';
 import {
     createTestGame,
     createPlayerEntityFactory,
@@ -15,18 +14,8 @@ import {
     createEntity,
     MockImportsAndEngine
 } from '@quake2ts/test-utils';
-
-// Mock projectiles
-vi.mock('../../src/entities/projectiles.js', async () => {
-    const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
-    return createMockProjectiles();
-});
-
-// Mock T_Damage
-vi.mock('../../src/combat/damage.js', async () => {
-    const { createMockDamage } = await import('@quake2ts/test-utils/mocks/damage');
-    return createMockDamage();
-});
+import * as projectiles from '../../src/entities/projectiles.js';
+import * as damage from '../../src/combat/damage.js';
 
 type MutableGame = {
     -readonly [P in keyof GameExports]: GameExports[P];
@@ -36,10 +25,20 @@ describe('Weapon Tests', () => {
     let mockGame: GameExports;
     let mockImports: MockImportsAndEngine['imports'];
     let player: Entity;
+    let createBlasterBoltSpy: any;
+    let createRocketSpy: any;
+    let createBfgBallSpy: any;
+    let tDamageSpy: any;
+    let tRadiusDamageSpy: any;
 
     beforeEach(() => {
+        createBlasterBoltSpy = vi.spyOn(projectiles, 'createBlasterBolt').mockImplementation(() => undefined as any);
+        createRocketSpy = vi.spyOn(projectiles, 'createRocket').mockImplementation(() => undefined as any);
+        createBfgBallSpy = vi.spyOn(projectiles, 'createBfgBall').mockImplementation(() => undefined as any);
+        tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => undefined as any);
+        tRadiusDamageSpy = vi.spyOn(damage, 'T_RadiusDamage').mockImplementation(() => undefined as any);
+
         vi.clearAllMocks();
-        vi.mocked(T_Damage).mockClear();
 
         const { game, imports } = createTestGame({
             imports: {
@@ -93,7 +92,7 @@ describe('Weapon Tests', () => {
     describe('Blaster', () => {
         it('should fire with speed 1500', () => {
              fireBlaster(mockGame, player);
-             expect(createBlasterBolt).toHaveBeenCalledWith(
+             expect(createBlasterBoltSpy).toHaveBeenCalledWith(
                  expect.anything(), // game object
                  player,
                  expect.anything(),
@@ -126,7 +125,7 @@ describe('Weapon Tests', () => {
 
             fireRailgunShot(mockGame, player);
 
-            expect(T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target,
                 player,
                 player,
@@ -163,7 +162,7 @@ describe('Weapon Tests', () => {
 
             fireRailgunShot(mockGame, player);
 
-            expect(T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target,
                 player,
                 player,
@@ -195,7 +194,7 @@ describe('Weapon Tests', () => {
              fireChaingun(mockGame, player);
 
              // Even with 1 shot, it should call T_Damage
-             expect(T_Damage).toHaveBeenCalledWith(
+             expect(tDamageSpy).toHaveBeenCalledWith(
                  target,
                  player,
                  player,
@@ -225,7 +224,7 @@ describe('Weapon Tests', () => {
 
              fireChaingun(mockGame, player);
 
-             expect(T_Damage).toHaveBeenCalledWith(
+             expect(tDamageSpy).toHaveBeenCalledWith(
                  target,
                  player,
                  player,
@@ -286,7 +285,7 @@ describe('Weapon Tests', () => {
 
             fireRocket(mockGame, player);
 
-            expect(createRocket).toHaveBeenCalledWith(
+            expect(createRocketSpy).toHaveBeenCalledWith(
                 expect.anything(), // game
                 player,
                 expect.anything(),
@@ -303,7 +302,7 @@ describe('Weapon Tests', () => {
             setDeathmatch(false);
             fireHyperBlaster(mockGame, player);
 
-            expect(createBlasterBolt).toHaveBeenCalledWith(
+            expect(createBlasterBoltSpy).toHaveBeenCalledWith(
                 expect.anything(),
                 player,
                 expect.anything(),
@@ -318,7 +317,7 @@ describe('Weapon Tests', () => {
             setDeathmatch(true);
             fireHyperBlaster(mockGame, player);
 
-            expect(createBlasterBolt).toHaveBeenCalledWith(
+            expect(createBlasterBoltSpy).toHaveBeenCalledWith(
                 expect.anything(),
                 player,
                 expect.anything(),
@@ -337,7 +336,7 @@ describe('Weapon Tests', () => {
 
             fireBFG(mockGame, player);
 
-            expect(createBfgBall).toHaveBeenCalledWith(
+            expect(createBfgBallSpy).toHaveBeenCalledWith(
                 expect.anything(),
                 player,
                 expect.anything(),
@@ -354,7 +353,7 @@ describe('Weapon Tests', () => {
 
             fireBFG(mockGame, player);
 
-            expect(createBfgBall).toHaveBeenCalledWith(
+            expect(createBfgBallSpy).toHaveBeenCalledWith(
                 expect.anything(),
                 player,
                 expect.anything(),

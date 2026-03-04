@@ -7,26 +7,7 @@ import { WeaponId } from '../../../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../../../src/inventory/ammo.js';
 import { Weapon_Generic, Throw_Generic } from '../../../../src/combat/weapons/animation.js';
 
-// Mock dependencies
-vi.mock('../../../../src/combat/weapons/switching.js', () => ({
-    ChangeWeapon: vi.fn((ent: Entity, weaponId?: string) => {
-        if (!ent.client) return;
-        if (weaponId) {
-             ent.client.weaponstate = WeaponStateEnum.WEAPON_DROPPING;
-             ent.client.newWeapon = weaponId;
-        } else {
-             // Finalize switch (activates new weapon)
-             ent.client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
-             ent.client.newWeapon = undefined;
-        }
-    }),
-    NoAmmoWeaponChange: vi.fn((ent: Entity) => {
-        if (!ent.client) return;
-        ent.client.newWeapon = 'Blaster'; // Mock choice
-    })
-}));
-
-import { ChangeWeapon, NoAmmoWeaponChange } from '../../../../src/combat/weapons/switching.js';
+import * as switching from '../../../../src/combat/weapons/switching.js';
 
 // Mocks
 const mockFire = vi.fn();
@@ -39,7 +20,26 @@ describe('Weapon State Machine Edge Cases', () => {
     let context: any;
     let player: Entity;
 
+    let changeWeaponSpy: any;
+    let noAmmoWeaponChangeSpy: any;
+
     beforeEach(() => {
+        changeWeaponSpy = vi.spyOn(switching, 'ChangeWeapon').mockImplementation((ent: Entity, weaponId?: string) => {
+            if (!ent.client) return;
+            if (weaponId) {
+                ent.client.weaponstate = WeaponStateEnum.WEAPON_DROPPING;
+                ent.client.newWeapon = weaponId;
+            } else {
+                ent.client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
+                ent.client.newWeapon = undefined;
+            }
+        });
+
+        noAmmoWeaponChangeSpy = vi.spyOn(switching, 'NoAmmoWeaponChange').mockImplementation((ent: Entity) => {
+            if (!ent.client) return;
+            ent.client.newWeapon = 'Blaster';
+        });
+
         vi.clearAllMocks();
         context = createTestContext();
         player = context.entities.spawn();
@@ -91,7 +91,7 @@ describe('Weapon State Machine Edge Cases', () => {
         // Expect state to REMAIN firing (cannot interrupt)
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
         expect(player.client!.newWeapon).toBe(WeaponId.Shotgun);
-        expect(ChangeWeapon).not.toHaveBeenCalled();
+        expect(changeWeaponSpy).not.toHaveBeenCalled();
 
         // Advance to end of firing
         player.client!.gun_frame = 15; // FIRE_LAST
@@ -110,7 +110,7 @@ describe('Weapon State Machine Edge Cases', () => {
         );
 
         // NOW it should switch
-        expect(ChangeWeapon).toHaveBeenCalledWith(player, WeaponId.Shotgun);
+        expect(changeWeaponSpy).toHaveBeenCalledWith(player, WeaponId.Shotgun);
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_DROPPING);
     });
 
@@ -173,7 +173,7 @@ describe('Weapon State Machine Edge Cases', () => {
         );
 
         expect(fireShotgun).toHaveBeenCalled();
-        expect(NoAmmoWeaponChange).toHaveBeenCalled();
+        expect(noAmmoWeaponChangeSpy).toHaveBeenCalled();
         // Should still be in firing state (playing "click" animation)
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
         // expect(player.client!.newWeapon).toBe('Blaster'); // Mock sets it
@@ -195,7 +195,7 @@ describe('Weapon State Machine Edge Cases', () => {
         );
 
         // Should switch now
-        expect(ChangeWeapon).toHaveBeenCalled();
+        expect(changeWeaponSpy).toHaveBeenCalled();
     });
 
 });

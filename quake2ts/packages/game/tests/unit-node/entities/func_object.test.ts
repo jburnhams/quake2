@@ -105,7 +105,7 @@ describe('func_object', () => {
 
     entity.touch?.(entity, other, plane, undefined);
 
-    expect(T_Damage).toHaveBeenCalled();
+    expect(tDamageSpy).toHaveBeenCalled();
   });
 
   it('should NOT inflict damage if not hitting from above (normal.z < 1)', () => {

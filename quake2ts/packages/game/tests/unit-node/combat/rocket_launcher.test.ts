@@ -2,19 +2,19 @@
 // Quake II - Rocket Launcher Weapon Tests
 // =================================================================
 
-import { describe, it, expect, vi, afterEach } from 'vitest';
+import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest';
 import { fire, firingRandom } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as projectiles from '../../../src/entities/projectiles.js';
 import { createTestGame, spawnEntity, createPlayerEntityFactory } from '@quake2ts/test-utils';
 
-// Mock projectiles
-vi.mock('../../../src/entities/projectiles.js', async () => {
-    const { createMockProjectiles } = await import('@quake2ts/test-utils/mocks/projectiles');
-    return createMockProjectiles();
-});
-
 describe('Rocket Launcher', () => {
+    let createRocketSpy: any;
+
+    beforeEach(() => {
+        createRocketSpy = vi.spyOn(projectiles, 'createRocket').mockImplementation(() => undefined as any);
+    });
+
     afterEach(() => {
         vi.restoreAllMocks();
     });
@@ -46,7 +46,7 @@ describe('Rocket Launcher', () => {
         // Rocket base damage 100 + 17 = 117
         const expectedDamage = 117;
 
-        expect(projectiles.createRocket).toHaveBeenCalledWith(
+        expect(createRocketSpy).toHaveBeenCalledWith(
             game.entities,
             player,
             expect.anything(),
