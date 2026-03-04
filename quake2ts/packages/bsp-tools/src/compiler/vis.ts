@@ -288,6 +288,7 @@ export function computePhs(
   numClusters: number
 ): BitSet[] {
   const phs: BitSet[] = [];
+  const rowBytes = Math.ceil(numClusters / 8);
 
   for (let i = 0; i < numClusters; i++) {
     const pvsRow = pvs[i];
@@ -297,17 +298,13 @@ export function computePhs(
       // For every cluster 'j' that cluster 'i' can see (PVS)
       for (let j = 0; j < numClusters; j++) {
         if (pvsRow.get(j)) {
-          // Add 'j' to PHS
-          phsRow.set(j);
-
-          // Add everything that 'j' can see to 'i's PHS
+          // Add everything that 'j' can see to 'i's PHS using fast byte-wise OR.
+          // Note: pvs[j] implicitly has the j-th bit set, so we don't need to manually set it.
           const jPvs = pvs[j];
           if (jPvs) {
-             for (let k = 0; k < numClusters; k++) {
-                if (jPvs.get(k)) {
-                   phsRow.set(k);
-                }
-             }
+            for (let b = 0; b < rowBytes; b++) {
+              phsRow.data[b] |= jPvs.data[b];
+            }
           }
         }
       }
