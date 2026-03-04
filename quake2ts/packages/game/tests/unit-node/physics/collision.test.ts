@@ -35,7 +35,7 @@ describe('Collision Physics', () => {
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         surfaceFlags: 0,
         ent: other
-      }) as any;
+      });
 
       resolveImpact(ent, trace, system);
 
@@ -54,7 +54,7 @@ describe('Collision Physics', () => {
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         surfaceFlags: 123,
         ent: other
-      }) as any;
+      });
 
       resolveImpact(ent, trace, system);
 
@@ -69,7 +69,7 @@ describe('Collision Physics', () => {
         plane: null,
         surfaceFlags: 0,
         ent: null
-      }) as any;
+      });
 
       resolveImpact(ent, trace, system);
 
