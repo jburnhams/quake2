@@ -143,6 +143,6 @@ describe('func_object', () => {
             ent.touch(ent, obstacle, undefined, undefined, sys);
         }
 
-        expect(damageModule.T_Damage).toHaveBeenCalled();
+        expect(tDamageSpy).toHaveBeenCalled();
     });
 });

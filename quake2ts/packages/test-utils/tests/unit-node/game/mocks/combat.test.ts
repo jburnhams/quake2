@@ -3,7 +3,7 @@ import {
     createMockDamageInfo,
     createMockWeapon,
     mockMonsterAttacks
-} from '../../../src/game/mocks/combat';
+} from '../../../../src/game/mocks/combat';
 import { DamageMod } from '@quake2ts/game';
 
 describe('Combat Mocks', () => {

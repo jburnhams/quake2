@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMockRenderingContext } from '../../src/engine/rendering';
+import { createMockRenderingContext } from '../../../src/engine/rendering';
 
 describe('createMockRenderingContext', () => {
   it('should return a valid mock rendering context', () => {

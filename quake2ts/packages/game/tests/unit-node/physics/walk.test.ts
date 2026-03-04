@@ -3,7 +3,7 @@ import { Entity, MoveType, EntityFlags } from '../../../src/entities/entity.js';
 import { runStep } from '../../../src/physics/movement.js';
 import { GameImports } from '../../../src/imports.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { createTestContext, createEntityFactory, createTraceMock, createEntity } from '@quake2ts/test-utils';
+import { createTestGame, createEntityFactory, createTraceMock, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Physics: runStep', () => {
   let ent: Entity;
@@ -12,12 +12,11 @@ describe('Physics: runStep', () => {
   const frametime = 0.1;
 
   beforeEach(() => {
-    const context = createTestContext();
-    imports = context.imports;
-    system = context.entities;
+    const gameResult = createTestGame();
+    imports = gameResult.imports;
+    system = gameResult.game.entities;
 
-    ent = createEntity(createEntityFactory({
-        index: 1,
+    ent = spawnEntity(system, createEntityFactory({
         movetype: MoveType.Step,
         gravity: 1,
         velocity: { x: 0, y: 0, z: 0 },

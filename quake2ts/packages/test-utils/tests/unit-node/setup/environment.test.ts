@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from 'vitest';
-import { setupBrowserEnvironment } from '../../src/setup/browser';
+import { setupBrowserEnvironment } from '../../../src/setup/browser';
 
 describe('Integration Test Environment', () => {
   beforeAll(() => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { createConfigStringMock, createConfigStringArrayMock, createCvarMock } from '../../src/shared/factories';
+import { createConfigStringMock, createConfigStringArrayMock, createCvarMock } from '../../../src/shared/factories';
 import { CvarFlags } from '@quake2ts/shared';
 
 describe('Shared Factories', () => {

@@ -43,7 +43,8 @@ import { createBrushList, processCsg, addBoxBevels, updateBrushBounds } from './
 import { buildTree, flattenTree } from './tree.js';
 import { extractFaces, assignFacesToNodes, mergeCoplanarFaces, fixTJunctions } from './faces.js';
 import { buildEdges } from './edges.js';
-import { generateTrivialVis } from './vis.js';
+import { generateTrivialVis, computeVisibility } from './vis.js';
+import { generatePortals } from './portals.js';
 import { serializeEntities } from '../output/entityString.js';
 
 // Lighting logic (currently simple placeholders or partial implementations)
@@ -52,8 +53,10 @@ import { generateFullbrightLighting } from './lighting.js';
 export interface CompilerOptions {
   verbose?: boolean;
   noVis?: boolean;
+  fastVis?: boolean;
   noLighting?: boolean;
   preserveDetail?: boolean;
+  onProgress?: (stage: string, percent: number) => void;
 }
 
 export interface CompileResult {
@@ -267,9 +270,37 @@ export class BspCompiler {
     if (this.options.verbose) console.log('Generating Visibility...');
     let maxCluster = -1;
     for (const l of flattened.leafs) {
-      if (l.cluster > maxCluster) maxCluster = l.cluster;
+      if (l.cluster !== undefined && l.cluster > maxCluster) maxCluster = l.cluster;
     }
-    const visibility = generateTrivialVis(maxCluster + 1);
+    const numClusters = maxCluster + 1;
+
+    let visibility: BspVisibility | undefined = undefined;
+
+    if (this.options.noVis || numClusters === 0) {
+      visibility = generateTrivialVis(numClusters);
+    } else {
+      // 12a. Generate Portals
+      const portals = generatePortals(
+        root,
+        planes,
+        {
+          x: flattened.nodes[0]?.mins?.[0] || 0,
+          y: flattened.nodes[0]?.mins?.[1] || 0,
+          z: flattened.nodes[0]?.mins?.[2] || 0
+        },
+        {
+          x: flattened.nodes[0]?.maxs?.[0] || 0,
+          y: flattened.nodes[0]?.maxs?.[1] || 0,
+          z: flattened.nodes[0]?.maxs?.[2] || 0
+        }
+      );
+
+      // 12b. Compute Visibility
+      visibility = computeVisibility(portals, numClusters, {
+        fast: this.options.fastVis,
+        onProgress: (p) => this.options.onProgress?.('vis', p)
+      });
+    }
 
     // 13. Entities
     const entityString = serializeEntities(inputEntities);

@@ -4,8 +4,8 @@ import {
     createDeltaSnapshot,
     verifySnapshotConsistency,
     Snapshot
-} from '../../src/server/helpers/snapshot';
-import { createMockServerState } from '../../src/server/mocks/state';
+} from '../../../src/server/helpers/snapshot';
+import { createMockServerState } from '../../../src/server/mocks/state';
 import { EntityState } from '@quake2ts/shared';
 
 describe('Snapshot Helpers', () => {

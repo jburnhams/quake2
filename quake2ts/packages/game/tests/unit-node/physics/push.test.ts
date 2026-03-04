@@ -4,10 +4,7 @@ import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { GameImports, GameTraceResult } from '../../../src/imports.js';
 import { Vec3 } from '@quake2ts/shared';
-
-// Mock Vec3 helpers since we don't have the real ones loaded in test context perfectly sometimes
-// but here we can assume they are working or we mock what we need.
-// Actually we import them from shared, assuming shared is built.
+import { createTestGame, spawnEntity, createEntityFactory } from '@quake2ts/test-utils';
 
 describe('Physics: runPush', () => {
   let system: EntitySystem;
@@ -50,16 +47,17 @@ describe('Physics: runPush', () => {
     entities = [];
     worldBrushes = [];
 
-    // Mock EntitySystem
-    system = {
-      forEachEntity: (callback: (e: Entity) => void) => {
-        entities.forEach(callback);
-      },
-    } as any;
+    const gameResult = createTestGame();
+    system = gameResult.game.entities;
+    imports = gameResult.imports;
+
+    // Override forEachEntity to use our local array of entities
+    vi.spyOn(system, 'forEachEntity').mockImplementation((callback: (e: Entity) => void) => {
+      entities.forEach(callback);
+    });
 
     // Mock GameImports
-    imports = {
-      trace: vi.fn((start, mins, maxs, end, passent, contentmask) => {
+    imports.trace.mockImplementation((start, mins, maxs, end, passent, contentmask) => {
         // Simplified trace: just check if end pos is in a world brush
         // We assume 'ent' (passent) has its mins/maxs.
         // If start == end, it's a position test.
@@ -81,8 +79,9 @@ describe('Physics: runPush', () => {
           plane: null,
           ent: null,
         } as GameTraceResult;
-      }),
-      linkentity: vi.fn((ent: Entity) => {
+    });
+
+    imports.linkentity.mockImplementation((ent: Entity) => {
         // Update absmin/absmax based on origin + mins/maxs
         ent.absmin = {
             x: ent.origin.x + ent.mins.x,
@@ -94,20 +93,19 @@ describe('Physics: runPush', () => {
             y: ent.origin.y + ent.maxs.y,
             z: ent.origin.z + ent.maxs.z
         };
-      }),
-    } as any;
+    });
 
-    pusher = new Entity(1);
-    pusher.classname = 'func_door';
-    pusher.movetype = MoveType.Push;
-    pusher.solid = Solid.Bsp;
-    pusher.origin = { x: 0, y: 0, z: 0 };
-    pusher.mins = { x: -10, y: -10, z: -10 };
-    pusher.maxs = { x: 10, y: 10, z: 10 };
-    pusher.absmin = { x: -10, y: -10, z: -10 };
-    pusher.absmax = { x: 10, y: 10, z: 10 };
-    pusher.velocity = { x: 100, y: 0, z: 0 }; // Moving +X at 100 units/s
-    pusher.avelocity = { x: 0, y: 0, z: 0 };
+    pusher = spawnEntity(system, createEntityFactory({
+      classname: 'func_door',
+      movetype: MoveType.Push,
+      solid: Solid.Bsp,
+      origin: { x: 0, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+      velocity: { x: 100, y: 0, z: 0 }, // Moving +X at 100 units/s
+      avelocity: { x: 0, y: 0, z: 0 },
+    }));
+    imports.linkentity(pusher);
 
     entities.push(pusher);
   });
@@ -136,13 +134,14 @@ describe('Physics: runPush', () => {
   });
 
   it('should carry rider entities (groundentity == pusher)', () => {
-    const rider = new Entity(2);
-    rider.classname = 'player';
-    rider.origin = { x: 0, y: 0, z: 11 }; // On top of pusher
-    rider.mins = { x: -10, y: -10, z: 0 };
-    rider.maxs = { x: 10, y: 10, z: 10 };
-    rider.solid = Solid.Bsp; // Or Bbox
-    rider.groundentity = pusher;
+    const rider = spawnEntity(system, createEntityFactory({
+      classname: 'player',
+      origin: { x: 0, y: 0, z: 11 }, // On top of pusher
+      mins: { x: -10, y: -10, z: 0 },
+      maxs: { x: 10, y: 10, z: 10 },
+      solid: Solid.Bsp, // Or Bbox
+      groundentity: pusher,
+    }));
 
     // Pre-calc abs for rider
     imports.linkentity(rider);
@@ -156,11 +155,12 @@ describe('Physics: runPush', () => {
   });
 
   it('should push entities in the path', () => {
-    const victim = new Entity(2);
-    victim.origin = { x: 15, y: 0, z: 0 }; // 5 units away from pusher's max X (10)
-    victim.mins = { x: -10, y: -10, z: -10 };
-    victim.maxs = { x: 10, y: 10, z: 10 };
-    victim.solid = Solid.BoundingBox;
+    const victim = spawnEntity(system, createEntityFactory({
+      origin: { x: 15, y: 0, z: 0 }, // 5 units away from pusher's max X (10)
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+      solid: Solid.BoundingBox,
+    }));
     // AbsMin X = 5.
 
     imports.linkentity(victim);
@@ -178,12 +178,13 @@ describe('Physics: runPush', () => {
   });
 
   it('should revert if pushed entity hits a wall (blocking)', () => {
-    const victim = new Entity(2);
-    victim.origin = { x: 15, y: 0, z: 0 };
-    victim.mins = { x: -10, y: -10, z: -10 };
-    victim.maxs = { x: 10, y: 10, z: 10 };
-    victim.solid = Solid.BoundingBox;
-    victim.health = 100; // Has health, so it's a valid blocker
+    const victim = spawnEntity(system, createEntityFactory({
+      origin: { x: 15, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+      solid: Solid.BoundingBox,
+      health: 100, // Has health, so it's a valid blocker
+    }));
     imports.linkentity(victim);
     entities.push(victim);
 
@@ -205,12 +206,13 @@ describe('Physics: runPush', () => {
   });
 
   it('should continue if blocked callback clears the obstacle (pusher crushing)', () => {
-    const victim = new Entity(2);
-    victim.origin = { x: 15, y: 0, z: 0 };
-    victim.mins = { x: -10, y: -10, z: -10 };
-    victim.maxs = { x: 10, y: 10, z: 10 };
-    victim.solid = Solid.BoundingBox;
-    victim.health = 100;
+    const victim = spawnEntity(system, createEntityFactory({
+      origin: { x: 15, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+      solid: Solid.BoundingBox,
+      health: 100,
+    }));
     imports.linkentity(victim);
     entities.push(victim);
 
@@ -240,20 +242,22 @@ describe('Physics: runPush', () => {
   });
 
   it('should handle multiple entities being pushed', () => {
-    const rider = new Entity(2);
-    rider.origin = { x: 0, y: 0, z: 11 };
-    rider.mins = { x: -5, y: -5, z: 0 };
-    rider.maxs = { x: 5, y: 5, z: 10 };
-    rider.groundentity = pusher;
-    rider.solid = Solid.Bsp;
+    const rider = spawnEntity(system, createEntityFactory({
+      origin: { x: 0, y: 0, z: 11 },
+      mins: { x: -5, y: -5, z: 0 },
+      maxs: { x: 5, y: 5, z: 10 },
+      groundentity: pusher,
+      solid: Solid.Bsp,
+    }));
     imports.linkentity(rider);
     entities.push(rider);
 
-    const pushable = new Entity(3);
-    pushable.origin = { x: 15, y: 0, z: 0 };
-    pushable.mins = { x: -5, y: -5, z: -5 };
-    pushable.maxs = { x: 5, y: 5, z: 5 };
-    pushable.solid = Solid.BoundingBox;
+    const pushable = spawnEntity(system, createEntityFactory({
+      origin: { x: 15, y: 0, z: 0 },
+      mins: { x: -5, y: -5, z: -5 },
+      maxs: { x: 5, y: 5, z: 5 },
+      solid: Solid.BoundingBox,
+    }));
     imports.linkentity(pushable);
     entities.push(pushable);
 

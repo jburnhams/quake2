@@ -11,17 +11,16 @@ import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
 
-vi.mock('../../../src/combat/damage.js', () => ({
-    T_Damage: vi.fn(),
-}));
-
 describe('Weapon Firing Logic', () => {
     let mockGame: GameExports;
     let player: Entity;
     let target1: Entity;
     let target2: Entity;
+    let tDamageSpy: any;
 
     beforeEach(() => {
+        tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => undefined as any);
+
         vi.clearAllMocks();
 
         // Use test-utils factories
@@ -91,7 +90,7 @@ describe('Weapon Firing Logic', () => {
             }));
 
             fire(mockGame, player, WeaponId.Chaingun);
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
                 7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
@@ -106,7 +105,7 @@ describe('Weapon Firing Logic', () => {
             }));
 
             fire(mockGame, player, WeaponId.Chaingun);
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
                 5, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
@@ -121,7 +120,7 @@ describe('Weapon Firing Logic', () => {
             }));
 
             fire(mockGame, player, WeaponId.Chaingun);
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
                 7, 1, DamageFlags.BULLET, DamageMod.CHAINGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
@@ -142,7 +141,7 @@ describe('Weapon Firing Logic', () => {
             }));
 
             fire(mockGame, player, WeaponId.Machinegun);
-             expect(damage.T_Damage).toHaveBeenCalledWith(
+             expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
                 7, 1, DamageFlags.BULLET, DamageMod.MACHINEGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
@@ -164,7 +163,7 @@ describe('Weapon Firing Logic', () => {
 
             fire(mockGame, player, WeaponId.Shotgun);
 
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 1000, y: 0, z: 0 }, ZERO_VEC3,
                 4, 1, DamageFlags.BULLET, DamageMod.SHOTGUN, mockGame.time, mockGame.multicast, { hooks: mockGame.hooks }
             );
@@ -187,12 +186,12 @@ describe('Weapon Firing Logic', () => {
                 .mockReturnValueOnce(createTraceMock({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0 }));
 
             fire(mockGame, player, WeaponId.Railgun);
-            expect(damage.T_Damage).toHaveBeenCalledTimes(2);
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledTimes(2);
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
                 125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target2, player, player, ZERO_VEC3, { x: 200, y: 0, z: 0 }, ZERO_VEC3,
                 125, 225, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
@@ -207,12 +206,12 @@ describe('Weapon Firing Logic', () => {
                 .mockReturnValueOnce(createTraceMock({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0 }));
 
             fire(mockGame, player, WeaponId.Railgun);
-            expect(damage.T_Damage).toHaveBeenCalledTimes(2);
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledTimes(2);
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target1, player, player, ZERO_VEC3, { x: 100, y: 0, z: 0 }, ZERO_VEC3,
                 100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );
-            expect(damage.T_Damage).toHaveBeenCalledWith(
+            expect(tDamageSpy).toHaveBeenCalledWith(
                 target2, player, player, ZERO_VEC3, { x: 200, y: 0, z: 0 }, ZERO_VEC3,
                 100, 200, DamageFlags.ENERGY, DamageMod.RAILGUN, mockGame.time, expect.any(Function), { hooks: mockGame.hooks }
             );

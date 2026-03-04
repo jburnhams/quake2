@@ -9,36 +9,9 @@ import { createPlayerInventory } from '../../../../src/inventory/playerInventory
 import { GameExports } from '../../../../src/index.js';
 import { DamageMod } from '../../../../src/combat/damageMods.js';
 import { TempEntity, ServerCommand } from '@quake2ts/shared';
-
-// Mock T_Damage
-vi.mock('../../../../src/combat/damage.js', () => ({
-  T_Damage: vi.fn(),
-}));
-
-// Mock applyKick from common.js
-vi.mock('../../../../src/combat/weapons/common.js', () => ({
-  applyKick: vi.fn(),
-}));
-
-// Mock Weapon_Repeating from animation.js
-vi.mock('../../../../src/combat/weapons/animation.js', () => ({
-  Weapon_Repeating: vi.fn((ent, a, b, c, d, e, fire, sys) => {
-    // Mock behavior:
-    // If we want to simulate frame progression + callback:
-    if (ent.client?.weaponstate === WeaponStateEnum.WEAPON_FIRING) {
-        // Increment frame (standard Weapon_Repeating behavior)
-        // Check loop (simplified)
-        ent.client.gun_frame++;
-
-        // Call fire callback
-        fire(ent);
-    }
-  }),
-}));
-
-import { T_Damage } from '../../../../src/combat/damage.js';
-import { applyKick } from '../../../../src/combat/weapons/common.js';
-import { Weapon_Repeating } from '../../../../src/combat/weapons/animation.js';
+import * as damage from '../../../../src/combat/damage.js';
+import * as common from '../../../../src/combat/weapons/common.js';
+import * as animation from '../../../../src/combat/weapons/animation.js';
 
 describe('Chainfist Weapon', () => {
   let entity: Entity;
@@ -46,7 +19,20 @@ describe('Chainfist Weapon', () => {
   let gameMock: GameExports;
   let target: Entity;
 
+  let tDamageSpy: any;
+  let applyKickSpy: any;
+  let weaponRepeatingSpy: any;
+
   beforeEach(() => {
+    tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(() => undefined as any);
+    applyKickSpy = vi.spyOn(common, 'applyKick').mockImplementation(() => undefined as any);
+    weaponRepeatingSpy = vi.spyOn(animation, 'Weapon_Repeating').mockImplementation((ent: any, a: any, b: any, c: any, d: any, e: any, fire: any, sys: any) => {
+        if (ent.client?.weaponstate === WeaponStateEnum.WEAPON_FIRING) {
+            ent.client.gun_frame++;
+            fire(ent);
+        }
+    });
+
     target = {
       inUse: true,
       takedamage: 100, // health
@@ -102,7 +88,7 @@ describe('Chainfist Weapon', () => {
 
           fireChainfist(gameMock, entity, entity.client!.inventory, {} as any, start, forward);
 
-          expect(T_Damage).toHaveBeenCalled();
+          expect(tDamageSpy).toHaveBeenCalled();
           const callArgs = (T_Damage as any).mock.calls[0];
           expect(callArgs[0]).toBe(target);
           expect(callArgs[6]).toBe(7); // Base damage
@@ -117,7 +103,7 @@ describe('Chainfist Weapon', () => {
 
           fireChainfist(gameMock, entity, entity.client!.inventory, {} as any, start, forward);
 
-          expect(T_Damage).not.toHaveBeenCalled();
+          expect(tDamageSpy).not.toHaveBeenCalled();
       });
   });
 
@@ -125,7 +111,7 @@ describe('Chainfist Weapon', () => {
       it('should call Weapon_Repeating with correct args', () => {
           Weapon_ChainFist(entity, sys);
 
-          expect(Weapon_Repeating).toHaveBeenCalled();
+          expect(weaponRepeatingSpy).toHaveBeenCalled();
           const args = (Weapon_Repeating as any).mock.calls[0];
 
           expect(args[1]).toBe(4); // Activate Last

@@ -2,9 +2,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { resolveImpact, checkTriggers } from '../../../src/physics/collision.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { GameTraceResult } from '../../../src/imports.js';
 import { GameEngine } from '../../../src/index.js';
-import { createTestGame } from '@quake2ts/test-utils';
+import { createTestGame, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Collision Physics', () => {
   let system: EntitySystem;
@@ -31,16 +30,12 @@ describe('Collision Physics', () => {
       ent.touch = vi.fn();
       other.touch = vi.fn();
 
-      const trace: GameTraceResult = {
+      const trace = createTraceMock({
         fraction: 0.5,
-        endpos: { x: 0, y: 0, z: 0 },
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         surfaceFlags: 0,
-        contents: 0,
-        allsolid: false,
-        startsolid: false,
         ent: other
-      };
+      });
 
       resolveImpact(ent, trace, system);
 
@@ -54,16 +49,12 @@ describe('Collision Physics', () => {
       ent.touch = vi.fn();
       other.touch = vi.fn();
 
-      const trace: GameTraceResult = {
+      const trace = createTraceMock({
         fraction: 0.5,
-        endpos: { x: 0, y: 0, z: 0 },
         plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         surfaceFlags: 123,
-        contents: 0,
-        allsolid: false,
-        startsolid: false,
         ent: other
-      };
+      });
 
       resolveImpact(ent, trace, system);
 
@@ -73,16 +64,12 @@ describe('Collision Physics', () => {
 
     it('should do nothing if no entity hit', () => {
       ent.touch = vi.fn();
-      const trace: GameTraceResult = {
+      const trace = createTraceMock({
         fraction: 0.5,
-        endpos: { x: 0, y: 0, z: 0 },
         plane: null,
         surfaceFlags: 0,
-        contents: 0,
-        allsolid: false,
-        startsolid: false,
         ent: null
-      };
+      });
 
       resolveImpact(ent, trace, system);
 

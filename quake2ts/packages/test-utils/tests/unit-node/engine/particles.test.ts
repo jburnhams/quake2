@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMockParticle, createMockParticleEmitter, createMockParticleSystem } from '../../src/engine/mocks/particles';
+import { createMockParticle, createMockParticleEmitter, createMockParticleSystem } from '../../../src/engine/mocks/particles';
 
 describe('Particle Mocks', () => {
   describe('createMockParticle', () => {

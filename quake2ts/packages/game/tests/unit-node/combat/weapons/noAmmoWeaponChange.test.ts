@@ -9,24 +9,20 @@ import { AmmoType } from '../../../../src/inventory/ammo.js';
 import { GameExports } from '../../../../src/index.js';
 import { WeaponState } from '../../../../src/combat/weapons/state.js';
 
-// Mock dependencies
-vi.mock('../../../../src/combat/weapons/switching.js', () => ({
-    NoAmmoWeaponChange: vi.fn(),
-    getBestWeapon: vi.fn(),
-    ChangeWeapon: vi.fn(),
-}));
-
-vi.mock('../../../../src/combat/weapons/animation.js', () => ({
-    Throw_Generic: vi.fn(),
-}));
+import * as switching from '../../../../src/combat/weapons/switching.js';
+import * as animation from '../../../../src/combat/weapons/animation.js';
 
 describe('fireHandGrenade', () => {
     let mockGame: GameExports;
     let mockPlayer: Entity;
     let mockInventory: PlayerInventory;
     let mockWeaponState: WeaponState;
+    let noAmmoWeaponChangeSpy: any;
+    let throwGenericSpy: any;
 
     beforeEach(() => {
+        noAmmoWeaponChangeSpy = vi.spyOn(switching, 'NoAmmoWeaponChange').mockImplementation(() => undefined);
+        throwGenericSpy = vi.spyOn(animation, 'Throw_Generic').mockImplementation(() => undefined);
         mockGame = {
             time: 1000,
             entities: {},
@@ -62,8 +58,8 @@ describe('fireHandGrenade', () => {
 
         fireHandGrenade(mockGame, mockPlayer, mockInventory, mockWeaponState);
 
-        expect(NoAmmoWeaponChange).toHaveBeenCalledWith(mockPlayer);
-        expect(Throw_Generic).not.toHaveBeenCalled();
+        expect(noAmmoWeaponChangeSpy).toHaveBeenCalledWith(mockPlayer);
+        expect(throwGenericSpy).not.toHaveBeenCalled();
     });
 
     it('should not call NoAmmoWeaponChange and proceed to throw when grenade ammo is >= 1', () => {
@@ -71,7 +67,7 @@ describe('fireHandGrenade', () => {
 
         fireHandGrenade(mockGame, mockPlayer, mockInventory, mockWeaponState);
 
-        expect(NoAmmoWeaponChange).not.toHaveBeenCalled();
-        expect(Throw_Generic).toHaveBeenCalled();
+        expect(noAmmoWeaponChangeSpy).not.toHaveBeenCalled();
+        expect(throwGenericSpy).toHaveBeenCalled();
     });
 });

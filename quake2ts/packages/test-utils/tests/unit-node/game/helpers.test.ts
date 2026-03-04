@@ -4,7 +4,7 @@ import {
   createSpawnTestContext,
   createCombatTestContext,
   createPhysicsTestContext
-} from '../../src/game/helpers.js';
+} from '../../../src/game/helpers.js';
 import { Entity } from '@quake2ts/game';
 
 describe('Game Context Helpers', () => {

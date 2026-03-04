@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeAll, vi } from 'vitest';
-import { setupBrowserEnvironment } from '../../../src/setup/browser';
-import { createInputInjector, InputInjector, createMockPointerLock } from '../../../src/client/mocks/input';
+import { setupBrowserEnvironment } from '../../../../src/setup/browser';
+import { createInputInjector, InputInjector, createMockPointerLock } from '../../../../src/client/mocks/input';
 
 describe('Input API Substitutes', () => {
   let injector: InputInjector;

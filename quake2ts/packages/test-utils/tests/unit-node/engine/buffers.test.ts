@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { createMockVertexBuffer, createMockIndexBuffer, createMockShaderProgram, createMockShader } from '../../src/engine/mocks/buffers';
-import { createMockWebGL2Context } from '../../src/engine/mocks/webgl';
+import { createMockVertexBuffer, createMockIndexBuffer, createMockShaderProgram, createMockShader } from '../../../src/engine/mocks/buffers';
+import { createMockWebGL2Context } from '../../../src/engine/mocks/webgl';
 
 describe('Buffer and Shader Mocks', () => {
   describe('createMockVertexBuffer', () => {

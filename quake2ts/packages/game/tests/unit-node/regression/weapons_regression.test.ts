@@ -6,68 +6,27 @@ import { createBlasterBolt } from '../../../src/entities/projectiles.js';
 import { fireRailgunShot, fireChaingun, fireBFG, fireBlaster } from '../../../src/combat/weapons/firing.js';
 import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { WeaponState } from '../../../src/combat/types.js';
-import { T_Damage } from '../../../src/combat/damage.js';
 import { WeaponId } from '../../../src/inventory/playerInventory.js';
-
-// Mock specific weapon functions
-vi.mock('../../../src/entities/projectiles.js', async () => {
-    const actual = await vi.importActual('../../../src/entities/projectiles.js');
-    return {
-        ...actual,
-        createBlasterBolt: vi.fn(actual.createBlasterBolt),
-        createLaser: vi.fn(actual.createLaser),
-    };
-});
-
-// Mock damage system
-// We need to allow T_Damage to run for Quad Damage test (it does the multiply logic),
-// but we want to spy on it for others to verify inputs.
-// So we use vi.spyOn? No, T_Damage is a standalone function.
-// We can mock it to call the actual implementation but with a spy wrapper?
-// Or mock it completely but implement the basic logic we need?
-// The Quad Damage test specifically wants to check if damage is multiplied.
-// So we need the logic inside getDamageModifier.
-// The T_Damage implementation calls getDamageModifier.
-// If we mock T_Damage, we bypass that logic.
-// So for Quad Damage test, we should NOT use the mock at the top level, or make the mock implementation smart.
-
-// Let's create a smart mock for T_Damage that we can control.
-// Or better: Use actual T_Damage but mock its dependencies (armor, flags, etc are already imported/mockable).
-// But `damage.ts` imports from `shared` and `armor.js` and `gibs.js`.
-// We can just spy on the exported T_Damage if we don't mock the module?
-// But we are in an ESM environment, spying on exports is tricky if other modules import them directly.
-// The mock below replaces the module.
-
-// We will use a mock implementation that stores calls and simulates quad damage logic
-// IF we want to test that logic.
-// But verifying "Quad damage multiplier is 4x" implies testing T_Damage.
-// If T_Damage is correct, then passing 125 to it results in 500.
-// So:
-// 1. Verify fireRailgunShot passes 125.
-// 2. Verify T_Damage multiplies by 4 if quad is active.
-// We can split this.
-// Or we can implement the multiplier logic in our T_Damage mock to satisfy the integration behavior.
-// "If client.quad_time > time, damage *= 4".
-
-const originalT_Damage = vi.fn();
-
-vi.mock('../../../src/combat/damage.js', () => ({
-    // We export a mock T_Damage that we can inspect
-    T_Damage: vi.fn((...args) => {
-        // We can add simple logic here if needed for return values
-        return { take: args[6], killed: false }; // args[6] is damage
-    }),
-    T_RadiusDamage: vi.fn(),
-    Damageable: {},
-    CanDamage: () => true
-}));
+import * as projectiles from '../../../src/entities/projectiles.js';
+import * as damage from '../../../src/combat/damage.js';
 
 describe('Weapon Regression Tests', () => {
     let context: ReturnType<typeof createTestContext>;
     let player: Entity;
     let game: any;
+    let tDamageSpy: any;
+    let tRadiusDamageSpy: any;
+    let createBlasterBoltSpy: any;
+    let createLaserSpy: any;
 
     beforeEach(() => {
+        tDamageSpy = vi.spyOn(damage, 'T_Damage').mockImplementation(((...args: any[]) => {
+            return { take: args[6], killed: false }; // args[6] is damage
+        }) as any);
+        tRadiusDamageSpy = vi.spyOn(damage, 'T_RadiusDamage').mockImplementation(() => undefined);
+        createBlasterBoltSpy = vi.spyOn(projectiles, 'createBlasterBolt').mockImplementation(projectiles.createBlasterBolt);
+        createLaserSpy = vi.spyOn(projectiles, 'createLaser').mockImplementation(projectiles.createLaser);
+
         context = createTestContext();
 
         // Mock game exports properly
@@ -131,7 +90,7 @@ describe('Weapon Regression Tests', () => {
         fireBlaster(game, player);
 
         // Verify createBlasterBolt was called with correct speed (1500)
-        expect(createBlasterBolt).toHaveBeenCalledWith(
+        expect(createBlasterBoltSpy).toHaveBeenCalledWith(
             expect.anything(), // entities
             expect.anything(), // owner
             expect.anything(), // start
@@ -160,7 +119,7 @@ describe('Weapon Regression Tests', () => {
 
         fireRailgunShot(game, player);
 
-        expect(T_Damage).toHaveBeenLastCalledWith(
+        expect(tDamageSpy).toHaveBeenLastCalledWith(
             target,
             player,
             player,
@@ -180,7 +139,7 @@ describe('Weapon Regression Tests', () => {
         game.deathmatch = true;
         fireRailgunShot(game, player);
 
-        expect(T_Damage).toHaveBeenLastCalledWith(
+        expect(tDamageSpy).toHaveBeenLastCalledWith(
             target,
             player,
             player,
@@ -215,19 +174,19 @@ describe('Weapon Regression Tests', () => {
         player.client!.weaponStates.states.set(WeaponIdChaingun, ws);
 
         fireChaingun(game, player);
-        expect(T_Damage).toHaveBeenCalledTimes(1);
+        expect(tDamageSpy).toHaveBeenCalledTimes(1);
 
         // Shot 2 (spinupCount = 5 -> 6, logic: >5 is 2 shots)
         ws.spinupCount = 5;
         vi.clearAllMocks();
         fireChaingun(game, player);
-        expect(T_Damage).toHaveBeenCalledTimes(2);
+        expect(tDamageSpy).toHaveBeenCalledTimes(2);
 
         // Shot 3 (spinupCount = 10 -> 11, logic: >10 is 3 shots)
         ws.spinupCount = 10;
         vi.clearAllMocks();
         fireChaingun(game, player);
-        expect(T_Damage).toHaveBeenCalledTimes(3);
+        expect(tDamageSpy).toHaveBeenCalledTimes(3);
     });
 
     it('BFG lasers fire every 100ms', () => {
@@ -282,7 +241,7 @@ describe('Weapon Regression Tests', () => {
 
         fireRailgunShot(game, player);
 
-        expect(T_Damage).toHaveBeenLastCalledWith(
+        expect(tDamageSpy).toHaveBeenLastCalledWith(
             expect.anything(),
             expect.anything(),
             expect.anything(),

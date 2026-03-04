@@ -1,19 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { M_CheckBottom } from '../../../src/ai/movement.js';
 import type { Entity } from '../../../src/entities/entity.js';
 import type { EntitySystem } from '../../../src/entities/system.js';
-import { MoveType, Solid } from '../../../src/entities/entity.js';
-import { CONTENTS_SOLID } from '@quake2ts/shared';
-import { createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { MoveType } from '../../../src/entities/entity.js';
+import { createEntityFactory, createTraceMock, createTestGame, spawnEntity } from '@quake2ts/test-utils';
+import type { GameImports } from '../../../src/imports.js';
 
 describe('M_CheckBottom', () => {
   let entity: Entity;
   let context: EntitySystem;
-  let traceMock: any;
-  let pointContentsMock: any;
+  let imports: GameImports;
 
   beforeEach(() => {
-    entity = createEntityFactory({
+    const gameResult = createTestGame();
+    context = gameResult.game.entities;
+    imports = gameResult.imports;
+
+    entity = spawnEntity(context, createEntityFactory({
       origin: { x: 0, y: 0, z: 100 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
@@ -21,34 +24,27 @@ describe('M_CheckBottom', () => {
       flags: 0,
       groundentity: null,
       waterlevel: 0,
-    }) as Entity;
-
-    traceMock = vi.fn();
-    pointContentsMock = vi.fn();
-
-    context = {
-      trace: traceMock,
-      pointcontents: pointContentsMock,
-    } as unknown as EntitySystem;
+    }));
   });
 
   it('should return true if point content is solid (lava/slime/water)', () => {
-    pointContentsMock.mockReturnValue(1); // Non-zero content
+    // Non-zero content represents solid/liquid here
+    imports.pointcontents.mockReturnValue(1);
     const result = M_CheckBottom(entity, context);
     expect(result).toBe(true);
   });
 
   it('should return false if trace does not hit anything (stepping off into void)', () => {
-    pointContentsMock.mockReturnValue(0);
-    traceMock.mockReturnValue(createTraceMock({ fraction: 1.0 })); // Did not hit anything
+    imports.pointcontents.mockReturnValue(0);
+    imports.trace.mockReturnValue(createTraceMock({ fraction: 1.0 })); // Did not hit anything
 
     const result = M_CheckBottom(entity, context);
     expect(result).toBe(false);
   });
 
   it('should return true if trace hits something (solid ground)', () => {
-    pointContentsMock.mockReturnValue(0);
-    traceMock.mockReturnValue(createTraceMock({ fraction: 0.5, endpos: { x: 0, y: 0, z: 50 } })); // Hit something
+    imports.pointcontents.mockReturnValue(0);
+    imports.trace.mockReturnValue(createTraceMock({ fraction: 0.5, endpos: { x: 0, y: 0, z: 50 } })); // Hit something
 
     const result = M_CheckBottom(entity, context);
     expect(result).toBe(true);

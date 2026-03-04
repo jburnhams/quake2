@@ -4,33 +4,19 @@ import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { Entity, MoveType, Solid, ServerFlags } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import * as damageModule from '../../../src/combat/damage.js';
-
-// Mock dependencies
-vi.mock('../../../src/combat/damage.js', () => ({
-    T_RadiusDamage: vi.fn(),
-    DamageFlags: { NONE: 0 },
-    DamageMod: { EXPLOSIVE: 1 }
-}));
-
-// Mock gibs module
-vi.mock('../../../src/entities/gibs.js', async (importOriginal) => {
-    const actual = await importOriginal();
-    return {
-        ...(actual as any),
-        throwGibs: vi.fn(),
-        GIB_METALLIC: 1,
-        GIB_DEBRIS: 2
-    };
-});
-
-import { throwGibs } from '../../../src/entities/gibs.js';
+import * as gibsModule from '../../../src/entities/gibs.js';
 
 describe('func_explosive', () => {
     let registry: SpawnRegistry;
     let system: EntitySystem;
     let entities: Entity[];
+    let throwGibsSpy: any;
+    let tRadiusDamageSpy: any;
 
     beforeEach(() => {
+        throwGibsSpy = vi.spyOn(gibsModule, 'throwGibs').mockImplementation(() => undefined);
+        tRadiusDamageSpy = vi.spyOn(damageModule, 'T_RadiusDamage').mockImplementation(() => undefined);
+
         registry = new SpawnRegistry();
         registerFuncSpawns(registry);
         entities = [];
@@ -124,7 +110,7 @@ describe('func_explosive', () => {
         ent.die?.(ent, ent, attacker, 50);
 
         expect(system.findByRadius).toHaveBeenCalled();
-        expect(damageModule.T_RadiusDamage).toHaveBeenCalled();
+        expect(tRadiusDamageSpy).toHaveBeenCalled();
         expect(system.free).toHaveBeenCalledWith(ent);
     });
 
@@ -132,6 +118,6 @@ describe('func_explosive', () => {
         const ent = spawnExplosive({ mass: 200 }); // Untargeted
         ent.die?.(ent, ent, ent, 100);
 
-        expect(throwGibs).toHaveBeenCalled();
+        expect(throwGibsSpy).toHaveBeenCalled();
     });
 });

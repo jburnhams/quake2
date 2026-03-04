@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { compareSnapshots } from '../../src/visual/snapshots';
+import { compareSnapshots } from '../../../src/visual/snapshots';
 
 describe('compareSnapshots', () => {
     it('returns passed=true for identical images', async () => {

@@ -15,8 +15,9 @@ export { intersects, stairTrace, ladderTrace } from '@quake2ts/shared';
 export interface TraceMock extends Partial<TraceResult> {
     fraction: number;
     endpos: Vec3;
-    plane: CollisionPlane;
+    plane: CollisionPlane | null;
     surface: { flags: number, name?: string, value?: number };
+    surfaceFlags: number;
     contents: number;
     ent: any; // Using any to avoid circular dependency with Entity
     allsolid: boolean;
@@ -34,6 +35,7 @@ export const createTraceMock = (overrides?: Partial<TraceMock>): TraceMock => ({
     endpos: { x: 0, y: 0, z: 0 },
     plane: { normal: { x: 0, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
     surface: { flags: 0 },
+    surfaceFlags: 0,
     contents: 0,
     ent: null,
     allsolid: false,
