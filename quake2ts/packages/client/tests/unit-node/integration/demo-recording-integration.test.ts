@@ -1,40 +1,21 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
-import { DemoRecorder, createEmptyEntityState } from '@quake2ts/engine';
-import { GetCGameAPI } from '@quake2ts/cgame';
-import { Init_Hud } from '@quake2ts/client/hud.js';
+import { DemoRecorder } from '@quake2ts/engine';
+import { createMockEngineImports, createMockEngineHost } from '@quake2ts/test-utils';
 import { resetCommonClientMocks } from '../test-helpers.js';
-
-let mockRecorderInstance: any;
 
 // Mock dependencies
 vi.mock('@quake2ts/engine', async () => {
-    const actual = await vi.importActual('@quake2ts/engine');
+    const actual = await vi.importActual<typeof import('@quake2ts/engine')>('@quake2ts/engine');
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+
+    // Create a spy wrapper for the class to allow instance capture
+    const MockDemoRecorderSpy = vi.fn(function() { return new utils.MockDemoRecorder(); });
+
     return {
         ...actual,
-        DemoRecorder: vi.fn().mockImplementation(function() {
-            mockRecorderInstance = {
-                startRecording: vi.fn(),
-                recordMessage: vi.fn(),
-                stopRecording: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-                getIsRecording: vi.fn().mockReturnValue(true)
-            };
-            return mockRecorderInstance;
-        }),
-        DemoPlaybackController: class {
-            setHandler = vi.fn();
-            loadDemo = vi.fn();
-            setSpeed = vi.fn();
-            setFrameDuration = vi.fn();
-            getCurrentTime = vi.fn();
-            getDuration = vi.fn();
-            getState = vi.fn();
-            getSpeed = vi.fn();
-            play = vi.fn();
-            pause = vi.fn();
-            stop = vi.fn();
-            update = vi.fn();
-        },
+        DemoRecorder: MockDemoRecorderSpy,
+        DemoPlaybackController: utils.MockDemoPlaybackController,
         ClientRenderer: vi.fn(),
         createEmptyEntityState: vi.fn().mockReturnValue({ origin: {x:0,y:0,z:0} })
     };
@@ -53,89 +34,61 @@ vi.mock('../../../src/net/browserWsDriver.ts', () => ({
     }
 }));
 
-vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
-    MenuSystem: vi.fn().mockImplementation(function() {
-        return {
-            isActive: vi.fn(),
-            pushMenu: vi.fn(),
-            closeAll: vi.fn(),
-            render: vi.fn(),
-            handleInput: vi.fn(),
-            getState: vi.fn().mockReturnValue({})
-        };
-    })
-}));
+vi.mock('@quake2ts/client/ui/menu/system.js', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        MenuSystem: utils.MockMenuSystem
+    };
+});
 
 vi.mock('@quake2ts/client/hud.js', () => ({
     Init_Hud: vi.fn().mockResolvedValue(undefined),
     Draw_Hud: vi.fn()
 }));
 
-vi.mock('@quake2ts/cgame', () => ({
-    ClientPrediction: vi.fn().mockImplementation(function() { return {
-        setAuthoritative: vi.fn(),
-        enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn(),
-        decayError: vi.fn()
-    }; }),
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(function() { return {
-        sample: vi.fn()
-    }; }),
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('@quake2ts/cgame', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        ClientPrediction: utils.MockClientPrediction,
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: utils.MockViewEffects,
+        GetCGameAPI: vi.fn().mockReturnValue({
+            Init: vi.fn(),
+            Shutdown: vi.fn(),
+            DrawHUD: vi.fn(),
+            ParseConfigString: vi.fn(),
+            ParseCenterPrint: vi.fn(),
+            NotifyMessage: vi.fn(),
+            ShowSubtitle: vi.fn()
+        })
+    };
+});
 
-vi.mock('../../../cgame/src/index.ts', () => ({
-    ClientPrediction: vi.fn().mockImplementation(function() { return {
-        setAuthoritative: vi.fn(),
-        enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn(),
-        decayError: vi.fn()
-    }; }),
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(function() { return {
-        sample: vi.fn()
-    }; }),
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('../../../cgame/src/index.ts', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        ClientPrediction: utils.MockClientPrediction,
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: utils.MockViewEffects,
+        GetCGameAPI: vi.fn().mockReturnValue({
+            Init: vi.fn(),
+            Shutdown: vi.fn(),
+            DrawHUD: vi.fn(),
+            ParseConfigString: vi.fn(),
+            ParseCenterPrint: vi.fn(),
+            NotifyMessage: vi.fn(),
+            ShowSubtitle: vi.fn()
+        })
+    };
+});
 
 describe('Demo Recording Integration', () => {
     let client: ClientExports;
     let mockEngine: any;
+    let mockRecorderInstance: any;
 
     beforeEach(() => {
         vi.clearAllMocks();
-        mockRecorderInstance = undefined;
-
-        // Reset mock return values due to mockReset: true
-        if (vi.isMockFunction(DemoRecorder)) {
-             vi.mocked(DemoRecorder).mockImplementation(function() {
-                mockRecorderInstance = {
-                    startRecording: vi.fn(),
-                    recordMessage: vi.fn(),
-                    stopRecording: vi.fn().mockReturnValue(new Uint8Array([1, 2, 3])),
-                    getIsRecording: vi.fn().mockReturnValue(true)
-                };
-                return mockRecorderInstance;
-            });
-        }
-
         resetCommonClientMocks();
 
         // Mock localStorage
@@ -150,59 +103,61 @@ describe('Demo Recording Integration', () => {
             } as any;
         }
 
-        mockEngine = {
-            trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
-            assets: {
-                listFiles: vi.fn().mockReturnValue([]),
-                getMap: vi.fn(),
-                loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }),
-            },
-            renderer: {
-                width: 800,
-                height: 600,
-                registerTexture: vi.fn(),
-                registerPic: vi.fn(),
-                drawCenterString: vi.fn(),
-                drawString: vi.fn(),
-                drawfillRect: vi.fn(),
-                begin2D: vi.fn(),
-                end2D: vi.fn(),
-                setGamma: vi.fn(),
-                setBrightness: vi.fn(),
-                setBloom: vi.fn(),
-                setBloomIntensity: vi.fn(),
-                setUnderwaterWarp: vi.fn(),
-            },
+        const mockRenderer = {
+            width: 800,
+            height: 600,
+            renderFrame: vi.fn(),
+            begin2D: vi.fn(),
+            end2D: vi.fn(),
+            drawfillRect: vi.fn(),
+            drawString: vi.fn(),
+            drawCenterString: vi.fn(),
+            registerTexture: vi.fn(),
+            registerPic: vi.fn(),
+            getPerformanceReport: vi.fn().mockReturnValue({ textureBinds: 0, drawCalls: 0, triangles: 0, vertices: 0 }),
+            setGamma: vi.fn(),
+            setBrightness: vi.fn(),
+            setBloom: vi.fn(),
+            setBloomIntensity: vi.fn(),
+            setUnderwaterWarp: vi.fn(),
+        };
+
+        const engineImports = createMockEngineImports({
+            renderer: mockRenderer,
             cmd: {
                 executeText: vi.fn(),
                 register: vi.fn()
-            },
+            } as any,
             audio: {
+                sound: vi.fn(),
+                positioned_sound: vi.fn(),
+                set_music_volume: vi.fn(),
                 play_track: vi.fn(),
                 play_music: vi.fn(),
-                stop_music: vi.fn(),
-                set_music_volume: vi.fn()
-            }
-        };
+                stop_music: vi.fn()
+            } as any
+        });
+
+        engineImports.assets.loadTexture = vi.fn().mockResolvedValue({ width: 32, height: 32 });
+        mockEngine = engineImports;
+
+        const host = createMockEngineHost();
+        host.cvars.get = vi.fn().mockReturnValue({ string: '', number: 0 });
 
         const imports: ClientImports = {
             engine: mockEngine,
-            host: {
-                cvars: {
-                    get: vi.fn().mockReturnValue({ string: '', number: 0 }),
-                    setValue: vi.fn(),
-                    list: vi.fn().mockReturnValue([]),
-                    register: vi.fn()
-                },
-                commands: {
-                    register: vi.fn(),
-                    execute: vi.fn()
-                }
-            } as any
+            host: host
         };
 
         client = createClient(imports);
         client.Init();
+
+        // Capture the recorder instance created by createClient
+        mockRecorderInstance = vi.mocked(DemoRecorder).mock.results[0].value;
+
+        // Configure specific behavior needed for tests
+        mockRecorderInstance.stopRecording.mockReturnValue(new Uint8Array([1, 2, 3]));
+        mockRecorderInstance.getIsRecording.mockReturnValue(true);
     });
 
     it('should set demo recorder on multiplayer connection', () => {
@@ -210,10 +165,6 @@ describe('Demo Recording Integration', () => {
         // Verify that the DemoRecorder constructor was called during client initialization
         expect(DemoRecorder).toHaveBeenCalled();
 
-        // Indirectly verify that the recorder was set on the multiplayer connection
-        // by attempting to start recording (simulating a connected state) and verifying
-        // that the mock recorder's startRecording method is invoked.
-        // This confirms the plumbing from client -> multiplayer -> recorder is intact.
         vi.spyOn(client.multiplayer, 'isConnected').mockReturnValue(true);
         client.startRecording('test_setup.dm2');
         expect(mockRecorderInstance.startRecording).toHaveBeenCalledWith('test_setup.dm2');
@@ -221,24 +172,6 @@ describe('Demo Recording Integration', () => {
 
     it('should start recording when connected', () => {
         if (!mockRecorderInstance) return;
-
-        // Force connection state to true in mock driver if needed, but we defaulted isConnected to true.
-        // Also MultiplayerConnection tracks state.
-        // We need to simulate connection state change to Connected/Active.
-
-        // client.multiplayer is real instance.
-        // It listens to driver.
-        // We mocked driver to have isConnected=true, but MultiplayerConnection also checks its own state enum.
-        // ConnectionState.Active is required for sending commands, but for recording?
-
-        // client.startRecording:
-        // if (multiplayer.isConnected()) { demoRecorder.startRecording(...) }
-
-        // MultiplayerConnection.isConnected() checks `this.state === ConnectionState.Active`.
-
-        // We need to transition multiplayer to Active.
-        // We can call `client.multiplayer.onServerData(...)` and `finishLoading()` flow?
-        // Or we can just spy on client.multiplayer.isConnected and make it return true.
 
         vi.spyOn(client.multiplayer, 'isConnected').mockReturnValue(true);
 
@@ -283,8 +216,6 @@ describe('Demo Recording Integration', () => {
             revokeObjectURL: vi.fn()
         } as any;
         global.Blob = vi.fn();
-
-        mockRecorderInstance.getIsRecording.mockReturnValue(true);
 
         client.stopRecording();
 
