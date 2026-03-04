@@ -97,8 +97,9 @@ describe('Visibility Flow', () => {
     const state = initializePortalFlow(portals, 3);
 
     // Simulate that flood fill already populated mightSee
+    // Populate mightSee for each flow to realistically test PVS computation
     for (const flow of state.portals) {
-      flow.mightSee.setAll();
+      flow.mightSee = floodFillVisibility(state, flow.backCluster);
     }
 
     const pvsA = computeClusterPvs(state, 0);
