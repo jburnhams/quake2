@@ -49,7 +49,7 @@ Port the Quake 2 BSP compilation toolchain to TypeScript as `@quake2ts/bsp-tools
 | 25-4 | Primitive Builder (MVP) | **COMPLETED** |
 | 25-5 | CSG Operations | **COMPLETED** |
 | 25-6 | BSP Tree Construction | **COMPLETED** |
-| 25-7 | Portals & Visibility | Pending |
+| 25-7 | Portals & Visibility | IN PROGRESS |
 | 25-8 | Lighting & Lightmaps | Pending |
 
 ## Key References
