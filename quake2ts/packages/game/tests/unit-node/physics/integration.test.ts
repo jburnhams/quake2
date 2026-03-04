@@ -13,6 +13,9 @@ import {
 import {
   makeLeafModel,
   makeBrushFromMinsMaxs,
+  createTestGame,
+  spawnEntity,
+  createEntityFactory
 } from '@quake2ts/test-utils';
 import { runProjectileMovement, runPush, runGravity } from '../../../src/physics/movement.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
@@ -62,16 +65,21 @@ describe('Physics Integration Tests', () => {
 
   beforeEach(() => {
     entities = [];
-    system = {
-      forEachEntity: (callback: (e: Entity) => void) => {
-        entities.forEach(callback);
-      },
-    } as any;
+    const gameResult = createTestGame();
+    system = gameResult.game.entities;
+    imports = gameResult.imports;
 
-    imports = {
-      trace: vi.fn(),
-      linkentity: vi.fn((ent: Entity) => {
-        // Update absmin/absmax
+    // In test-utils createTestGame, forEachEntity loops over the registry's entities.
+    // For these unit tests which create specific local arrays, we might override it,
+    // or just use system directly and append to its pool if needed.
+    // However, the test below modifies `entities` array locally and expects forEachEntity to use it.
+    // So we spy on the real system's forEachEntity.
+    vi.spyOn(system, 'forEachEntity').mockImplementation((callback: (e: Entity) => void) => {
+      entities.forEach(callback);
+    });
+
+    // We also need to keep the mock of linkentity to calculate absmins quickly for tests
+    imports.linkentity.mockImplementation((ent: Entity) => {
         ent.absmin = {
             x: ent.origin.x + ent.mins.x,
             y: ent.origin.y + ent.mins.y,
@@ -82,8 +90,7 @@ describe('Physics Integration Tests', () => {
             y: ent.origin.y + ent.maxs.y,
             z: ent.origin.z + ent.maxs.z
         };
-      }),
-    } as unknown as GameImports;
+    });
   });
 
   it('Projectile Collision: should stop/hit when firing into a wall', () => {
@@ -99,13 +106,14 @@ describe('Physics Integration Tests', () => {
     imports.trace = createTraceDelegate(model);
 
     // Create projectile
-    const proj = new Entity(1);
-    proj.movetype = MoveType.FlyMissile;
-    proj.origin = { x: 0, y: 0, z: 0 };
-    proj.velocity = { x: 200, y: 0, z: 0 }; // Moving towards wall
-    proj.mins = { x: 0, y: 0, z: 0 };
-    proj.maxs = { x: 0, y: 0, z: 0 }; // Point projectile
-    proj.clipmask = MASK_SHOT; // Ensure it hits solid
+    const proj = spawnEntity(system, createEntityFactory({
+      movetype: MoveType.FlyMissile,
+      origin: { x: 0, y: 0, z: 0 },
+      velocity: { x: 200, y: 0, z: 0 }, // Moving towards wall
+      mins: { x: 0, y: 0, z: 0 },
+      maxs: { x: 0, y: 0, z: 0 }, // Point projectile
+      clipmask: MASK_SHOT, // Ensure it hits solid
+    }));
 
     // Time to impact: distance 100 / speed 200 = 0.5s.
     // Run for 0.6s
@@ -165,11 +173,12 @@ describe('Physics Integration Tests', () => {
     const model = makeLeafModel([trigger]);
     imports.trace = createTraceDelegate(model);
 
-    const ent = new Entity(1);
-    ent.origin = { x: 0, y: 0, z: 0 };
-    ent.mins = { x: -10, y: -10, z: -10 };
-    ent.maxs = { x: 10, y: 10, z: 10 };
-    ent.clipmask = CONTENTS_TRIGGER;
+    const ent = spawnEntity(system, createEntityFactory({
+      origin: { x: 0, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: -10 },
+      maxs: { x: 10, y: 10, z: 10 },
+      clipmask: CONTENTS_TRIGGER,
+    }));
 
     // Move into trigger
     const end = { x: 60, y: 0, z: 0 };
@@ -197,27 +206,29 @@ describe('Physics Integration Tests', () => {
     imports.trace = createTraceDelegate(model);
 
     // Pusher setup (Platform)
-    const pusher = new Entity(1);
-    pusher.movetype = MoveType.Push;
-    pusher.solid = Solid.Bsp;
-    pusher.origin = { x: 0, y: 0, z: 0 };
-    pusher.mins = { x: -20, y: -20, z: -10 };
-    pusher.maxs = { x: 20, y: 20, z: 10 };
-    pusher.clipmask = MASK_SOLID;
+    const pusher = spawnEntity(system, createEntityFactory({
+      movetype: MoveType.Push,
+      solid: Solid.Bsp,
+      origin: { x: 0, y: 0, z: 0 },
+      mins: { x: -20, y: -20, z: -10 },
+      maxs: { x: 20, y: 20, z: 10 },
+      clipmask: MASK_SOLID,
+      velocity: { x: 100, y: 0, z: 0 }, // Moving right
+      avelocity: { x: 0, y: 0, z: 0 },
+    }));
     // Init abs
     imports.linkentity(pusher);
-    pusher.velocity = { x: 100, y: 0, z: 0 }; // Moving right
-    pusher.avelocity = { x: 0, y: 0, z: 0 };
 
     entities.push(pusher);
 
     // Rider setup
-    const rider = new Entity(2);
-    rider.origin = { x: 0, y: 0, z: 11 }; // On top
-    rider.mins = { x: -10, y: -10, z: 0 };
-    rider.maxs = { x: 10, y: 10, z: 10 };
-    rider.groundentity = pusher;
-    rider.solid = Solid.BoundingBox; // Needs to be solid to be pushed/checked?
+    const rider = spawnEntity(system, createEntityFactory({
+      origin: { x: 0, y: 0, z: 11 }, // On top
+      mins: { x: -10, y: -10, z: 0 },
+      maxs: { x: 10, y: 10, z: 10 },
+      groundentity: pusher,
+      solid: Solid.BoundingBox, // Needs to be solid to be pushed/checked?
+    }));
     imports.linkentity(rider);
 
     entities.push(rider);
