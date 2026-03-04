@@ -479,6 +479,14 @@ export function computeVisibility(
   const state = initializePortalFlow(portals, numClusters);
   const pvsBits: BitSet[] = [];
 
+  // If doing full VIS, we need to pre-compute the base topological visibility (mightSee)
+  // for every portal so that the recursive frustum culling knows which portals to even test.
+  if (!isFast) {
+    for (const flow of state.portals) {
+      flow.mightSee = floodFillVisibility(state, flow.backCluster);
+    }
+  }
+
   for (let i = 0; i < numClusters; i++) {
     if (isFast) {
       // Fast mode: just use flood fill (mightSee)
