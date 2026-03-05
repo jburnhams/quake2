@@ -6,7 +6,7 @@ import { Solid, Entity } from '../../../../src/entities/entity';
 import { EntitySystem } from '../../../../src/entities/system';
 import { GameExports } from '../../../../src/index';
 import { KeyId } from '../../../../src/inventory/playerInventory';
-import { createTestContext, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Capture Logic', () => {
   let context: EntitySystem;
@@ -16,41 +16,36 @@ describe('CTF Capture Logic', () => {
   let player: Entity;
 
   beforeEach(async () => {
+    const testGame = createTestGame();
+    game = testGame.game;
+    context = game.entities;
+
     // Red flag setup
-    redFlag = createItemEntityFactory('item_flag_team1', {
+    redFlag = spawnEntity(context, createItemEntityFactory('item_flag_team1', {
       flagTeam: 'red',
       flagState: FlagState.AT_BASE,
       baseOrigin: { x: 100, y: 0, z: 0 },
       origin: { x: 100, y: 0, z: 0 },
       solid: Solid.Trigger,
-    }) as unknown as FlagEntity;
+    })) as FlagEntity;
 
     // Blue flag setup
-    blueFlag = createItemEntityFactory('item_flag_team2', {
+    blueFlag = spawnEntity(context, createItemEntityFactory('item_flag_team2', {
       flagTeam: 'blue',
       flagState: FlagState.CARRIED, // Assumed carried by player
       baseOrigin: { x: -100, y: 0, z: 0 },
       origin: { x: -100, y: 0, z: 0 },
       solid: Solid.Not,
-    }) as unknown as FlagEntity;
+    })) as FlagEntity;
 
     // Player setup
-    player = createPlayerEntityFactory({
+    player = spawnEntity(context, createPlayerEntityFactory({
       client: createPlayerClientFactory({
         score: 0,
         // Mock team property used in CTF logic
         team: 'red'
       })
-    }) as unknown as Entity;
-
-    // Create context with initial entities
-    const testCtx = createTestContext({
-      initialEntities: [redFlag, blueFlag, player]
-    });
-
-    context = testCtx.entities;
-    // Cast MockGame to GameExports (compatible enough for tests)
-    game = testCtx.game as unknown as GameExports;
+    }));
   });
 
   describe('checkCapture', () => {
@@ -106,6 +101,9 @@ describe('CTF Capture Logic', () => {
     });
 
     it('should play capture sound and message', () => {
+      vi.spyOn(game, 'sound');
+      vi.spyOn(game, 'centerprintf');
+
       captureFlag(redFlag, player, game, context);
       expect(game.sound).toHaveBeenCalledWith(player, 0, 'ctf/flagcap.wav', 1, 1, 0);
       expect(game.centerprintf).toHaveBeenCalledWith(player, 'You captured the flag!');

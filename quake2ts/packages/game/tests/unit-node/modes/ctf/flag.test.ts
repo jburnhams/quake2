@@ -5,7 +5,7 @@ import { FLAG_ITEMS } from '../../../../src/inventory/items.js';
 import { Solid } from '../../../../src/entities/entity.js';
 import { Entity, EntitySystem } from '../../../../src/entities/system.js';
 import { KeyId } from '../../../../src/inventory/playerInventory.js';
-import { createTestContext, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Flag Entities', () => {
     let mockGame: GameExports;
@@ -13,16 +13,16 @@ describe('CTF Flag Entities', () => {
     let mockPlayer: Entity;
 
     beforeEach(() => {
-        const testCtx = createTestContext();
-        mockGame = testCtx.game as unknown as GameExports;
-        mockEntitySystem = testCtx.entities;
+        const testGame = createTestGame();
+        mockGame = testGame.game;
+        mockEntitySystem = testGame.game.entities;
 
         // Mock time
-        (mockGame as any).time = 100;
+        vi.spyOn(mockGame, 'time', 'get').mockReturnValue(100);
 
-        mockPlayer = createPlayerEntityFactory({
+        mockPlayer = spawnEntity(mockEntitySystem, createPlayerEntityFactory({
             client: createPlayerClientFactory()
-        }) as unknown as Entity;
+        }));
     });
 
     it('should create red flag entity', () => {
@@ -51,7 +51,10 @@ describe('CTF Flag Entities', () => {
         const self = { ...entity } as Entity;
 
         // Mock player to be on opposite team (blue)
-        (mockPlayer.client as any).team = 'blue';
+        mockPlayer.client!.team = 'blue';
+
+        vi.spyOn(mockGame, 'sound');
+        vi.spyOn(mockGame, 'centerprintf');
 
         if (entity.touch) {
             entity.touch(self, mockPlayer, undefined, undefined);
@@ -76,6 +79,8 @@ describe('CTF Flag Entities', () => {
         const entity = createFlagPickupEntity(mockGame, flagItem);
         const other = {} as Entity; // Not a client
         const self = { ...entity } as Entity;
+
+        vi.spyOn(mockGame, 'sound');
 
         if (entity.touch) {
             entity.touch(self, other, undefined, undefined);
