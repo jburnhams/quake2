@@ -1,5 +1,6 @@
 import { BspVisibility, BspVisibilityCluster } from '../types/bsp.js';
-import { Winding, copyWinding } from '@quake2ts/shared';
+import { Winding, copyWinding, splitWinding } from '@quake2ts/shared';
+import { ON_EPSILON } from '../types/index.js';
 import { Portal } from './portals.js';
 import { TreeLeaf, isLeaf } from './tree.js';
 
@@ -188,6 +189,15 @@ export function floodFillVisibility(
  * @param portal The target portal we are flowing into.
  * @param pvs The BitSet collecting all visible clusters from the original source.
  */
+/**
+ * Recursively traces visibility through portals to build the exact PVS.
+ *
+ * @param state Global visibility state.
+ * @param portal The target portal we are flowing into.
+ * @param sourceWinding The original source portal winding.
+ * @param passWinding The current tight view frustum winding at the previous portal.
+ * @param pvs The BitSet collecting all visible clusters from the original source.
+ */
 function recursiveLeafFlow(
   state: VisibilityState,
   portal: PortalFlow,
@@ -204,10 +214,24 @@ function recursiveLeafFlow(
   for (const nextFlow of nextFlows) {
     if (!pvs.get(nextFlow.backCluster)) {
       if (portal.mightSee.get(nextFlow.backCluster)) {
-          // Clip source winding against the target portal using anti-penumbra planes
-          const clipped = clipToAntiPenumbra(passWinding, sourceWinding, nextFlow.portal.winding);
-          if (clipped && clipped.numPoints >= 3) {
-            recursiveLeafFlow(state, nextFlow, sourceWinding, clipped, pvs);
+          // Check if we are checking the direct neighbor (first step).
+          // If the pass winding is exactly the source winding, we can just flow through.
+          if (passWinding === sourceWinding) {
+            // When moving to the next neighbor, its "pass winding" initially is just its portal winding itself.
+            let pass = clipToAntiPenumbra(sourceWinding, sourceWinding, nextFlow.portal.winding, false);
+            if (pass && pass.numPoints >= 3) {
+              recursiveLeafFlow(state, nextFlow, sourceWinding, nextFlow.portal.winding, pvs);
+            }
+          } else {
+            // Try clipping the target portal against the separating planes
+            // constructed from the source portal and pass portal.
+            let pass = clipToAntiPenumbra(sourceWinding, passWinding, nextFlow.portal.winding, false);
+            if (pass && pass.numPoints >= 3) {
+              pass = clipToAntiPenumbra(passWinding, sourceWinding, pass, true);
+              if (pass && pass.numPoints >= 3) {
+                recursiveLeafFlow(state, nextFlow, sourceWinding, pass, pvs);
+              }
+            }
           }
       }
     }
@@ -247,20 +271,98 @@ export function computeClusterPvs(
  * @returns The clipped winding, or null if completely clipped away.
  */
 export function clipToAntiPenumbra(
-  pass: Winding,
   source: Winding,
-  target: Winding
+  pass: Winding,
+  target: Winding,
+  flipclip: boolean
 ): Winding | null {
-  // For MVP/simple mode, we just return the pass winding or target winding.
-  // Full anti-penumbra clipping requires generating separator planes between
-  // every edge of 'source' and every vertex of 'pass', which is complex.
-  // In a robust implementation, you construct planes that form the frustum
-  // from source through pass, and clip the target.
+  let clippedTarget = copyWinding(target);
 
-  // Here we do a simplified check: just return target winding if it exists.
-  // This means no actual clipping is done, defaulting back to flood fill behavior
-  // but satisfying the API.
-  return target ? copyWinding(target) : null;
+  // Check all combinations
+  for (let i = 0; i < source.numPoints; i++) {
+    const l = (i + 1) % source.numPoints;
+    const v1 = {
+      x: source.points[l].x - source.points[i].x,
+      y: source.points[l].y - source.points[i].y,
+      z: source.points[l].z - source.points[i].z
+    };
+
+    // find a vertex of pass that makes a plane that puts all of the
+    // vertexes of pass on the front side and all of the vertexes of
+    // source on the back side
+    for (let j = 0; j < pass.numPoints; j++) {
+      const v2 = {
+        x: pass.points[j].x - source.points[i].x,
+        y: pass.points[j].y - source.points[i].y,
+        z: pass.points[j].z - source.points[i].z
+      };
+
+      const normal = {
+        x: v1.y * v2.z - v1.z * v2.y,
+        y: v1.z * v2.x - v1.x * v2.z,
+        z: v1.x * v2.y - v1.y * v2.x
+      };
+
+      let lengthSq = normal.x * normal.x + normal.y * normal.y + normal.z * normal.z;
+      if (lengthSq < 1e-4) {
+        continue; // collinear points or very short edges
+      }
+
+      const length = Math.sqrt(lengthSq);
+      normal.x /= length;
+      normal.y /= length;
+      normal.z /= length;
+
+      let dist = pass.points[j].x * normal.x + pass.points[j].y * normal.y + pass.points[j].z * normal.z;
+
+      let fliptest = false;
+      let k = 0;
+      for (k = 0; k < source.numPoints; k++) {
+        if (k === i || k === l) continue;
+        const d = source.points[k].x * normal.x + source.points[k].y * normal.y + source.points[k].z * normal.z - dist;
+        if (d < -ON_EPSILON) {
+          fliptest = false;
+          break;
+        } else if (d > ON_EPSILON) {
+          fliptest = true;
+          break;
+        }
+      }
+      if (k === source.numPoints) continue; // planar with source portal
+
+      if (fliptest) {
+        normal.x = -normal.x;
+        normal.y = -normal.y;
+        normal.z = -normal.z;
+        dist = -dist;
+      }
+
+      let counts = [0, 0, 0];
+      for (k = 0; k < pass.numPoints; k++) {
+        if (k === j) continue;
+        const d = pass.points[k].x * normal.x + pass.points[k].y * normal.y + pass.points[k].z * normal.z - dist;
+        if (d < -ON_EPSILON) break;
+        else if (d > ON_EPSILON) counts[0]++;
+        else counts[2]++;
+      }
+      if (k !== pass.numPoints) continue; // points on negative side, not a separating plane
+      if (!counts[0]) continue; // planar with separating plane
+
+      if (flipclip) {
+        normal.x = -normal.x;
+        normal.y = -normal.y;
+        normal.z = -normal.z;
+        dist = -dist;
+      }
+
+      // chop winding
+      const split = splitWinding(clippedTarget, normal, dist);
+      if (!split.front) return null; // fully clipped
+      clippedTarget = split.front;
+    }
+  }
+
+  return clippedTarget;
 }
 
 export function mightSeeCluster(

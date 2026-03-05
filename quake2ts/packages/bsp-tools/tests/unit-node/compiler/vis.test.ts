@@ -5,6 +5,51 @@ import { TreeLeaf } from '../../../src/compiler/tree.js';
 import { createEmptyBounds3, baseWindingForPlane } from '@quake2ts/shared';
 
 describe('Visibility Flow', () => {
+  it('Full PVS is subset of flood fill', () => {
+    // 3 clusters in a row: A <-> B <-> C
+    const leafA: TreeLeaf = { contents: 0, cluster: 0, brushes: [], bounds: createEmptyBounds3() };
+    const leafB: TreeLeaf = { contents: 0, cluster: 1, brushes: [], bounds: createEmptyBounds3() };
+    const leafC: TreeLeaf = { contents: 0, cluster: 2, brushes: [], bounds: createEmptyBounds3() };
+    const leafD: TreeLeaf = { contents: 0, cluster: 3, brushes: [], bounds: createEmptyBounds3() };
+
+    // Face A->B points +Z
+    const portalAB: any = {
+        nodes: [leafA, leafB],
+        winding: { numPoints: 4, points: [{x:-5, y:-5, z:0}, {x:5, y:-5, z:0}, {x:5, y:5, z:0}, {x:-5, y:5, z:0}] }
+    };
+    // Face B->C points +Z, slightly to the right, so A->B can see B->C
+    const portalBC: any = {
+        nodes: [leafB, leafC],
+        winding: { numPoints: 4, points: [{x:0, y:-5, z:10}, {x:10, y:-5, z:10}, {x:10, y:5, z:10}, {x:0, y:5, z:10}] }
+    };
+    // Face C->D points +Z, way to the right, totally out of view of A->B, but visible from B->C
+    const portalCD: any = {
+        nodes: [leafC, leafD],
+        winding: { numPoints: 4, points: [{x:40, y:-5, z:20}, {x:50, y:-5, z:20}, {x:50, y:5, z:20}, {x:40, y:5, z:20}] }
+    };
+
+    const portals: Portal[] = [portalAB, portalBC, portalCD];
+    const state = initializePortalFlow(portals, 4);
+
+    for (const flow of state.portals) {
+      flow.mightSee = floodFillVisibility(state, flow.backCluster);
+    }
+
+    // Flood fill should find C from A
+    const reachableA = floodFillVisibility(state, 0);
+    expect(reachableA.get(3)).toBe(true);
+
+    // Full PVS shouldn't find D from A, as A and D are mutually occluded by the frustum through B
+    const pvsA = computeClusterPvs(state, 0);
+    expect(pvsA.get(1)).toBe(true); // can see B
+    expect(pvsA.get(2)).toBe(true); // can see C
+    expect(pvsA.get(3)).toBe(false); // CANNOT see D
+
+    // Also test B -> D
+    const pvsB = computeClusterPvs(state, 1);
+    expect(pvsB.get(2)).toBe(true);
+    expect(pvsB.get(3)).toBe(true);
+  });
   it('BitSet functions correctly', () => {
     const bits = new BitSet(10);
     expect(bits.size).toBe(10);
@@ -159,15 +204,128 @@ describe('Visibility Flow', () => {
     expect(decompressPvs(result.clusters[1].pvs, 0, 2).get(0)).toBe(true);
   });
 
-  it('clipToAntiPenumbra returns correctly in MVP mode', () => {
-      const w1 = baseWindingForPlane({x:1, y:0, z:0}, 0);
-      const w2 = baseWindingForPlane({x:0, y:1, z:0}, 0);
-      const w3 = baseWindingForPlane({x:0, y:0, z:1}, 0);
+  it('clipToAntiPenumbra trims target based on source and pass portals', () => {
+    // 10x10 portal at z=0 (source)
+    const sourceWinding = {
+      numPoints: 4,
+      points: [
+        { x: -5, y: -5, z: 0 },
+        { x: 5, y: -5, z: 0 },
+        { x: 5, y: 5, z: 0 },
+        { x: -5, y: 5, z: 0 }
+      ]
+    };
 
-      const res = clipToAntiPenumbra(w1!, w2!, w3!);
+    // 10x10 portal at z=10 (pass)
+    const passWinding = {
+      numPoints: 4,
+      points: [
+        { x: -5, y: -5, z: 10 },
+        { x: 5, y: -5, z: 10 },
+        { x: 5, y: 5, z: 10 },
+        { x: -5, y: 5, z: 10 }
+      ]
+    };
 
-      expect(res).toBeDefined();
-      expect(res!.numPoints).toBe(w3!.numPoints);
+    // Very large portal at z=20 (target)
+    const targetWinding = {
+      numPoints: 4,
+      points: [
+        { x: -50, y: -50, z: 20 },
+        { x: 50, y: -50, z: 20 },
+        { x: 50, y: 50, z: 20 },
+        { x: -50, y: 50, z: 20 }
+      ]
+    };
+
+    const res = clipToAntiPenumbra(sourceWinding, passWinding, targetWinding, false);
+
+    expect(res).toBeDefined();
+    expect(res!.numPoints).toBeGreaterThanOrEqual(3);
+
+    // The resulting polygon shouldn't exceed x/y = 15, since the source to pass creates a 1:1 expanding frustum
+    for (const p of res!.points) {
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(16); // floating point tolerance
+      expect(Math.abs(p.y)).toBeLessThanOrEqual(16);
+    }
+  });
+
+  it('clipToAntiPenumbra returns null if totally occluded', () => {
+    // Source at z=0 looking up
+    const sourceWinding = {
+      numPoints: 4,
+      points: [
+        { x: -5, y: -5, z: 0 },
+        { x: 5, y: -5, z: 0 },
+        { x: 5, y: 5, z: 0 },
+        { x: -5, y: 5, z: 0 }
+      ]
+    };
+
+    // Pass at z=10, shifted heavily to the right
+    const passWinding = {
+      numPoints: 4,
+      points: [
+        { x: 20, y: -5, z: 10 },
+        { x: 30, y: -5, z: 10 },
+        { x: 30, y: 5, z: 10 },
+        { x: 20, y: 5, z: 10 }
+      ]
+    };
+
+    // Target at z=20, shifted heavily to the left
+    const targetWinding = {
+      numPoints: 4,
+      points: [
+        { x: -40, y: -5, z: 20 },
+        { x: -30, y: -5, z: 20 },
+        { x: -30, y: 5, z: 20 },
+        { x: -40, y: 5, z: 20 }
+      ]
+    };
+
+    const res = clipToAntiPenumbra(sourceWinding, passWinding, targetWinding, false);
+    expect(res).toBeNull();
+  });
+
+  it('L-shaped corridor blocks line of sight in computeClusterPvs', () => {
+    const leafA: TreeLeaf = { contents: 0, cluster: 0, brushes: [], bounds: createEmptyBounds3() };
+    const leafB: TreeLeaf = { contents: 0, cluster: 1, brushes: [], bounds: createEmptyBounds3() };
+    const leafC: TreeLeaf = { contents: 0, cluster: 2, brushes: [], bounds: createEmptyBounds3() };
+    const leafD: TreeLeaf = { contents: 0, cluster: 3, brushes: [], bounds: createEmptyBounds3() };
+
+    // A looks through B into C, which turns left to D
+    // A -> B portal (facing positive X)
+    const portalAB: any = {
+        nodes: [leafA, leafB],
+        winding: { numPoints: 4, points: [{x:0, y:-5, z:0}, {x:0, y:5, z:0}, {x:0, y:5, z:10}, {x:0, y:-5, z:10}] }
+    };
+
+    // B -> C portal (facing positive X, further down)
+    const portalBC: any = {
+        nodes: [leafB, leafC],
+        winding: { numPoints: 4, points: [{x:20, y:-5, z:0}, {x:20, y:5, z:0}, {x:20, y:5, z:10}, {x:20, y:-5, z:10}] }
+    };
+
+    // C -> D portal (facing positive Y, turned left from the previous sightline)
+    const portalCD: any = {
+        nodes: [leafC, leafD],
+        winding: { numPoints: 4, points: [{x:30, y:20, z:0}, {x:40, y:20, z:0}, {x:40, y:20, z:10}, {x:30, y:20, z:10}] }
+    };
+
+    const portals: Portal[] = [portalAB, portalBC, portalCD];
+    const state = initializePortalFlow(portals, 4);
+
+    for (const flow of state.portals) {
+      flow.mightSee = floodFillVisibility(state, flow.backCluster);
+    }
+
+    const pvsA = computeClusterPvs(state, 0);
+    expect(pvsA.get(0)).toBe(true);
+    expect(pvsA.get(1)).toBe(true);
+    expect(pvsA.get(2)).toBe(true);
+    // A should not see D because it's around the corner and occluded by the portal constraints
+    expect(pvsA.get(3)).toBe(false);
   });
 });
 
