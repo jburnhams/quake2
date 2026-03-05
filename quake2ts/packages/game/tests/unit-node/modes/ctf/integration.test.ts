@@ -4,42 +4,34 @@ import { FlagEntity, FlagState } from '../../../../src/modes/ctf/state.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
 import { KeyId } from '../../../../src/inventory/playerInventory.js';
 import { GameExports } from '../../../../src/index.js';
-import { createTestContext, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
-
-// Helper to cast factories to correct type for tests
-const asFlag = (ent: any) => ent as FlagEntity;
+import { createTestGame, spawnEntity, createItemEntityFactory, createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import { Entity } from '../../../../src/entities/entity.js';
 
 describe('CTF Integration', () => {
-    let player: any;
+    let player: Entity;
     let flag: FlagEntity;
     let context: EntitySystem;
     let mockGame: GameExports;
 
     beforeEach(() => {
-        player = createPlayerEntityFactory({
+        const testGame = createTestGame();
+        mockGame = testGame.game;
+        context = testGame.game.entities;
+
+        player = spawnEntity(context, createPlayerEntityFactory({
             client: createPlayerClientFactory(),
             origin: { x: 100, y: 100, z: 0 }
-        });
+        }));
 
-        flag = createItemEntityFactory('item_flag_team2', {
+        flag = spawnEntity(context, createItemEntityFactory('item_flag_team2', {
             flagState: FlagState.CARRIED,
-            classname: 'item_flag_team2',
             owner: player,
             origin: { x: 0, y: 0, z: 0 },
             baseOrigin: { x: 1000, y: 1000, z: 0 },
             flagTeam: 'blue'
-        } as any) as FlagEntity;
+        })) as FlagEntity;
 
-        const testCtx = createTestContext({
-            initialEntities: [player, flag]
-        });
-
-        context = testCtx.entities;
-        mockGame = testCtx.game as unknown as GameExports;
-        (mockGame as any).time = 100;
-
-        // Link game to context if needed by implementation (some code checks ._game)
-        (context as any)._game = mockGame;
+        vi.spyOn(mockGame, 'time', 'get').mockReturnValue(100);
     });
 
     it('should drop flag if player has key and owns flag entity', () => {
