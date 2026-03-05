@@ -17,16 +17,16 @@ describe('CTF Teams', () => {
 
     it('should count players on team correctly', () => {
         spawnEntity(entities, createPlayerEntityFactory({
-            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any)
+            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED })
         }));
         spawnEntity(entities, createPlayerEntityFactory({
-            client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE } as any)
+            client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE })
         }));
         spawnEntity(entities, createPlayerEntityFactory({
-            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any)
+            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED })
         }));
         spawnEntity(entities, createPlayerEntityFactory({
-            client: undefined as any // Just to cover undefined client case
+            client: null // Just to cover undefined client case (null matches expected type safely)
         }));
 
         expect(countPlayersOnTeam(CtfTeam.RED, entities)).toBe(2);
@@ -43,7 +43,7 @@ describe('CTF Teams', () => {
     it('should auto-assign to smaller team (RED smaller)', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
         spawnEntity(entities, createPlayerEntityFactory({
-            client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE } as any)
+            client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE })
         }));
 
         assignTeam(client, CtfTeam.NOTEAM, entities, mockGame);
@@ -53,7 +53,7 @@ describe('CTF Teams', () => {
     it('should auto-assign to smaller team (BLUE smaller)', () => {
         const client: ClientWithTeam = { ctfTeam: CtfTeam.NOTEAM };
         spawnEntity(entities, createPlayerEntityFactory({
-            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any)
+            client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED })
         }));
 
         assignTeam(client, CtfTeam.NOTEAM, entities, mockGame);
@@ -69,24 +69,24 @@ describe('CTF Teams', () => {
 
     describe('Friendly Fire', () => {
         it('should allow damage if enemies', () => {
-             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any) }));
-             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE } as any) }));
+             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED }) }));
+             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.BLUE }) }));
 
              expect(onSameTeam(ent1, ent2)).toBe(false);
              expect(checkFriendlyFire(ent1, ent2)).toBe(true);
         });
 
         it('should prevent damage if same team', () => {
-             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any) }));
-             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED } as any) }));
+             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED }) }));
+             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.RED }) }));
 
              expect(onSameTeam(ent1, ent2)).toBe(true);
              expect(checkFriendlyFire(ent1, ent2)).toBe(false);
         });
 
         it('should allow damage if no teams (DM style or NOTEAM)', () => {
-             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.NOTEAM } as any) }));
-             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.NOTEAM } as any) }));
+             const ent1 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.NOTEAM }) }));
+             const ent2 = spawnEntity(entities, createPlayerEntityFactory({ client: createPlayerClientFactory({ ctfTeam: CtfTeam.NOTEAM }) }));
 
              // NOTEAM vs NOTEAM are NOT same team in CTF context (usually)
              expect(onSameTeam(ent1, ent2)).toBe(false);

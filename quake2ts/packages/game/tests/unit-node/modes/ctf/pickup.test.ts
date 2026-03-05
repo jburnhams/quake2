@@ -28,7 +28,7 @@ describe('CTF Flag Pickup', () => {
         player = spawnEntity(context, createPlayerEntityFactory({
              client: createPlayerClientFactory({
                  team: 'red'
-             } as any)
+             })
         }));
 
         // Mock time

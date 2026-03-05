@@ -51,7 +51,7 @@ describe('CTF Flag Entities', () => {
         const self = { ...entity } as Entity;
 
         // Mock player to be on opposite team (blue)
-        (mockPlayer.client as any).team = 'blue';
+        mockPlayer.client!.team = 'blue';
 
         vi.spyOn(mockGame, 'sound');
         vi.spyOn(mockGame, 'centerprintf');
