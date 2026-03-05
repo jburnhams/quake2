@@ -1,5 +1,5 @@
 import { BspVisibility, BspVisibilityCluster } from '../types/bsp.js';
-import { Winding, copyWinding, splitWinding } from '@quake2ts/shared';
+import { Winding, copyWinding, splitWinding, dotVec3 } from '@quake2ts/shared';
 import { ON_EPSILON } from '../types/index.js';
 import { Portal } from './portals.js';
 import { TreeLeaf, isLeaf } from './tree.js';
@@ -278,30 +278,28 @@ export function clipToAntiPenumbra(
 ): Winding | null {
   let clippedTarget = copyWinding(target);
 
+  const v1 = { x: 0, y: 0, z: 0 };
+  const v2 = { x: 0, y: 0, z: 0 };
+  const normal = { x: 0, y: 0, z: 0 };
+
   // Check all combinations
   for (let i = 0; i < source.numPoints; i++) {
     const l = (i + 1) % source.numPoints;
-    const v1 = {
-      x: source.points[l].x - source.points[i].x,
-      y: source.points[l].y - source.points[i].y,
-      z: source.points[l].z - source.points[i].z
-    };
+    v1.x = source.points[l].x - source.points[i].x;
+    v1.y = source.points[l].y - source.points[i].y;
+    v1.z = source.points[l].z - source.points[i].z;
 
     // find a vertex of pass that makes a plane that puts all of the
     // vertexes of pass on the front side and all of the vertexes of
     // source on the back side
     for (let j = 0; j < pass.numPoints; j++) {
-      const v2 = {
-        x: pass.points[j].x - source.points[i].x,
-        y: pass.points[j].y - source.points[i].y,
-        z: pass.points[j].z - source.points[i].z
-      };
+      v2.x = pass.points[j].x - source.points[i].x;
+      v2.y = pass.points[j].y - source.points[i].y;
+      v2.z = pass.points[j].z - source.points[i].z;
 
-      const normal = {
-        x: v1.y * v2.z - v1.z * v2.y,
-        y: v1.z * v2.x - v1.x * v2.z,
-        z: v1.x * v2.y - v1.y * v2.x
-      };
+      normal.x = v1.y * v2.z - v1.z * v2.y;
+      normal.y = v1.z * v2.x - v1.x * v2.z;
+      normal.z = v1.x * v2.y - v1.y * v2.x;
 
       let lengthSq = normal.x * normal.x + normal.y * normal.y + normal.z * normal.z;
       if (lengthSq < 1e-4) {
@@ -313,13 +311,13 @@ export function clipToAntiPenumbra(
       normal.y /= length;
       normal.z /= length;
 
-      let dist = pass.points[j].x * normal.x + pass.points[j].y * normal.y + pass.points[j].z * normal.z;
+      let dist = dotVec3(pass.points[j], normal);
 
       let fliptest = false;
       let k = 0;
       for (k = 0; k < source.numPoints; k++) {
         if (k === i || k === l) continue;
-        const d = source.points[k].x * normal.x + source.points[k].y * normal.y + source.points[k].z * normal.z - dist;
+        const d = dotVec3(source.points[k], normal) - dist;
         if (d < -ON_EPSILON) {
           fliptest = false;
           break;
@@ -340,7 +338,7 @@ export function clipToAntiPenumbra(
       let counts = [0, 0, 0];
       for (k = 0; k < pass.numPoints; k++) {
         if (k === j) continue;
-        const d = pass.points[k].x * normal.x + pass.points[k].y * normal.y + pass.points[k].z * normal.z - dist;
+        const d = dotVec3(pass.points[k], normal) - dist;
         if (d < -ON_EPSILON) break;
         else if (d > ON_EPSILON) counts[0]++;
         else counts[2]++;
@@ -356,7 +354,9 @@ export function clipToAntiPenumbra(
       }
 
       // chop winding
-      const split = splitWinding(clippedTarget, normal, dist);
+      // Note: we can't reuse `normal` if splitWinding captures a reference to it.
+      // But splitWinding creates a copy of points using dot products. It reads the normal.
+      const split = splitWinding(clippedTarget, { x: normal.x, y: normal.y, z: normal.z }, dist);
       if (!split.front) return null; // fully clipped
       clippedTarget = split.front;
     }
