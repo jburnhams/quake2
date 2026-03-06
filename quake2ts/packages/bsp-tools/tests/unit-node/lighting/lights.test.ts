@@ -1,9 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseLights, EntityDef } from '../../../src/lighting/lights.js';
+import { parseLights } from '../../../src/lighting/lights.js';
+import { MapEntityDef } from '../../../src/parser/entityParser.js';
 
 describe('Light Entity Parsing', () => {
   it('should parse a point light', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'light',
       properties: new Map([
         ['origin', '10 20 30'],
@@ -27,7 +28,7 @@ describe('Light Entity Parsing', () => {
   });
 
   it('should parse a spotlight with a target', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'light',
       properties: new Map([
         ['origin', '0 0 100'],
@@ -50,7 +51,7 @@ describe('Light Entity Parsing', () => {
   });
 
   it('should parse a colored light', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'light',
       properties: new Map([
         ['origin', '0 0 0'],
@@ -69,7 +70,7 @@ describe('Light Entity Parsing', () => {
   });
 
   it('should apply default values correctly', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'light',
       properties: new Map([
         ['origin', '50 50 50']
@@ -90,7 +91,7 @@ describe('Light Entity Parsing', () => {
   });
 
   it('should parse a surface light', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'light',
       properties: new Map([
         ['origin', '0 0 0'],
@@ -108,7 +109,7 @@ describe('Light Entity Parsing', () => {
   });
 
   it('should parse a sun light from worldspawn', () => {
-    const entities: EntityDef[] = [{
+    const entities: MapEntityDef[] = [{
       classname: 'worldspawn',
       properties: new Map([
         ['_sun', 'target_sun'],
@@ -130,5 +131,26 @@ describe('Light Entity Parsing', () => {
     expect(lights[0].direction?.x).toBe(0);
     expect(lights[0].direction?.y).toBe(0);
     expect(lights[0].direction?.z).toBe(-1);
+  });
+  it('should trim string values when parsing vec3', () => {
+    const entities: MapEntityDef[] = [{
+      classname: 'light',
+      properties: new Map([
+        ['origin', ' 10 20 30 '],
+        ['_color', ' 1 0.5 0.25 ']
+      ]),
+      brushes: [],
+      line: 1
+    }];
+
+    const lights = parseLights(entities);
+
+    expect(lights.length).toBe(1);
+    expect(lights[0].origin.x).toBe(10);
+    expect(lights[0].origin.y).toBe(20);
+    expect(lights[0].origin.z).toBe(30);
+    expect(lights[0].color.x).toBe(1);
+    expect(lights[0].color.y).toBe(0.5);
+    expect(lights[0].color.z).toBe(0.25);
   });
 });

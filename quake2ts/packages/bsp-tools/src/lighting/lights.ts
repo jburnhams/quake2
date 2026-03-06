@@ -1,13 +1,5 @@
 import { Vec3 } from '@quake2ts/shared';
-
-// We need a common EntityDef to represent parsed map entities
-// This matches what mapParser produces
-export interface EntityDef {
-  classname: string;
-  properties: Map<string, string>;
-  brushes: any[]; // we don't care about brushes for lights
-  line: number;
-}
+import { MapEntityDef } from '../parser/entityParser.js';
 
 export interface Light {
   type: 'point' | 'spot' | 'surface' | 'sun';
@@ -31,9 +23,9 @@ export interface Light {
 
 function parseVec3(str: string | undefined): Vec3 | undefined {
   if (!str) return undefined;
-  const parts = str.split(/\s+/).map(Number);
+  const parts = str.trim().split(/\s+/).map(Number);
   if (parts.length === 3 && !parts.some(isNaN)) {
-    return { x: parts[0], y: parts[1], z: parts[2], 0: parts[0], 1: parts[1], 2: parts[2] } as Vec3;
+    return { x: parts[0], y: parts[1], z: parts[2] } as Vec3;
   }
   return undefined;
 }
@@ -43,7 +35,7 @@ function parseVec3(str: string | undefined): Vec3 | undefined {
  *
  * Based on q2tools/src/rad.c MakeLights
  */
-export function parseLights(entities: EntityDef[]): Light[] {
+export function parseLights(entities: MapEntityDef[]): Light[] {
   const lights: Light[] = [];
 
   for (const entity of entities) {
@@ -54,7 +46,7 @@ export function parseLights(entities: EntityDef[]): Light[] {
         // Find the target entity to determine direction, but for now we'll just check
         // if there's a sun_color or sun_light
         const colorStr = entity.properties.get('_sun_color');
-        let color: Vec3 = { x: 1, y: 1, z: 1, 0: 1, 1: 1, 2: 1 } as Vec3;
+        let color: Vec3 = { x: 1, y: 1, z: 1 } as Vec3;
         if (colorStr) {
           const parsedColor = parseVec3(colorStr);
           if (parsedColor) color = parsedColor;
@@ -67,10 +59,10 @@ export function parseLights(entities: EntityDef[]): Light[] {
         // q2tools doesn't really have a 'sun' per se natively but some compilers do.
         lights.push({
           type: 'sun',
-          origin: { x: 0, y: 0, z: 0, 0: 0, 1: 0, 2: 0 } as Vec3, // Sun doesn't really have an origin
+          origin: { x: 0, y: 0, z: 0 } as Vec3, // Sun doesn't really have an origin
           intensity,
           color,
-          direction: { x: 0, y: 0, z: -1, 0: 0, 1: 0, 2: -1 } as Vec3 // Default straight down
+          direction: { x: 0, y: 0, z: -1 } as Vec3 // Default straight down
         });
       }
       continue;
@@ -85,7 +77,7 @@ export function parseLights(entities: EntityDef[]): Light[] {
 
       // Color
       const colorStr = entity.properties.get('_color') || entity.properties.get('color');
-      let color: Vec3 = { x: 1, y: 1, z: 1, 0: 1, 1: 1, 2: 1 } as Vec3; // Default white
+      let color: Vec3 = { x: 1, y: 1, z: 1 } as Vec3; // Default white
       if (colorStr) {
         const parsedColor = parseVec3(colorStr);
         if (parsedColor) color = parsedColor;
