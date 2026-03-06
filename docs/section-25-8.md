@@ -40,8 +40,8 @@ Lights + Faces → Direct Lighting → Lightmaps
 
 ### 2.1 Parse Light Entities
 
-- [ ] Create `src/lighting/lights.ts`
-- [ ] Implement light entity parsing
+- [x] Create `src/lighting/lights.ts`
+- [x] Implement light entity parsing
 
 **File: `src/lighting/lights.ts`**
 ```typescript
@@ -81,10 +81,10 @@ export function parseLights(entities: EntityDef[]): Light[];
 
 ### 2.2 Tests
 
-- [ ] Test: Parse point light
-- [ ] Test: Parse spotlight with target
-- [ ] Test: Parse colored light
-- [ ] Test: Default values applied
+- [x] Test: Parse point light
+- [x] Test: Parse spotlight with target
+- [x] Test: Parse colored light
+- [x] Test: Default values applied
 
 ---
 
@@ -540,7 +540,7 @@ if (!options.noLighting) {
 
 ## Verification Checklist
 
-- [ ] Light entity parsing correct
+- [x] Light entity parsing correct
 - [ ] Ray tracing produces correct hits
 - [ ] Shadow testing blocks correctly
 - [ ] Lightmap sizing correct
