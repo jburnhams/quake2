@@ -1,7 +1,6 @@
 import {
   type Vec3,
   CONTENTS_SOLID,
-  CONTENTS_WINDOW,
   subtractVec3,
   addVec3,
   scaleVec3,
@@ -38,19 +37,11 @@ function testLineR(
   planes: CompilePlane[]
 ): number {
   if (isLeaf(element)) {
-    // If it's a leaf, check contents
-    // In original code, it treats CONTENTS_SOLID and CONTENTS_WINDOW as blocking
     const contents = element.contents;
-    // Allow ray to pass through everything except solid and window
-    if ((contents & (CONTENTS_SOLID | CONTENTS_WINDOW)) !== 0) {
-      // If it's solid or window, it's a hit. But window is somewhat translucent.
-      // For shadow tests we typically consider both as occluding.
-      if (contents !== CONTENTS_WINDOW) {
-        return contents;
-      }
-      return 0; // In original qrad it returns 0 for CONTENTS_WINDOW for light tests, wait no:
-      // if ((r = node & ~(1 << 31)) != CONTENTS_WINDOW) { return r; } return 0;
-      // This means if it's window, it does NOT block light (returns 0). If solid, it blocks (returns contents).
+    // Treat only solid leaves as fully blocking for light/shadow tests.
+    // Window contents allow light to pass.
+    if ((contents & CONTENTS_SOLID) !== 0) {
+      return contents;
     }
     return 0;
   }
@@ -124,7 +115,6 @@ export function traceRay(
   // We'll implement a more complete ray cast for traceRay compared to just boolean testLine.
 
   let hitFraction = 1.0;
-  let hitPlaneNum = -1;
   let hitContents = 0;
   let hitPoint: Vec3 | undefined;
   let hitNormal: Vec3 | undefined;
@@ -196,7 +186,6 @@ export function traceRay(
     if (hitFraction < preHitFraction) {
       // Something was hit in the back side! This means we entered it through this plane
       if (hitFraction === midFrac) {
-         hitPlaneNum = currentHitPlaneNum;
          // Normal should face against the ray direction
          const planeNormal = planes[currentHitPlaneNum].normal;
          hitNormal = side === 0 ? planeNormal : scaleVec3(planeNormal, -1);
