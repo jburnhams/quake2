@@ -92,8 +92,8 @@ export function parseLights(entities: EntityDef[]): Light[];
 
 ### 3.1 Ray-BSP Intersection
 
-- [ ] Create `src/lighting/trace.ts`
-- [ ] Implement ray tracing through BSP
+- [x] Create `src/lighting/trace.ts`
+- [x] Implement ray tracing through BSP
 
 **File: `src/lighting/trace.ts`**
 ```typescript
@@ -127,7 +127,7 @@ export function traceRay(
 
 ### 3.2 Shadow Testing
 
-- [ ] Implement shadow ray testing
+- [x] Implement shadow ray testing
 
 ```typescript
 /**
@@ -143,10 +143,10 @@ export function isInShadow(
 
 ### 3.3 Tests
 
-- [ ] Test: Ray through empty space returns no hit
-- [ ] Test: Ray into solid returns hit
-- [ ] Test: Shadow ray blocked by solid
-- [ ] Test: Shadow ray passes through empty
+- [x] Test: Ray through empty space returns no hit
+- [x] Test: Ray into solid returns hit
+- [x] Test: Shadow ray blocked by solid
+- [x] Test: Shadow ray passes through empty
 
 ---
 
@@ -541,8 +541,8 @@ if (!options.noLighting) {
 ## Verification Checklist
 
 - [x] Light entity parsing correct
-- [ ] Ray tracing produces correct hits
-- [ ] Shadow testing blocks correctly
+- [x] Ray tracing produces correct hits
+- [x] Shadow testing blocks correctly
 - [ ] Lightmap sizing correct
 - [ ] Sample points on face plane
 - [ ] Direct lighting calculation correct
