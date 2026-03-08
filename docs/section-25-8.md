@@ -154,8 +154,8 @@ export function isInShadow(
 
 ### 4.1 Calculate Lightmap Size
 
-- [ ] Create `src/lighting/lightmap.ts`
-- [ ] Implement lightmap sizing
+- [x] Create `src/lighting/lightmap.ts`
+- [x] Implement lightmap sizing
 
 **File: `src/lighting/lightmap.ts`**
 ```typescript
@@ -183,7 +183,7 @@ export function calculateLightmapSize(
 
 ### 4.2 Sample Points
 
-- [ ] Implement sample point generation
+- [x] Implement sample point generation
 
 ```typescript
 /**
@@ -200,9 +200,9 @@ export function generateSamplePoints(
 
 ### 4.3 Tests
 
-- [ ] Test: Small face gets minimum lightmap size
-- [ ] Test: Large face gets proportional size
-- [ ] Test: Sample points lie on face plane
+- [x] Test: Small face gets minimum lightmap size
+- [x] Test: Large face gets proportional size
+- [x] Test: Sample points lie on face plane
 
 ---
 
@@ -210,7 +210,7 @@ export function generateSamplePoints(
 
 ### 5.1 Calculate Direct Light
 
-- [ ] Implement direct lighting calculation
+- [x] Implement direct lighting calculation
 
 ```typescript
 export interface LightSample {
@@ -241,7 +241,7 @@ export function calculateDirectLight(
 
 ### 5.2 Apply to Face
 
-- [ ] Implement face lighting
+- [x] Implement face lighting
 
 ```typescript
 /**
@@ -259,10 +259,10 @@ export function lightFace(
 
 ### 5.3 Tests
 
-- [ ] Test: Point directly under light is brightest
-- [ ] Test: Points in shadow are dark
-- [ ] Test: Light falls off with distance
-- [ ] Test: Facing away from light is dark
+- [x] Test: Point directly under light is brightest
+- [x] Test: Points in shadow are dark
+- [x] Test: Light falls off with distance
+- [x] Test: Facing away from light is dark
 
 ---
 
@@ -543,9 +543,9 @@ if (!options.noLighting) {
 - [x] Light entity parsing correct
 - [x] Ray tracing produces correct hits
 - [x] Shadow testing blocks correctly
-- [ ] Lightmap sizing correct
-- [ ] Sample points on face plane
-- [ ] Direct lighting calculation correct
+- [x] Lightmap sizing correct
+- [x] Sample points on face plane
+- [x] Direct lighting calculation correct
 - [ ] Radiosity converges
 - [ ] Tone mapping produces valid output
 - [ ] Lightmap packing correct
