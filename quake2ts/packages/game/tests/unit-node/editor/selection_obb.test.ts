@@ -1,24 +1,22 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { rayCastEntities, Ray } from '../../../src/editor/selection';
 import { EntitySystem } from '../../../src/entities/system';
-import { Entity, MoveType, Solid } from '../../../src/entities/entity';
+import { Entity, Solid } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 // Helper to create a basic entity
 function createEntity(sys: EntitySystem, origin: number[], mins: number[], maxs: number[], angles: number[] = [0, 0, 0]) {
-  const ent = sys.spawn();
-  ent.classname = 'test_entity';
-  ent.origin = { x: origin[0], y: origin[1], z: origin[2] };
-  ent.mins = { x: mins[0], y: mins[1], z: mins[2] };
-  ent.maxs = { x: maxs[0], y: maxs[1], z: maxs[2] };
-  ent.angles = { x: angles[0], y: angles[1], z: angles[2] };
-  ent.solid = Solid.Bbox;
-
-  // Set absmin/absmax roughly (though rayCastEntities might not use them if we change it to OBB)
-  // But rayCastEntities currently uses absmin/absmax for fallback.
-  // We'll set them to a large enough box to pass broadphase if any.
-  ent.absmin = { x: origin[0] - 100, y: origin[1] - 100, z: origin[2] - 100 };
-  ent.absmax = { x: origin[0] + 100, y: origin[1] + 100, z: origin[2] + 100 };
+  const ent = spawnEntity(sys, createEntityFactory({
+      classname: 'test_entity',
+      origin: { x: origin[0], y: origin[1], z: origin[2] },
+      mins: { x: mins[0], y: mins[1], z: mins[2] },
+      maxs: { x: maxs[0], y: maxs[1], z: maxs[2] },
+      angles: { x: angles[0], y: angles[1], z: angles[2] },
+      solid: Solid.Bbox,
+      absmin: { x: origin[0] - 100, y: origin[1] - 100, z: origin[2] - 100 },
+      absmax: { x: origin[0] + 100, y: origin[1] + 100, z: origin[2] + 100 }
+  }));
 
   return ent;
 }
@@ -27,9 +25,8 @@ describe('rayCastEntities OBB', () => {
   let sys: EntitySystem;
 
   beforeEach(() => {
-    // Mock engine and imports
-    const mockEngine = {};
-    sys = new EntitySystem(mockEngine as any);
+    const ctx = createTestContext();
+    sys = ctx.entities;
   });
 
   it('should hit an axis-aligned entity (sanity check)', () => {

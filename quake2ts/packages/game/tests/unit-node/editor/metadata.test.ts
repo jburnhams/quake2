@@ -6,15 +6,19 @@ import {
   getEntityBounds,
   getEntityModel
 } from '../../../src/editor/metadata';
+import { EntitySystem } from '../../../src/entities/system';
 import { Entity } from '../../../src/entities/entity';
-import { vec3 } from 'gl-matrix';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Entity Metadata', () => {
   let mockEntity: Entity;
-  let mockSystem: any;
+  let mockSystem: EntitySystem;
 
   beforeEach(() => {
-    mockEntity = {
+    const ctx = createTestContext();
+    mockSystem = ctx.entities;
+
+    mockEntity = spawnEntity(mockSystem, createEntityFactory({
       index: 42,
       origin: { x: 10, y: 20, z: 30 },
       angles: { x: 0, y: 90, z: 0 },
@@ -25,29 +29,22 @@ describe('Entity Metadata', () => {
       target: 'trigger1',
       spawnflags: 1,
       health: 100,
-      inUse: true,
       absmin: { x: 0, y: 0, z: 0 },
-      absmax: { x: 10, y: 10, z: 10 },
-      // Arbitrary field
-      speed: 200
-    } as any;
+      absmax: { x: 10, y: 10, z: 10 }
+    }));
+    // Arbitrary field
+    (mockEntity as any).speed = 200;
 
-    mockSystem = {
-      forEachEntity: (cb: (e: Entity) => void) => {
-        // Mock a target entity
-        const targetEntity = {
-            index: 99,
-            classname: 'target_speaker',
-            targetname: 'trigger1'
-        } as any;
-        cb(targetEntity);
-      }
-    };
+    const targetEntity = spawnEntity(mockSystem, createEntityFactory({
+        classname: 'target_speaker',
+        targetname: 'trigger1'
+    }));
+    (mockSystem as any).targetEntity = targetEntity;
   });
 
   it('should return correct metadata', () => {
     const metadata = getEntityMetadata(mockEntity);
-    expect(metadata.id).toBe(42);
+    expect(metadata.id).toBe(mockEntity.index);
     expect(metadata.classname).toBe('func_door');
     expect(metadata.origin[0]).toBe(10);
     expect(metadata.model).toBe('*1');
@@ -64,7 +61,7 @@ describe('Entity Metadata', () => {
   it('should return entity connections', () => {
     const connections = getEntityConnections(mockEntity, mockSystem);
     expect(connections.length).toBe(1);
-    expect(connections[0].targetId).toBe(99);
+    expect(connections[0].targetId).toBe((mockSystem as any).targetEntity.index);
     expect(connections[0].targetName).toBe('target_speaker');
     expect(connections[0].type).toBe('target');
   });

@@ -7,74 +7,68 @@ import {
   searchEntityFields,
   getAllEntityClassnames
 } from '../../../src/editor/search';
+import { EntitySystem } from '../../../src/entities/system';
 import { Entity } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Entity Search', () => {
-  let mockSystem: any;
-  let entities: Entity[] = [];
+  let mockSystem: EntitySystem;
 
   beforeEach(() => {
-    entities = [];
-    mockSystem = {
-      forEachEntity: (cb: (e: Entity) => void) => {
-        entities.forEach(cb);
-      }
-    };
+    const ctx = createTestContext();
+    mockSystem = ctx.entities;
   });
 
-  function addEntity(props: Partial<Entity> & { id: number }) {
-    const e = {
-      index: props.id,
+  function addEntity(props: Partial<Entity>): Entity {
+    const e = spawnEntity(mockSystem, createEntityFactory({
       origin: props.origin || { x: 0, y: 0, z: 0 },
       absmin: { x: 0, y: 0, z: 0 },
       absmax: { x: 0, y: 0, z: 0 },
-      inUse: true,
       ...props
-    } as any;
-    entities.push(e);
+    }));
     return e;
   }
 
   it('should find entities by classname', () => {
-    addEntity({ id: 1, classname: 'foo' });
-    addEntity({ id: 2, classname: 'bar' });
-    addEntity({ id: 3, classname: 'foo' });
+    const e1 = addEntity({ classname: 'foo' });
+    const e2 = addEntity({ classname: 'bar' });
+    const e3 = addEntity({ classname: 'foo' });
 
     const results = findEntitiesByClassname(mockSystem, 'foo');
-    expect(results).toEqual([1, 3]);
+    expect(results).toEqual([e1.index, e3.index]);
   });
 
   it('should find entities by targetname', () => {
-    addEntity({ id: 1, targetname: 't1' });
-    addEntity({ id: 2, targetname: 't2' });
+    const e1 = addEntity({ targetname: 't1' });
+    const e2 = addEntity({ targetname: 't2' });
 
     const results = findEntitiesByTargetname(mockSystem, 't1');
-    expect(results).toEqual([1]);
+    expect(results).toEqual([e1.index]);
   });
 
   it('should find entities in radius', () => {
-    addEntity({ id: 1, origin: { x: 0, y: 0, z: 0 } } as any);
-    addEntity({ id: 2, origin: { x: 10, y: 0, z: 0 } } as any);
-    addEntity({ id: 3, origin: { x: 20, y: 0, z: 0 } } as any);
+    const e1 = addEntity({ origin: { x: 0, y: 0, z: 0 } });
+    const e2 = addEntity({ origin: { x: 10, y: 0, z: 0 } });
+    const e3 = addEntity({ origin: { x: 20, y: 0, z: 0 } });
 
     const results = findEntitiesInRadius(mockSystem, vec3.fromValues(0, 0, 0), 15);
-    expect(results).toEqual([1, 2]);
+    expect(results).toEqual([e1.index, e2.index]);
   });
 
   it('should find entities in bounds', () => {
     // Entity inside
-    const e1 = addEntity({ id: 1 });
+    const e1 = addEntity({});
     e1.absmin = { x: 0, y: 0, z: 0 };
     e1.absmax = { x: 10, y: 10, z: 10 };
 
     // Entity outside
-    const e2 = addEntity({ id: 2 });
+    const e2 = addEntity({});
     e2.absmin = { x: 20, y: 20, z: 20 };
     e2.absmax = { x: 30, y: 30, z: 30 };
 
     // Entity overlapping
-    const e3 = addEntity({ id: 3 });
+    const e3 = addEntity({});
     e3.absmin = { x: 5, y: 5, z: 5 };
     e3.absmax = { x: 15, y: 15, z: 15 };
 
@@ -82,25 +76,25 @@ describe('Entity Search', () => {
     const maxs = vec3.fromValues(12, 12, 12);
 
     const results = findEntitiesInBounds(mockSystem, mins, maxs);
-    expect(results).toContain(1);
-    expect(results).toContain(3);
-    expect(results).not.toContain(2);
+    expect(results).toContain(e1.index);
+    expect(results).toContain(e3.index);
+    expect(results).not.toContain(e2.index);
   });
 
   it('should search entity fields', () => {
-    addEntity({ id: 1, health: 100 } as any);
-    addEntity({ id: 2, health: 50 } as any);
-    addEntity({ id: 3, health: 100 } as any);
+    const e1 = addEntity({ health: 100 });
+    const e2 = addEntity({ health: 50 });
+    const e3 = addEntity({ health: 100 });
 
     const results = searchEntityFields(mockSystem, 'health', 100);
-    expect(results).toEqual([1, 3]);
+    expect(results).toEqual([e1.index, e3.index]);
   });
 
   it('should get all entity classnames', () => {
-    addEntity({ id: 1, classname: 'foo' });
-    addEntity({ id: 2, classname: 'bar' });
-    addEntity({ id: 3, classname: 'foo' });
-    addEntity({ id: 4, classname: 'baz' });
+    addEntity({ classname: 'foo' });
+    addEntity({ classname: 'bar' });
+    addEntity({ classname: 'foo' });
+    addEntity({ classname: 'baz' });
 
     const results = getAllEntityClassnames(mockSystem);
     expect(results).toEqual(['bar', 'baz', 'foo']);
