@@ -1,14 +1,10 @@
-import { Vec3, dotVec3, scaleVec3, subtractVec3, normalizeVec3 } from '@quake2ts/shared';
+import { Vec3, dotVec3, scaleVec3, subtractVec3, normalizeVec3, lengthVec3 } from '@quake2ts/shared';
 import type { Light } from './lights.js';
 import type { TreeElement, TreeNode } from '../compiler/tree.js';
 import type { CompilePlane, CompileFace } from '../types/compile.js';
 import type { BspTexInfo } from '../types/bsp.js';
 import { isInShadow } from './trace.js';
 import { LightmapInfo, generateSamplePoints } from './lightmap.js';
-
-function lengthVec3(v: Vec3): number {
-  return Math.sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
-}
 
 export interface LightSample {
   color: Vec3;  // RGB, can exceed 1.0
