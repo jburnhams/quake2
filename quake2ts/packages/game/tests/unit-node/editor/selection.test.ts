@@ -1,34 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { rayCastEntities, Ray } from '../../../src/editor/selection';
 import { EntitySystem } from '../../../src/entities/system';
 import { Entity } from '../../../src/entities/entity';
 import { vec3 } from 'gl-matrix';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 
 describe('Entity Selection', () => {
-  let mockEntitySystem: any;
-  let entities: Entity[] = [];
+  let mockEntitySystem: EntitySystem;
 
   beforeEach(() => {
-    entities = [];
-    mockEntitySystem = {
-      forEachEntity: (callback: (e: Entity) => void) => {
-        entities.forEach(callback);
-      }
-    };
+    const ctx = createTestContext();
+    mockEntitySystem = ctx.entities;
   });
 
   function createEntity(mins: number[], maxs: number[]): Entity {
-    const e = {
-      inUse: true,
+    return spawnEntity(mockEntitySystem, createEntityFactory({
       origin: { x: 0, y: 0, z: 0 },
       angles: { x: 0, y: 0, z: 0 },
       mins: { x: mins[0], y: mins[1], z: mins[2] },
       maxs: { x: maxs[0], y: maxs[1], z: maxs[2] },
       absmin: { x: mins[0], y: mins[1], z: mins[2] },
       absmax: { x: maxs[0], y: maxs[1], z: maxs[2] }
-    } as any;
-    entities.push(e);
-    return e;
+    }));
   }
 
   it('should hit an entity in front of the ray', () => {

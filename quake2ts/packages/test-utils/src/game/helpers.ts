@@ -326,6 +326,9 @@ export function createTestContext(options?: {
     findByClassname: vi.fn((classname: string) => {
       return entityList.filter(e => e.classname === classname);
     }),
+    getByIndex: vi.fn((index: number) => {
+      return entityList.find(e => e.index === index);
+    }),
     beginFrame: vi.fn((timeSeconds: number) => {
       (entities as any).timeSeconds = timeSeconds;
       game.time = timeSeconds; // Update game time too
