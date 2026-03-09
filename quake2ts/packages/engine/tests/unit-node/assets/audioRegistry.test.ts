@@ -31,7 +31,7 @@ describe('Audio registry', () => {
     { path: 'music/example.ogg', data: oggBuffer },
   ], 'base.pak');
   const vfs = createMockVFS();
-  vi.spyOn(vfs, 'readFile').mockImplementation((path: string) => {
+  vi.spyOn(vfs, 'readFile').mockImplementation(async (path: string) => {
       // Normalize path for lookup in pak file
       const lookupPath = path.toLowerCase();
 
@@ -42,12 +42,12 @@ describe('Audio registry', () => {
           try {
               file = pak.readFile(path);
           } catch(e) {
-              return Promise.reject(new Error('File not found'));
+              throw new Error('File not found');
           }
       }
       // If we got a file from PakArchive but it's empty/undefined, handle it
-      if (!file) return Promise.reject(new Error('File not found'));
-      return Promise.resolve(new Uint8Array(file));
+      if (!file) throw new Error('File not found');
+      return new Uint8Array(file);
   });
   vi.spyOn(vfs, 'stat').mockImplementation((path: string) => {
       try {
@@ -73,7 +73,7 @@ describe('Audio registry', () => {
   it('rejects unknown audio formats', async () => {
     const badPak = createTestPakArchive([{ path: 'sound/bad.txt', data: new Uint8Array([1, 2, 3]) }], 'bad.pak');
     const badVfs = createMockVFS();
-    vi.spyOn(badVfs, 'readFile').mockImplementation((path: string) => {
+    vi.spyOn(badVfs, 'readFile').mockImplementation(async (path: string) => {
         // Normalize path for lookup in pak file
         const lookupPath = path.toLowerCase();
 
@@ -84,11 +84,11 @@ describe('Audio registry', () => {
             try {
                 file = badPak.readFile(path);
             } catch(e) {
-                return Promise.reject(new Error('File not found'));
+                throw new Error('File not found');
             }
         }
-        if (!file) return Promise.reject(new Error('File not found'));
-        return Promise.resolve(new Uint8Array(file));
+        if (!file) throw new Error('File not found');
+        return new Uint8Array(file);
     });
     vi.spyOn(badVfs, 'stat').mockImplementation((path: string) => {
         try {

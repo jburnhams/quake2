@@ -52,7 +52,9 @@ export class AudioRegistry {
     let arrayBuffer: ArrayBuffer;
 
     // Check if it's already an ArrayBuffer (e.g. from a test mock)
-    if ((data as any) instanceof ArrayBuffer) {
+    if (!data) {
+        throw new AudioRegistryError(`File not found or empty: ${path}`);
+    } else if ((data as any) instanceof ArrayBuffer) {
         arrayBuffer = (data as any).slice(0);
     } else {
         // Assume Uint8Array
