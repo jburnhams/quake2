@@ -47,7 +47,21 @@ export class AudioRegistry {
     }
 
     const data = await this.vfs.readFile(path);
-    const arrayBuffer = data.slice().buffer;
+    // data might be Uint8Array or ArrayBuffer depending on how VFS returned it.
+    let arrayBuffer: ArrayBuffer;
+    if (data instanceof Uint8Array) {
+        // Need to take byteOffset and byteLength into account when getting the underlying buffer
+        // Or create a new clean copy to avoid issues with shared ArrayBuffers
+        const copy = new Uint8Array(data.byteLength);
+        copy.set(data);
+        arrayBuffer = copy.buffer;
+    } else if (data instanceof ArrayBuffer) {
+        arrayBuffer = data.slice(0);
+    } else {
+        // It might be a regular buffer or array
+        const copy = new Uint8Array(data as any);
+        arrayBuffer = copy.buffer;
+    }
     const audio = await this.decodeByExtension(path, arrayBuffer);
     this.cache.set(normalized, audio);
     this.refCounts.set(normalized, 1);

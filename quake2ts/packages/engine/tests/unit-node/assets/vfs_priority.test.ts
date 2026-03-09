@@ -1,47 +1,11 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
-import { PakArchive, PakDirectoryEntry } from '../../../src/assets/pak.js';
-
-// Mock PakArchive
-class MockPakArchive implements PakArchive {
-  name: string;
-  size: number = 0;
-  private entries: PakDirectoryEntry[] = [];
-  private data: Map<string, Uint8Array> = new Map();
-
-  constructor(name: string) {
-    this.name = name;
-  }
-
-  addFile(path: string, content: string) {
-    const buffer = new TextEncoder().encode(content);
-    const entry: PakDirectoryEntry = {
-      name: path,
-      offset: 0,
-      length: buffer.length
-    };
-    this.entries.push(entry);
-    this.data.set(path, buffer);
-  }
-
-  listEntries(): PakDirectoryEntry[] {
-    return this.entries;
-  }
-
-  readFile(path: string): Uint8Array {
-    const data = this.data.get(path);
-    if (!data) throw new Error(`File not found: ${path}`);
-    return data;
-  }
-}
+import { createTestPakArchive, textData } from '@quake2ts/test-utils';
 
 describe('VirtualFileSystem Priority', () => {
   it('respects priority when mounting paks', async () => {
-    const pak1 = new MockPakArchive('pak0.pak');
-    pak1.addFile('config.cfg', 'base config');
-
-    const pak2 = new MockPakArchive('pak1.pak');
-    pak2.addFile('config.cfg', 'mod config');
+    const pak1 = createTestPakArchive([{ path: 'config.cfg', data: textData('base config') }], 'pak0.pak');
+    const pak2 = createTestPakArchive([{ path: 'config.cfg', data: textData('mod config') }], 'pak1.pak');
 
     const vfs = new VirtualFileSystem();
 
@@ -58,11 +22,8 @@ describe('VirtualFileSystem Priority', () => {
   });
 
   it('respects priority regardless of mount order', async () => {
-    const pak1 = new MockPakArchive('pak0.pak');
-    pak1.addFile('config.cfg', 'base config');
-
-    const pak2 = new MockPakArchive('pak1.pak');
-    pak2.addFile('config.cfg', 'mod config');
+    const pak1 = createTestPakArchive([{ path: 'config.cfg', data: textData('base config') }], 'pak0.pak');
+    const pak2 = createTestPakArchive([{ path: 'config.cfg', data: textData('mod config') }], 'pak1.pak');
 
     const vfs = new VirtualFileSystem();
 
@@ -76,11 +37,8 @@ describe('VirtualFileSystem Priority', () => {
   });
 
   it('falls back to lower priority if file missing in high priority', async () => {
-    const pak1 = new MockPakArchive('base.pak');
-    pak1.addFile('base.txt', 'base');
-
-    const pak2 = new MockPakArchive('mod.pak');
-    pak2.addFile('mod.txt', 'mod');
+    const pak1 = createTestPakArchive([{ path: 'base.txt', data: textData('base') }], 'base.pak');
+    const pak2 = createTestPakArchive([{ path: 'mod.txt', data: textData('mod') }], 'mod.pak');
 
     const vfs = new VirtualFileSystem();
     vfs.mountPak(pak1, 0);
@@ -91,11 +49,8 @@ describe('VirtualFileSystem Priority', () => {
   });
 
   it('updates priority dynamically', async () => {
-    const pak1 = new MockPakArchive('pak0.pak');
-    pak1.addFile('file.txt', 'v1');
-
-    const pak2 = new MockPakArchive('pak1.pak');
-    pak2.addFile('file.txt', 'v2');
+    const pak1 = createTestPakArchive([{ path: 'file.txt', data: textData('v1') }], 'pak0.pak');
+    const pak2 = createTestPakArchive([{ path: 'file.txt', data: textData('v2') }], 'pak1.pak');
 
     const vfs = new VirtualFileSystem();
     vfs.mountPak(pak1, 10);
@@ -112,9 +67,9 @@ describe('VirtualFileSystem Priority', () => {
   });
 
   it('getPaks returns sorted list', () => {
-    const pak1 = new MockPakArchive('p1');
-    const pak2 = new MockPakArchive('p2');
-    const pak3 = new MockPakArchive('p3');
+    const pak1 = createTestPakArchive([], 'p1');
+    const pak2 = createTestPakArchive([], 'p2');
+    const pak3 = createTestPakArchive([], 'p3');
 
     const vfs = new VirtualFileSystem();
     vfs.mountPak(pak1, 5);

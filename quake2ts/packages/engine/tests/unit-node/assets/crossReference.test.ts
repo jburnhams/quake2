@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { AssetCrossReference } from '../../../src/assets/crossReference.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 import { AssetManager } from '../../../src/assets/manager.js';
+import { createMockVFS } from '@quake2ts/test-utils';
 
 // We will mock the parser functions from crossReference.ts imports
 vi.mock('../../../src/assets/bsp.js', () => ({
@@ -65,7 +66,7 @@ describe('AssetCrossReference', () => {
   let xref: AssetCrossReference;
 
   beforeEach(() => {
-    vfs = new VirtualFileSystem([]);
+    vfs = createMockVFS();
     assetManager = new AssetManager(vfs, {} as any);
     xref = new AssetCrossReference(vfs, assetManager);
 
