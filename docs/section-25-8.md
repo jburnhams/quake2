@@ -270,8 +270,8 @@ export function lightFace(
 
 ### 6.1 Patch Subdivision
 
-- [ ] Create `src/lighting/radiosity.ts`
-- [ ] Implement patch creation
+- [x] Create `src/lighting/radiosity.ts`
+- [x] Implement patch creation
 
 **File: `src/lighting/radiosity.ts`**
 ```typescript
@@ -306,7 +306,7 @@ export function createPatches(
 
 ### 6.2 Form Factors
 
-- [ ] Implement form factor computation
+- [x] Implement form factor computation
 
 ```typescript
 /**
@@ -332,7 +332,7 @@ export function calculateFormFactor(
 
 ### 6.3 Light Bounce
 
-- [ ] Implement iterative light bouncing
+- [x] Implement iterative light bouncing
 
 ```typescript
 export interface RadiosityOptions {
@@ -362,10 +362,10 @@ for each bounce:
 
 ### 6.4 Tests
 
-- [ ] Test: Emissive patch illuminates neighbors
-- [ ] Test: Light bounces off bright surfaces
-- [ ] Test: Energy conserved (doesn't explode)
-- [ ] Test: Converges after reasonable bounces
+- [x] Test: Emissive patch illuminates neighbors
+- [x] Test: Light bounces off bright surfaces
+- [x] Test: Energy conserved (doesn't explode)
+- [x] Test: Converges after reasonable bounces
 
 ---
 
@@ -373,7 +373,7 @@ for each bounce:
 
 ### 7.1 HDR to LDR Conversion
 
-- [ ] Implement tone mapping
+- [x] Implement tone mapping
 
 ```typescript
 /**
@@ -389,7 +389,7 @@ export function toneMapLightmap(
 
 ### 7.2 Lightmap Packing
 
-- [ ] Implement lightmap atlas packing
+- [x] Implement lightmap atlas packing
 
 ```typescript
 export interface PackedLightmaps {
@@ -412,9 +412,9 @@ export function packLightmaps(
 
 ### 7.3 Tests
 
-- [ ] Test: Lightmaps packed contiguously
-- [ ] Test: Face offsets point to correct data
-- [ ] Test: No buffer overflow
+- [x] Test: Lightmaps packed contiguously
+- [x] Test: Face offsets point to correct data
+- [x] Test: No buffer overflow
 
 ---
 
@@ -546,9 +546,9 @@ if (!options.noLighting) {
 - [x] Lightmap sizing correct
 - [x] Sample points on face plane
 - [x] Direct lighting calculation correct
-- [ ] Radiosity converges
-- [ ] Tone mapping produces valid output
-- [ ] Lightmap packing correct
+- [x] Radiosity converges
+- [x] Tone mapping produces valid output
+- [x] Lightmap packing correct
 - [ ] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly

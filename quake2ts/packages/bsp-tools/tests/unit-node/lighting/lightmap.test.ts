@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest';
-import { calculateLightmapSize, generateSamplePoints } from '../../../src/lighting/lightmap.js';
+import { calculateLightmapSize, generateSamplePoints, toneMapLightmap, packLightmaps } from '../../../src/lighting/lightmap.js';
 import type { CompileFace, CompilePlane } from '../../../src/types/compile.js';
 import type { BspTexInfo } from '../../../src/types/bsp.js';
 import { Vec3, type Winding } from '@quake2ts/shared';
+import type { LightSample } from '../../../src/lighting/direct.js';
 
 describe('lightmap', () => {
   const plane: CompilePlane = {
@@ -81,6 +82,91 @@ describe('lightmap', () => {
       expect(p0.x).toBeCloseTo(8);
       expect(p0.y).toBeCloseTo(24);
       expect(p0.z).toBeCloseTo(0);
+    });
+  });
+
+  describe('toneMapLightmap', () => {
+    it('correctly clamps values greater than 255 and handles negatives', () => {
+      const samples: LightSample[] = [
+        { color: { x: 300, y: 150, z: -50 } as Vec3 }
+      ];
+
+      const lightmap = toneMapLightmap(samples, 1, 1);
+
+      expect(lightmap.length).toBe(3);
+      expect(lightmap[0]).toBe(255); // Clamped upper
+      expect(lightmap[1]).toBe(150);
+      expect(lightmap[2]).toBe(0);   // Clamped lower
+    });
+
+    it('applies exposure multiplier', () => {
+      const samples: LightSample[] = [
+        { color: { x: 100, y: 100, z: 100 } as Vec3 }
+      ];
+
+      const lightmap = toneMapLightmap(samples, 1, 1, 2.0);
+
+      expect(lightmap[0]).toBe(200);
+      expect(lightmap[1]).toBe(200);
+      expect(lightmap[2]).toBe(200);
+    });
+  });
+
+  describe('packLightmaps', () => {
+    it('assembles continuous data and returns correct offsets', () => {
+      const faces = [
+        {
+          lightmapInfo: { width: 1, height: 1 } as any,
+          samples: [{ color: { x: 100, y: 0, z: 0 } as Vec3 }]
+        },
+        {
+          lightmapInfo: { width: 2, height: 1 } as any,
+          samples: [
+            { color: { x: 0, y: 100, z: 0 } as Vec3 },
+            { color: { x: 0, y: 0, z: 100 } as Vec3 }
+          ]
+        }
+      ];
+
+      const packed = packLightmaps(faces);
+
+      // 1 pixel (3 bytes) + 2 pixels (6 bytes) = 9 bytes
+      expect(packed.data.length).toBe(9);
+
+      // Face offsets
+      expect(packed.faceOffsets).toEqual([0, 3]);
+
+      // Face 1 color check
+      expect(packed.data[0]).toBe(100);
+      expect(packed.data[1]).toBe(0);
+      expect(packed.data[2]).toBe(0);
+
+      // Face 2 color check
+      expect(packed.data[3]).toBe(0);
+      expect(packed.data[4]).toBe(100);
+      expect(packed.data[5]).toBe(0);
+
+      expect(packed.data[6]).toBe(0);
+      expect(packed.data[7]).toBe(0);
+      expect(packed.data[8]).toBe(100);
+    });
+
+    it('skips faces without lightmaps and marks offset as -1', () => {
+       const faces = [
+        {
+          lightmapInfo: { width: 0, height: 0 } as any,
+          samples: []
+        },
+        {
+          lightmapInfo: { width: 1, height: 1 } as any,
+          samples: [{ color: { x: 255, y: 255, z: 255 } as Vec3 }]
+        }
+      ];
+
+      const packed = packLightmaps(faces);
+
+      expect(packed.data.length).toBe(3);
+      expect(packed.faceOffsets).toEqual([-1, 0]);
     });
   });
 });
