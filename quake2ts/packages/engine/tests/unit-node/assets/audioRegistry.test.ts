@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AudioRegistry, AudioRegistryError } from '../../../src/assets/audio.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 import { buildWav, createTestPakArchive, createMockVFS } from '@quake2ts/test-utils';
@@ -31,33 +31,42 @@ describe('Audio registry', () => {
     { path: 'music/example.ogg', data: oggBuffer },
   ], 'base.pak');
   const vfs = createMockVFS();
-  vi.spyOn(vfs, 'readFile').mockImplementation(async (path: string) => {
-      // Normalize path for lookup in pak file
-      const lookupPath = path.toLowerCase();
+  let registry: AudioRegistry;
 
-      let file;
-      try {
-          file = pak.readFile(lookupPath);
-      } catch(e) {
+  beforeEach(() => {
+      // Clear caches and reset call counts for isolation
+      vi.clearAllMocks();
+
+      // Set up mock implementations inside beforeEach so they aren't cleared by Vitest's mockReset
+      vi.spyOn(vfs, 'readFile').mockImplementation(async (path: string) => {
+          // Normalize path for lookup in pak file
+          const lookupPath = path.toLowerCase();
+
+          let file;
           try {
-              file = pak.readFile(path);
+              file = pak.readFile(lookupPath);
           } catch(e) {
-              throw new Error('File not found');
+              try {
+                  file = pak.readFile(path);
+              } catch(e) {
+                  throw new Error('File not found');
+              }
           }
-      }
-      // If we got a file from PakArchive but it's empty/undefined, handle it
-      if (!file) throw new Error('File not found');
-      return new Uint8Array(file);
+          if (!file) throw new Error('File not found');
+          return new Uint8Array(file);
+      });
+
+      vi.spyOn(vfs, 'stat').mockImplementation((path: string) => {
+          try {
+              const file = pak.readFile(path.toLowerCase());
+              return { path, size: file.byteLength, sourcePak: 'base.pak' };
+          } catch(e) {
+              return undefined;
+          }
+      });
+
+      registry = new AudioRegistry(vfs, { cacheSize: 4 });
   });
-  vi.spyOn(vfs, 'stat').mockImplementation((path: string) => {
-      try {
-          const file = pak.readFile(path.toLowerCase());
-          return { path, size: file.byteLength, sourcePak: 'base.pak' };
-      } catch(e) {
-          return undefined;
-      }
-  });
-  const registry = new AudioRegistry(vfs, { cacheSize: 4 });
 
   it('loads wav and ogg assets with caching', async () => {
     const wav = await registry.load('sound/WEAPONS/BLASTER.WAV');
@@ -74,9 +83,7 @@ describe('Audio registry', () => {
     const badPak = createTestPakArchive([{ path: 'sound/bad.txt', data: new Uint8Array([1, 2, 3]) }], 'bad.pak');
     const badVfs = createMockVFS();
     vi.spyOn(badVfs, 'readFile').mockImplementation(async (path: string) => {
-        // Normalize path for lookup in pak file
         const lookupPath = path.toLowerCase();
-
         let file;
         try {
             file = badPak.readFile(lookupPath);
