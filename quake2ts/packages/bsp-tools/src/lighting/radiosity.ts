@@ -276,11 +276,9 @@ export function computeRadiosity(
           nextEnergy[j * 3 + 2] += b * ff;
 
           // Also accumulate to total light directly so we don't need a final pass
-          dest.totalLight = {
-            x: dest.totalLight.x + r * ff,
-            y: dest.totalLight.y + g * ff,
-            z: dest.totalLight.z + b * ff
-          };
+          dest.totalLight.x += r * ff;
+          dest.totalLight.y += g * ff;
+          dest.totalLight.z += b * ff;
 
           bounceEnergy += (r + g + b) * ff;
         }
