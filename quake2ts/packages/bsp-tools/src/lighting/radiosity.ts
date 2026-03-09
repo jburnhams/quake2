@@ -62,62 +62,74 @@ export function createPatches(
     // Start with the face's full winding
     let currentPatches: Winding[] = [copyWinding(face.winding)];
 
-    // Iteratively split patches that are too large
-    let done = false;
-    while (!done) {
-      done = true;
-      const nextPatches: Winding[] = [];
+    // Queue of windings to evaluate
+    const queue: Winding[] = [copyWinding(face.winding)];
+    const finalWindings: Winding[] = [];
 
-      for (let i = 0; i < currentPatches.length; i++) {
-        const w = currentPatches[i];
-        const bounds = windingBounds(w);
-        // Bounds3 defines mins and maxs, not min and max.
-        const sizeX = bounds.maxs.x - bounds.mins.x;
-        const sizeY = bounds.maxs.y - bounds.mins.y;
-        const sizeZ = bounds.maxs.z - bounds.mins.z;
+    while (queue.length > 0) {
+      const w = queue.shift()!;
+      const bounds = windingBounds(w);
+      const sizeX = bounds.maxs.x - bounds.mins.x;
+      const sizeY = bounds.maxs.y - bounds.mins.y;
+      const sizeZ = bounds.maxs.z - bounds.mins.z;
 
-        // Check if winding needs splitting
-        let splitAxis = -1;
-        if (sizeX > patchSize) splitAxis = 0;
-        else if (sizeY > patchSize) splitAxis = 1;
-        else if (sizeZ > patchSize) splitAxis = 2;
+      // Check if winding needs splitting
+      let splitAxis = -1;
+      if (sizeX > patchSize) splitAxis = 0;
+      else if (sizeY > patchSize) splitAxis = 1;
+      else if (sizeZ > patchSize) splitAxis = 2;
 
-        if (splitAxis !== -1) {
-          done = false; // We found a patch to split, so we're not done yet
+      if (splitAxis !== -1) {
+        let splitNormal = { x: 0, y: 0, z: 0 };
+        let splitDist = 0;
 
-          // Create a splitting plane perpendicular to the split axis
-          let splitNormal = { x: 0, y: 0, z: 0 } as Vec3;
-          let splitDist = 0;
-
-          if (splitAxis === 0) {
-            splitNormal = { x: 1, y: 0, z: 0 } as Vec3;
-            splitDist = (bounds.mins.x + bounds.maxs.x) / 2;
-          } else if (splitAxis === 1) {
-            splitNormal = { x: 0, y: 1, z: 0 } as Vec3;
-            splitDist = (bounds.mins.y + bounds.maxs.y) / 2;
-          } else {
-            splitNormal = { x: 0, y: 0, z: 1 } as Vec3;
-            splitDist = (bounds.mins.z + bounds.maxs.z) / 2;
-          }
-
-          // In q2tools, clipWindingEpsilon keeps the front or back based on a boolean.
-          // True = keep front, False = keep back.
-          const epsilon = 0.1;
-          const frontW = clipWindingEpsilon(w, splitNormal, splitDist, epsilon, true);
-          const backW = clipWindingEpsilon(w, splitNormal, splitDist, epsilon, false);
-
-          if (frontW && frontW.numPoints >= 3) nextPatches.push(frontW);
-          if (backW && backW.numPoints >= 3) nextPatches.push(backW);
+        if (splitAxis === 0) {
+          splitNormal = { x: 1, y: 0, z: 0 };
+          splitDist = (bounds.mins.x + bounds.maxs.x) / 2;
+        } else if (splitAxis === 1) {
+          splitNormal = { x: 0, y: 1, z: 0 };
+          splitDist = (bounds.mins.y + bounds.maxs.y) / 2;
         } else {
-          // Patch is small enough
-          nextPatches.push(w);
+          splitNormal = { x: 0, y: 0, z: 1 };
+          splitDist = (bounds.mins.z + bounds.maxs.z) / 2;
         }
+
+        const epsilon = 0.1;
+        const frontW = clipWindingEpsilon(w, splitNormal, splitDist, epsilon, true);
+        const backW = clipWindingEpsilon(w, splitNormal, splitDist, epsilon, false);
+
+        // Security fix: If a split produces a child winding with the exact same
+        // number of points and bounds (which happens when points fall within epsilon),
+        // it means the split did nothing. This leads to an infinite loop.
+        // We ensure we don't endlessly re-queue identically sized windings.
+        const originalArea = windingArea(w);
+
+        let splitSucceeded = false;
+        if (frontW && backW && frontW.numPoints >= 3 && backW.numPoints >= 3) {
+           const frontArea = windingArea(frontW);
+           const backArea = windingArea(backW);
+
+           // If either split piece is suspiciously close to the original area,
+           // we failed to make a meaningful cut.
+           if (frontArea < originalArea - 0.1 && backArea < originalArea - 0.1) {
+              splitSucceeded = true;
+              queue.push(frontW);
+              queue.push(backW);
+           }
+        }
+
+        if (!splitSucceeded) {
+           // We could not split it properly, likely due to epsilon issues. Accept as-is.
+           finalWindings.push(w);
+        }
+      } else {
+        // Patch is small enough
+        finalWindings.push(w);
       }
-      currentPatches = nextPatches;
     }
 
     // Convert final windings to Patch objects
-    for (const w of currentPatches) {
+    for (const w of finalWindings) {
       const area = windingArea(w);
       if (area < 1.0) continue; // Ignore tiny slivers
 
@@ -126,10 +138,10 @@ export function createPatches(
       patches.push({
         winding: w,
         origin,
-        normal: { x: normal.x, y: normal.y, z: normal.z } as Vec3,
+        normal: { x: normal.x, y: normal.y, z: normal.z },
         area,
-        emissive: { x: 0, y: 0, z: 0 } as Vec3, // Setup later based on texture/light
-        totalLight: { x: 0, y: 0, z: 0 } as Vec3,
+        emissive: { x: 0, y: 0, z: 0 }, // Setup later based on texture/light
+        totalLight: { x: 0, y: 0, z: 0 },
         numTransfers: 0,
         transfers: []
       });
@@ -169,7 +181,7 @@ export function calculateFormFactor(
   }
 
   // Normal of source must face dest (dir is dest->source, so -dir is source->dest)
-  const dotSource = dotVec3(source.normal, { x: -dir.x, y: -dir.y, z: -dir.z } as Vec3);
+  const dotSource = dotVec3(source.normal, { x: -dir.x, y: -dir.y, z: -dir.z });
   if (dotSource <= 0.001) {
     return 0; // Dest is behind source
   }
@@ -223,7 +235,7 @@ export function computeRadiosity(
     const p = patches[i];
 
     // Seed total light with initial direct light + emissive
-    p.totalLight = { x: p.emissive.x, y: p.emissive.y, z: p.emissive.z } as Vec3;
+    p.totalLight = { x: p.emissive.x, y: p.emissive.y, z: p.emissive.z };
 
     // First bounce distributes emissive light
     currentEnergy[i * 3 + 0] = p.emissive.x;
@@ -268,7 +280,7 @@ export function computeRadiosity(
             x: dest.totalLight.x + r * ff,
             y: dest.totalLight.y + g * ff,
             z: dest.totalLight.z + b * ff
-          } as Vec3;
+          };
 
           bounceEnergy += (r + g + b) * ff;
         }
