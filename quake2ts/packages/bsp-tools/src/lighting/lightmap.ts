@@ -1,6 +1,7 @@
 import { Vec3, dotVec3, crossVec3, scaleVec3, addVec3, subtractVec3 } from '@quake2ts/shared';
 import type { CompileFace, CompilePlane } from '../types/compile.js';
 import type { BspTexInfo } from '../types/bsp.js';
+import type { LightSample } from './direct.js';
 
 export interface LightmapInfo {
   width: number;
@@ -142,4 +143,90 @@ export function generateSamplePoints(
   }
 
   return points;
+}
+
+/**
+ * Convert HDR light values to 8-bit lightmap
+ */
+export function toneMapLightmap(
+  samples: LightSample[],
+  width: number,
+  height: number,
+  exposure: number = 1.0
+): Uint8Array {
+  const result = new Uint8Array(width * height * 3);
+
+  for (let i = 0; i < samples.length; i++) {
+    const sample = samples[i];
+    let r = sample.color.x * exposure;
+    let g = sample.color.y * exposure;
+    let b = sample.color.z * exposure;
+
+    // Simple clamp tone mapping as used in Q2
+    if (r > 255) r = 255;
+    if (g > 255) g = 255;
+    if (b > 255) b = 255;
+
+    result[i * 3 + 0] = Math.max(0, Math.floor(r));
+    result[i * 3 + 1] = Math.max(0, Math.floor(g));
+    result[i * 3 + 2] = Math.max(0, Math.floor(b));
+  }
+
+  return result;
+}
+
+export interface PackedLightmaps {
+  data: Uint8Array;  // All lightmap data
+  faceOffsets: number[];  // Offset into data for each face
+}
+
+/**
+ * Pack all face lightmaps into lighting lump
+ */
+export function packLightmaps(
+  faces: Array<{
+    lightmapInfo: LightmapInfo;
+    samples: LightSample[];
+  }>,
+  exposure: number = 1.0
+): PackedLightmaps {
+  // First, calculate total size
+  let totalSize = 0;
+  for (const face of faces) {
+    if (!face.lightmapInfo || face.lightmapInfo.width === 0 || face.lightmapInfo.height === 0) {
+      continue;
+    }
+    totalSize += face.lightmapInfo.width * face.lightmapInfo.height * 3;
+  }
+
+  const data = new Uint8Array(totalSize);
+  const faceOffsets: number[] = new Array(faces.length).fill(-1);
+
+  let currentOffset = 0;
+
+  for (let i = 0; i < faces.length; i++) {
+    const face = faces[i];
+
+    // Skip faces without lightmap
+    if (!face.lightmapInfo || face.lightmapInfo.width === 0 || face.lightmapInfo.height === 0) {
+      continue;
+    }
+
+    const lmData = toneMapLightmap(
+      face.samples,
+      face.lightmapInfo.width,
+      face.lightmapInfo.height,
+      exposure
+    );
+
+    data.set(lmData, currentOffset);
+    faceOffsets[i] = currentOffset;
+
+    currentOffset += lmData.length;
+  }
+
+  return {
+    data,
+    faceOffsets
+  };
 }
