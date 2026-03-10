@@ -114,17 +114,23 @@ describe('lightmap', () => {
 
   describe('packLightmaps', () => {
     it('assembles continuous data and returns correct offsets', () => {
+      const samplesMap1 = new Map<number, LightSample[]>();
+      samplesMap1.set(0, [{ color: { x: 100, y: 0, z: 0 } as Vec3 }]);
+
+      const samplesMap2 = new Map<number, LightSample[]>();
+      samplesMap2.set(0, [
+        { color: { x: 0, y: 100, z: 0 } as Vec3 },
+        { color: { x: 0, y: 0, z: 100 } as Vec3 }
+      ]);
+
       const faces = [
         {
           lightmapInfo: { width: 1, height: 1 } as any,
-          samples: [{ color: { x: 100, y: 0, z: 0 } as Vec3 }]
+          samplesByStyle: samplesMap1
         },
         {
           lightmapInfo: { width: 2, height: 1 } as any,
-          samples: [
-            { color: { x: 0, y: 100, z: 0 } as Vec3 },
-            { color: { x: 0, y: 0, z: 100 } as Vec3 }
-          ]
+          samplesByStyle: samplesMap2
         }
       ];
 
@@ -135,6 +141,10 @@ describe('lightmap', () => {
 
       // Face offsets
       expect(packed.faceOffsets).toEqual([0, 3]);
+
+      // Face styles
+      expect(packed.faceStyles[0]).toEqual([0, 255, 255, 255]);
+      expect(packed.faceStyles[1]).toEqual([0, 255, 255, 255]);
 
       // Face 1 color check
       expect(packed.data[0]).toBe(100);
@@ -152,14 +162,17 @@ describe('lightmap', () => {
     });
 
     it('skips faces without lightmaps and marks offset as -1', () => {
+       const samplesMap2 = new Map<number, LightSample[]>();
+       samplesMap2.set(0, [{ color: { x: 255, y: 255, z: 255 } as Vec3 }]);
+
        const faces = [
         {
           lightmapInfo: { width: 0, height: 0 } as any,
-          samples: []
+          samplesByStyle: new Map()
         },
         {
           lightmapInfo: { width: 1, height: 1 } as any,
-          samples: [{ color: { x: 255, y: 255, z: 255 } as Vec3 }]
+          samplesByStyle: samplesMap2
         }
       ];
 

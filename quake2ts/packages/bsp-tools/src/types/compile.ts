@@ -52,4 +52,5 @@ export interface CompileFace {
   merged?: boolean;
   // Added for BSP generation
   side?: number; // 0 = front, 1 = back
+  styles?: [number, number, number, number]; // Up to 4 light styles
 }

@@ -39,20 +39,28 @@ export function parseLights(entities: MapEntityDef[]): Light[] {
   const lights: Light[] = [];
 
   for (const entity of entities) {
+    // entity.properties might be a Map (MapEntityDef) or Record (EntityDef)
+    const getProp = (key: string): string | undefined => {
+      if (entity.properties instanceof Map) {
+        return entity.properties.get(key);
+      }
+      return (entity.properties as Record<string, string>)[key];
+    };
+
     if (entity.classname === 'worldspawn') {
       // Check for sun
-      const sunTarget = entity.properties.get('_sun');
+      const sunTarget = getProp('_sun');
       if (sunTarget) {
         // Find the target entity to determine direction, but for now we'll just check
         // if there's a sun_color or sun_light
-        const colorStr = entity.properties.get('_sun_color');
+        const colorStr = getProp('_sun_color');
         let color: Vec3 = { x: 1, y: 1, z: 1 } as Vec3;
         if (colorStr) {
           const parsedColor = parseVec3(colorStr);
           if (parsedColor) color = parsedColor;
         }
 
-        const intensity = parseFloat(entity.properties.get('_sun_light') || '50');
+        const intensity = parseFloat(getProp('_sun_light') || '50');
 
         // We don't have direction yet, it would require resolving the target.
         // For MVP, we'll assign a default direction if sun_pos isn't present
@@ -69,14 +77,14 @@ export function parseLights(entities: MapEntityDef[]): Light[] {
     }
 
     if (entity.classname === 'light') {
-      const originStr = entity.properties.get('origin');
+      const originStr = getProp('origin');
       if (!originStr) continue;
 
       const origin = parseVec3(originStr);
       if (!origin) continue;
 
       // Color
-      const colorStr = entity.properties.get('_color') || entity.properties.get('color');
+      const colorStr = getProp('_color') || getProp('color');
       let color: Vec3 = { x: 1, y: 1, z: 1 } as Vec3; // Default white
       if (colorStr) {
         const parsedColor = parseVec3(colorStr);
@@ -84,17 +92,17 @@ export function parseLights(entities: MapEntityDef[]): Light[] {
       }
 
       // Intensity
-      let intensity = parseFloat(entity.properties.get('light') || '300');
+      let intensity = parseFloat(getProp('light') || '300');
       if (isNaN(intensity)) intensity = 300;
 
       // Style
-      let styleStr = entity.properties.get('_style') || entity.properties.get('style');
+      let styleStr = getProp('_style') || getProp('style');
       let style = parseInt(styleStr || '0', 10);
       if (isNaN(style) || style < 0 || style >= 256) style = 0;
 
       // Type
       let type: 'point' | 'spot' | 'surface' = 'point';
-      const target = entity.properties.get('target');
+      const target = getProp('target');
 
       let innerCone: number | undefined;
       let outerCone: number | undefined;
@@ -106,14 +114,14 @@ export function parseLights(entities: MapEntityDef[]): Light[] {
         // For standard parsing without resolving targets, we mark it as spot
         // but can't calculate direction until we have all entities.
         // For now, _cone provides the cone.
-        const coneStr = entity.properties.get('_cone');
+        const coneStr = getProp('_cone');
         outerCone = parseFloat(coneStr || '10');
         if (isNaN(outerCone)) outerCone = 10;
         innerCone = outerCone - 10; // Q2 tools style inner cone heuristic
         if (innerCone < 0) innerCone = 0;
       }
 
-      const surface = entity.properties.get('_surface');
+      const surface = getProp('_surface');
       if (surface) {
         type = 'surface';
       }
