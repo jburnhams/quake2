@@ -103,9 +103,11 @@ export function calculateDirectLightStyles(
       b += light.color.z * scale;
     }
 
-    currentSample.color.x += r;
-    currentSample.color.y += g;
-    currentSample.color.z += b;
+    currentSample.color = {
+      x: currentSample.color.x + r,
+      y: currentSample.color.y + g,
+      z: currentSample.color.z + b
+    } as Vec3;
   }
 
   return styles;
@@ -122,15 +124,15 @@ export function calculateDirectLight(
   planes: CompilePlane[]
 ): LightSample {
     const styles = calculateDirectLightStyles(point, normal, lights, tree, planes);
-    const result = { color: { x: 0, y: 0, z: 0 } as Vec3 };
+    let rx = 0, ry = 0, rz = 0;
 
     for (const sample of styles.values()) {
-        result.color.x += sample.color.x;
-        result.color.y += sample.color.y;
-        result.color.z += sample.color.z;
+        rx += sample.color.x;
+        ry += sample.color.y;
+        rz += sample.color.z;
     }
 
-    return result;
+    return { color: { x: rx, y: ry, z: rz } as Vec3 };
 }
 
 /**
