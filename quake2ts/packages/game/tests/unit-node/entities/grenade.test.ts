@@ -21,11 +21,13 @@ describe('Grenade Projectile', () => {
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
-        const player = game.entities.find((e) => e.classname === 'player')!;
+        const player = game.entities.find((e) => e.classname === 'player');
+        if (!player) throw new Error('Player entity not found');
 
         createGrenade(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 120, 600);
 
-        const grenade = game.entities.find((e) => e.classname === 'grenade')!;
+        const grenade = game.entities.find((e) => e.classname === 'grenade');
+        if (!grenade) throw new Error('Grenade entity not found');
 
         expect(grenade).toBeDefined();
         expect(grenade.movetype).toBe(MoveType.Bounce);
