@@ -13,17 +13,27 @@ export interface LightSample {
 /**
  * Calculate direct lighting at a sample point
  * Ported from q2tools/src/lightmap.c LightContributionToPoint
+ * Returns a map of style index to LightSample
  */
-export function calculateDirectLight(
+export function calculateDirectLightStyles(
   point: Vec3,
   normal: Vec3,
   lights: Light[],
   tree: TreeElement,
   planes: CompilePlane[]
-): LightSample {
-  let r = 0, g = 0, b = 0;
+): Map<number, LightSample> {
+  const styles = new Map<number, LightSample>();
 
   for (const light of lights) {
+    const style = light.style || 0;
+
+    let currentSample = styles.get(style);
+    if (!currentSample) {
+        currentSample = { color: { x: 0, y: 0, z: 0 } as Vec3 };
+        styles.set(style, currentSample);
+    }
+
+    let r = 0, g = 0, b = 0;
     if (light.type === 'sun') {
       // Sun/directional light
       const dir = light.direction!;
@@ -92,13 +102,87 @@ export function calculateDirectLight(
       g += light.color.y * scale;
       b += light.color.z * scale;
     }
+
+    currentSample.color.x += r;
+    currentSample.color.y += g;
+    currentSample.color.z += b;
   }
 
-  return { color: { x: r, y: g, z: b } as Vec3 };
+  return styles;
 }
 
 /**
- * Calculate lighting for all samples on a face
+ * Backward compatibility signature, accumulates all lights to a single sample
+ */
+export function calculateDirectLight(
+  point: Vec3,
+  normal: Vec3,
+  lights: Light[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): LightSample {
+    const styles = calculateDirectLightStyles(point, normal, lights, tree, planes);
+    const result = { color: { x: 0, y: 0, z: 0 } as Vec3 };
+
+    for (const sample of styles.values()) {
+        result.color.x += sample.color.x;
+        result.color.y += sample.color.y;
+        result.color.z += sample.color.z;
+    }
+
+    return result;
+}
+
+/**
+ * Calculate lighting for all samples on a face, separated by light styles
+ */
+export function lightFaceStyles(
+  face: CompileFace,
+  lightmapInfo: LightmapInfo,
+  texInfo: BspTexInfo,
+  lights: Light[],
+  tree: TreeElement,
+  planes: CompilePlane[]
+): Map<number, LightSample[]> {
+  const points = generateSamplePoints(face, lightmapInfo, texInfo, planes);
+  const normal = planes[face.planeNum].normal;
+
+  // Q2 nudges sample points slightly off the face to avoid self-shadowing
+  const NUDGE_EPSILON = 1.0; // 1 unit in Q2
+
+  const numSamples = points.length;
+  const samplesByStyle = new Map<number, LightSample[]>();
+
+  for (let i = 0; i < points.length; i++) {
+    const point = points[i];
+    // Nudge point along normal
+    const nudgedPoint = {
+      x: point.x + normal.x * NUDGE_EPSILON,
+      y: point.y + normal.y * NUDGE_EPSILON,
+      z: point.z + normal.z * NUDGE_EPSILON
+    } as Vec3;
+
+    const pointStyles = calculateDirectLightStyles(nudgedPoint, normal, lights, tree, planes);
+
+    for (const [style, sample] of pointStyles.entries()) {
+        if (!samplesByStyle.has(style)) {
+            // Initialize array of black samples for this new style
+            const styleArray = new Array<LightSample>(numSamples);
+            for(let j=0; j<numSamples; j++) {
+                styleArray[j] = { color: {x:0, y:0, z:0} as Vec3 };
+            }
+            samplesByStyle.set(style, styleArray);
+        }
+
+        samplesByStyle.get(style)![i] = sample;
+    }
+  }
+
+  return samplesByStyle;
+}
+
+/**
+ * Calculate lighting for all samples on a face (combined styles)
  */
 export function lightFace(
   face: CompileFace,
@@ -112,11 +196,9 @@ export function lightFace(
   const points = generateSamplePoints(face, lightmapInfo, texInfo, planes);
   const normal = planes[face.planeNum].normal;
 
-  // Q2 nudges sample points slightly off the face to avoid self-shadowing
-  const NUDGE_EPSILON = 1.0; // 1 unit in Q2
+  const NUDGE_EPSILON = 1.0;
 
   for (const point of points) {
-    // Nudge point along normal
     const nudgedPoint = {
       x: point.x + normal.x * NUDGE_EPSILON,
       y: point.y + normal.y * NUDGE_EPSILON,

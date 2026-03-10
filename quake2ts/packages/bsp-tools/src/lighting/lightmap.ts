@@ -178,16 +178,20 @@ export function toneMapLightmap(
 export interface PackedLightmaps {
   data: Uint8Array;  // All lightmap data
   faceOffsets: number[];  // Offset into data for each face
+  faceStyles: [number, number, number, number][]; // Styles array for each face
+}
+
+export interface FaceLightingData {
+  lightmapInfo: LightmapInfo;
+  /** Map of style index to light samples. style 0 is default/ambient/normal lights */
+  samplesByStyle: Map<number, LightSample[]>;
 }
 
 /**
- * Pack all face lightmaps into lighting lump
+ * Pack all face lightmaps into lighting lump, supporting multiple light styles
  */
 export function packLightmaps(
-  faces: Array<{
-    lightmapInfo: LightmapInfo;
-    samples: LightSample[];
-  }>,
+  faces: FaceLightingData[],
   exposure: number = 1.0
 ): PackedLightmaps {
   // First, calculate total size
@@ -196,11 +200,15 @@ export function packLightmaps(
     if (!face.lightmapInfo || face.lightmapInfo.width === 0 || face.lightmapInfo.height === 0) {
       continue;
     }
-    totalSize += face.lightmapInfo.width * face.lightmapInfo.height * 3;
+
+    // Each style requires a full lightmap
+    const numStyles = Math.min(4, face.samplesByStyle.size);
+    totalSize += face.lightmapInfo.width * face.lightmapInfo.height * 3 * numStyles;
   }
 
   const data = new Uint8Array(totalSize);
   const faceOffsets: number[] = new Array(faces.length).fill(-1);
+  const faceStyles: [number, number, number, number][] = new Array(faces.length).fill([255, 255, 255, 255]);
 
   let currentOffset = 0;
 
@@ -208,25 +216,51 @@ export function packLightmaps(
     const face = faces[i];
 
     // Skip faces without lightmap
-    if (!face.lightmapInfo || face.lightmapInfo.width === 0 || face.lightmapInfo.height === 0) {
+    if (!face.lightmapInfo || face.lightmapInfo.width === 0 || face.lightmapInfo.height === 0 || face.samplesByStyle.size === 0) {
       continue;
     }
 
-    const lmData = toneMapLightmap(
-      face.samples,
-      face.lightmapInfo.width,
-      face.lightmapInfo.height,
-      exposure
-    );
-
-    data.set(lmData, currentOffset);
     faceOffsets[i] = currentOffset;
 
-    currentOffset += lmData.length;
+    // Extract up to 4 styles
+    const styles: [number, number, number, number] = [255, 255, 255, 255];
+    let styleIdx = 0;
+
+    // Always put style 0 first if it exists
+    if (face.samplesByStyle.has(0)) {
+        styles[styleIdx++] = 0;
+    }
+
+    for (const style of face.samplesByStyle.keys()) {
+        if (style === 0) continue; // Already added
+        if (styleIdx >= 4) break;
+        styles[styleIdx++] = style;
+    }
+
+    faceStyles[i] = styles;
+
+    // Pack lightmaps for each style sequentially
+    for (let s = 0; s < 4; s++) {
+        const style = styles[s];
+        if (style === 255) break;
+
+        const samples = face.samplesByStyle.get(style)!;
+
+        const lmData = toneMapLightmap(
+          samples,
+          face.lightmapInfo.width,
+          face.lightmapInfo.height,
+          exposure
+        );
+
+        data.set(lmData, currentOffset);
+        currentOffset += lmData.length;
+    }
   }
 
   return {
     data,
-    faceOffsets
+    faceOffsets,
+    faceStyles
   };
 }

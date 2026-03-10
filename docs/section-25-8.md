@@ -1,4 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
+COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
 
 ## Overview
 
@@ -422,7 +423,7 @@ export function packLightmaps(
 
 ### 8.1 Multiple Light Styles
 
-- [ ] Support multiple light styles per face
+- [x] Support multiple light styles per face
 
 ```typescript
 export const MAX_LIGHTMAPS = 4;  // Per face
@@ -439,9 +440,9 @@ Light styles allow animated/switchable lights.
 
 ### 8.2 Tests
 
-- [ ] Test: Face with single style
-- [ ] Test: Face with multiple styles
-- [ ] Test: Style index matches entity
+- [x] Test: Face with single style
+- [x] Test: Face with multiple styles
+- [x] Test: Style index matches entity
 
 ---
 
@@ -449,7 +450,7 @@ Light styles allow animated/switchable lights.
 
 ### 9.1 Lighting Configuration
 
-- [ ] Implement lighting options
+- [x] Implement lighting options
 
 ```typescript
 export interface LightingOptions {
@@ -479,7 +480,7 @@ export interface LightingOptions {
 
 ### 9.2 Fast Lighting Mode
 
-- [ ] Implement fast lighting (direct only, no radiosity)
+- [x] Implement fast lighting (direct only, no radiosity)
 
 ```typescript
 /**
@@ -500,7 +501,7 @@ export function computeFastLighting(
 
 ### 10.1 Add to Compiler
 
-- [ ] Integrate lighting into BspCompiler
+- [x] Integrate lighting into BspCompiler
 
 ```typescript
 // In BspCompiler.compile():
@@ -518,7 +519,7 @@ if (!options.noLighting) {
 
 ### 10.2 Tests
 
-- [ ] Test: Compiled BSP has lighting data
+- [x] Test: Compiled BSP has lighting data
 - [ ] Test: Engine renders lightmaps correctly
 
 ---
@@ -549,6 +550,6 @@ if (!options.noLighting) {
 - [x] Radiosity converges
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
-- [ ] Light styles supported
+- [x] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly

@@ -49,12 +49,16 @@ import { serializeEntities } from '../output/entityString.js';
 
 // Lighting logic (currently simple placeholders or partial implementations)
 import { generateFullbrightLighting } from './lighting.js';
+import { parseLights } from '../lighting/lights.js';
+import { computeFastLighting } from '../lighting/fast.js';
 
 export interface CompilerOptions {
   verbose?: boolean;
   noVis?: boolean;
   fastVis?: boolean;
   noLighting?: boolean;
+  fastLighting?: boolean;
+  radiosity?: boolean;
   preserveDetail?: boolean;
   onProgress?: (stage: string, percent: number) => void;
 }
@@ -256,14 +260,43 @@ export class BspCompiler {
     let lightMaps = new Uint8Array(0) as Uint8Array;
     if (!this.options.noLighting) {
       if (this.options.verbose) console.log('Generating Lighting...');
-      lightMaps = generateFullbrightLighting(
-          finalFaces,
-          edgeData.vertices,
-          this.texInfoManager.getTexInfos(),
-          edgeData.surfEdges,
-          edgeData.edges,
-          planes
-      ) as Uint8Array;
+
+      const compilePlanes = this.planeSet.getPlanes();
+      const texInfos = this.texInfoManager.getTexInfos();
+      const compileFaces = flattened.serializedFaces;
+
+      if (this.options.fastLighting || !this.options.radiosity) {
+        const lights = parseLights(inputEntities as any);
+        const packed = computeFastLighting(
+          compileFaces,
+          texInfos,
+          lights,
+          root,
+          compilePlanes
+        );
+
+        lightMaps = packed.data;
+
+        for (let i = 0; i < finalFaces.length; i++) {
+          const offset = packed.faceOffsets[i];
+          if (offset >= 0) {
+            (finalFaces[i] as any).lightOffset = offset;
+            (finalFaces[i] as any).styles = packed.faceStyles[i];
+          } else {
+            (finalFaces[i] as any).lightOffset = -1;
+            (finalFaces[i] as any).styles = [255, 255, 255, 255];
+          }
+        }
+      } else {
+        lightMaps = generateFullbrightLighting(
+            finalFaces,
+            edgeData.vertices,
+            this.texInfoManager.getTexInfos(),
+            edgeData.surfEdges,
+            edgeData.edges,
+            planes
+        ) as Uint8Array;
+      }
     }
 
     // 12. Visibility
