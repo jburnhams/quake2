@@ -47,7 +47,24 @@ export class AudioRegistry {
     }
 
     const data = await this.vfs.readFile(path);
-    const arrayBuffer = data.slice().buffer;
+    // data is typically a Uint8Array, but depending on the VFS implementation or test mocks,
+    // it could potentially be an ArrayBuffer. However, TS types data as Uint8Array based on vfs.readFile.
+    let arrayBuffer: ArrayBuffer;
+
+    // Check if it's already an ArrayBuffer (e.g. from a test mock)
+    if (!data) {
+        throw new AudioRegistryError(`File not found or empty: ${path}`);
+    } else if ((data as any) instanceof ArrayBuffer) {
+        arrayBuffer = (data as any).slice(0);
+    } else {
+        // Assume Uint8Array
+        // Need to take byteOffset and byteLength into account when getting the underlying buffer
+        // Or create a new clean copy to avoid issues with shared ArrayBuffers
+        const copy = new Uint8Array(data.byteLength);
+        copy.set(data);
+        arrayBuffer = copy.buffer;
+    }
+
     const audio = await this.decodeByExtension(path, arrayBuffer);
     this.cache.set(normalized, audio);
     this.refCounts.set(normalized, 1);

@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { AssetManager } from '../../../src/assets/manager.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
+import { createMockVFS } from '@quake2ts/test-utils';
 
 describe('AssetManager Memory Budget', () => {
     let vfs: VirtualFileSystem;
     let manager: AssetManager;
 
     beforeEach(() => {
-        vfs = new VirtualFileSystem();
+        vfs = createMockVFS();
         manager = new AssetManager(vfs, {
             textureCacheCapacity: 10,
             textureMemoryLimit: 1000

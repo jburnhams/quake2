@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
 import { ingestPakFiles, filesToPakSources, wireDropTarget, wireFileInput } from '../../../src/assets/browserIngestion.js';
-import { buildPak, textData } from '@quake2ts/test-utils'; // pakBuilder.js';
+import { buildPak, textData, createMockVFS } from '@quake2ts/test-utils'; // pakBuilder.js';
 
 const decoder = new TextDecoder();
 
@@ -42,7 +42,7 @@ describe('browser ingestion helpers', () => {
   let vfs: VirtualFileSystem;
 
   beforeEach(() => {
-    vfs = new VirtualFileSystem();
+    vfs = createMockVFS();
   });
 
   it('converts File inputs to PakSource objects', () => {
@@ -57,10 +57,15 @@ describe('browser ingestion helpers', () => {
     const onProgress = vi.fn();
     const onError = vi.fn();
 
+    vi.spyOn(vfs, 'mountPak').mockImplementation(() => {});
+
     const results = await ingestPakFiles(vfs, [pakFile], { onProgress, onError, stopOnError: true });
 
     expect(results).toHaveLength(1);
-    const file = await vfs.readFile('pics/logo.pcx');
+    expect(vfs.mountPak).toHaveBeenCalled();
+    const mountedPak = (vfs.mountPak as any).mock.calls[0][0];
+    expect(mountedPak.name).toBe('pak0.pak');
+    const file = mountedPak.readFile('pics/logo.pcx');
     expect(decoder.decode(file)).toBe('pcx');
     expect(onProgress).toHaveBeenCalledWith(expect.objectContaining({ file: 'pak0.pak', state: 'parsed' }));
     expect(onError).not.toHaveBeenCalled();

@@ -1,7 +1,7 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AudioRegistry, AudioRegistryError } from '../../../src/assets/audio.js';
 import { VirtualFileSystem } from '../../../src/assets/vfs.js';
-import { buildWav, createTestPakArchive } from '@quake2ts/test-utils';
+import { buildWav, createTestPakArchive, createMockVFS } from '@quake2ts/test-utils';
 import type { OggAudio } from '../../../src/assets/ogg.js';
 
 const mockOgg: OggAudio = {
@@ -30,8 +30,43 @@ describe('Audio registry', () => {
     { path: 'sound/weapons/blaster.wav', data: new Uint8Array(wavBuffer) },
     { path: 'music/example.ogg', data: oggBuffer },
   ], 'base.pak');
-  const vfs = new VirtualFileSystem([pak]);
-  const registry = new AudioRegistry(vfs, { cacheSize: 4 });
+  const vfs = createMockVFS();
+  let registry: AudioRegistry;
+
+  beforeEach(() => {
+      // Clear caches and reset call counts for isolation
+      vi.clearAllMocks();
+
+      // Set up mock implementations inside beforeEach so they aren't cleared by Vitest's mockReset
+      vi.spyOn(vfs, 'readFile').mockImplementation(async (path: string) => {
+          // Normalize path for lookup in pak file
+          const lookupPath = path.toLowerCase();
+
+          let file;
+          try {
+              file = pak.readFile(lookupPath);
+          } catch(e) {
+              try {
+                  file = pak.readFile(path);
+              } catch(e) {
+                  throw new Error('File not found');
+              }
+          }
+          if (!file) throw new Error('File not found');
+          return new Uint8Array(file);
+      });
+
+      vi.spyOn(vfs, 'stat').mockImplementation((path: string) => {
+          try {
+              const file = pak.readFile(path.toLowerCase());
+              return { path, size: file.byteLength, sourcePak: 'base.pak' };
+          } catch(e) {
+              return undefined;
+          }
+      });
+
+      registry = new AudioRegistry(vfs, { cacheSize: 4 });
+  });
 
   it('loads wav and ogg assets with caching', async () => {
     const wav = await registry.load('sound/WEAPONS/BLASTER.WAV');
@@ -46,7 +81,30 @@ describe('Audio registry', () => {
 
   it('rejects unknown audio formats', async () => {
     const badPak = createTestPakArchive([{ path: 'sound/bad.txt', data: new Uint8Array([1, 2, 3]) }], 'bad.pak');
-    const badVfs = new VirtualFileSystem([badPak]);
+    const badVfs = createMockVFS();
+    vi.spyOn(badVfs, 'readFile').mockImplementation(async (path: string) => {
+        const lookupPath = path.toLowerCase();
+        let file;
+        try {
+            file = badPak.readFile(lookupPath);
+        } catch(e) {
+            try {
+                file = badPak.readFile(path);
+            } catch(e) {
+                throw new Error('File not found');
+            }
+        }
+        if (!file) throw new Error('File not found');
+        return new Uint8Array(file);
+    });
+    vi.spyOn(badVfs, 'stat').mockImplementation((path: string) => {
+        try {
+            const file = badPak.readFile(path.toLowerCase());
+            return { path, size: file.byteLength, sourcePak: 'bad.pak' };
+        } catch(e) {
+            return undefined;
+        }
+    });
     const badRegistry = new AudioRegistry(badVfs);
     await expect(badRegistry.load('sound/bad.txt')).rejects.toBeInstanceOf(AudioRegistryError);
   });
