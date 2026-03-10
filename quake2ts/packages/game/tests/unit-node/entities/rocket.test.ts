@@ -4,18 +4,15 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { createRocket } from '../../../src/entities/projectiles.js';
-import { createGame } from '../../../src/index.js';
 import { MoveType, Solid } from '../../../src/entities/entity.js';
 import * as damage from '../../../src/combat/damage.js';
-import { createEntityFactory, createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
 
 describe('Rocket Projectile', () => {
     it('should have correct initial properties and explode on touch', () => {
         const T_RadiusDamage = vi.spyOn(damage, 'T_RadiusDamage');
 
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 } });
-        game.init(0);
+        const { game } = createTestGame();
 
         const playerStart = game.entities.spawn();
         playerStart.classname = 'info_player_start';
@@ -24,11 +21,11 @@ describe('Rocket Projectile', () => {
         game.entities.finalizeSpawn(playerStart);
         game.spawnWorld();
 
-        const player = game.entities.find(e => e.classname === 'player')!;
+        const player = game.entities.find((e) => e.classname === 'player')!;
 
         createRocket(game.entities, player, player.origin, { x: 1, y: 0, z: 0 }, 100, 650);
 
-        const rocket = game.entities.find(e => e.classname === 'rocket')!;
+        const rocket = game.entities.find((e) => e.classname === 'rocket')!;
 
         // Use factory via internal pool or just verification.
         // For 'target' we can't easily swap out with createEntityFactory because we need it to be in the system
