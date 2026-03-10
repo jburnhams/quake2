@@ -2,23 +2,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { createGame, GameExports } from '@quake2ts/game';
 import { ClientState } from '../../src/client.js';
-import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports, createMockConnection } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports, createMockConnection, createMockFsPromises, createMockEngineParseBsp } from '@quake2ts/test-utils';
+import fsPromises from 'node:fs/promises';
+import { parseBsp } from '@quake2ts/engine';
 
-// Mock dependencies
-// ws mock removed
-vi.mock('node:fs/promises', () => ({
-  default: {
-    readFile: vi.fn().mockResolvedValue(Buffer.from([0])),
-  },
-}));
-vi.mock('@quake2ts/engine', () => ({
-  parseBsp: vi.fn().mockReturnValue({}),
-}));
-vi.mock('@quake2ts/game', () => ({
-  createGame: vi.fn(),
-  createPlayerInventory: vi.fn(),
-  createPlayerWeaponStates: vi.fn(),
-}));
+vi.mock('node:fs/promises');
+vi.mock('@quake2ts/engine');
+vi.mock('@quake2ts/game');
 
 describe('DedicatedServer Connection Flow', () => {
   let server: DedicatedServer;
@@ -29,6 +19,13 @@ describe('DedicatedServer Connection Flow', () => {
   let transport: MockTransport;
 
   beforeEach(async () => {
+    // Setup global mocks from shared factories
+    const fsMocks = createMockFsPromises();
+    vi.mocked(fsPromises.readFile).mockImplementation(fsMocks.readFile as any);
+
+    const engineMocks = createMockEngineParseBsp();
+    vi.mocked(parseBsp).mockImplementation(engineMocks.parseBsp as any);
+
     sentMessages = [];
     consoleLogSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
     consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
@@ -38,7 +35,7 @@ describe('DedicatedServer Connection Flow', () => {
       clientBegin: vi.fn(() => ({ id: 1, classname: 'player' } as any)),
     });
 
-    (createGame as vi.Mock).mockReturnValue(mockGame);
+    vi.mocked(createGame).mockReturnValue(mockGame);
 
     transport = createMockTransport();
     server = new DedicatedServer({ transport });

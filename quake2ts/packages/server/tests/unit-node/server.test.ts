@@ -1,19 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer, createServer } from '../../src/dedicated.js';
-import { createMockTransport, MockTransport, createTestBspMap } from '@quake2ts/test-utils';
-
-// Mock dependencies
-vi.mock('node:fs/promises', () => ({
-    default: {
-        readFile: vi.fn().mockResolvedValue(Buffer.alloc(100))
-    }
-}));
-
+import { createMockTransport, MockTransport, createTestBspMap, createMockFsPromises, createMockEngineParseBsp } from '@quake2ts/test-utils';
+import fsPromises from 'node:fs/promises';
 import { parseBsp } from '@quake2ts/engine';
 
-vi.mock('@quake2ts/engine', () => ({
-    parseBsp: vi.fn()
-}));
+vi.mock('node:fs/promises');
+vi.mock('@quake2ts/engine');
 
 describe('DedicatedServer', () => {
     let server: DedicatedServer;
@@ -23,6 +15,12 @@ describe('DedicatedServer', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
+
+        const fsMocks = createMockFsPromises();
+        vi.mocked(fsPromises.readFile).mockImplementation(fsMocks.readFile as any);
+
+        const engineMocks = createMockEngineParseBsp();
+        vi.mocked(parseBsp).mockImplementation(engineMocks.parseBsp as any);
         vi.mocked(parseBsp).mockReturnValue(createTestBspMap());
 
         transport = createMockTransport();

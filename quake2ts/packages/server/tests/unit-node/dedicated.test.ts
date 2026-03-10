@@ -9,33 +9,16 @@ import {
     createMockServerClient,
     createMockGameExports,
     createGameStateSnapshotFactory,
-    createServerSnapshot
+    createServerSnapshot,
+    createMockFsPromises,
+    createMockEngineParseBsp
 } from '@quake2ts/test-utils';
+import fsPromises from 'node:fs/promises';
+import { parseBsp } from '@quake2ts/engine';
 
-// Mock dependencies
-vi.mock('node:fs/promises', () => ({
-  default: {
-    readFile: vi.fn().mockResolvedValue(Buffer.from([0])),
-  },
-}));
-vi.mock('@quake2ts/engine', () => ({
-  parseBsp: vi.fn().mockReturnValue({
-        planes: [],
-        nodes: [],
-        leafs: [],
-        brushes: [],
-        models: [],
-        leafLists: { leafBrushes: [] },
-        texInfo: [],
-        brushSides: [],
-        visibility: { numClusters: 0, clusters: [] }
-  }),
-}));
-vi.mock('@quake2ts/game', () => ({
-  createGame: vi.fn(),
-  createPlayerInventory: vi.fn(),
-  createPlayerWeaponStates: vi.fn(),
-}));
+vi.mock('node:fs/promises');
+vi.mock('@quake2ts/engine');
+vi.mock('@quake2ts/game');
 
 const FRAME_TIME_MS = 100; // 10Hz
 
@@ -47,6 +30,13 @@ describe('DedicatedServer', () => {
   let transport: MockTransport;
 
   beforeEach(async () => {
+    // Setup global mocks from shared factories
+    const fsMocks = createMockFsPromises();
+    vi.mocked(fsPromises.readFile).mockImplementation(fsMocks.readFile as any);
+
+    const engineMocks = createMockEngineParseBsp();
+    vi.mocked(parseBsp).mockImplementation(engineMocks.parseBsp as any);
+
     // Only fake specific timers to avoid blocking internal promises/fs mocks
     vi.useFakeTimers({
         toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
@@ -65,7 +55,7 @@ describe('DedicatedServer', () => {
       clientConnect: vi.fn().mockReturnValue(true),
     });
 
-    (createGame as vi.Mock).mockReturnValue(mockGame);
+    vi.mocked(createGame).mockReturnValue(mockGame);
 
     transport = createMockTransport();
     server = new DedicatedServer({ transport });
