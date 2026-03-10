@@ -1,32 +1,15 @@
-
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated.js';
 import { ClientState } from '../../src/client.js';
-import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports } from '@quake2ts/test-utils';
+import { createMockTransport, MockTransport, createMockServerClient, createMockNetDriver, createMockGameExports, createMockFsPromises, createMockEngineParseBsp } from '@quake2ts/test-utils';
 import { NetDriver } from '@quake2ts/shared';
-
-// Mock dependencies
-vi.mock('node:fs/promises', async () => {
-    return {
-        default: {
-            readFile: vi.fn().mockResolvedValue(Buffer.from(''))
-        },
-        readFile: vi.fn().mockResolvedValue(Buffer.from(''))
-    };
-});
-
+import fsPromises from 'node:fs/promises';
+import { parseBsp } from '@quake2ts/engine';
 import { createGame } from '@quake2ts/game';
 
-// Mock game creation
-vi.mock('@quake2ts/game', async () => {
-    const actual = await vi.importActual('@quake2ts/game');
-    return {
-        ...actual,
-        createGame: vi.fn(),
-        createPlayerInventory: vi.fn(),
-        createPlayerWeaponStates: vi.fn()
-    };
-});
+vi.mock('node:fs/promises');
+vi.mock('@quake2ts/game');
+vi.mock('@quake2ts/engine');
 
 // Access private properties for testing
 function getPrivate(obj: any, key: string) {
@@ -40,6 +23,12 @@ describe('DedicatedServer Timeout', () => {
     let transport: MockTransport;
 
     beforeEach(async () => {
+        const fsMocks = createMockFsPromises();
+        vi.mocked(fsPromises.readFile).mockImplementation(fsMocks.readFile as any);
+
+        const engineMocks = createMockEngineParseBsp();
+        vi.mocked(parseBsp).mockImplementation(engineMocks.parseBsp as any);
+
         vi.useFakeTimers({
             toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date']
         });
@@ -47,7 +36,7 @@ describe('DedicatedServer Timeout', () => {
         consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
 
         // Setup mock game return value here, where we can access createMockGameExports
-        (createGame as vi.Mock).mockReturnValue(createMockGameExports({
+        vi.mocked(createGame).mockReturnValue(createMockGameExports({
             clientBegin: vi.fn().mockReturnValue({ index: 1, origin: {x:0,y:0,z:0} } as any),
             clientConnect: vi.fn().mockReturnValue(true)
         }));
