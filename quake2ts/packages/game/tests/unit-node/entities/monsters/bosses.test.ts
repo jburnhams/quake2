@@ -3,38 +3,18 @@ import { SP_monster_supertank } from '../../../../src/entities/monsters/supertan
 import { SP_monster_boss2 } from '../../../../src/entities/monsters/boss2.js';
 import { SP_monster_floater } from '../../../../src/entities/monsters/floater.js';
 import { Entity, MoveType, Solid, EntityFlags, DeadFlag } from '../../../../src/entities/entity.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
-import { createRandomGenerator } from '@quake2ts/shared';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestContext, TestContext } from '@quake2ts/test-utils';
 
 describe('Boss/Monster Spawns', () => {
   let entity: Entity;
-  let context: SpawnContext;
+  let context: TestContext;
 
   beforeEach(() => {
-    entity = new Entity(1);
-    const { imports, engine } = createGameImportsAndEngine();
-    context = {
-      keyValues: {},
-      entities: {
-        spawn: () => new Entity(2),
-        free: vi.fn(),
-        finalizeSpawn: vi.fn(),
-        freeImmediate: vi.fn(),
-        timeSeconds: 10,
-        modelIndex: vi.fn(() => 0),
-        scheduleThink: vi.fn(),
-        linkentity: imports.linkentity,
-        multicast: imports.multicast,
-        engine, // Attach mocked engine
-        sound: engine.sound,
-        rng: createRandomGenerator(12345),
-      } as any,
-      health_multiplier: 1,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
+    context = createTestContext();
+    entity = context.entities.spawn();
     entity.timestamp = 10;
+    // Set up a mock for free explicitly just to test we called it
+    context.entities.free = vi.fn();
   });
 
   describe('SP_monster_supertank', () => {

@@ -1,33 +1,17 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { SP_monster_flipper } from '../../../../src/entities/monsters/flipper.js';
-import { Entity, MoveType, Solid, DeadFlag } from '../../../../src/entities/entity.js';
-import { EntitySystem } from '../../../../src/entities/system.js';
-import { createGame } from '../../../../src/index.js';
-import { SpawnContext } from '../../../../src/entities/spawn.js';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { MoveType, Solid, DeadFlag } from '../../../../src/entities/entity.js';
+import { createTestContext, TestContext } from '@quake2ts/test-utils';
 
 describe('monster_flipper', () => {
-  let system: EntitySystem;
-  let context: SpawnContext;
+  let context: TestContext;
 
   beforeEach(() => {
-    // Mock game engine and imports
-    const { imports, engine } = createGameImportsAndEngine();
-
-    const gameExports = createGame(imports, engine as any, { gravity: { x: 0, y: 0, z: -800 }, skill: 1 });
-    system = (gameExports as any).entities;
-
-    context = {
-      keyValues: {},
-      entities: system,
-      health_multiplier: 1,
-      warn: vi.fn(),
-      free: vi.fn(),
-    };
+    context = createTestContext();
   });
 
   it('spawns with correct properties', () => {
-    const ent = system.spawn();
+    const ent = context.entities.spawn();
     SP_monster_flipper(ent, context);
 
     expect(ent.classname).toBe('monster_flipper');
@@ -40,7 +24,7 @@ describe('monster_flipper', () => {
   });
 
   it('enters stand state after spawn', () => {
-    const ent = system.spawn();
+    const ent = context.entities.spawn();
     SP_monster_flipper(ent, context);
 
     expect(ent.monsterinfo.current_move).toBeDefined();
@@ -48,23 +32,23 @@ describe('monster_flipper', () => {
   });
 
   it('handles pain correctly', () => {
-    const ent = system.spawn();
+    const ent = context.entities.spawn();
     SP_monster_flipper(ent, context);
 
     // Force pain debounce to pass
     ent.pain_debounce_time = 0;
 
-    ent.pain!(ent, system.world, 0, 10);
+    ent.pain!(ent, context.entities.world, 0, 10);
     const frame = ent.monsterinfo.current_move?.firstframe;
     const painFrames = [99, 94]; // pain1, pain2
     expect(painFrames).toContain(frame);
   });
 
   it('handles death correctly', () => {
-    const ent = system.spawn();
+    const ent = context.entities.spawn();
     SP_monster_flipper(ent, context);
 
-    ent.die!(ent, system.world, system.world, 500, { x: 0, y: 0, z: 0 });
+    ent.die!(ent, context.entities.world, context.entities.world, 500, { x: 0, y: 0, z: 0 });
 
     expect(ent.deadflag).toBe(DeadFlag.Dead);
     // Death animation
