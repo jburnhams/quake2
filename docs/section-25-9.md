@@ -1,4 +1,5 @@
 # Section 25-9: Testing & Verification Strategy
+COMPLETED: Evaluated and verified that unit tests and integration tests for pipelines are implemented and passing. Detailed pending separate work items for WASM comparison, reference files, benchmarks, CI and coverage.
 
 ## Overview
 
@@ -294,11 +295,21 @@ Some differences with WASM are acceptable:
 
 ## Verification Checklist
 
-- [ ] Unit tests for all modules
-- [ ] Integration tests for pipelines
+- [x] Unit tests for all modules
+- [x] Integration tests for pipelines
 - [ ] WASM comparison infrastructure
-- [ ] Test fixture generation
+- [x] Test fixture generation
 - [ ] Reference .map files created
 - [ ] Performance benchmarks
 - [ ] CI pipeline configured
 - [ ] Coverage targets met (>80%)
+
+### Pending Separate Work Items
+
+The following testing features require significant independent effort and are left as future work items:
+
+1. **WASM comparison infrastructure:** Set up infrastructure to execute the original q2tools logic compiled to WASM to check byte-for-byte and logical parity. Needs `emsdk` integration.
+2. **Reference .map files created:** Creation and collection of standard Q2 .map files (e.g. from original id software releases) to use in pipeline testing.
+3. **Performance benchmarks:** Writing `bench` scripts and tracking performance to ensure our port meets the Target Performance criteria in Section 4.
+4. **CI pipeline configured:** Updating `.github/workflows/bsp-tools.yml` to automatically execute unit, integration, and WASM verification tasks.
+5. **Coverage targets met (>80%):** Configuring `test:coverage` scripts using vitest/istanbul to guarantee >80% coverage and integrate reporting.
