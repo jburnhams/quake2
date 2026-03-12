@@ -30,7 +30,8 @@
     "build:bundles": "tsup",
     "test": "pnpm run test:unit",
     "test:unit": "pnpm run test:unit:node",
-    "test:unit:node": "TEST_TYPE=unit-node vitest run --passWithNoTests"
+    "test:unit:node": "TEST_TYPE=unit-node vitest run --passWithNoTests",
+    "test:bench": "TEST_TYPE=unit-node vitest bench --run --passWithNoTests"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*"
