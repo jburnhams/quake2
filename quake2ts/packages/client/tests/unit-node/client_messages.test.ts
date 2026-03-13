@@ -4,90 +4,41 @@ import * as CGame from '@quake2ts/cgame';
 import { createMockEngineImports, createMockEngineHost } from '@quake2ts/test-utils';
 
 // Mock dependencies
-vi.mock('@quake2ts/cgame', () => ({
-    GetCGameAPI: vi.fn(() => ({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ParseConfigString: vi.fn(),
-    })),
-    ClientPrediction: class {
-        constructor() {
-            return {
-                setAuthoritative: vi.fn(),
-                getPredictedState: vi.fn(),
-                enqueueCommand: vi.fn(),
-                decayError: vi.fn()
-            };
-        }
-    },
-    ViewEffects: class {
-        constructor() {
-            return {
-                render: vi.fn(),
-                update: vi.fn()
-            };
-        }
-    },
-    createCGameImport: vi.fn(),
-}));
+vi.mock('@quake2ts/cgame', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        GetCGameAPI: vi.fn(() => ({
+            Init: vi.fn(),
+            Shutdown: vi.fn(),
+            DrawHUD: vi.fn(),
+            ParseCenterPrint: vi.fn(),
+            NotifyMessage: vi.fn(),
+            ParseConfigString: vi.fn(),
+        })),
+        ClientPrediction: utils.MockClientPrediction,
+        ViewEffects: utils.MockViewEffects,
+        createCGameImport: vi.fn(),
+    };
+});
 
-vi.mock('@quake2ts/engine', () => ({
-    EngineHost: class { constructor() {} },
-    DemoPlaybackController: class {
-        constructor() {
-            return {
-                setHandler: vi.fn(),
-                setFrameDuration: vi.fn(),
-                getCurrentTime: vi.fn(() => 0),
-                update: vi.fn(),
-                loadDemo: vi.fn()
-            };
-        }
-    },
-    Renderer: class { constructor() {} },
-    DynamicLightManager: class {
-        constructor() {
-            return {
-                update: vi.fn(),
-                getActiveLights: vi.fn(() => [])
-            };
-        }
-    },
-    DemoRecorder: class {
-        constructor() {
-            return {
-                startRecording: vi.fn(),
-                stopRecording: vi.fn(),
-                getIsRecording: vi.fn(() => false)
-            };
-        }
-    },
-    ClientNetworkHandler: class {
-        constructor() {
-            return {
-                setView: vi.fn(),
-                setCallbacks: vi.fn()
-            };
-        }
-    }
-}));
+vi.mock('@quake2ts/engine', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        EngineHost: class { constructor() {} },
+        DemoPlaybackController: utils.MockDemoPlaybackController,
+        Renderer: class { constructor() {} },
+        DynamicLightManager: utils.MockDynamicLightManager,
+        DemoRecorder: utils.MockDemoRecorder,
+        ClientNetworkHandler: utils.MockClientNetworkHandler
+    };
+});
 
-vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
-    MenuSystem: class {
-        constructor() {
-            return {
-                onStateChange: undefined,
-                isActive: vi.fn(() => false),
-                closeAll: vi.fn(),
-                pushMenu: vi.fn(),
-                handleInput: vi.fn()
-            };
-        }
-    }
-}));
+vi.mock('@quake2ts/client/ui/menu/system.js', async () => {
+    const utils = await vi.importActual<typeof import('@quake2ts/test-utils')>('@quake2ts/test-utils');
+    return {
+        MenuSystem: utils.MockMenuSystem
+    };
+});
 
 describe('ClientExports Message Parsing', () => {
     let client: ClientExports;
