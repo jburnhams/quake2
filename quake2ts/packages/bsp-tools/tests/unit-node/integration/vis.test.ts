@@ -6,7 +6,7 @@ import { processCsg } from '../../../src/compiler/csg.js';
 import { box } from '../../../src/builder/primitives.js';
 import { CONTENTS_SOLID } from '@quake2ts/shared';
 import { createCompileBrush } from '../compiler/helpers.js';
-import { initializePortalFlow, floodFillVisibility } from '../../../src/compiler/vis.js';
+import { initializePortalFlow, floodFillVisibility, decompressPvs } from '../../../src/compiler/vis.js';
 
 describe('Visibility Integration Flow', () => {
   it('correctly processes end-to-end portal connectivity with map brushes', () => {
@@ -70,5 +70,67 @@ describe('Visibility Integration Flow', () => {
         // there should be at least one topological connection.
         expect(hasConnections).toBe(true);
     }
+  });
+});
+
+import { BspCompiler } from '../../../src/compiler/BspCompiler.js';
+import { EntityDef } from '../../../src/builder/types.js';
+
+describe('BspCompiler Visibility Integration', () => {
+  it('computes tighter visibility with full vis mode than fast vis mode', async () => {
+    // Construct an L-shaped corridor using worldspawn brushes
+    // The corridor starts at x=0, goes to x=300 (Room A and B), then turns and goes to y=300 (Room C and D)
+    const entities: EntityDef[] = [
+      {
+        classname: 'worldspawn',
+        properties: { classname: 'worldspawn' },
+        brushes: [
+          // Floor (-100 to 400 in X and Y, z: -10 to 0)
+          box({ origin: { x: 150, y: 150, z: -5 }, size: { x: 500, y: 500, z: 10 } }),
+          // Ceiling
+          box({ origin: { x: 150, y: 150, z: 105 }, size: { x: 500, y: 500, z: 10 } }),
+          // Outer walls
+          box({ origin: { x: 150, y: -5, z: 50 }, size: { x: 500, y: 10, z: 100 } }), // Bottom wall
+          box({ origin: { x: -5, y: 150, z: 50 }, size: { x: 10, y: 500, z: 100 } }), // Left wall
+          box({ origin: { x: 405, y: 150, z: 50 }, size: { x: 10, y: 500, z: 100 } }), // Right wall
+          box({ origin: { x: 150, y: 405, z: 50 }, size: { x: 500, y: 10, z: 100 } }), // Top wall
+          // Inner corner to make it L-shaped (blocks view from bottom-left to top-right)
+          box({ origin: { x: 250, y: 250, z: 50 }, size: { x: 300, y: 300, z: 100 } }),
+        ]
+      }
+    ];
+
+    const inputBrushes = entities[0].brushes || [];
+    const compilerFast = new BspCompiler({ fastVis: true, noVis: false });
+    const resultFast = compilerFast.compile(inputBrushes, entities);
+
+    const compilerFull = new BspCompiler({ fastVis: false, noVis: false });
+    const resultFull = compilerFull.compile(inputBrushes, entities);
+
+    expect(resultFast.bsp.visibility).toBeDefined();
+    expect(resultFast.bsp.visibility!.numClusters).toBeGreaterThan(0);
+
+    expect(resultFull.bsp.visibility).toBeDefined();
+    expect(resultFull.bsp.visibility!.numClusters).toEqual(resultFast.bsp.visibility!.numClusters);
+
+    const numClusters = resultFast.bsp.visibility!.numClusters;
+
+    // Decompress and count total visible cluster pairs
+    let totalVisibleFast = 0;
+    let totalVisibleFull = 0;
+
+    for (let i = 0; i < numClusters; i++) {
+      const pvsFast = decompressPvs(resultFast.bsp.visibility!.clusters[i].pvs, 0, numClusters);
+      const pvsFull = decompressPvs(resultFull.bsp.visibility!.clusters[i].pvs, 0, numClusters);
+
+      for (let j = 0; j < numClusters; j++) {
+        if (pvsFast.get(j)) totalVisibleFast++;
+        if (pvsFull.get(j)) totalVisibleFull++;
+      }
+    }
+
+    // Full vis should trim the PVS using the anti-penumbra clipping,
+    // making the total number of visible pairs strictly smaller than flood-fill (fast vis).
+    expect(totalVisibleFull).toBeLessThanOrEqual(totalVisibleFast);
   });
 });
