@@ -26,6 +26,7 @@ export interface GameCreateOptions {
   rogue?: boolean;
   xatrix?: boolean;
   random?: RandomGenerator;
+  maxEntities?: number;
 }
 
 import { ServerCommand, EntityState } from '@quake2ts/shared';
@@ -233,7 +234,7 @@ export function createGame(
       serverCommand
   };
 
-  const entities = new EntitySystem(engine, systemImports, gravity, undefined, undefined, deathmatch, skill, rng, coop);
+  const entities = new EntitySystem(engine, systemImports, gravity, options.maxEntities, undefined, deathmatch, skill, rng, coop);
   (entities as any)._game = {
       // Lazy proxy or partial implementation of GameExports needed by EntitySystem consumers (like weapons)
       // This is circular, so we must be careful.
