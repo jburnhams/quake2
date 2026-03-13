@@ -1,6 +1,7 @@
-# Section 25-7: Portals & Visibility (IN PROGRESS)
+# Section 25-7: Portals & Visibility
+COMPLETED: Visibility generation using portals, flood-fill connectivity, PHS, full anti-penumbra PVS frustum culling, and run-length-encoded output lumps has been fully implemented, tested, and integrated into the BspCompiler.
 
-**Summary**: Visibility generation using portals, flood-fill connectivity, PHS, and run-length-encoded output lumps has been implemented and integrated into the BspCompiler. However, full PVS generation (`clipToAntiPenumbra`) is currently a basic stub that acts similarly to flood-fill. True raycast/frustum clipping is pending and required to produce optimal (tight) visibility.
+**Summary**: Visibility generation using portals, flood-fill connectivity, PHS, and run-length-encoded output lumps has been implemented and integrated into the BspCompiler. Full PVS generation (`clipToAntiPenumbra`) is fully implemented with proper true raycast/frustum clipping, tightening bounds dynamically to produce an optimal PVS.
 
 ## Overview
 
@@ -227,7 +228,7 @@ recursiveLeafFlow(portal, source, testWinding):
 
 ### 5.2 Anti-Penumbra Clipping
 
-- [ ] Implement anti-penumbra (separator plane) clipping (Currently just an MVP stub that returns target)
+- [x] Implement anti-penumbra (separator plane) clipping
 
 ```typescript
 /**
@@ -241,16 +242,16 @@ export function clipToAntiPenumbra(
 ): Winding | null;
 ```
 
-This is the most complex part of VIS - creates separator planes between source and pass portals to tighten the view frustum. Needs full implementation to provide actual optimization.
+This is the most complex part of VIS - creates separator planes between source and pass portals to tighten the view frustum.
 
 **Reference**: `q2tools/src/vis.c` lines 250-400 (`ClipToAntiPenumbra`)
 
 ### 5.3 Tests
 
-- [ ] Test: Adjacent rooms see each other
-- [ ] Test: Rooms behind solid don't see each other
-- [ ] Test: L-shaped corridor blocks line of sight
-- [ ] Test: Full PVS is subset of flood fill
+- [x] Test: Adjacent rooms see each other
+- [x] Test: Rooms behind solid don't see each other
+- [x] Test: L-shaped corridor blocks line of sight
+- [x] Test: Full PVS is subset of flood fill
 
 ---
 
@@ -357,8 +358,8 @@ Fast mode skips expensive anti-penumbra clipping, producing larger (less optimal
 ### 8.2 Tests
 
 - [x] Test: Fast VIS completes quickly
-- [ ] Test: Fast VIS is superset of full VIS
-- [ ] Test: Full VIS is tighter than fast VIS (Pending `clipToAntiPenumbra`)
+- [x] Test: Fast VIS is superset of full VIS
+- [x] Test: Full VIS is tighter than fast VIS
 
 ---
 
@@ -415,11 +416,13 @@ if (!options.noVis) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has valid visibility
-- [ ] Test: Engine renders correct faces (Pending realistic integration tests)
+- [x] Test: Engine renders correct faces (Realistic integration test using BspCompiler with visibility lump added)
 
 ---
 
-## 11. WASM Verification
+## 11. WASM Verification (Deferred to Separate Work Items)
+
+*See Section 25-9 for details on pending separate work items related to WASM.*
 
 ### 11.1 PVS Comparison
 
@@ -439,10 +442,10 @@ if (!options.noVis) {
 - [x] Portal generation produces correct portals
 - [x] Portal winding clipping correct
 - [x] Flood fill visits all reachable clusters
-- [ ] Full PVS computation correct
-- [ ] Anti-penumbra tightens visibility
+- [x] Full PVS computation correct
+- [x] Anti-penumbra tightens visibility
 - [x] PVS compression/decompression works
 - [x] PHS computed correctly
 - [x] Fast VIS produces valid (if loose) results
 - [x] Visibility lump correctly formatted
-- [ ] WASM comparison passes
+- [ ] WASM comparison passes (Deferred to Separate Work Items)
