@@ -1,7 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createClient, ClientExports, ClientImports } from '@quake2ts/client/index.js';
+import { createClient, ClientExports, ClientImports } from '../../src/index.js';
 import { EngineImports, Renderer } from '@quake2ts/engine';
-import { createMockRenderer, createMockAssetManager, createMockEngineHost, createMockLocalStorage, createPlayerStateFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import {
+  createMockRenderer,
+  createMockAssetManager,
+  createMockEngineHost,
+  createMockLocalStorage,
+  createPlayerStateFactory,
+  createPlayerClientFactory,
+  createMockEngineImports
+} from '@quake2ts/test-utils';
 
 describe('Client FOV and View', () => {
   let client: ClientExports;
@@ -35,12 +43,12 @@ describe('Client FOV and View', () => {
     // Setup initial fvar value override if needed, but createMockEngineHost handles registration logic
     // We can spy on register if we want to verify calls, but createMockEngineHost already uses vi.fn()
 
-    const mockEngine: EngineImports & { renderer: Renderer } = {
+    const mockEngine = createMockEngineImports({
       assets: mockAssets,
       renderer: mockRenderer,
       trace: mockTrace,
       pointcontents: vi.fn().mockReturnValue(0),
-    } as any;
+    });
 
     client = createClient({ engine: mockEngine, host: mockHost } as ClientImports);
     await client.Init();
