@@ -1,23 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
-import { createGameImportsAndEngine } from '@quake2ts/test-utils';
+import { createTestGame } from '@quake2ts/test-utils';
 import { EntitySystem, Solid } from '@quake2ts/game';
 
 describe('Entity System Unit Tests', () => {
   let entitySystem: EntitySystem;
-  let imports: ReturnType<typeof createGameImportsAndEngine>['imports'];
-  let engine: ReturnType<typeof createGameImportsAndEngine>['engine'];
+  let testEnv: ReturnType<typeof createTestGame>;
 
   beforeEach(() => {
-    const result = createGameImportsAndEngine();
-    imports = result.imports;
-    engine = result.engine;
-
-    entitySystem = new EntitySystem(
-      engine,
-      imports,
-      { x: 0, y: 0, z: -800 }, // Gravity
-      1024 // Max entities
-    );
+    testEnv = createTestGame();
+    entitySystem = testEnv.game.entities;
   });
 
   afterEach(() => {
@@ -58,10 +49,10 @@ describe('Entity System Unit Tests', () => {
 
     // Simulate collision/touch manually for integration
     if (ent2.touch) {
-      ent2.touch(ent2, ent1);
+      ent2.touch(ent2, ent1, null, null);
     }
 
-    expect(ent2.touch).toHaveBeenCalledWith(ent2, ent1);
+    expect(ent2.touch).toHaveBeenCalledWith(ent2, ent1, null, null);
   });
 
   it('should cleanup entities', () => {
