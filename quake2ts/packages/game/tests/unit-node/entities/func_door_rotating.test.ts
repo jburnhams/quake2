@@ -22,7 +22,7 @@ describe('func_door_rotating', () => {
     }));
     // We need to mock distance if it comes from map keys (it's not on entity usually)
     // But in our spawn function, we read it from entity property (which is mapped from keyvalues)
-    (entity as any).distance = 90;
+    (entity as Entity & { distance?: number }).distance = 90;
   });
 
   it('should initialize with default Z-axis rotation', () => {

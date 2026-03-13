@@ -60,7 +60,7 @@ describe('func_door_secret', () => {
             linkentity: vi.fn(),
             sound: vi.fn(),
             timeSeconds: 10,
-        } as any;
+        } as unknown as EntitySystem;
 
         context = {
             entities: entitySystem,

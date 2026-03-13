@@ -11,7 +11,7 @@ describe('target_crosslevel', () => {
     const { game } = createTestGame();
     sys = game.entities;
     // createTestGame sets up the registry on the entities system
-    registry = (sys as any).spawnRegistry;
+    registry = (sys as unknown as { spawnRegistry: SpawnRegistry }).spawnRegistry;
   });
 
   describe('target_crosslevel_trigger', () => {

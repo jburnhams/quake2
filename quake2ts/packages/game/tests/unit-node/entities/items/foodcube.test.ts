@@ -21,7 +21,7 @@ describe('Food Cube Item', () => {
             entities: context.entities as unknown as EntitySystem,
             hooks: {
                 onPickup: vi.fn(),
-            } as any
+            }
         });
     });
 
@@ -43,8 +43,8 @@ describe('Food Cube Item', () => {
             index: 2,
             health: 50,
             max_health: 100,
+            client: {}
         });
-        player.client = {} as any;
 
         if (entity.touch) {
             entity.touch(entity, player, null, null);
@@ -64,9 +64,9 @@ describe('Food Cube Item', () => {
         const player = createPlayerEntityFactory({
             index: 2,
             health: 100,
-            max_health: 100
+            max_health: 100,
+            client: {}
         });
-        player.client = {} as any;
 
         if (entity.touch) {
             entity.touch(entity, player, null, null);

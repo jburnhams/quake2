@@ -1,43 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createGame } from '../../../src/index.js';
+import { createTestGame } from '@quake2ts/test-utils';
 import type { GameExports } from '../../../src/index.js';
-import { MoveType, Solid } from '../../../src/entities/entity.js';
-import { registerSpawnFunction } from '../../../src/entities/spawn.js';
+import type { Entity } from '../../../src/entities/entity.js';
 
 describe('Entity System Edge Cases', () => {
   let game: GameExports;
-  const engineMock = {
-    trace: vi.fn(() => ({
-      fraction: 1,
-      allsolid: false,
-      startsolid: false,
-      endpos: { x: 0, y: 0, z: 0 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-      ent: null
-    })),
-    pointcontents: vi.fn(() => 0),
-    multicast: vi.fn(),
-    unicast: vi.fn(),
-    sound: vi.fn(),
-    linkentity: vi.fn(),
-    unlinkentity: vi.fn(),
-    modelIndex: vi.fn(() => 1),
-    configstring: vi.fn(),
-    centerprintf: vi.fn(),
-    error: vi.fn(),
-    print: vi.fn(),
-    // ... other mocks as needed
-  };
 
   const gameOptions = {
-    gravity: 800,
+    gravity: { x: 0, y: 0, z: -800 },
     maxEntities: 256, // Smaller limit for testing limit
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    game = createGame(engineMock as any, engineMock as any, gameOptions);
-    game.init(0);
+    const testGame = createTestGame({ config: gameOptions });
+    game = testGame.game;
   });
 
   it('handles missing spawn function gracefully', () => {
@@ -65,11 +42,11 @@ describe('Entity System Edge Cases', () => {
      // But Entity properties are typed.
 
      // If we assign a string to a number field via 'any' cast
-     (ent as any).health = "invalid";
+     (ent as unknown as { health: string }).health = "invalid";
 
      // Logic that consumes health might fail if it expects a number.
      // But the entity system itself shouldn't crash on spawn.
-     expect((ent as any).health).toBe("invalid");
+     expect((ent as unknown as { health: string }).health).toBe("invalid");
   });
 
   it('handles circular targets', () => {

@@ -17,14 +17,14 @@ describe('Ammo Pickup Entities', () => {
     });
 
     it('should create an ammo pickup entity', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells);
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells);
         expect(ammo.classname).toBe('ammo_shells');
         expect(ammo.solid).toBe(Solid.Trigger);
         expect(typeof ammo.touch).toBe('function');
     });
 
     it('should pickup ammo when touched by player', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells) as Entity;
 
         const inventory = createMockInventory();
         // Ensure starting shell count is 0 for clear assertion
@@ -33,7 +33,7 @@ describe('Ammo Pickup Entities', () => {
         const player = createPlayerEntityFactory({
             client: {
                 inventory
-            } as any
+            }
         }) as Entity;
 
         // Ensure touch is defined
@@ -49,7 +49,7 @@ describe('Ammo Pickup Entities', () => {
     });
 
     it('should not pickup if maxed out', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells) as Entity;
 
         const inventory = createMockInventory();
         // Set to max
@@ -59,7 +59,7 @@ describe('Ammo Pickup Entities', () => {
         const player = createPlayerEntityFactory({
             client: {
                 inventory
-            } as any
+            }
         }) as Entity;
 
         if (!ammo.touch) throw new Error('Touch callback undefined');

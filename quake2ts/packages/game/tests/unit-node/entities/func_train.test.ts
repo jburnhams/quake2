@@ -32,7 +32,7 @@ describe('func_train', () => {
     });
 
     // Mock pickTarget to return p1
-    (context.entities.pickTarget as any).mockReturnValue(p1);
+    vi.mocked(context.entities.pickTarget).mockReturnValue(p1);
 
     const spawn = registry.get('func_train');
     // @ts-ignore

@@ -20,7 +20,7 @@ describe('target_autosave', () => {
     });
 
     // Mock timeSeconds on the entities object
-    (context.entities as any).timeSeconds = 100;
+    (context.entities as unknown as { timeSeconds: number }).timeSeconds = 100;
 
     // Mock level state
     context.entities.level.next_auto_save = 0;

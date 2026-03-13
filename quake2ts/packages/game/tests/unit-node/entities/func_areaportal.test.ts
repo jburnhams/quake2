@@ -3,6 +3,7 @@ import { registerFuncSpawns } from '../../../src/entities/funcs.js';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('func_areaportal', () => {
   it('should register func_areaportal', () => {
@@ -20,14 +21,7 @@ describe('func_areaportal', () => {
       use: undefined,
     } as Entity;
 
-    const system = {
-        timeSeconds: 0,
-    } as unknown as EntitySystem;
-
-    const context = {
-        entities: system,
-        warn: vi.fn(),
-    } as any;
+    const context = createTestContext();
 
     const spawn = registry.get('func_areaportal');
     spawn?.(entity, context);

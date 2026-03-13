@@ -31,7 +31,7 @@ describe('Weapon Pickup Entities', () => {
             entities: {
                 scheduleThink: vi.fn(),
                 modelIndex: vi.fn().mockReturnValue(1),
-            } as any,
+            },
             hooks: {
                 onPickup: vi.fn(),
                 onMapLoad: vi.fn(),
@@ -39,7 +39,7 @@ describe('Weapon Pickup Entities', () => {
                 onPlayerSpawn: vi.fn(),
                 onPlayerDeath: vi.fn(),
                 register: vi.fn(),
-            } as any
+            }
         });
     });
 
@@ -59,7 +59,7 @@ describe('Weapon Pickup Entities', () => {
         const player = createPlayerEntityFactory({
             client: {
                 inventory: createMockInventory(),
-            } as any
+            }
         }) as Entity;
 
         entity.touch!(entity, player);

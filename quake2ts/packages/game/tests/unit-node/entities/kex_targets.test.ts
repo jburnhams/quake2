@@ -18,15 +18,16 @@ describe('New Target Entities', () => {
     };
     entities = new EntitySystem(mockEngine, undefined, undefined, 2048);
     // Mock cvar functions
-    (entities.imports as any).cvar = vi.fn().mockReturnValue({ value: 0 });
-    (entities.imports as any).cvar_set = vi.fn();
-    (entities.imports as any).configstring = vi.fn();
-    (entities.imports as any).serverCommand = vi.fn();
-    (entities.imports as any).positioned_sound = vi.fn();
-    (entities.imports as any).imageindex = vi.fn().mockReturnValue(1);
-    (entities.imports as any).soundindex = vi.fn().mockReturnValue(1);
-    (entities.imports as any).multicast = vi.fn();
-    (entities.imports as any).get_configstring = vi.fn().mockReturnValue("az"); // Default light ramp
+    const imports = entities.imports as Record<string, any>;
+    imports.cvar = vi.fn().mockReturnValue({ value: 0 });
+    imports.cvar_set = vi.fn();
+    imports.configstring = vi.fn();
+    imports.serverCommand = vi.fn();
+    imports.positioned_sound = vi.fn();
+    imports.imageindex = vi.fn().mockReturnValue(1);
+    imports.soundindex = vi.fn().mockReturnValue(1);
+    imports.multicast = vi.fn();
+    imports.get_configstring = vi.fn().mockReturnValue("az"); // Default light ramp
   });
 
   it('target_gravity should set sv_gravity cvar and level.gravity', () => {

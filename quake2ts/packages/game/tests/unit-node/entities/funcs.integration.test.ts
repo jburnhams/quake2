@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { DoorState, registerFuncSpawns } from '../../../src/entities/funcs.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Funcs Integration', () => {
   const registry = createDefaultSpawnRegistry(null);
@@ -10,9 +11,7 @@ describe('Funcs Integration', () => {
 
   it('should open a door when a button is used', () => {
     // Mock engine to handle sound
-    const mockEngine = {
-      sound: vi.fn(),
-    } as any;
+    const { engine: mockEngine } = createGameImportsAndEngine();
 
     const entities = new EntitySystem(mockEngine, null, null, 2048);
     // Note: We set angle to 90 to ensure the door moves in the Y direction.
