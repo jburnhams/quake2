@@ -3,50 +3,33 @@ import { BspCompiler } from '../../../src/compiler/BspCompiler.js';
 import { createBoxRoom } from '../../fixtures/maps/box.js';
 import { createCorridor } from '../../fixtures/maps/corridor.js';
 import { createMultiRoom } from '../../fixtures/maps/multiroom.js';
+import type { MapEntityDef } from '../../../src/parser/entityParser.js';
 
 describe('Compilation Performance', () => {
+  const compiler = new BspCompiler({ noVis: true, noLighting: true, verbose: false });
+
+  function compileMap(entities: any[]) {
+    // We assume the first entity is worldspawn and it contains the map brushes.
+    const worldspawn = entities.find(e => e.classname === 'worldspawn') || { brushes: [] };
+    const brushes = worldspawn.brushes || [];
+    compiler.compile(brushes, entities);
+  }
+
   bench('empty worldspawn', () => {
-    const map = {
-      mapVersion: 220,
-      worldspawn: { classname: 'worldspawn', properties: new Map(), brushes: [], line: 1 },
-      entities: [
-        { classname: 'worldspawn', properties: new Map(), brushes: [], line: 1 }
-      ]
-    };
-    const compiler = new BspCompiler({ noVis: true, noLighting: true, verbose: false });
-    compiler.compile(map);
+    compileMap([
+      { classname: 'worldspawn', properties: new Map(), brushes: [], line: 1 }
+    ]);
   });
 
   bench('single room (box)', () => {
-    const mapData = createBoxRoom();
-    const map = {
-      mapVersion: 220,
-      worldspawn: mapData[0] as any,
-      entities: mapData as any
-    };
-    const compiler = new BspCompiler({ noVis: true, noLighting: true, verbose: false });
-    compiler.compile(map);
+    compileMap(createBoxRoom());
   });
 
   bench('corridor map', () => {
-    const mapData = createCorridor();
-    const map = {
-      mapVersion: 220,
-      worldspawn: mapData[0] as any,
-      entities: mapData as any
-    };
-    const compiler = new BspCompiler({ noVis: true, noLighting: true, verbose: false });
-    compiler.compile(map);
+    compileMap(createCorridor());
   });
 
   bench('multiroom map', () => {
-    const mapData = createMultiRoom();
-    const map = {
-      mapVersion: 220,
-      worldspawn: mapData[0] as any,
-      entities: mapData as any
-    };
-    const compiler = new BspCompiler({ noVis: true, noLighting: true, verbose: false });
-    compiler.compile(map);
+    compileMap(createMultiRoom());
   });
 });
