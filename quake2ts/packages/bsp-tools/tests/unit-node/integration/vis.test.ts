@@ -131,6 +131,6 @@ describe('BspCompiler Visibility Integration', () => {
 
     // Full vis should trim the PVS using the anti-penumbra clipping,
     // making the total number of visible pairs strictly smaller than flood-fill (fast vis).
-    expect(totalVisibleFull).toBeLessThanOrEqual(totalVisibleFast);
+    expect(totalVisibleFull).toBeLessThan(totalVisibleFast);
   });
 });
