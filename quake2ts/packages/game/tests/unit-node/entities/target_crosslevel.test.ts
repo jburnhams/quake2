@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestGame } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createEntityFactory } from '@quake2ts/test-utils';
 import type { EntitySystem } from '../../../src/entities/system.js';
 import type { SpawnRegistry } from '../../../src/entities/spawn.js';
 
@@ -17,8 +17,9 @@ describe('target_crosslevel', () => {
   describe('target_crosslevel_trigger', () => {
     it('should set crossLevelFlags when used', () => {
       const spawnFn = registry.get('target_crosslevel_trigger')!;
-      const ent = sys.spawn();
-      ent.spawnflags = 5; // Bits 1 and 3 set (1 | 4)
+      const ent = spawnEntity(sys, createEntityFactory({
+        spawnflags: 5, // Bits 1 and 3 set (1 | 4)
+      }));
 
       const context = {
         entities: sys,
@@ -30,11 +31,8 @@ describe('target_crosslevel', () => {
 
       spawnFn(ent, context);
 
-      // Trigger it
       expect(sys.crossLevelFlags).toBe(0);
-      if (ent.use) {
-        ent.use(ent, null, null);
-      }
+      ent.use?.(ent, null, null);
 
       expect(sys.crossLevelFlags).toBe(5);
       expect(context.free).toHaveBeenCalledWith(ent);
@@ -43,14 +41,14 @@ describe('target_crosslevel', () => {
 
   describe('target_crosslevel_target', () => {
     it('should fire targets if flags match', () => {
-      // Pre-set flags
       sys.crossLevelFlags = 5; // 1 | 4
 
       const spawnFn = registry.get('target_crosslevel_target')!;
-      const ent = sys.spawn();
-      ent.classname = 'target_crosslevel_target';
-      ent.spawnflags = 4; // Only bit 3 required, which is present in 5
-      ent.target = 'my_target';
+      const ent = spawnEntity(sys, createEntityFactory({
+        classname: 'target_crosslevel_target',
+        spawnflags: 4, // Only bit 3 required, which is present in 5
+        target: 'my_target',
+      }));
 
       const context = {
         entities: sys,
@@ -62,32 +60,27 @@ describe('target_crosslevel', () => {
 
       spawnFn(ent, context);
 
-      // Verify think is scheduled
       expect(ent.think).toBeDefined();
       expect(ent.nextthink).toBeGreaterThan(sys.timeSeconds);
 
-      // Mock useTargets
       const useTargetsSpy = vi.spyOn(sys, 'useTargets');
 
-      // Fast forward time to trigger think
       sys.beginFrame(ent.nextthink + 0.1);
-      if (ent.think) {
-        ent.think(ent);
-      }
+      ent.think?.(ent, sys);
 
       expect(useTargetsSpy).toHaveBeenCalledWith(ent, ent);
       expect(context.free).toHaveBeenCalledWith(ent);
     });
 
     it('should NOT fire targets if flags do not match', () => {
-      // Pre-set flags
       sys.crossLevelFlags = 1; // Only bit 1
 
       const spawnFn = registry.get('target_crosslevel_target')!;
-      const ent = sys.spawn();
-      ent.classname = 'target_crosslevel_target';
-      ent.spawnflags = 4; // Requires bit 3
-      ent.target = 'my_target';
+      const ent = spawnEntity(sys, createEntityFactory({
+        classname: 'target_crosslevel_target',
+        spawnflags: 4, // Requires bit 3
+        target: 'my_target',
+      }));
 
       const context = {
         entities: sys,
@@ -101,10 +94,7 @@ describe('target_crosslevel', () => {
 
       const useTargetsSpy = vi.spyOn(sys, 'useTargets');
 
-      // Execute think
-      if (ent.think) {
-        ent.think(ent);
-      }
+      ent.think?.(ent, sys);
 
       expect(useTargetsSpy).not.toHaveBeenCalled();
       expect(context.free).not.toHaveBeenCalled();

@@ -440,3 +440,49 @@ describe('PVS Compression', () => {
     }
   });
 });
+
+describe('Fast vs Full Visibility', () => {
+  it('Full VIS is tighter than fast VIS for L-shaped corridors', () => {
+    const leafA: TreeLeaf = { contents: 0, cluster: 0, brushes: [], bounds: createEmptyBounds3() };
+    const leafB: TreeLeaf = { contents: 0, cluster: 1, brushes: [], bounds: createEmptyBounds3() };
+    const leafC: TreeLeaf = { contents: 0, cluster: 2, brushes: [], bounds: createEmptyBounds3() };
+    const leafD: TreeLeaf = { contents: 0, cluster: 3, brushes: [], bounds: createEmptyBounds3() };
+
+    const portalAB: any = {
+        nodes: [leafA, leafB],
+        winding: { numPoints: 4, points: [{x:0, y:-5, z:0}, {x:0, y:5, z:0}, {x:0, y:5, z:10}, {x:0, y:-5, z:10}] }
+    };
+    const portalBC: any = {
+        nodes: [leafB, leafC],
+        winding: { numPoints: 4, points: [{x:20, y:-5, z:0}, {x:20, y:5, z:0}, {x:20, y:5, z:10}, {x:20, y:-5, z:10}] }
+    };
+    const portalCD: any = {
+        nodes: [leafC, leafD],
+        winding: { numPoints: 4, points: [{x:30, y:20, z:0}, {x:40, y:20, z:0}, {x:40, y:20, z:10}, {x:30, y:20, z:10}] }
+    };
+
+    const portals: Portal[] = [portalAB, portalBC, portalCD];
+
+    // Fast visibility
+    const fastVis = computeVisibility(portals, 4, { fast: true });
+
+    // Full visibility
+    const fullVis = computeVisibility(portals, 4, { fast: false });
+
+    // Compare cluster 0 (leaf A)
+    const fastPvsA = decompressPvs(fastVis.clusters[0].pvs, 0, 4);
+    const fullPvsA = decompressPvs(fullVis.clusters[0].pvs, 0, 4);
+
+    // Fast visibility should see all clusters (flood fill)
+    expect(fastPvsA.get(0)).toBe(true);
+    expect(fastPvsA.get(1)).toBe(true);
+    expect(fastPvsA.get(2)).toBe(true);
+    expect(fastPvsA.get(3)).toBe(true);
+
+    // Full visibility should occlude cluster D due to the L-turn
+    expect(fullPvsA.get(0)).toBe(true);
+    expect(fullPvsA.get(1)).toBe(true);
+    expect(fullPvsA.get(2)).toBe(true);
+    expect(fullPvsA.get(3)).toBe(false); // D is occluded
+  });
+});

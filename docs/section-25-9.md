@@ -300,7 +300,7 @@ Some differences with WASM are acceptable:
 - [ ] WASM comparison infrastructure
 - [x] Test fixture generation
 - [ ] Reference .map files created
-- [ ] Performance benchmarks
+- [x] Performance benchmarks
 - [ ] CI pipeline configured
 - [ ] Coverage targets met (>80%)
 
