@@ -2,7 +2,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { MoveType, Solid } from '../../../src/entities/entity.js';
 import { runStep } from '../../../src/physics/movement.js';
-import { createTestContext, createMonsterEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, spawnEntity, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Monster Fall Damage', () => {
   it('should apply damage when a monster falls', () => {
@@ -35,22 +35,22 @@ describe('Monster Fall Damage', () => {
     sys.trace = (start, mins, maxs, end, passEntity, contentMask) => {
         if (start.z > 0 && end.z < 0) {
             const fraction = (start.z - 0) / (start.z - end.z);
-            return {
+            return createTraceMock({
                 allsolid: false,
                 startsolid: false,
                 fraction: fraction,
                 endpos: { x: start.x, y: start.y, z: 0 },
-                plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
-                ent: { linkcount: 1, solid: Solid.Bsp } as any
-            };
+                plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
+                ent: { linkcount: 1, solid: Solid.Bsp }
+            });
         }
-        return {
+        return createTraceMock({
             allsolid: false,
             startsolid: false,
             fraction: 1.0,
             endpos: end,
             ent: null
-        };
+        });
     };
 
     const imports = {
@@ -65,7 +65,7 @@ describe('Monster Fall Damage', () => {
     const frametime = 0.1;
 
     // Run physics step
-    runStep(monster, sys, imports as any, gravity, frametime);
+    runStep(monster, sys, imports, gravity, frametime);
 
     // Expect velocity.z to be 0 (stopped on ground)
     expect(monster.velocity.z).toBe(0);

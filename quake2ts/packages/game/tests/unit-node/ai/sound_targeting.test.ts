@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity } from '../../../src/entities/entity.js';
 import { findTarget } from '../../../src/ai/targeting.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createMonsterInfoFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('Sound-based Targeting', () => {
   let monster: Entity;
@@ -17,20 +17,20 @@ describe('Sound-based Targeting', () => {
     mockContext = context.entities;
 
     player = spawnEntity(mockContext, createPlayerEntityFactory({
-      origin: { x: 100, y: 0, z: 0 },
-      client: {
-        sound_entity: null,
-        sound_entity_time: 0,
-      } as any
+      origin: { x: 100, y: 0, z: 0 }
     }));
+    if (player.client) {
+        player.client.sound_entity = null;
+        player.client.sound_entity_time = 0;
+    }
 
     monster = spawnEntity(mockContext, createMonsterEntityFactory('monster_soldier', {
       origin: { x: 0, y: 0, z: 0 },
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         aiflags: 0,
         sight: vi.fn(),
         last_sighting: { x: 0, y: 0, z: 0 },
-      } as any,
+      }),
       areanum: 1,
     }));
 
@@ -55,10 +55,10 @@ describe('Sound-based Targeting', () => {
     };
 
     // Default visibility check: blocked
-    mockContext.trace.mockReturnValue({
+    mockContext.trace.mockReturnValue(createTraceMock({
       fraction: 0.0,
       ent: null,
-    });
+    }));
 
     // Need to set areasConnected implementation or mock on context imports?
     // findTarget uses context.imports.areasConnected if available or just internal checks.

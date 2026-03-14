@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, EntityFlags } from '../../../src/entities/entity.js';
 import { ai_walk } from '../../../src/ai/movement.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterInfoFactory } from '@quake2ts/test-utils';
 
 describe('AI Patrol (path_corner)', () => {
   let system: EntitySystem;
@@ -16,9 +16,9 @@ describe('AI Patrol (path_corner)', () => {
 
     // Patch targetAwareness with necessary mocks (if not fully covered by test-utils)
     if (system.targetAwareness) {
-        (system.targetAwareness as any).activePlayers = [];
-        (system.targetAwareness as any).monsterAlertedByPlayers = vi.fn().mockReturnValue(null);
-        (system.targetAwareness as any).soundClient = vi.fn().mockReturnValue(null);
+        system.targetAwareness.activePlayers = [];
+        vi.spyOn(system.targetAwareness, 'monsterAlertedByPlayers').mockReturnValue(null);
+        vi.spyOn(system.targetAwareness, 'soundClient').mockReturnValue(null as any);
     }
 
     // Mock pickTarget to return entities by name
@@ -33,12 +33,12 @@ describe('AI Patrol (path_corner)', () => {
     monster.flags |= EntityFlags.Fly;
     monster.origin = { x: 0, y: 0, z: 0 };
     monster.angles = { x: 0, y: 0, z: 0 };
-    monster.monsterinfo = {
+    monster.monsterinfo = createMonsterInfoFactory({
         stand: vi.fn(),
         run: vi.fn(),
         sight: vi.fn(),
         aiflags: 0
-    } as any;
+    });
     monster.ideal_yaw = 0;
     monster.yaw_speed = 200;
 

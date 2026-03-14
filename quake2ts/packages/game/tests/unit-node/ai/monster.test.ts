@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createDefaultSpawnRegistry } from '../../../src/entities/spawn.js';
-import { createTestContext, createMonsterEntityFactory, spawnEntity, createMonsterMoveFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, spawnEntity, createMonsterMoveFactory, createMonsterInfoFactory } from '@quake2ts/test-utils';
 import { monster_think } from '../../../src/ai/monster.js';
 import { RenderFx } from '@quake2ts/shared';
 import { Entity } from '../../../src/entities/entity.js';
@@ -92,7 +92,7 @@ describe('monster_think (Freeze Logic)', () => {
     // targetAwareness mocks are now provided by createTestContext
 
     const monsterData = createMonsterEntityFactory('monster_soldier', {
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         current_move: createMonsterMoveFactory({
           firstframe: 0,
           lastframe: 10,
@@ -112,7 +112,7 @@ describe('monster_think (Freeze Logic)', () => {
         idle: null,
         checkattack: null,
         search: null,
-        pause_time: 0,
+        pausetime: 0,
         attack_finished: 0,
         saved_goal: null,
         last_sighting: { x: 0, y: 0, z: 0 },
@@ -120,7 +120,7 @@ describe('monster_think (Freeze Logic)', () => {
         viewheight: 0,
         allow_spawn: null,
         freeze_time: 0
-      } as any,
+      }),
       frame: 0,
       renderfx: 0,
       inUse: true

@@ -3,7 +3,7 @@ import { ai_run, monster_done_dodge } from '../../../src/ai/movement.js';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { AIFlags, AttackState } from '../../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 import * as targeting from '../../../src/ai/targeting.js';
 import * as perception from '../../../src/ai/perception.js';
 
@@ -37,13 +37,10 @@ describe('AI Dodge', () => {
     self.flags |= EntityFlags.Fly; // Allow movement without ground check for simplicity
 
     // Manual monsterinfo setup or use merge if factory supports deeply
-    self.monsterinfo = {
-      ...self.monsterinfo,
-      current_move: null,
-      aiflags: 0,
-      attack_state: AttackState.Straight,
-      lefty: 0
-    } as any;
+    self.monsterinfo.current_move = null;
+    self.monsterinfo.aiflags = 0;
+    self.monsterinfo.attack_state = AttackState.Straight;
+    self.monsterinfo.lefty = 0;
 
     // Setup enemy
     const playerData = createPlayerEntityFactory({
@@ -61,13 +58,13 @@ describe('AI Dodge', () => {
     vi.spyOn(perception, 'visible').mockReturnValue(true);
 
     // Ensure trace returns success for movement
-    (context.trace as any).mockImplementation(() => ({
+    vi.mocked(context.trace).mockImplementation(() => createTraceMock({
         fraction: 1.0,
         ent: null,
         allsolid: false,
         startsolid: false,
         endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
     }));
   });
 
@@ -83,13 +80,13 @@ describe('AI Dodge', () => {
 
        const oldY = self.origin.y;
        // Mock trace to update endpos based on delta
-        (context.trace as any).mockImplementation((start: any, mins: any, maxs: any, end: any) => ({
+        vi.mocked(context.trace).mockImplementation((start: any, mins: any, maxs: any, end: any) => createTraceMock({
             fraction: 1.0,
             ent: null,
             allsolid: false,
             startsolid: false,
             endpos: { ...end },
-            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         }));
 
        ai_run(self, 10, context);
@@ -102,13 +99,13 @@ describe('AI Dodge', () => {
        self.ideal_yaw = 0;
        self.monsterinfo.attack_state = AttackState.Sliding;
 
-        (context.trace as any).mockImplementation((start: any, mins: any, maxs: any, end: any) => ({
+        vi.mocked(context.trace).mockImplementation((start: any, mins: any, maxs: any, end: any) => createTraceMock({
             fraction: 1.0,
             ent: null,
             allsolid: false,
             startsolid: false,
             endpos: { ...end },
-            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         }));
 
        const oldY = self.origin.y;
@@ -120,13 +117,13 @@ describe('AI Dodge', () => {
 
     it('should stop dodging if move blocked', () => {
         // Mock trace to fail
-        (context.trace as any).mockImplementation(() => ({
+        vi.mocked(context.trace).mockImplementation(() => createTraceMock({
             fraction: 0.0,
             ent: null,
             allsolid: false,
             startsolid: false,
             endpos: { x: 0, y: 0, z: 0 },
-            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
         }));
 
         self.monsterinfo.attack_state = AttackState.Sliding;

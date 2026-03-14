@@ -8,7 +8,7 @@ import {
   monster_jump_finished,
   BlockedJumpResult
 } from '../../../src/ai/rogue.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createEntityFactory, createMonsterInfoFactory } from '@quake2ts/test-utils';
 import { Entity, EntityFlags, ServerFlags, Solid } from '../../../src/entities/entity.js';
 import { Vec3, ZERO_VEC3, copyVec3 } from '@quake2ts/shared';
 
@@ -26,10 +26,10 @@ describe('Rogue AI Extensions', () => {
     // Use factories
     const monsterData = createMonsterEntityFactory('monster_rogue', {
       origin: { x: 0, y: 0, z: 0 },
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         jump_height: 64,
         drop_height: 128
-      } as any,
+      }),
       inUse: true
     });
     self = system.spawn();

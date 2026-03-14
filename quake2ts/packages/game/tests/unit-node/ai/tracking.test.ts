@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { Entity, ServerFlags } from '../../../src/entities/entity.js';
 import { huntTarget, TargetAwarenessState } from '../../../src/ai/targeting.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createMonsterInfoFactory } from '@quake2ts/test-utils';
 
 describe('AI Tracking (Lost Sight)', () => {
   let system: EntitySystem;
@@ -34,21 +34,24 @@ describe('AI Tracking (Lost Sight)', () => {
         Object.assign(system.targetAwareness, awareness);
     } else {
         // Since we are mocking, we can just attach it.
-        (system as any).targetAwareness = awareness;
+        Object.defineProperty(system, 'targetAwareness', {
+            value: awareness,
+            writable: true
+        });
     }
 
     monster = spawnEntity(system, createMonsterEntityFactory('monster_test', {
         origin: { x: 0, y: 0, z: 0 },
         angles: { x: 0, y: 0, z: 0 },
         ideal_yaw: 0,
-        monsterinfo: {
+        monsterinfo: createMonsterInfoFactory({
             stand: vi.fn(),
             run: vi.fn(),
             sight: vi.fn(),
             aiflags: 0,
             last_sighting: { x: 100, y: 0, z: 0 }, // Last seen location
             search_time: 0
-        } as any
+        })
     }));
 
     player = spawnEntity(system, createPlayerEntityFactory({
