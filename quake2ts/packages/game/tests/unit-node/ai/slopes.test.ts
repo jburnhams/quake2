@@ -20,13 +20,13 @@ describe('Sloping Surface Traversal', () => {
       maxs: { x: 16, y: 16, z: 32 },
       gravityVector: { x: 0, y: 0, z: -1 }, // Default gravity
       svflags: 0,
-      spawnflags: { has: () => false } as any,
       movetype: MoveType.Step,
       flags: 0,
       groundentity: { index: 1 } as Entity, // Simulate grounded
       waterlevel: 0,
     });
     entity = spawnEntity(mockContext, monsterData);
+    entity.spawnflags = { has: () => false } as any;
   });
 
   it('should adjust move for slopes when blocked', () => {

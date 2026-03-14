@@ -3,7 +3,7 @@ import { ai_stand, ai_walk, ai_run, ai_charge } from '../../../src/ai/movement.j
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createMonsterEntityFactory, createPlayerEntityFactory, createMonsterInfoFactory, createTraceMock } from '@quake2ts/test-utils';
 import * as targeting from '../../../src/ai/targeting.js';
 import * as perception from '../../../src/ai/perception.js';
 
@@ -32,12 +32,12 @@ describe('AI Movement', () => {
         flags: EntityFlags.Fly, // Allow movement without ground check for simplicity
         ideal_yaw: 0,
         yaw_speed: 200, // Fast enough to turn in one frame
-        monsterinfo: {
+        monsterinfo: createMonsterInfoFactory({
           stand: vi.fn(),
           run: vi.fn(),
           sight: vi.fn(),
           aiflags: 0
-        } as any
+        })
     }));
 
     // Setup enemy
@@ -54,13 +54,13 @@ describe('AI Movement', () => {
     vi.spyOn(perception, 'visible').mockReturnValue(true);
 
     // Ensure trace returns success for movement
-    (sys.trace as any).mockImplementation(() => ({
+    vi.mocked(sys.trace).mockImplementation(() => createTraceMock({
         fraction: 1.0,
         ent: null,
         allsolid: false,
         startsolid: false,
         endpos: { x: 0, y: 0, z: 0 },
-        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 },
     }));
   });
 

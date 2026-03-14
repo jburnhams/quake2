@@ -5,7 +5,7 @@ import {
 } from '../../../src/index.js';
 import { MoveType } from '../../../src/entities/entity.js';
 import { CONTENTS_SOLID, CONTENTS_WATER, CONTENTS_SLIME, CONTENTS_LAVA, TraceResult } from '@quake2ts/shared';
-import { createTestContext, createEntityFactory } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
 
 // Constants expected to be exported or defined
 export const BOTTOM_EMPTY = 0;
@@ -20,14 +20,14 @@ describe('M_CheckBottom', () => {
   beforeEach(() => {
     context = createTestContext();
     // Reset mocks for each test
-    context.entities.trace = vi.fn().mockReturnValue({
+    context.entities.trace = vi.fn().mockReturnValue(createTraceMock({
       fraction: 1.0,
       allsolid: false,
       startsolid: false,
       ent: null,
       endpos: { x: 0, y: 0, z: 0 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult);
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    }));
     context.entities.pointcontents = vi.fn().mockReturnValue(0);
   });
 
@@ -46,7 +46,7 @@ describe('M_CheckBottom', () => {
   it('returns true if all 4 corners are in solid (Fast Check)', () => {
     const ent = createEntity();
     // pointcontents returns CONTENTS_SOLID for all calls
-    (context.entities.pointcontents as any).mockReturnValue(CONTENTS_SOLID);
+    vi.mocked(context.entities.pointcontents).mockReturnValue(CONTENTS_SOLID);
 
     expect(M_CheckBottom(ent, context.entities)).toBe(true);
 
@@ -57,15 +57,15 @@ describe('M_CheckBottom', () => {
   it('falls back to Slow Check if any corner is not solid', () => {
     const ent = createEntity();
     // First corner empty, forcing slow check
-    (context.entities.pointcontents as any).mockReturnValueOnce(0);
+    vi.mocked(context.entities.pointcontents).mockReturnValueOnce(0);
 
     // Slow check trace: hits ground immediately (fraction 0, or close)
-    (context.entities.trace as any).mockReturnValue({
+    vi.mocked(context.entities.trace).mockReturnValue(createTraceMock({
       fraction: 0.1,
       endpos: { x: 0, y: 0, z: ent.origin.z + ent.mins.z }, // landed on ground
       ent: {}, // hit something
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult);
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    }));
 
     // The slow check does a center trace first, then 4 quadrant traces.
     // If center trace hits, and quadrants hit within stepsize, it returns true.
@@ -75,36 +75,36 @@ describe('M_CheckBottom', () => {
 
   it('returns false if center trace hits nothing (floating in air)', () => {
     const ent = createEntity();
-    (context.entities.pointcontents as any).mockReturnValue(0); // Fail fast check
+    vi.mocked(context.entities.pointcontents).mockReturnValue(0); // Fail fast check
 
     // Center trace returns fraction 1.0 (empty)
-    (context.entities.trace as any).mockReturnValue({
+    vi.mocked(context.entities.trace).mockReturnValue(createTraceMock({
       fraction: 1.0,
       endpos: { x: 0, y: 0, z: -100 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult);
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    }));
 
     expect(M_CheckBottom(ent, context.entities)).toBe(false);
   });
 
   it('returns false if a corner drops too far (hanging off ledge)', () => {
     const ent = createEntity();
-    (context.entities.pointcontents as any).mockReturnValue(0); // Fail fast check
+    vi.mocked(context.entities.pointcontents).mockReturnValue(0); // Fail fast check
 
     // Center trace hits ground at z = -24 (base of entity)
-    const hitGround = {
+    const hitGround = createTraceMock({
       fraction: 0.1,
       endpos: { x: 0, y: 0, z: -24 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult;
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    });
 
-    const hitCliff = {
+    const hitCliff = createTraceMock({
       fraction: 1.0,
       endpos: { x: 0, y: 0, z: -100 }, // cliff
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult;
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    });
 
-    const traceMock = context.entities.trace as any;
+    const traceMock = vi.mocked(context.entities.trace);
 
     traceMock
       .mockReturnValueOnce(hitGround)
@@ -139,31 +139,31 @@ describe('M_CheckBottomEx', () => {
 
   it('returns BOTTOM_SOLID when on solid ground', () => {
     const ent = createEntity();
-    (context.entities.pointcontents as any).mockReturnValue(CONTENTS_SOLID); // Fast check pass
+    vi.mocked(context.entities.pointcontents).mockReturnValue(CONTENTS_SOLID); // Fast check pass
     expect(M_CheckBottomEx(ent, context.entities)).toBe(BOTTOM_SOLID);
   });
 
   it('returns BOTTOM_EMPTY when in air', () => {
     const ent = createEntity();
-    (context.entities.pointcontents as any).mockReturnValue(0);
-    (context.entities.trace as any).mockReturnValue({ fraction: 1.0, plane: { normal: {x:0, y:0, z:1}, dist:0 } } as TraceResult);
+    vi.mocked(context.entities.pointcontents).mockReturnValue(0);
+    vi.mocked(context.entities.trace).mockReturnValue(createTraceMock({ fraction: 1.0, plane: { normal: {x:0, y:0, z:1}, dist:0, type: 0, signbits: 0 } }));
 
     expect(M_CheckBottomEx(ent, context.entities)).toBe(BOTTOM_EMPTY);
   });
 
   it('returns BOTTOM_WATER when standing in water', () => {
     const ent = createEntity();
-    (context.entities.pointcontents as any).mockReturnValue(0); // Not solid
+    vi.mocked(context.entities.pointcontents).mockReturnValue(0); // Not solid
 
     // Trace hits something
-    (context.entities.trace as any).mockReturnValue({
+    vi.mocked(context.entities.trace).mockReturnValue(createTraceMock({
       fraction: 0.1,
       endpos: { x: 0, y: 0, z: -24 },
-      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 }
-    } as TraceResult);
+      plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0, signbits: 0 }
+    }));
 
     // pointcontents at hit point is water
-    (context.entities.pointcontents as any).mockImplementation((pos: any) => {
+    vi.mocked(context.entities.pointcontents).mockImplementation((pos: any) => {
        if (pos.z <= -24) return CONTENTS_WATER;
        return 0;
     });

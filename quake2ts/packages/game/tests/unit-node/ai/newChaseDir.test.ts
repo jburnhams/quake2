@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SV_NewChaseDir } from '../../../src/ai/movement.js';
 import type { Entity } from '../../../src/entities/entity.js';
 import { MoveType } from '../../../src/entities/entity.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createEntity, createMonsterInfoFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('SV_NewChaseDir', () => {
   let entity: Entity;
@@ -25,9 +25,9 @@ describe('SV_NewChaseDir', () => {
       flags: 0,
       groundentity: createEntity({ index: 1 }),
       waterlevel: 0,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
           aiflags: 0
-      } as any,
+      }),
       ideal_yaw: 0,
       angles: { x: 0, y: 0, z: 0 },
       enemy: null
@@ -62,9 +62,9 @@ describe('SV_NewChaseDir', () => {
     // Mock trace success
     traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
          // If checking bottom (downwards trace)
-        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
+        if (end.z < start.z - 10) return createTraceMock({ fraction: 0.5, endpos: end, allsolid: false, startsolid: false });
         // If moving (horizontal)
-        return { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
+        return createTraceMock({ fraction: 1.0, endpos: end, allsolid: false, startsolid: false });
     });
     pointContentsMock.mockReturnValue(0);
 
@@ -80,7 +80,7 @@ describe('SV_NewChaseDir', () => {
 
      // Mock trace failure for straight move
     traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
-        const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
+        const result = createTraceMock({ fraction: 1.0, endpos: end, allsolid: false, startsolid: false });
         // Checking bottom always succeeds
         if (end.z < start.z - 10) {
             result.fraction = 0.5;

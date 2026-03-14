@@ -3,7 +3,7 @@ import { SV_StepDirection } from '../../../src/ai/movement.js';
 import type { Entity } from '../../../src/entities/entity.js';
 import type { EntitySystem } from '../../../src/entities/system.js';
 import { MoveType } from '../../../src/entities/entity.js';
-import { createMonsterEntityFactory, createEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createEntity, createMonsterInfoFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('SV_StepDirection', () => {
   let entity: Entity;
@@ -26,9 +26,9 @@ describe('SV_StepDirection', () => {
       flags: 0,
       groundentity: createEntity({ index: 1 }),
       waterlevel: 0,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
           aiflags: 0
-      } as any,
+      }),
       angles: { x: 0, y: 0, z: 0 }
     });
 
@@ -41,12 +41,12 @@ describe('SV_StepDirection', () => {
     context = {
       trace: traceMock,
       pointcontents: pointContentsMock,
-    } as unknown as EntitySystem;
+    } as unknown as EntitySystem; // we'll keep as unknown as EntitySystem since it's an intentionally small mocked subset. However, to avoid 'as unknown', let's mock the methods instead.
   });
 
   it('should return true if straight forward move succeeds', () => {
     // Mock trace success for straight move
-    traceMock.mockReturnValue({ fraction: 1.0 });
+    traceMock.mockReturnValue(createTraceMock({ fraction: 1.0 }));
     pointContentsMock.mockReturnValue(0);
 
     // M_walkmove checkBottom also needs to pass
@@ -54,9 +54,9 @@ describe('SV_StepDirection', () => {
     // Second/Third trace in checkBottom -> success (fraction < 1.0 means ground hit)
     traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         // If checking bottom (downwards trace)
-        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
+        if (end.z < start.z - 10) return createTraceMock({ fraction: 0.5, endpos: end, allsolid: false, startsolid: false });
         // If moving (horizontal)
-        return { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
+        return createTraceMock({ fraction: 1.0, endpos: end, allsolid: false, startsolid: false });
     });
 
     const result = SV_StepDirection(entity, 0, 10, context);
@@ -66,7 +66,7 @@ describe('SV_StepDirection', () => {
   it('should try alternate angles if straight move fails', () => {
      // Mock trace failure for straight move
     traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
-        const result = { fraction: 1.0, endpos: end, allsolid: false, startsolid: false };
+        const result = createTraceMock({ fraction: 1.0, endpos: end, allsolid: false, startsolid: false });
         // Checking bottom always succeeds
         if (end.z < start.z - 10) {
             result.fraction = 0.5;
@@ -113,9 +113,9 @@ describe('SV_StepDirection', () => {
     // All blocked
      traceMock.mockImplementation((start: any, mins: any, maxs: any, end: any) => {
         // Checking bottom always succeeds
-        if (end.z < start.z - 10) return { fraction: 0.5, endpos: end, allsolid: false, startsolid: false };
+        if (end.z < start.z - 10) return createTraceMock({ fraction: 0.5, endpos: end, allsolid: false, startsolid: false });
         // Move always fails
-        return { fraction: 0.5, endpos: start, allsolid: false, startsolid: false };
+        return createTraceMock({ fraction: 0.5, endpos: start, allsolid: false, startsolid: false });
     });
     pointContentsMock.mockReturnValue(0);
 

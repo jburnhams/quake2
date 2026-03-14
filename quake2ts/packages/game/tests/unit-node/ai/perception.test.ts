@@ -9,7 +9,7 @@ import {
 } from '../../../src/index.js';
 import { FL_NOVISIBLE, RANGE_MELEE, RANGE_NEAR, RANGE_MID, SPAWNFLAG_MONSTER_AMBUSH, TraceMask } from '../../../src/ai/constants.js';
 import type { TraceFunction } from '../../../src/ai/perception.js';
-import { createEntityFactory, createPlayerEntityFactory, createEntity } from '@quake2ts/test-utils';
+import { createEntityFactory, createPlayerEntityFactory, createEntity, createTraceMock } from '@quake2ts/test-utils';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 
 // Helper to create a full Entity instance from factory data using test-utils
@@ -22,10 +22,9 @@ function createTestEntity(id: number = 1, overrides: Partial<Entity> = {}): Enti
 
     const ent = createEntity({
         ...data,
-        ...overrides // Apply overrides again to ensure they persist if needed, though createEntityFactory already does this mostly
+        ...overrides,
+        index: id
     });
-    // Manually set ID if needed, though default is 1
-    (ent as any).index = id;
 
     return ent;
 }
@@ -34,8 +33,7 @@ function createPlayerTestEntity(id: number = 1, overrides: Partial<Entity> = {})
   const data = createPlayerEntityFactory(overrides);
   if (!data.origin) data.origin = { ...ZERO_VEC3 };
 
-  const ent = createEntity({ ...data, ...overrides });
-  (ent as any).index = id;
+  const ent = createEntity({ ...data, ...overrides, index: id });
   return ent;
 }
 
@@ -119,7 +117,7 @@ describe('visible', () => {
         // We do a loose check or exact check depending on needs
         if (mask !== undefined) expect(mask).toBe(result.expectedMask);
       }
-      return { ...result, entity: result.ent, startsolid: false, allsolid: false, endpos: end, plane: { normal: { x:0, y:0, z:1}, dist:0 } as any };
+      return createTraceMock({ ...result, entity: result.ent, startsolid: false, allsolid: false, endpos: end, plane: { normal: { x:0, y:0, z:1}, dist:0, type: 0, signbits: 0 } });
     };
   }
 
@@ -140,7 +138,7 @@ describe('visible', () => {
     const tracer: TraceFunction = (start, mins, maxs, end) => {
       capturedStart = start;
       capturedEnd = end;
-      return { fraction: 1, ent: null, entity: null, startsolid: false, allsolid: false, endpos: end, plane: { normal: { x:0, y:0, z:1}, dist:0 } as any };
+      return createTraceMock({ fraction: 1, ent: null, entity: null, startsolid: false, allsolid: false, endpos: end, plane: { normal: { x:0, y:0, z:1}, dist:0, type: 0, signbits: 0 } });
     };
 
     expect(visible(self, other, tracer)).toBe(true);
@@ -171,12 +169,12 @@ describe('visible', () => {
               buttons: 0,
               fov: 90,
               gun_frame: 0,
-              pers: {} as any,
+              pers: {},
               pm_flags: 0,
               pm_time: 0,
               pm_type: 0,
               rdflags: 0,
-              weaponStates: {} as any,
+              weaponStates: {},
               stats: [],
               kick_angles: { x: 0, y: 0, z: 0 },
               kick_origin: { x: 0, y: 0, z: 0 },
@@ -184,10 +182,10 @@ describe('visible', () => {
               gunangles: { x: 0, y: 0, z: 0 },
               gunindex: 0,
               blend: [0, 0, 0, 0],
-              ps: {} as any,
+              ps: {},
               invisible_time: 0,
               invisibility_fade_time: 0
-          } as any // Partially mock client for specific test needs if factory defaults aren't enough, but factory should handle structure
+          }
       });
 
       // The factory provides the structure, we just need to override values relevant to the test
@@ -196,7 +194,7 @@ describe('visible', () => {
           other.client.invisibility_fade_time = 0;
       }
 
-      const tracer: TraceFunction = (s, m1, m2, e) => ({ fraction: 1, ent: null, entity: null, startsolid: false, allsolid: false, endpos: e, plane: { normal: { x:0, y:0, z:1}, dist:0 } as any });
+      const tracer: TraceFunction = (s, m1, m2, e) => createTraceMock({ fraction: 1, ent: null, entity: null, startsolid: false, allsolid: false, endpos: e, plane: { normal: { x:0, y:0, z:1}, dist:0, type: 0, signbits: 0 } });
 
       // No invisibility
       expect(visible(self, other, tracer, { timeSeconds: 10 })).toBe(true);

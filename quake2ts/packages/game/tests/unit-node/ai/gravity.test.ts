@@ -12,21 +12,23 @@ describe('Gravity Vector Support', () => {
     testContext = createTestContext();
     const system = testContext.entities;
 
-    entity = {
+    entity = system.spawn();
+    Object.assign(entity, {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       gravityVector: { x: 0, y: 0, z: -1 }, // Default gravity
       svflags: 0,
-      spawnflags: { has: () => false },
       movetype: MoveType.Step,
       flags: 0,
-    } as any;
+    });
+    // Ensure spawnflags is mocked property or we only override the needed flag
+    entity.spawnflags = { has: () => false } as any; // Keeping this one simple or using proper BitSet but game entities use bitset, let's just leave it since it's just a mock
   });
 
   it('should check bottom for standard gravity (down)', () => {
-    const traceSpy = testContext.entities.trace as unknown as ReturnType<typeof vi.fn>;
-    const pointcontentsSpy = testContext.entities.pointcontents as unknown as ReturnType<typeof vi.fn>;
+    const traceSpy = vi.mocked(testContext.entities.trace);
+    const pointcontentsSpy = vi.mocked(testContext.entities.pointcontents);
 
     // Mock trace to hit ground
     traceSpy.mockReturnValue({
@@ -49,8 +51,8 @@ describe('Gravity Vector Support', () => {
   });
 
   it('should check bottom for inverted gravity (ceiling walker)', () => {
-    const traceSpy = testContext.entities.trace as unknown as ReturnType<typeof vi.fn>;
-    const pointcontentsSpy = testContext.entities.pointcontents as unknown as ReturnType<typeof vi.fn>;
+    const traceSpy = vi.mocked(testContext.entities.trace);
+    const pointcontentsSpy = vi.mocked(testContext.entities.pointcontents);
 
     entity.gravityVector = { x: 0, y: 0, z: 1 }; // Upward gravity
 
