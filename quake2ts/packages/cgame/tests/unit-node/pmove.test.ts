@@ -5,7 +5,7 @@ import * as shared from '@quake2ts/shared';
 
 // We need to mock applyPmove in shared.
 vi.mock('@quake2ts/shared', async (importOriginal) => {
-    const actual = await importOriginal() as any;
+    const actual = await importOriginal<typeof import('@quake2ts/shared')>();
     return {
         ...actual,
         applyPmove: vi.fn((state, cmd, trace, pointContents) => {
@@ -21,9 +21,11 @@ vi.mock('@quake2ts/shared', async (importOriginal) => {
     };
 });
 
+import { createMockCGameImport } from '@quake2ts/test-utils';
+
 describe('CGame Pmove', () => {
     let mockImports: CGameImport;
-    let mockTrace: any;
+    let mockTrace: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
         vi.clearAllMocks(); // Clear mocks to ensure fresh state
@@ -31,49 +33,16 @@ describe('CGame Pmove', () => {
         mockTrace = vi.fn().mockReturnValue({
             fraction: 1,
             endpos: { x: 0, y: 0, z: 0 },
-            allsolid: false,
-            startsolid: false
+            allSolid: false,
+            startSolid: false,
+            plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+            ent: -1
         });
 
-        mockImports = {
+        mockImports = createMockCGameImport({
             PM_Trace: mockTrace,
-            CL_ClientTime: () => 0,
-            // ... other stubs
-            Com_Print: vi.fn(),
-            Com_Error: vi.fn(),
-            get_configstring: vi.fn(),
-            TagMalloc: vi.fn(),
-            TagFree: vi.fn(),
-            FreeTags: vi.fn(),
-            cvar: vi.fn(),
-            cvar_set: vi.fn(),
-            cvar_forceset: vi.fn(),
-            CL_FrameValid: vi.fn(),
-            CL_FrameTime: vi.fn(),
-            CL_ServerFrame: vi.fn(),
-            CL_ServerProtocol: vi.fn(),
-            CL_GetClientName: vi.fn(),
-            CL_GetClientPic: vi.fn(),
-            CL_GetClientDogtag: vi.fn(),
-            CL_GetKeyBinding: vi.fn(),
-            RegisterModel: vi.fn(),
-            RegisterSound: vi.fn(),
-            Draw_RegisterPic: vi.fn(),
-            Draw_GetPicSize: vi.fn(),
-            SCR_DrawChar: vi.fn(),
-            SCR_DrawPic: vi.fn(),
-            SCR_DrawColorPic: vi.fn(),
-            SCR_DrawFontString: vi.fn(),
-            SCR_DrawCenterString: vi.fn(),
-            SCR_MeasureFontString: vi.fn(),
-            SCR_FontLineHeight: vi.fn(),
-            SCR_SetAltTypeface: vi.fn(),
-            SCR_DrawBind: vi.fn(),
-            Localize: vi.fn(),
-            CL_GetTextInput: vi.fn(),
-            CL_GetWarnAmmoCount: vi.fn(),
-            CL_InAutoDemoLoop: vi.fn(),
-        } as unknown as CGameImport;
+            CL_ClientTime: vi.fn().mockReturnValue(0),
+        });
     });
 
     it('should call applyPmove and update state', () => {
@@ -139,19 +108,7 @@ describe('CGame Pmove', () => {
         // Instead, let's redefine the mock using a variable that we can access.
         // Vitest factories are isolated.
 
-        // Alternative: Verify logic by ensuring trace calls happen if we simulate applyPmove logic.
-        // But we are MOCKING applyPmove. So applyPmove logic is REPLACED.
-        // So we can only verify that `applyPmove` was CALLED with SOME function.
-        // To verify that function works, we'd need to execute it.
-
         // Let's modify the mock to execute the passed trace adapter.
-        // (We already did that in the factory? No, we returned a fixed object).
-
-        // We can make the mock call the trace adapter!
-        // But we need to update the mock implementation.
-        // Since `vi.mock` factory is static/hoisted, we can use `vi.mocked(shared.applyPmove).mockImplementation(...)`.
-
-        // Let's try to update the mock implementation in this test.
         vi.mocked(shared.applyPmove).mockImplementation((state, cmd, trace, pointContents) => {
             // Call the trace adapter
             trace({x:0,y:0,z:0}, {x:10,y:0,z:0});

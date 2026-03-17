@@ -13,9 +13,9 @@ describe('HUD Damage Indicators', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Mock RegisterPic to return a dummy object
-        (mockCgi.Draw_RegisterPic as any).mockImplementation((name: string) => ({ name }));
+        vi.mocked(mockCgi.Draw_RegisterPic).mockImplementation((name: string) => ({ name }) as any);
         // Mock GetPicSize to return some dimensions
-        (mockCgi.Draw_GetPicSize as any).mockReturnValue({ width: 32, height: 32 });
+        vi.mocked(mockCgi.Draw_GetPicSize).mockReturnValue({ width: 32, height: 32 });
 
         // Re-init damage pics to use the mock
         Init_Damage(mockCgi);
@@ -48,7 +48,7 @@ describe('HUD Damage Indicators', () => {
         Draw_Damage(mockCgi, ps, width, height);
 
         expect(mockCgi.SCR_DrawColorPic).toHaveBeenCalledTimes(1);
-        const picArg = (mockCgi.SCR_DrawColorPic as any).mock.calls[0][2];
+        const picArg = vi.mocked(mockCgi.SCR_DrawColorPic).mock.calls[0][2];
         expect(picArg).toEqual({ name: 'pics/d_up.pcx' });
     });
 
@@ -68,11 +68,11 @@ describe('HUD Damage Indicators', () => {
         Draw_Damage(mockCgi, ps, width, height);
 
         expect(mockCgi.SCR_DrawColorPic).toHaveBeenCalledTimes(1);
-        const picArg = (mockCgi.SCR_DrawColorPic as any).mock.calls[0][2];
+        const picArg = vi.mocked(mockCgi.SCR_DrawColorPic).mock.calls[0][2];
         expect(picArg).toEqual({ name: 'pics/d_down.pcx' });
 
         // Check alpha
-        const alphaArg = (mockCgi.SCR_DrawColorPic as any).mock.calls[0][4];
+        const alphaArg = vi.mocked(mockCgi.SCR_DrawColorPic).mock.calls[0][4];
         expect(alphaArg).toBe(0.5);
     });
 
@@ -92,7 +92,7 @@ describe('HUD Damage Indicators', () => {
         Draw_Damage(mockCgi, ps, width, height);
 
         expect(mockCgi.SCR_DrawColorPic).toHaveBeenCalledTimes(1);
-        const picArg = (mockCgi.SCR_DrawColorPic as any).mock.calls[0][2];
+        const picArg = vi.mocked(mockCgi.SCR_DrawColorPic).mock.calls[0][2];
         expect(picArg).toEqual({ name: 'pics/d_left.pcx' });
     });
 
@@ -112,7 +112,7 @@ describe('HUD Damage Indicators', () => {
         Draw_Damage(mockCgi, ps, width, height);
 
         expect(mockCgi.SCR_DrawColorPic).toHaveBeenCalledTimes(1);
-        const picArg = (mockCgi.SCR_DrawColorPic as any).mock.calls[0][2];
+        const picArg = vi.mocked(mockCgi.SCR_DrawColorPic).mock.calls[0][2];
         expect(picArg).toEqual({ name: 'pics/d_right.pcx' });
     });
 });

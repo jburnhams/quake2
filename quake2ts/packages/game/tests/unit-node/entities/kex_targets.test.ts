@@ -3,30 +3,37 @@ import { createDefaultSpawnRegistry, spawnEntityFromDictionary } from '../../../
 import { EntitySystem } from '../../../src/entities/system.js';
 import { ServerFlags, Entity } from '../../../src/entities/entity.js';
 import { ConfigStringIndex } from '@quake2ts/shared';
+import { createTestContext } from '@quake2ts/test-utils';
 
 describe('New Target Entities', () => {
-  let registry: any;
+  let registry: ReturnType<typeof createDefaultSpawnRegistry>;
   let entities: EntitySystem;
-  let mockEngine: any;
 
   beforeEach(() => {
+    const context = createTestContext();
     registry = createDefaultSpawnRegistry();
-    mockEngine = {
-        soundIndex: vi.fn().mockReturnValue(1),
-        modelIndex: vi.fn().mockReturnValue(1),
-        sound: vi.fn(),
-    };
-    entities = new EntitySystem(mockEngine, undefined, undefined, 2048);
-    // Mock cvar functions
-    (entities.imports as any).cvar = vi.fn().mockReturnValue({ value: 0 });
-    (entities.imports as any).cvar_set = vi.fn();
-    (entities.imports as any).configstring = vi.fn();
-    (entities.imports as any).serverCommand = vi.fn();
-    (entities.imports as any).positioned_sound = vi.fn();
-    (entities.imports as any).imageindex = vi.fn().mockReturnValue(1);
-    (entities.imports as any).soundindex = vi.fn().mockReturnValue(1);
-    (entities.imports as any).multicast = vi.fn();
-    (entities.imports as any).get_configstring = vi.fn().mockReturnValue("az"); // Default light ramp
+    entities = context.entities;
+
+    // Set up needed mocks that are specific to kex_targets tests
+    entities.imports.cvar = vi.fn().mockReturnValue({ value: 0, string: '0' });
+    entities.imports.cvar_set = vi.fn();
+    entities.imports.configstring = vi.fn();
+    entities.imports.serverCommand = vi.fn();
+    entities.imports.positioned_sound = vi.fn();
+    entities.imports.imageindex = vi.fn().mockReturnValue(1);
+    entities.imports.soundindex = vi.fn().mockReturnValue(1);
+    entities.imports.multicast = vi.fn();
+    entities.multicast = vi.fn(); // Also mock system multicast
+    entities.imports.get_configstring = vi.fn().mockReturnValue("az"); // Default light ramp
+
+    // Some entities need engine mocked
+    entities.engine.soundIndex = vi.fn().mockReturnValue(1);
+    entities.engine.modelIndex = vi.fn().mockReturnValue(1);
+    entities.engine.sound = vi.fn();
+
+    // Add missing level properties that these tests expect
+    entities.level.helpmessage1 = '';
+    entities.level.helpmessage2 = '';
   });
 
   it('target_gravity should set sv_gravity cvar and level.gravity', () => {
@@ -95,7 +102,7 @@ describe('New Target Entities', () => {
 
     target.use(target, null, null, entities);
 
-    expect(entities.imports.multicast).toHaveBeenCalled();
+    expect(entities.multicast).toHaveBeenCalled();
   });
 
   it('target_story should update story configstring', () => {
