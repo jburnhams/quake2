@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { GetCGameAPI, CGameImport, CGameExport } from '../../src/index';
-import { PmoveInfo } from '../../src/types';
+import { GetCGameAPI, CGameImport, CGameExport } from '../../src/index.js';
+import { PmoveInfo } from '../../src/types.js';
+import { createMockCGameImport } from '@quake2ts/test-utils';
+import { PlayerState, UserCommand } from '@quake2ts/shared';
 
 describe('CGame Prediction CVars', () => {
     let cgame: CGameExport;
@@ -9,17 +11,22 @@ describe('CGame Prediction CVars', () => {
 
     beforeEach(() => {
         mockCvars = {};
-        mockImport = {
+        mockImport = createMockCGameImport({
             Cvar_Get: vi.fn((name, val, flags) => {
                 const cvar = { value: parseInt(val) };
                 mockCvars[name] = cvar;
                 return cvar;
             }),
-            Com_Print: vi.fn(),
-            PM_Trace: vi.fn().mockReturnValue({ fraction: 1.0, contents: 0, endpos: { x: 1, y: 0, z: 0 } }), // Ensure trace returns valid endpos
-            CL_ClientTime: vi.fn().mockReturnValue(1000),
-            // Mock other required methods to avoid crashes if called
-        } as any;
+            PM_Trace: vi.fn().mockReturnValue({
+                fraction: 1.0,
+                contents: 0,
+                endpos: { x: 1, y: 0, z: 0 },
+                allSolid: false,
+                startSolid: false,
+                plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0 },
+                ent: -1
+            }), // Ensure trace returns valid endpos
+        });
 
         cgame = GetCGameAPI(mockImport);
         cgame.Init();
@@ -46,10 +53,18 @@ describe('CGame Prediction CVars', () => {
                 mins: { x: -16, y: -16, z: -24 },
                 maxs: { x: 16, y: 16, z: 32 },
                 viewAngles: { x: 0, y: 0, z: 0 }
-            } as any,
+            } as PlayerState,
             cmd: {
-                forwardmove: 100
-            } as any
+                forwardmove: 100,
+                sidemove: 0,
+                upmove: 0,
+                buttons: 0,
+                angles: { x: 0, y: 0, z: 0 },
+                msec: 100,
+                impulse: 0,
+                lightlevel: 0,
+                sequence: 0,
+            } as UserCommand
         };
 
         // Call Pmove
@@ -76,15 +91,18 @@ describe('CGame Prediction CVars', () => {
                 mins: { x: -16, y: -16, z: -24 },
                 maxs: { x: 16, y: 16, z: 32 },
                 viewAngles: { x: 0, y: 0, z: 0 }
-            } as any,
+            } as PlayerState,
             cmd: {
                 forwardmove: 100,
                 sidemove: 0,
                 upmove: 0,
                 buttons: 0,
                 angles: { x: 0, y: 0, z: 0 },
-                msec: 100
-            } as any
+                msec: 100,
+                impulse: 0,
+                lightlevel: 0,
+                sequence: 0,
+            } as UserCommand
         };
 
         // Call Pmove

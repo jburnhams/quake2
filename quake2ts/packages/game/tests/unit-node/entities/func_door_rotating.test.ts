@@ -20,9 +20,7 @@ describe('func_door_rotating', () => {
       mins: { x: -10, y: -10, z: -10 },
       maxs: { x: 10, y: 10, z: 10 },
     }));
-    // We need to mock distance if it comes from map keys (it's not on entity usually)
-    // But in our spawn function, we read it from entity property (which is mapped from keyvalues)
-    (entity as any).distance = 90;
+    entity.distance = 90;
   });
 
   it('should initialize with default Z-axis rotation', () => {
@@ -37,29 +35,13 @@ describe('func_door_rotating', () => {
     expect(entity.movetype).toBe(MoveType.Push);
 
     // Default movedir should be Z axis (0, 0, 1) to rotate around Z (Yaw)
-    // Actually code sets movedir index 1 (Y) for Z_AXIS default... wait.
-    // In SP_func_door_rotating:
-    // else // Z_AXIS
-    //    ent->movedir[1] = 1.0;
-
-    // My implementation:
-    // } else {
-    //    // Z_AXIS (Default)
-    //    entity.movedir = { x: 0, y: 1.0, z: 0 }; // Index 1 -> Y
-    // }
-
-    // This matches C code.
-    // Why? Quake angles are [Pitch, Yaw, Roll].
-    // Index 1 is Yaw (rotation around Z).
-    // So setting movedir[1] = 1 means we modify Yaw.
-
+    // Quake angles are [Pitch, Yaw, Roll]. Index 1 is Yaw (rotation around Z).
     expect(entity.movedir).toEqual({ x: 0, y: 1, z: 0 });
 
     // pos1 = angles (0,0,0)
     expect(entity.pos1).toEqual({ x: 0, y: 0, z: 0 });
 
-    // pos2 = angles + movedir * distance
-    // 0 + 1 * 90 = 90
+    // pos2 = angles + movedir * distance -> 0 + 1 * 90 = 90
     expect(entity.pos2).toEqual({ x: 0, y: 90, z: 0 });
   });
 
