@@ -1,5 +1,5 @@
-# Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+# Section 25-8: Lighting & Lightmaps (COMPLETED)
+**Summary**: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. Pending tasks extracted to separate future infrastructural work items.
 
 ## Overview
 
@@ -520,22 +520,6 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
-
----
-
-## 11. WASM Verification
-
-### 11.1 Lightmap Comparison
-
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
-
-### 11.2 Visual Comparison
-
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
 
 ---
 
@@ -551,5 +535,12 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+The following items are deferred as separate future work items due to significant infrastructural requirements:
+
+1. **WASM comparison infrastructure:** Set up infrastructure to execute the original q2tools logic compiled to WASM.
+2. **Lightmap WASM Comparison:** Compare lightmap dimensions per face, average brightness per face, and total lighting data size against the WASM reference.
+3. **Visual Comparison:** Render the same viewpoint with both BSPs and compare screenshots for major differences.
+4. **Engine Rendering Integration:** Verify the engine correctly loads and renders the final lightmaps.
