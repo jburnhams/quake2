@@ -160,7 +160,8 @@ function sanitizeEntity(ent: Entity): FactoryOverrides<Entity> {
   // We need to remove these properties from the returned object so Object.assign doesn't copy them.
   // But we want to keep the prototype.
 
-  const safe = ent as any;
+  const safe = ent as unknown as Partial<Entity>;
+  // @ts-ignore
   delete safe.index;
   delete safe.inUse;
   delete safe.freePending;
@@ -334,8 +335,9 @@ export function createMonsterInfoFactory(overrides: Partial<MonsterInfo> = {}): 
         viewheight: 0,
         allow_spawn: null,
         freeze_time: 0,
+        blind_fire_delay: 0,
         ...overrides
-    } as MonsterInfo;
+    } as unknown as MonsterInfo; // Cast as unknown as MonsterInfo because some tests expect partial mocks.
 }
 
 export * from './client.js';

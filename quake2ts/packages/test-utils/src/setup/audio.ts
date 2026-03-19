@@ -86,9 +86,9 @@ export function setupMockAudioContext(): void {
     close() { return Promise.resolve(); }
   }
 
-  global.AudioContext = MockAudioContext as any;
+  global.AudioContext = MockAudioContext as unknown as typeof AudioContext;
   // @ts-ignore
-  global.webkitAudioContext = MockAudioContext as any;
+  global.webkitAudioContext = MockAudioContext as unknown as typeof AudioContext;
 }
 
 /**

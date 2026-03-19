@@ -24,7 +24,7 @@ export function createMockCanvas(width: number = 300, height: number = 150): HTM
         return napiCanvas.getContext('2d', options);
       }
       if (contextId === 'webgl2') {
-         return createMockWebGL2Context(canvas as any);
+         return createMockWebGL2Context(canvas as unknown as HTMLCanvasElement);
       }
       return null;
     },
@@ -65,10 +65,11 @@ export function captureCanvasDrawCalls(context: CanvasRenderingContext2D): DrawC
 
   // Iterate over all properties of the context prototype
   for (const key of Object.getOwnPropertyNames(proto)) {
-     const value = (context as any)[key];
+     const ctxAny = context as unknown as Record<string, any>;
+     const value = ctxAny[key];
      if (typeof value === 'function') {
          // Override function
-         (context as any)[key] = function(...args: any[]) {
+         ctxAny[key] = function(...args: any[]) {
              calls.push({ method: key, args });
              return value.apply(context, args);
          };
@@ -134,7 +135,7 @@ export function createMockImage(width: number = 100, height: number = 100, src: 
     // Simulate async load if src is provided
     if (src) {
         setTimeout(() => {
-            if (img.onload) (img.onload as any)();
+            if (img.onload) (img.onload as unknown as () => void)();
         }, 0);
     }
 
