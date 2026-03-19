@@ -21,7 +21,7 @@ describe('Food Cube Item', () => {
             entities: context.entities as unknown as EntitySystem,
             hooks: {
                 onPickup: vi.fn(),
-            } as any
+            }
         });
     });
 
@@ -44,7 +44,6 @@ describe('Food Cube Item', () => {
             health: 50,
             max_health: 100,
         });
-        player.client = {} as any;
 
         if (entity.touch) {
             entity.touch(entity, player, null, null);
@@ -66,7 +65,6 @@ describe('Food Cube Item', () => {
             health: 100,
             max_health: 100
         });
-        player.client = {} as any;
 
         if (entity.touch) {
             entity.touch(entity, player, null, null);

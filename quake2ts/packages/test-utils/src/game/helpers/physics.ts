@@ -60,7 +60,7 @@ export function createPhysicsTestScenario(
     // surfaceFlags is a numeric property if we cast to any or define it, usually on entity state/brush
     // But Entity class might not expose it directly unless it has collision fields
     // Assuming Entity has it or we just ignore for mock tests
-    (ladder as any).surfaceFlags = 1; // SURF_LADDER
+    Object.assign(ladder, { surfaceFlags: 1 }); // SURF_LADDER
     context.entities.linkentity(ladder);
     walls.push(ladder);
   };
@@ -109,7 +109,7 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
     const dist = lengthVec3(delta);
 
     if (dist < 0.001) {
-        return createTraceMock({ fraction: 1.0, endpos: destination }) as unknown as TraceResult;
+        return createTraceMock({ fraction: 1.0, endpos: destination });
     }
 
     const dir = normalizeVec3(delta);
@@ -121,7 +121,8 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
 
     // Check if context.entities.trace is a mocked function we can control or real one
     // We assume the interface matches
-    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, (entity as any).clipmask || 0);
+    const clipmask = 'clipmask' in entity ? (entity as { clipmask: number }).clipmask : 0;
+    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, clipmask);
 
     // Update origin if not stuck
     if (!tr.startsolid && !tr.allsolid) {
@@ -136,8 +137,7 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
         context.entities.linkentity(entity);
     }
 
-    // Return TraceResult, cast if needed as we don't import CollisionTraceResult specifically
-    return tr as unknown as TraceResult;
+    return tr;
 }
 
 /**
@@ -149,7 +149,8 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
  * @param context - The TestContext.
  */
 export function simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void {
-    const gravity = (context.game as any).cvars?.gravity?.value ?? 800; // MockGame might not have cvars yet
+    const game = context.game as { cvars?: { gravity?: { value?: number } } };
+    const gravity = game.cvars?.gravity?.value ?? 800; // MockGame might not have cvars yet
     if (entity.groundentity || !entity.movetype) return;
 
     // Simple Euler integration for gravity
@@ -164,7 +165,8 @@ export function simulateGravity(entity: Entity, deltaTime: number, context: Test
     const start = { ...entity.origin };
     const end = { x: start.x, y: start.y, z: start.z - 0.25 };
 
-    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, (entity as any).clipmask || 0);
+    const clipmask = 'clipmask' in entity ? (entity as { clipmask: number }).clipmask : 0;
+    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, clipmask);
 
     if (tr.fraction < 1.0) {
         entity.groundentity = tr.ent || context.entities.world;
