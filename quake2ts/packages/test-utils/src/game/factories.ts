@@ -161,6 +161,7 @@ function sanitizeEntity(ent: Entity): FactoryOverrides<Entity> {
   // But we want to keep the prototype.
 
   const safe = ent as unknown as Partial<Entity>;
+  // @ts-ignore
   delete safe.index;
   delete safe.inUse;
   delete safe.freePending;
