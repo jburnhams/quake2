@@ -10,27 +10,35 @@ import { createPlayerWeaponStates } from '../../../src/combat/weapons/state.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import * as damage from '../../../src/combat/damage.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import {
+    createGameImportsAndEngine,
+    createTestGame,
+    createPlayerEntityFactory,
+    spawnEntity,
+    createTraceMock
+} from '@quake2ts/test-utils';
 
 describe('Plasma Beam (Heatbeam)', () => {
     it('should fire a beam, consume ammo, and deal damage', () => {
-        const customTrace = vi.fn().mockReturnValue({
+        const customTrace = vi.fn().mockReturnValue(createTraceMock({
             fraction: 0.5,
             endpos: { x: 100, y: 0, z: 0 },
-            plane: { normal: { x: -1, y: 0, z: 0 } },
-            ent: { takedamage: true }
-        });
+            plane: { normal: { x: -1, y: 0, z: 0 }, dist: 0, type: 0, signbits: 0 },
+            ent: { takedamage: true } as any
+        }));
+
         const T_Damage = vi.spyOn(damage, 'T_Damage');
 
-        const { imports, engine } = createGameImportsAndEngine({
+        const { game, imports } = createTestGame({
             imports: {
                 trace: customTrace,
             },
+            config: {
+                rogue: true
+            }
         });
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: -800 }, rogue: true });
-        game.init(0);
 
-        const player = createPlayerEntityFactory({
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
             classname: 'player',
             origin: { x: 0, y: 0, z: 0 },
             viewheight: 22,
@@ -41,12 +49,10 @@ describe('Plasma Beam (Heatbeam)', () => {
                 }),
                 weaponStates: createPlayerWeaponStates(),
                 buttons: 1, // BUTTON_ATTACK
-            } as any
-        }) as any;
-        game.entities.spawn = vi.fn().mockReturnValue(player);
-        game.entities.finalizeSpawn(player);
+            }
+        }));
 
-        // Fire
+        // Fire weapon logic
         fire(game, player, WeaponId.PlasmaBeam);
 
         // Ammo consumption
@@ -95,11 +101,9 @@ describe('Plasma Beam (Heatbeam)', () => {
     });
 
     it('should not fire if out of ammo', () => {
-        const { imports, engine } = createGameImportsAndEngine();
-        const game = createGame(imports, engine, { gravity: { x: 0, y: 0, z: 0 } });
-        game.init(0);
+        const { game, imports } = createTestGame();
 
-        const player = createPlayerEntityFactory({
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
             classname: 'player',
             client: {
                 inventory: createPlayerInventory({
@@ -107,10 +111,8 @@ describe('Plasma Beam (Heatbeam)', () => {
                     ammo: { [AmmoType.Cells]: 0 },
                 }),
                 weaponStates: createPlayerWeaponStates(),
-            } as any
-        });
-        game.entities.spawn = vi.fn().mockReturnValue(player);
-        game.entities.finalizeSpawn(player);
+            }
+        }));
 
         fire(game, player, WeaponId.PlasmaBeam);
 

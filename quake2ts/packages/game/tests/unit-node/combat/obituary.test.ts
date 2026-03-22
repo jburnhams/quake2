@@ -1,11 +1,11 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ClientObituary, PRINT_MEDIUM, getGender } from '../../../src/combat/obituary.js';
+import { ClientObituary, PRINT_MEDIUM } from '../../../src/combat/obituary.js';
 import { Entity } from '../../../src/entities/entity.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { MulticastType } from '../../../src/imports.js';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
 
 // Mock getGender since it's hardcoded to "male" but we want to test female paths if possible.
 // We can use vi.mock to mock the module, but since we are testing the module itself, that's tricky.
@@ -15,24 +15,25 @@ describe('ClientObituary', () => {
     let sys: EntitySystem;
     let victim: Entity;
     let attacker: Entity;
-    let multicastSpy: any;
+    let multicastSpy: ReturnType<typeof vi.fn>;
 
     beforeEach(() => {
-        multicastSpy = vi.fn();
-        sys = {
-            multicast: multicastSpy,
-        } as any;
+        const context = createTestContext();
+        sys = context.entities;
 
-        victim = createPlayerEntityFactory({
+        multicastSpy = vi.fn();
+        sys.multicast = multicastSpy;
+
+        victim = spawnEntity(sys, createPlayerEntityFactory({
             classname: 'player',
-            client: {} as any
-        }) as Entity;
+        }));
+
+        // Tests rely on entity index matching or differing to infer suicides vs PvP
         victim.index = 1;
 
-        attacker = createPlayerEntityFactory({
+        attacker = spawnEntity(sys, createPlayerEntityFactory({
             classname: 'player',
-            client: {} as any
-        }) as Entity;
+        }));
         attacker.index = 2;
     });
 
