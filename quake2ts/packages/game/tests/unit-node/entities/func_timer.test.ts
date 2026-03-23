@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { registerFuncSpawns } from '../../../src/entities/funcs.js';
 import { Entity, ServerFlags } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('func_timer', () => {
@@ -14,8 +14,9 @@ describe('func_timer', () => {
     registry = new SpawnRegistry();
     registerFuncSpawns(registry);
 
-    entity = new Entity(1);
-    entity.classname = 'func_timer';
+    entity = spawnEntity(context.entities, createEntityFactory({
+      classname: 'func_timer'
+    }));
 
     // Mock crandom
     context.entities.rng.crandom = vi.fn(() => 0.5);
@@ -72,7 +73,7 @@ describe('func_timer', () => {
     expect(entity.nextthink).toBe(0);
 
     // Turn on
-    const activator = new Entity(2);
+    const activator = spawnEntity(context.entities, createEntityFactory({ number: 2 }));
     entity.use?.(entity, null, activator);
 
     // Should fire immediately if no delay
@@ -94,7 +95,7 @@ describe('func_timer', () => {
     const spawnFn = registry.get('func_timer');
     spawnFn?.(entity, context);
 
-    const activator = new Entity(2);
+    const activator = spawnEntity(context.entities, createEntityFactory({ number: 2 }));
     entity.use?.(entity, null, activator);
 
     // Should not fire targets yet

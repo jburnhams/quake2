@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { registerFuncSpawns } from '../../../../src/entities/funcs.js';
 import { Entity, Solid, MoveType, ServerFlags } from '../../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../../src/entities/spawn.js';
 
 describe('func_pendulum', () => {
@@ -14,12 +14,12 @@ describe('func_pendulum', () => {
     registry = new SpawnRegistry();
     registerFuncSpawns(registry);
 
-    entity = new Entity(1);
-    entity.classname = 'func_pendulum';
-    entity.angles = { x: 0, y: 0, z: 0 };
-    // Mins/Maxs
-    entity.mins = { x: -10, y: -10, z: 0 };
-    entity.maxs = { x: 10, y: 10, z: 10 };
+    entity = spawnEntity(context.entities, createEntityFactory({
+      classname: 'func_pendulum',
+      angles: { x: 0, y: 0, z: 0 },
+      mins: { x: -10, y: -10, z: 0 },
+      maxs: { x: 10, y: 10, z: 10 }
+    }));
   });
 
   it('should initialize correctly', () => {

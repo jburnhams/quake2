@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { registerFuncSpawns } from '../../../src/entities/funcs.js';
-import { createTestContext, createEntity } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 
 describe('func_areaportal', () => {
@@ -15,10 +15,10 @@ describe('func_areaportal', () => {
     const registry = new SpawnRegistry();
     registerFuncSpawns(registry);
 
-    const entity = createEntity({
+    const entity = spawnEntity(context.entities, createEntityFactory({
       classname: 'func_areaportal',
       use: undefined,
-    });
+    }));
 
     const spawn = registry.get('func_areaportal');
     spawn?.(entity, context);

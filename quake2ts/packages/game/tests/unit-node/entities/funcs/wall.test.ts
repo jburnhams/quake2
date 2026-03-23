@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createEntityFactory, spawnEntity } from '@quake2ts/test-utils';
 import { func_wall } from '../../../../src/entities/funcs.js';
 import { Entity, Solid, ServerFlags, MoveType } from '../../../../src/entities/entity.js';
 
@@ -13,13 +13,14 @@ const EF_ANIM_ALL = 4;
 const EF_ANIM_ALLFAST = 8;
 
 describe('func_wall', () => {
-    let context: any;
+    let context: ReturnType<typeof createTestContext>;
     let entity: Entity;
 
     beforeEach(() => {
         context = createTestContext();
-        entity = context.entities.spawn();
-        entity.classname = 'func_wall';
+        entity = spawnEntity(context.entities, createEntityFactory({
+            classname: 'func_wall'
+        }));
     });
 
     it('initializes as a standard solid wall by default', () => {
