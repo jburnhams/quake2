@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. Engine rendering tests verified via LIGHTMAP_RENDERING_ISSUE fix. WASM comparison pending as separate infrastructure work.
 
 ## Overview
 
@@ -520,11 +520,13 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [x] Test: Engine renders lightmaps correctly (Verified via `LIGHTMAP_RENDERING_ISSUE.md`)
 
 ---
 
-## 11. WASM Verification
+## 11. WASM Verification (Deferred)
+
+*This task is far more involved than it seems, as it requires setting up an execution environment (e.g. `emsdk`) to run the compiled C code from `q2tools` as a web assembly module, generating raw byte arrays for lighting lumps from identical `.map` files, and then programmatically diffing these byte arrays or visual screenshots to assert parity. Thus, this work is being deferred as a separate pending work item. See Section 25-9 for full implementation details of this pending work.*
 
 ### 11.1 Lightmap Comparison
 
@@ -551,5 +553,5 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) *(Deferred to separate work item)*
+- [x] Engine renders lightmaps correctly
