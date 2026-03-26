@@ -33,10 +33,10 @@ describe('createMockRenderingContext', () => {
     const mockContext = createMockRenderingContext();
     const { pipelines } = mockContext;
 
-    pipelines.md2.render(vi.fn() as any, {} as any, 0, {} as any, 0); // Arguments don't matter for the mock
+    pipelines.md2.render(vi.fn() as unknown as Parameters<typeof pipelines.md2.render>[0], {} as unknown as Parameters<typeof pipelines.md2.render>[1], 0, {} as unknown as Parameters<typeof pipelines.md2.render>[3], 0); // Arguments don't matter for the mock
     expect(pipelines.md2.render).toHaveBeenCalled();
 
-    pipelines.bsp.render(vi.fn() as any, {} as any, {} as any, 0);
+    pipelines.bsp.render(vi.fn() as unknown as Parameters<typeof pipelines.bsp.render>[0], {} as unknown as Parameters<typeof pipelines.bsp.render>[1], {} as unknown as Parameters<typeof pipelines.bsp.render>[2], 0);
     expect(pipelines.bsp.render).toHaveBeenCalled();
   });
 });

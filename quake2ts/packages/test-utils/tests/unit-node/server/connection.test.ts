@@ -28,7 +28,7 @@ describe('Server Mocks: Connection', () => {
     describe('serializeUserInfo', () => {
         it('should serialize user info to Q2 format', () => {
             const info = { name: 'Player', skin: 'base' };
-            const serialized = serializeUserInfo(info as any);
+            const serialized = serializeUserInfo(info as unknown as Parameters<typeof serializeUserInfo>[0]);
             expect(serialized).toBe('\\name\\Player\\skin\\base');
         });
     });

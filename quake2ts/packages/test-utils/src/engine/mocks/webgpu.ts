@@ -349,12 +349,13 @@ export function createMockWebGPUContext(): MockWebGPUContext {
  */
 export function teardownWebGPUMocks(): void {
   // Remove navigator.gpu if it was set by setupWebGPUMocks
-  if (globalThis.navigator?.gpu) {
+  const globalNav = globalThis.navigator as unknown as { gpu?: GPU };
+  if (globalNav?.gpu) {
     try {
-      delete (globalThis.navigator as any).gpu;
+      delete globalNav.gpu;
     } catch (e) {
       // If delete fails (read-only), try setting to undefined
-      (globalThis.navigator as any).gpu = undefined;
+      globalNav.gpu = undefined;
     }
   }
 

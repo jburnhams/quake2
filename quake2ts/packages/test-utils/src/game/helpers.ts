@@ -140,10 +140,10 @@ export const createMockGame = (seed: number = 12345): { game: MockGame, spawnReg
       hooks.onMapLoad('q2dm1');
     }),
     clientBegin: vi.fn((client) => {
-      hooks.onPlayerSpawn({} as any);
+      hooks.onPlayerSpawn(new Entity(0));
     }),
     damage: vi.fn((amount: number) => {
-      hooks.onDamage({} as any, null, null, amount, 0, 0);
+      hooks.onDamage(new Entity(0), null, null, amount, 0, 0);
     }),
     entities: {
       spawnRegistry
@@ -236,7 +236,7 @@ export function createTestContext(options?: {
     destroy: vi.fn(() => {
       entityList.length = 0;
       // The internal hooks array needs to be cleared directly to prevent memory leaks from registered hooks.
-      (hooks as any).hooks = [];
+      hooks.clearHooks();
       currentSpawnRegistry = undefined;
     }),
     spawn: vi.fn(() => {
@@ -330,7 +330,7 @@ export function createTestContext(options?: {
       return entityList.find(e => e.index === index);
     }),
     beginFrame: vi.fn((timeSeconds: number) => {
-      (entities as any).timeSeconds = timeSeconds;
+      (entities as unknown as { timeSeconds: number }).timeSeconds = timeSeconds;
       game.time = timeSeconds; // Update game time too
     }),
     targetAwareness: {
@@ -355,7 +355,7 @@ export function createTestContext(options?: {
 
   const context = {
     destroy: () => {
-      (entities as any).destroy();
+      entities.destroy();
     },
     keyValues: {},
     entities,

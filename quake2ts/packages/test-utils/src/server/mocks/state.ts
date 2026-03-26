@@ -92,7 +92,7 @@ export function createMockServerClient(clientNum: number, overrides?: Partial<Cl
             writeReliableLong: vi.fn(),
             writeReliableString: vi.fn(),
             writeReliableData: vi.fn(),
-        } as any, // Cast as any because NetChan might be complex to fully mock here
+        } as unknown as Client['netchan'],
         userInfo: '',
         lastMessage: 0,
         lastCommandTime: 0,

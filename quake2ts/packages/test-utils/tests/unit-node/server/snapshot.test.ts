@@ -15,8 +15,8 @@ describe('Snapshot Helpers', () => {
             state.time = 100;
 
             // Add some entities to baselines
-            const ent1: EntityState = { number: 1, origin: {x:0,y:0,z:0} } as any;
-            const ent2: EntityState = { number: 2, origin: {x:10,y:0,z:0} } as any;
+            const ent1 = { number: 1, origin: {x:0,y:0,z:0} } as unknown as EntityState;
+            const ent2 = { number: 2, origin: {x:10,y:0,z:0} } as unknown as EntityState;
             state.baselines[1] = ent1;
             state.baselines[2] = ent2;
 
@@ -33,18 +33,18 @@ describe('Snapshot Helpers', () => {
         it('should identify new and changed entities', () => {
             const oldSnapshot: Snapshot = {
                 serverTime: 100,
-                playerState: {},
+                playerState: {} as unknown as Snapshot['playerState'],
                 entities: [
-                    { number: 2, origin: {x:0,y:0,z:0} } as any
+                    { number: 2, origin: {x:0,y:0,z:0} } as unknown as EntityState
                 ]
             };
 
             const newSnapshot: Snapshot = {
                 serverTime: 110,
-                playerState: {},
+                playerState: {} as unknown as Snapshot['playerState'],
                 entities: [
-                    { number: 2, origin: {x:10,y:0,z:0} } as any, // Changed
-                    { number: 3, origin: {x:50,y:0,z:0} } as any  // New
+                    { number: 2, origin: {x:10,y:0,z:0} } as unknown as EntityState, // Changed
+                    { number: 3, origin: {x:50,y:0,z:0} } as unknown as EntityState  // New
                 ]
             };
 
@@ -57,15 +57,15 @@ describe('Snapshot Helpers', () => {
         it('should identify removed entities', () => {
             const oldSnapshot: Snapshot = {
                 serverTime: 100,
-                playerState: {},
+                playerState: {} as unknown as Snapshot['playerState'],
                 entities: [
-                    { number: 2, origin: {x:0,y:0,z:0} } as any
+                    { number: 2, origin: {x:0,y:0,z:0} } as unknown as EntityState
                 ]
             };
 
             const newSnapshot: Snapshot = {
                 serverTime: 110,
-                playerState: {},
+                playerState: {} as unknown as Snapshot['playerState'],
                 entities: []
             };
 
@@ -79,8 +79,8 @@ describe('Snapshot Helpers', () => {
     describe('verifySnapshotConsistency', () => {
         it('should pass for ordered snapshots', () => {
             const snapshots: Snapshot[] = [
-                { serverTime: 100, entities: [], playerState: {} },
-                { serverTime: 110, entities: [], playerState: {} }
+                { serverTime: 100, entities: [], playerState: {} as unknown as Snapshot['playerState'] },
+                { serverTime: 110, entities: [], playerState: {} as unknown as Snapshot['playerState'] }
             ];
 
             const report = verifySnapshotConsistency(snapshots);
@@ -89,8 +89,8 @@ describe('Snapshot Helpers', () => {
 
         it('should fail for out-of-order snapshots', () => {
              const snapshots: Snapshot[] = [
-                { serverTime: 110, entities: [], playerState: {} },
-                { serverTime: 100, entities: [], playerState: {} }
+                { serverTime: 110, entities: [], playerState: {} as unknown as Snapshot['playerState'] },
+                { serverTime: 100, entities: [], playerState: {} as unknown as Snapshot['playerState'] }
             ];
 
             const report = verifySnapshotConsistency(snapshots);

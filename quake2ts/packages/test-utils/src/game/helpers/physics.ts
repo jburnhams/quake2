@@ -57,10 +57,9 @@ export function createPhysicsTestScenario(
     ladder.origin = { x: 100, y: 0, z: 0 };
     ladder.mins = { x: 0, y: -32, z: 0 };
     ladder.maxs = { x: 10, y: 32, z: 200 };
-    // surfaceFlags is a numeric property if we cast to any or define it, usually on entity state/brush
-    // But Entity class might not expose it directly unless it has collision fields
-    // Assuming Entity has it or we just ignore for mock tests
-    (ladder as any).surfaceFlags = 1; // SURF_LADDER
+    // surfaceFlags is typically on the collision trace result or the BSP model, not the entity directly
+    // but tests might check for it manually on the mock entity.
+    (ladder as unknown as { surfaceFlags: number }).surfaceFlags = 1; // SURF_LADDER
     context.entities.linkentity(ladder);
     walls.push(ladder);
   };
@@ -119,25 +118,20 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
     const start = { ...entity.origin };
     const end = destination;
 
-    // Check if context.entities.trace is a mocked function we can control or real one
-    // We assume the interface matches
-    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, (entity as any).clipmask || 0);
+    // Perform trace to check if movement is possible
+    const clipmask = typeof (entity as unknown as { clipmask?: number }).clipmask === 'number'
+        ? (entity as unknown as { clipmask: number }).clipmask
+        : 0;
+
+    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, clipmask);
 
     // Update origin if not stuck
-    if (!tr.startsolid && !tr.allsolid) {
-        // Trace result returns endpos which is where we stopped
-        if (tr.endpos) {
-             entity.origin = { ...tr.endpos };
-        } else {
-             // Fallback if trace result is simple
-             // In real engine trace always has endpos
-             entity.origin = { ...end }; // Should be tr.endpos really
-        }
+    if (!tr.startsolid && !tr.allsolid && tr.endpos) {
+        entity.origin = { ...tr.endpos };
         context.entities.linkentity(entity);
     }
 
-    // Return TraceResult, cast if needed as we don't import CollisionTraceResult specifically
-    return tr as unknown as TraceResult;
+    return tr;
 }
 
 /**
@@ -149,7 +143,8 @@ export function simulateMovement(entity: Entity, destination: Vec3, context: Tes
  * @param context - The TestContext.
  */
 export function simulateGravity(entity: Entity, deltaTime: number, context: TestContext): void {
-    const gravity = (context.game as any).cvars?.gravity?.value ?? 800; // MockGame might not have cvars yet
+    const cvars = (context.game as unknown as { cvars?: { gravity?: { value: number } } }).cvars;
+    const gravity = cvars?.gravity?.value ?? 800; // MockGame might not have cvars yet
     if (entity.groundentity || !entity.movetype) return;
 
     // Simple Euler integration for gravity
@@ -164,7 +159,11 @@ export function simulateGravity(entity: Entity, deltaTime: number, context: Test
     const start = { ...entity.origin };
     const end = { x: start.x, y: start.y, z: start.z - 0.25 };
 
-    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, (entity as any).clipmask || 0);
+    const clipmask = typeof (entity as unknown as { clipmask?: number }).clipmask === 'number'
+        ? (entity as unknown as { clipmask: number }).clipmask
+        : 0;
+
+    const tr = context.entities.trace(start, entity.mins, entity.maxs, end, entity, clipmask);
 
     if (tr.fraction < 1.0) {
         entity.groundentity = tr.ent || context.entities.world;
