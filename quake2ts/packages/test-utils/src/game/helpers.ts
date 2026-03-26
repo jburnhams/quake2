@@ -236,7 +236,7 @@ export function createTestContext(options?: {
     destroy: vi.fn(() => {
       entityList.length = 0;
       // The internal hooks array needs to be cleared directly to prevent memory leaks from registered hooks.
-      hooks.clearHooks();
+      (hooks as unknown as { hooks: unknown[] }).hooks = [];
       currentSpawnRegistry = undefined;
     }),
     spawn: vi.fn(() => {
@@ -355,7 +355,7 @@ export function createTestContext(options?: {
 
   const context = {
     destroy: () => {
-      entities.destroy();
+      (entities as unknown as { destroy: () => void }).destroy();
     },
     keyValues: {},
     entities,
