@@ -112,14 +112,16 @@ export function createSaveGameSnapshot(context: TestContext): MockSaveGame {
     });
 
     // We need to construct a LevelFrameState for the save file
+    const gameContext = context.game as unknown as { level?: { frameNumber?: number, timeSeconds?: number }, time?: number };
     const levelFrameState: LevelFrameState = {
-        frameNumber: (context.game as any).level?.frameNumber ?? 0,
-        timeSeconds: (context.game as any).level?.timeSeconds ?? (context.game as any).time ?? 0,
+        frameNumber: gameContext.level?.frameNumber ?? 0,
+        timeSeconds: gameContext.level?.timeSeconds ?? gameContext.time ?? 0,
         previousTimeSeconds: 0,
         deltaSeconds: 0.1
     };
 
-    const currentLevel = (context.entities as any).level || {};
+    const entitiesContext = context.entities as unknown as { level?: Partial<LevelState> };
+    const currentLevel = entitiesContext.level || {};
 
     return {
         game: {
@@ -127,7 +129,7 @@ export function createSaveGameSnapshot(context: TestContext): MockSaveGame {
             timestamp: Date.now(),
             map: 'snapshot_map',
             difficulty: 0,
-            playtimeSeconds: (context.game as any).time ?? 0,
+            playtimeSeconds: gameContext.time ?? 0,
             level: levelFrameState,
             entities: context.entities.createSnapshot(),
             rng: { mt: { index: 0, state: [] } },
@@ -166,8 +168,9 @@ export function restoreSaveGameSnapshot(saveGame: MockSaveGame, context: TestCon
     });
 
     // Restore level state
-    if ((context.entities as any).level) {
-        Object.assign((context.entities as any).level, saveGame.level);
+    const entitiesContext = context.entities as unknown as { level?: Partial<LevelState> };
+    if (entitiesContext.level) {
+        Object.assign(entitiesContext.level, saveGame.level);
     }
 }
 

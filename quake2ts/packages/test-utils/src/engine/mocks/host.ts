@@ -25,14 +25,19 @@ export function createMockEngineHost(overrides?: Partial<EngineHost>): EngineHos
       get: vi.fn((name) => cvars.get(name)),
       list: vi.fn(() => Array.from(cvars.values())),
       setValue: vi.fn((name, value, flags) => {
-        const cvar = cvars.get(name) as any;
+        const cvar = cvars.get(name) as unknown as {
+          string: string;
+          number: number;
+          modifiedCount: number;
+          onChange?: (c: Cvar, prev: string) => void;
+        };
         if (cvar) {
           const previousValue = cvar.string;
           cvar.string = value;
           cvar.number = parseFloat(value);
           cvar.modifiedCount = (cvar.modifiedCount || 0) + 1;
           if (cvar.onChange) {
-            cvar.onChange(cvar, previousValue);
+            cvar.onChange(cvar as unknown as Cvar, previousValue);
           }
         }
       }),

@@ -86,19 +86,17 @@ export function setupMockAudioContext(): void {
     close() { return Promise.resolve(); }
   }
 
-  global.AudioContext = MockAudioContext as any;
-  // @ts-ignore
-  global.webkitAudioContext = MockAudioContext as any;
+  (global as unknown as { AudioContext: typeof MockAudioContext }).AudioContext = MockAudioContext;
+  (global as unknown as { webkitAudioContext: typeof MockAudioContext }).webkitAudioContext = MockAudioContext;
 }
 
 /**
  * Restores original AudioContext.
  */
 export function teardownMockAudioContext(): void {
-  // @ts-ignore
-  delete global.AudioContext;
-  // @ts-ignore
-  delete global.webkitAudioContext;
+  const g = global as unknown as { AudioContext?: unknown, webkitAudioContext?: unknown };
+  delete g.AudioContext;
+  delete g.webkitAudioContext;
 }
 
 export interface AudioEvent {

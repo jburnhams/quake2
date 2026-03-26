@@ -45,7 +45,8 @@ describe('Combat Mocks', () => {
         });
 
         it('should be spies', () => {
-            mockMonsterAttacks.fireBlaster({} as any, {x:0,y:0,z:0}, {x:0,y:0,z:0}, 10, 1000, 0);
+            const mockEntity = { classname: 'monster' } as unknown as import('@quake2ts/game').Entity;
+            mockMonsterAttacks.fireBlaster(mockEntity, {x:0,y:0,z:0}, {x:0,y:0,z:0}, 10, 1000, 0);
             expect(mockMonsterAttacks.fireBlaster).toHaveBeenCalled();
         });
     });

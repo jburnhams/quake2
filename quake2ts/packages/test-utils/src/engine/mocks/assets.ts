@@ -15,21 +15,21 @@ export function createMockAssetManager(overrides?: Partial<AssetManager>): Asset
         has: vi.fn(),
         clear: vi.fn(),
         memoryUsage: 0
-    } as any,
+    } as unknown as AssetManager['textures'],
     audio: {
         load: vi.fn(),
         get: vi.fn(),
         clearAll: vi.fn()
-    } as any,
+    } as unknown as AssetManager['audio'],
     loadTexture: vi.fn().mockResolvedValue(createMockTexture()),
     registerTexture: vi.fn(),
-    loadSound: vi.fn().mockResolvedValue({} as any),
+    loadSound: vi.fn().mockResolvedValue({} as unknown),
     loadMd2Model: vi.fn().mockResolvedValue(createMockMd2Model()),
     getMd2Model: vi.fn(),
     loadMd3Model: vi.fn().mockResolvedValue(createMockMd3Model()),
     getMd3Model: vi.fn(),
-    loadSprite: vi.fn().mockResolvedValue({} as any),
-    loadMap: vi.fn().mockResolvedValue({} as BspMap),
+    loadSprite: vi.fn().mockResolvedValue({} as unknown),
+    loadMap: vi.fn().mockResolvedValue({} as unknown as BspMap),
     getMap: vi.fn(),
     loadPalette: vi.fn().mockResolvedValue(undefined),
     isAssetLoaded: vi.fn().mockReturnValue(true),
@@ -38,7 +38,7 @@ export function createMockAssetManager(overrides?: Partial<AssetManager>): Asset
     getMemoryUsage: vi.fn().mockReturnValue({ textures: 0, audio: 0 }),
     clearCache: vi.fn(),
     preloadAssets: vi.fn().mockResolvedValue(undefined),
-    queueLoad: vi.fn().mockImplementation((path) => Promise.resolve({} as any)),
+    queueLoad: vi.fn().mockImplementation((path) => Promise.resolve({} as unknown)),
     ...overrides
   } as unknown as AssetManager;
 }

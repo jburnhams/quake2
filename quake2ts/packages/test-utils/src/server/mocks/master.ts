@@ -82,10 +82,13 @@ export function createMockServerInfo(overrides: Partial<ServerInfo> = {}): Serve
 
 /**
  * Simulates the process of a game server registering with the master server
- * @param server - The mock game server instance (typed as any to accept mock)
+ * @param server - The mock game server instance
  * @param master - The mock master server
  */
-export async function simulateServerRegistration(server: any, master: MasterServer): Promise<boolean> {
+export async function simulateServerRegistration(
+  server: { name?: string; mapName?: string; clients?: (Client | null)[]; maxClients?: number },
+  master: MasterServer
+): Promise<boolean> {
   const info = createMockServerInfo({
     name: server.name || 'Test Server',
     map: server.mapName || 'q2dm1',
