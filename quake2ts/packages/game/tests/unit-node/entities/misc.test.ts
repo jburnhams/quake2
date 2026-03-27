@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, Mock } from 'vitest';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { createTestContext, createTestGame, spawnEntityFromDictionary, createEntityFactory } from '@quake2ts/test-utils';
 import { SP_func_object } from '../../../src/entities/misc.js';
@@ -6,9 +6,10 @@ import { MoveType, Solid } from '../../../src/entities/entity.js';
 import * as damageModule from '../../../src/combat/damage.js';
 
 // Mock T_Damage
-vi.mock('../../../src/combat/damage.js', () => ({
-    T_Damage: vi.fn(),
-}));
+vi.mock('../../../src/combat/damage.js', async () => {
+    const { createMockDamage } = await import('@quake2ts/test-utils');
+    return createMockDamage();
+});
 
 describe('Misc Entities', () => {
     // Use createTestGame to get a fully initialized game instance with registry
@@ -62,6 +63,10 @@ describe('func_object', () => {
         context = createTestContext();
         sys = context.entities;
         vi.clearAllMocks();
+    });
+
+    afterEach(() => {
+        vi.restoreAllMocks();
     });
 
     it('initializes correctly', () => {
