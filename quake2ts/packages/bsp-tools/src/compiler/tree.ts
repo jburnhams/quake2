@@ -343,6 +343,8 @@ export function flattenTree(
       if (element.contents !== CONTENTS_SOLID) {
          cluster = numClusters++;
          element.cluster = cluster;
+      } else {
+         element.cluster = -1;
       }
 
       const leaf: BspLeaf = {
