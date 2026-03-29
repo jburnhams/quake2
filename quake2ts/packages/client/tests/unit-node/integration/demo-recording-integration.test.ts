@@ -3,7 +3,13 @@ import { createClient, ClientExports, ClientImports } from '@quake2ts/client/ind
 import { DemoRecorder, createEmptyEntityState } from '@quake2ts/engine';
 import { GetCGameAPI } from '@quake2ts/cgame';
 import { Init_Hud } from '@quake2ts/client/hud.js';
-import { resetCommonClientMocks } from '../test-helpers.js';
+import {
+    createMockCGameAPI,
+    createMockClientPrediction,
+    createMockViewEffects,
+    createMockHudImports,
+    createMockEngineImports
+} from '@quake2ts/test-utils';
 
 let mockRecorderInstance: any;
 
@@ -66,54 +72,30 @@ vi.mock('@quake2ts/client/ui/menu/system.js', () => ({
     })
 }));
 
-vi.mock('@quake2ts/client/hud.js', () => ({
-    Init_Hud: vi.fn().mockResolvedValue(undefined),
-    Draw_Hud: vi.fn()
-}));
+vi.mock('@quake2ts/client/hud.js', async () => {
+    const { createMockHudImports } = await import('@quake2ts/test-utils');
+    return createMockHudImports();
+});
 
-vi.mock('@quake2ts/cgame', () => ({
-    ClientPrediction: vi.fn().mockImplementation(function() { return {
-        setAuthoritative: vi.fn(),
-        enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn(),
-        decayError: vi.fn()
-    }; }),
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(function() { return {
-        sample: vi.fn()
-    }; }),
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('@quake2ts/cgame', async () => {
+    const { createMockClientPrediction, createMockViewEffects, createMockCGameAPI } = await import('@quake2ts/test-utils');
+    return {
+        ClientPrediction: vi.fn(function() { return createMockClientPrediction(); }),
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: vi.fn(function() { return createMockViewEffects(); }),
+        GetCGameAPI: vi.fn(() => createMockCGameAPI())
+    };
+});
 
-vi.mock('../../../cgame/src/index.ts', () => ({
-    ClientPrediction: vi.fn().mockImplementation(function() { return {
-        setAuthoritative: vi.fn(),
-        enqueueCommand: vi.fn(),
-        getPredictedState: vi.fn(),
-        decayError: vi.fn()
-    }; }),
-    interpolatePredictionState: vi.fn(),
-    ViewEffects: vi.fn().mockImplementation(function() { return {
-        sample: vi.fn()
-    }; }),
-    GetCGameAPI: vi.fn().mockReturnValue({
-        Init: vi.fn(),
-        Shutdown: vi.fn(),
-        DrawHUD: vi.fn(),
-        ParseConfigString: vi.fn(),
-        ParseCenterPrint: vi.fn(),
-        NotifyMessage: vi.fn(),
-        ShowSubtitle: vi.fn()
-    })
-}));
+vi.mock('../../../cgame/src/index.ts', async () => {
+    const { createMockClientPrediction, createMockViewEffects, createMockCGameAPI } = await import('@quake2ts/test-utils');
+    return {
+        ClientPrediction: vi.fn(function() { return createMockClientPrediction(); }),
+        interpolatePredictionState: vi.fn(),
+        ViewEffects: vi.fn(function() { return createMockViewEffects(); }),
+        GetCGameAPI: vi.fn(() => createMockCGameAPI())
+    };
+});
 
 describe('Demo Recording Integration', () => {
     let client: ClientExports;
@@ -136,7 +118,9 @@ describe('Demo Recording Integration', () => {
             });
         }
 
-        resetCommonClientMocks();
+        // Restore common mocks
+        vi.mocked(GetCGameAPI).mockImplementation(() => createMockCGameAPI());
+        vi.mocked(Init_Hud).mockResolvedValue(undefined);
 
         // Mock localStorage
         if (typeof localStorage === 'undefined') {
@@ -150,40 +134,15 @@ describe('Demo Recording Integration', () => {
             } as any;
         }
 
-        mockEngine = {
-            trace: vi.fn().mockReturnValue({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 } }),
+        const engineImports = createMockEngineImports({
             assets: {
                 listFiles: vi.fn().mockReturnValue([]),
                 getMap: vi.fn(),
                 loadTexture: vi.fn().mockResolvedValue({ width: 32, height: 32 }),
-            },
-            renderer: {
-                width: 800,
-                height: 600,
-                registerTexture: vi.fn(),
-                registerPic: vi.fn(),
-                drawCenterString: vi.fn(),
-                drawString: vi.fn(),
-                drawfillRect: vi.fn(),
-                begin2D: vi.fn(),
-                end2D: vi.fn(),
-                setGamma: vi.fn(),
-                setBrightness: vi.fn(),
-                setBloom: vi.fn(),
-                setBloomIntensity: vi.fn(),
-                setUnderwaterWarp: vi.fn(),
-            },
-            cmd: {
-                executeText: vi.fn(),
-                register: vi.fn()
-            },
-            audio: {
-                play_track: vi.fn(),
-                play_music: vi.fn(),
-                stop_music: vi.fn(),
-                set_music_volume: vi.fn()
-            }
-        };
+            } as any,
+        });
+
+        mockEngine = engineImports as any;
 
         const imports: ClientImports = {
             engine: mockEngine,
@@ -221,24 +180,6 @@ describe('Demo Recording Integration', () => {
 
     it('should start recording when connected', () => {
         if (!mockRecorderInstance) return;
-
-        // Force connection state to true in mock driver if needed, but we defaulted isConnected to true.
-        // Also MultiplayerConnection tracks state.
-        // We need to simulate connection state change to Connected/Active.
-
-        // client.multiplayer is real instance.
-        // It listens to driver.
-        // We mocked driver to have isConnected=true, but MultiplayerConnection also checks its own state enum.
-        // ConnectionState.Active is required for sending commands, but for recording?
-
-        // client.startRecording:
-        // if (multiplayer.isConnected()) { demoRecorder.startRecording(...) }
-
-        // MultiplayerConnection.isConnected() checks `this.state === ConnectionState.Active`.
-
-        // We need to transition multiplayer to Active.
-        // We can call `client.multiplayer.onServerData(...)` and `finishLoading()` flow?
-        // Or we can just spy on client.multiplayer.isConnected and make it return true.
 
         vi.spyOn(client.multiplayer, 'isConnected').mockReturnValue(true);
 

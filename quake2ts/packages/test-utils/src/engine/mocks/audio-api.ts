@@ -1,5 +1,5 @@
 import { vi } from 'vitest';
-import type { AudioSystem, SoundRegistry, SubtitleClient, AudioApiOptions } from '@quake2ts/engine';
+import type { AudioSystem, SoundRegistry, SubtitleClient, AudioApiOptions, AudioApi } from '@quake2ts/engine';
 
 export function createMockSoundRegistry(overrides?: Partial<SoundRegistry>): SoundRegistry {
   return {
@@ -56,4 +56,25 @@ export function createMockAudioApiOptions(overrides?: Partial<AudioApiOptions>):
     client: undefined,
     ...overrides,
   };
+}
+
+export function createMockAudioApi(overrides?: Partial<AudioApi>): AudioApi {
+  return {
+    soundindex: vi.fn().mockReturnValue(0),
+    sound: vi.fn(),
+    positioned_sound: vi.fn(),
+    loop_sound: vi.fn(),
+    stop_entity_sounds: vi.fn(),
+    setPlaybackRate: vi.fn(),
+    set_listener: vi.fn(),
+    play_music: vi.fn().mockResolvedValue(undefined),
+    play_track: vi.fn().mockResolvedValue(undefined),
+    pause_music: vi.fn(),
+    resume_music: vi.fn().mockResolvedValue(undefined),
+    stop_music: vi.fn(),
+    set_music_volume: vi.fn(),
+    play_ambient: vi.fn(),
+    play_channel: vi.fn(),
+    ...overrides
+  } as unknown as AudioApi;
 }
