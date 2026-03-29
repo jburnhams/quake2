@@ -1,9 +1,16 @@
 
 import { describe, it, expect, vi } from 'vitest';
-import { buildRenderableEntities } from '@quake2ts/client/entities.js';
+import { buildRenderableEntities } from '../../src/entities.js';
 import { EntityState, ConfigStringIndex } from '@quake2ts/shared';
-import { ClientImports } from '@quake2ts/client/index.js';
-import { createMockAssetManager, createMockMd2Model, MockClientConfigStrings, createMockRenderer } from '@quake2ts/test-utils';
+import { ClientImports } from '../../src/index.js';
+import {
+    createMockAssetManager,
+    createMockMd2Model,
+    MockClientConfigStrings,
+    createMockRenderer,
+    createMockEngineImports,
+    createEntityStateFactory
+} from '@quake2ts/test-utils';
 
 describe('buildRenderableEntities', () => {
     // Mock ConfigStrings using test-utils helper
@@ -12,12 +19,12 @@ describe('buildRenderableEntities', () => {
     // Mock AssetManager using centralized factory from test-utils
     const mockAssets = createMockAssetManager();
 
-    // Mock ClientImports
+    // Mock ClientImports using centralized factory
     const mockImports = {
-        engine: {
+        engine: createMockEngineImports({
             assets: mockAssets,
             renderer: createMockRenderer()
-        }
+        })
     } as unknown as ClientImports;
 
     // Mock MD2 Model using centralized factory from test-utils
@@ -31,24 +38,17 @@ describe('buildRenderableEntities', () => {
         mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
         (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
-        const stateA: EntityState = {
+        const stateA = createEntityStateFactory({
             number: 1,
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
             modelIndex: 1,
-            frame: 0,
-            skinNum: 0,
-            effects: 0,
-            renderfx: 0,
-            solid: 0,
             scale: 1.0,
             alpha: 255
-        };
+        });
 
-        const stateB: EntityState = {
+        const stateB = createEntityStateFactory({
             ...stateA,
             scale: 2.0
-        };
+        });
 
         const renderables = buildRenderableEntities([stateB], [stateA], 0.5, mockConfigStrings, mockImports);
 
@@ -71,23 +71,16 @@ describe('buildRenderableEntities', () => {
         mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
         (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
-        const stateA: EntityState = {
+        const stateA = createEntityStateFactory({
             number: 1,
-            origin: { x: 0, y: 0, z: 0 },
-            angles: { x: 0, y: 0, z: 0 },
             modelIndex: 1,
-            frame: 0,
-            skinNum: 0,
-            effects: 0,
-            renderfx: 0,
-            solid: 0,
             alpha: 100 // 100/255
-        };
+        });
 
-        const stateB: EntityState = {
+        const stateB = createEntityStateFactory({
             ...stateA,
             alpha: 200 // 200/255
-        };
+        });
 
         // Alpha = 0.5
         // Expected = 150
@@ -104,23 +97,16 @@ describe('buildRenderableEntities', () => {
          mockConfigStrings.set(ConfigStringIndex.Models + 1, 'models/test.md2');
          (mockAssets.getMd2Model as any).mockReturnValue(mockMd2Model);
 
-         const stateA: EntityState = {
+         const stateA = createEntityStateFactory({
              number: 1,
-             origin: { x: 0, y: 0, z: 0 },
-             angles: { x: 0, y: 0, z: 0 },
              modelIndex: 1,
-             frame: 0,
-             skinNum: 0,
-             effects: 0,
-             renderfx: 0,
-             solid: 0,
              alpha: 0 // Should be treated as 255
-         };
+         });
 
-         const stateB: EntityState = {
+         const stateB = createEntityStateFactory({
              ...stateA,
              alpha: 0
-         };
+         });
 
          const renderables = buildRenderableEntities([stateB], [stateA], 0.5, mockConfigStrings, mockImports);
 
