@@ -1,13 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createGame, GameExports } from '../../../src/index.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createPlayerEntityFactory } from '@quake2ts/test-utils';
 import type { GameImports } from '../../../src/index.js';
+import { EntitySystem } from '../../../src/entities/system.js';
 
 describe('Spectator Mode', () => {
     let game: GameExports;
     let player: Entity;
-    let entities: any;
+    let entities: EntitySystem;
 
     beforeEach(() => {
         const { entities: mockEntities } = createTestContext();
@@ -18,14 +19,15 @@ describe('Spectator Mode', () => {
         };
         const options = { gravity: { x: 0, y: 0, z: -800 } };
         game = createGame(imports, engine, options);
-        entities = game.entities;
+        entities = game.entities as EntitySystem;
 
-        // Mock player
-        player = new Entity(1);
-        player.classname = 'player';
-        player.client = {} as any;
-        player.movetype = MoveType.Walk;
-        player.solid = Solid.BoundingBox;
+        // Mock player using test-utils factory for type safety
+        player = createPlayerEntityFactory({
+            index: 1,
+            classname: 'player',
+            movetype: MoveType.Walk,
+            solid: Solid.BoundingBox,
+        }) as Entity;
 
         vi.spyOn(entities, 'find').mockReturnValue(player);
     });

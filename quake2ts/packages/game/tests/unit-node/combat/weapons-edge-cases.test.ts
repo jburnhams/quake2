@@ -45,19 +45,6 @@ describe('Weapon Firing - Edge Cases', () => {
             origin: { x: 0, y: 0, z: 0 }
         }) as Entity;
 
-        // Ensure client properties are fully initialized if factory was partial
-        if (!player.client) {
-             player.client = {
-                ...createPlayerStateFactory(),
-                inventory: {
-                    ammo: { counts: [], caps: [] },
-                    weaponStates: { states: new Map() },
-                    items: new Set(),
-                    ownedWeapons: new Set()
-                }
-             } as any;
-        }
-
         // Setup ammo slots
         player.client!.inventory.ammo.counts[AmmoType.Slugs] = 0;
         player.client!.inventory.ammo.counts[AmmoType.Cells] = 0;
@@ -73,6 +60,7 @@ describe('Weapon Firing - Edge Cases', () => {
         });
 
         it('should deal 125 damage in single player', () => {
+            // Cast to any to set internal GameState property for deathmatch mode testing
             (game as any).deathmatch = false;
             fire(game, player, WeaponId.Railgun);
             expect(T_Damage_spy).toHaveBeenCalledWith(
@@ -93,6 +81,7 @@ describe('Weapon Firing - Edge Cases', () => {
         });
 
         it('should deal 100 damage in deathmatch', () => {
+            // Cast to any to set internal GameState property for deathmatch mode testing
             (game as any).deathmatch = true;
             fire(game, player, WeaponId.Railgun);
             expect(T_Damage_spy).toHaveBeenCalledWith(
@@ -119,6 +108,7 @@ describe('Weapon Firing - Edge Cases', () => {
         });
 
         it('should deal 20 damage in single player', async () => {
+            // Cast to any to set internal GameState property for deathmatch mode testing
             (game as any).deathmatch = false;
             // Mock createBlasterBolt to check damage param
             const projectiles = await import('../../../src/entities/projectiles.js');
@@ -138,6 +128,7 @@ describe('Weapon Firing - Edge Cases', () => {
         });
 
         it('should deal 15 damage in deathmatch', async () => {
+            // Cast to any to set internal GameState property for deathmatch mode testing
             (game as any).deathmatch = true;
             const projectiles = await import('../../../src/entities/projectiles.js');
             const spy = vi.spyOn(projectiles, 'createBlasterBolt');
