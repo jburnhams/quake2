@@ -4,29 +4,32 @@ import { Entity } from '../../../../src/entities/entity.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
 import { PlayerStat } from '@quake2ts/shared';
 import { ClientWithTeam } from '../../../../src/modes/ctf/teams.js';
+import { createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('CTF Scoreboard', () => {
     let player: Entity;
     let context: EntitySystem;
 
     beforeEach(() => {
-        player = {
-            client: {
-                stats: new Array(64).fill(0),
-                ctfStats: {
-                    captures: 0,
-                    returns: 0,
-                    defends: 0,
-                    assists: 0
-                },
-                // Add unknown casting to bypass strict type check for team in test
-            } as any
-        } as unknown as Entity;
-        (player.client as unknown as ClientWithTeam).ctfTeam = CtfTeam.RED;
+        const client = createPlayerClientFactory({
+            stats: new Array(64).fill(0),
+            ctfStats: {
+                captures: 0,
+                returns: 0,
+                defends: 0,
+                assists: 0
+            }
+        });
+
+        (client as ClientWithTeam).ctfTeam = CtfTeam.RED;
+
+        player = createPlayerEntityFactory({
+            client
+        }) as Entity;
 
         context = {
             configStringIndex: vi.fn().mockReturnValue(100),
-        } as unknown as EntitySystem;
+        } as Partial<EntitySystem> & { configStringIndex: ReturnType<typeof vi.fn> } as unknown as EntitySystem;
 
         // Reset scores
         teamScores[CtfTeam.RED] = 0;
