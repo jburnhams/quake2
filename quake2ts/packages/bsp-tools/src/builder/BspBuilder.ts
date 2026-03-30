@@ -354,16 +354,27 @@ export class BspBuilder {
   build(): BuildResult {
     const start = performance.now();
 
+    // Combine all brushes from world and entities into one list for the compiler,
+    // and make sure worldspawn includes all world brushes.
+    const allBrushes = [...this.brushes];
+
+    for (const entity of this.entities) {
+        if (entity.brushes) {
+            allBrushes.push(...entity.brushes);
+        }
+    }
+
     // Construct worldspawn entity
     const worldspawn: EntityDef = {
       classname: 'worldspawn',
-      properties: Object.fromEntries(this.worldspawnProps)
+      properties: Object.fromEntries(this.worldspawnProps),
+      brushes: this.brushes
     };
 
     // Combine with other entities
     const allEntities = [worldspawn, ...this.entities];
 
-    const compiler = new SimpleCompiler(this.brushes, allEntities);
+    const compiler = new SimpleCompiler(allBrushes, allEntities);
     const result = compiler.compile();
 
     return {
