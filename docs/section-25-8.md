@@ -520,11 +520,13 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [x] Test: Engine renders lightmaps correctly
 
 ---
 
 ## 11. WASM Verification
+
+*Note: WASM verification infrastructure is deferred to a separate work item, as documented in Section 25-9.*
 
 ### 11.1 Lightmap Comparison
 
@@ -551,5 +553,9 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) - *Deferred*
+- [x] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+1. **WASM comparison infrastructure:** Set up infrastructure to execute the original q2tools logic compiled to WASM to check byte-for-byte and logical parity, deferred alongside Section 25-9 pending WASM tasks.
