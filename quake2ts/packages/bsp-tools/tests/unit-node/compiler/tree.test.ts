@@ -263,4 +263,58 @@ describe('flattenTree', () => {
     expect(result.serializedFaces.length).toBe(1);
     expect(result.serializedFaces[0]).toBe(dummyFace);
   });
+
+  it('assigns clusters to empty leaves and -1 to solid leaves', () => {
+    // Construct a dummy tree manually
+    const leafEmpty1: TreeElement = {
+      contents: 0,
+      brushes: [],
+      bounds: createEmptyBounds3()
+    };
+    const leafSolid: TreeElement = {
+      contents: CONTENTS_SOLID,
+      brushes: [],
+      bounds: createEmptyBounds3()
+    };
+    const leafEmpty2: TreeElement = {
+      contents: 0,
+      brushes: [],
+      bounds: createEmptyBounds3()
+    };
+
+    const node2: TreeNode = {
+      planeNum: 2,
+      children: [leafSolid, leafEmpty2],
+      bounds: createEmptyBounds3()
+    };
+
+    const root: TreeNode = {
+      planeNum: 1,
+      children: [leafEmpty1, node2],
+      bounds: createEmptyBounds3()
+    };
+
+    const faceMap = new Map<TreeNode, CompileFace[]>();
+
+    const result = flattenTree(root, faceMap);
+
+    // Verify leaf clusters
+    // empty leaves get cluster >= 0, solid leaves get -1
+    // Flatten traverses children[0] then children[1]
+    // Order: leafEmpty1, leafSolid, leafEmpty2
+    expect(result.leafs.length).toBe(3);
+
+    // find index by looking at node children, or just check the returned array directly
+    // The returned leafs array matches the traversal order
+    expect(result.leafs[0].cluster).toBe(0);
+    expect(result.leafs[0].contents).toBe(0);
+
+    expect(result.leafs[1].cluster).toBe(-1);
+    expect(result.leafs[1].contents).toBe(CONTENTS_SOLID);
+
+    expect(result.leafs[2].cluster).toBe(1);
+    expect(result.leafs[2].contents).toBe(0);
+
+    // numClusters is part of the returned structure if we added it, but let's check the leaves array directly
+  });
 });

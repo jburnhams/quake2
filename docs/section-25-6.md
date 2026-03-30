@@ -343,8 +343,8 @@ Clusters group leaves for visibility. Initially 1:1, portals can merge clusters.
 
 ### 7.2 Tests
 
-- [ ] Test: Each empty leaf gets cluster
-- [ ] Test: Solid leaves get cluster -1
+- [x] Test: Each empty leaf gets cluster
+- [x] Test: Solid leaves get cluster -1
 
 ---
 
@@ -380,7 +380,7 @@ Model 0 is always worldspawn. Additional models for `func_*` entities.
 ### 8.2 Tests
 
 - [x] Test: Model 0 is worldspawn
-- [ ] Test: func_door gets separate model
+- [x] Test: func_door gets separate model
 - [x] Test: Model bounds correct
 
 ---

@@ -116,4 +116,50 @@ describe('SimpleCompiler Integration', () => {
     const solidLeafs = bsp.leafs.filter(l => l.contents !== 0);
     expect(solidLeafs.length).toBe(2);
   });
+
+  it('compiles func_door into a separate model', () => {
+    const builder = new BspBuilder();
+
+    // Worldspawn room
+    builder.addRoom({
+      origin: { x: 0, y: 0, z: 0 },
+      size: { x: 256, y: 256, z: 128 },
+      wallThickness: 16,
+      wallTexture: 'base_wall/concrete1',
+      floorTexture: 'base_wall/concrete1',
+      ceilingTexture: 'base_wall/concrete1'
+    });
+
+    // Add a func_door entity with its own brushes
+    builder.addEntity({
+      classname: 'func_door',
+      properties: {
+        angle: '90',
+        speed: '100'
+      },
+      brushes: [
+        box({
+          origin: { x: 0, y: 0, z: 32 },
+          size: { x: 64, y: 16, z: 64 },
+          texture: 'base_door/door1'
+        })
+      ]
+    });
+
+    const result = builder.build();
+    const bsp = result.bsp;
+
+    // Model 0 is always worldspawn.
+    // Model 1 should be the func_door.
+    expect(bsp.models.length).toBe(2);
+
+    // Ensure model 1 points to a valid node tree and has some faces
+    const doorModel = bsp.models[1];
+    expect(doorModel.headNode).toBeGreaterThanOrEqual(0);
+    expect(doorModel.numFaces).toBeGreaterThan(0);
+
+    // Entity string should reference the model
+    expect(bsp.entities.raw).toContain('"classname" "func_door"');
+    expect(bsp.entities.raw).toContain('"model" "*1"');
+  });
 });

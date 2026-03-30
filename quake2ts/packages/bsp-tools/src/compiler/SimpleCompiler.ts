@@ -139,7 +139,26 @@ export class SimpleCompiler {
 
   compile(): CompileResult {
     // 1. Process Brushes to Windings
+    // Map brushes by entity
+    const brushesByEntity = new Map<number, number[]>(); // entity index -> brush indices
+    const entityForBrush = new Map<BrushDef, number>();
+
+    for (let i = 0; i < this.inputEntities.length; i++) {
+        const entity = this.inputEntities[i];
+        if (entity.brushes) {
+            for (const brush of entity.brushes) {
+                entityForBrush.set(brush, i);
+            }
+        }
+    }
+
     this.processedBrushes = this.inputBrushes.map((b, i) => {
+      const entityIdx = entityForBrush.get(b) ?? 0; // Default to worldspawn
+      if (!brushesByEntity.has(entityIdx)) {
+          brushesByEntity.set(entityIdx, []);
+      }
+      brushesByEntity.get(entityIdx)!.push(i);
+
       return {
         index: i,
         def: b,
@@ -163,26 +182,76 @@ export class SimpleCompiler {
       });
     });
 
-    // 2. Build BSP Tree
-    // Start with a large universe box to track volume bounds
+    const finalEntities = [...this.inputEntities];
+
+    // Build models per entity
+    // Worldspawn is always model 0
+    const worldBrushes = brushesByEntity.get(0) || [];
     const universeWindings = this.createUniverseWindings();
-    const root = this.buildTree(this.processedBrushes.map(b => b.index), universeWindings);
+    const worldRoot = this.buildTree(worldBrushes, universeWindings);
+    const worldHeadNode = this.serializeTree(worldRoot);
 
-    // 3. Serialize Tree to BSP structures
-    const headNode = this.serializeTree(root);
-
-    // 4. Create Models (Model 0 is the world)
     this.models.push({
-      mins: root.bounds.mins, // Use root bounds
-      maxs: root.bounds.maxs,
+      mins: worldRoot.bounds.mins,
+      maxs: worldRoot.bounds.maxs,
       origin: { x: 0, y: 0, z: 0 },
-      headNode,
+      headNode: worldHeadNode,
       firstFace: 0,
       numFaces: this.faces.length
     });
 
+    // Process sub-models
+    for (const [entityIdx, brushIndices] of brushesByEntity.entries()) {
+      if (entityIdx === 0 || brushIndices.length === 0) continue;
+
+      const firstFaceIndex = this.faces.length;
+
+      // Calculate bounds for these brushes
+      let minX = Infinity, minY = Infinity, minZ = Infinity;
+      let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
+
+      for (const bIdx of brushIndices) {
+          const pb = this.processedBrushes[bIdx];
+          for (const w of pb.windings.values()) {
+              for (const p of w.points) {
+                  minX = Math.min(minX, p.x); minY = Math.min(minY, p.y); minZ = Math.min(minZ, p.z);
+                  maxX = Math.max(maxX, p.x); maxY = Math.max(maxY, p.y); maxZ = Math.max(maxZ, p.z);
+              }
+          }
+      }
+
+      // Generate hull/windings for model bounding box
+      // Need a slight margin
+      const margin = 8;
+      const submodelWindings = this.createWindingsFromBounds(
+          { x: minX - margin, y: minY - margin, z: minZ - margin },
+          { x: maxX + margin, y: maxY + margin, z: maxZ + margin }
+      );
+
+      const root = this.buildTree(brushIndices, submodelWindings);
+      const headNode = this.serializeTree(root);
+
+      const modelIndex = this.models.length;
+      this.models.push({
+        mins: { x: minX, y: minY, z: minZ },
+        maxs: { x: maxX, y: maxY, z: maxZ },
+        origin: { x: 0, y: 0, z: 0 },
+        headNode,
+        firstFace: firstFaceIndex,
+        numFaces: this.faces.length - firstFaceIndex
+      });
+
+      finalEntities[entityIdx] = {
+          ...finalEntities[entityIdx],
+          properties: {
+              ...finalEntities[entityIdx].properties,
+              model: `*${modelIndex}`
+          }
+      };
+    }
+
     // 5. Entities
-    const entityString = serializeEntities(this.inputEntities);
+    const entityString = serializeEntities(finalEntities);
 
     // 6. Lighting
     const planesList = this.planeSet.getPlanes().map(p => ({ normal: p.normal, dist: p.dist, type: p.type }));
@@ -243,21 +312,13 @@ export class SimpleCompiler {
   }
 
   private createUniverseWindings(): Winding[] {
-    // Create 6 windings for a large box
-    // +/- 16384 (MAX_WORLD_COORD is huge, let's pick a reasonable safe map size)
-    // Actually, let's use MAX_WORLD_COORD but as box planes?
-    // Or just manually construct 6 faces.
-    // baseWindingForPlane gives us a huge winding.
-    // We can just use 6 planes of a box and clip a base winding against others?
-    // Or just manually set points.
     const size = 32768; // +/- size
     const mins = { x: -size, y: -size, z: -size };
     const maxs = { x: size, y: size, z: size };
+    return this.createWindingsFromBounds(mins, maxs);
+  }
 
-    // We can use a helper or just define them.
-    // Let's use baseWindingForPlane and clip against the other 5 planes?
-    // That ensures consistency.
-
+  private createWindingsFromBounds(mins: Vec3, maxs: Vec3): Winding[] {
     const planes = [
       { normal: { x: 1, y: 0, z: 0 }, dist: maxs.x },
       { normal: { x: -1, y: 0, z: 0 }, dist: -mins.x },
