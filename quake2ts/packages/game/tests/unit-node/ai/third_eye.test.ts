@@ -2,13 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity } from '../../../src/entities/entity.js';
 import { findTarget } from '../../../src/ai/targeting.js';
 import { AIFlags } from '../../../src/ai/constants.js';
-import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createMonsterInfoFactory } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContext, spawnEntity, createMonsterInfoFactory, createTraceMock } from '@quake2ts/test-utils';
 
 describe('AI Third Eye Detection', () => {
   let monster: Entity;
   let enemy: Entity;
-  let context: any; // ReturnType<typeof createTestContext>
-  let mockContext: any;
+  let context: ReturnType<typeof createTestContext>;
+  let mockContext: ReturnType<typeof createTestContext>['entities'];
 
   beforeEach(() => {
     context = createTestContext();
@@ -20,11 +20,11 @@ describe('AI Third Eye Detection', () => {
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
       enemy: null,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         aiflags: 0,
         sight: vi.fn(),
         last_sighting: { x: 0, y: 0, z: 0 },
-      } as any,
+      }),
       angles: { x: 0, y: 0, z: 0 },
       ideal_yaw: 0,
     }));
@@ -40,8 +40,11 @@ describe('AI Third Eye Detection', () => {
     }));
 
     // Setup targeting context
-    mockContext.timeSeconds = 10;
-    mockContext.targetAwareness = {
+    Object.assign(mockContext, {
+      timeSeconds: 10,
+      maxClients: 1,
+      skill: 1,
+      targetAwareness: {
         timeSeconds: 10,
         frameNumber: 100,
         sightEntity: null,
@@ -54,9 +57,8 @@ describe('AI Third Eye Detection', () => {
         activePlayers: [enemy],
         monsterAlertedByPlayers: vi.fn(),
         soundClient: vi.fn(),
-    };
-    mockContext.maxClients = 1;
-    mockContext.skill = 1;
+      }
+    });
 
     // Use trace mock from context
     // traceMock = mockContext.trace;
@@ -67,7 +69,7 @@ describe('AI Third Eye Detection', () => {
     mockContext.targetAwareness.sightClient = enemy; // Potential candidate
 
     // Trace returns blocked
-    mockContext.trace.mockReturnValue({ fraction: 0.5, ent: null });
+    vi.mocked(mockContext.trace).mockReturnValue(createTraceMock({ fraction: 0.5, ent: null }));
 
     const result = findTarget(monster, mockContext.targetAwareness, mockContext, mockContext.trace);
     expect(result).toBe(false);
@@ -90,7 +92,7 @@ describe('AI Third Eye Detection', () => {
   it('should clear ThirdEye flag after successfully finding target', () => {
      monster.monsterinfo!.aiflags |= AIFlags.ThirdEye;
      mockContext.targetAwareness.sightClient = enemy;
-     mockContext.trace.mockReturnValue({ fraction: 0.5, ent: null });
+     vi.mocked(mockContext.trace).mockReturnValue(createTraceMock({ fraction: 0.5, ent: null }));
 
      findTarget(monster, mockContext.targetAwareness, mockContext, mockContext.trace);
 

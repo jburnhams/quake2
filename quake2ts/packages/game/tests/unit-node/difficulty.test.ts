@@ -13,13 +13,14 @@ import { foundTarget } from '../../src/ai/targeting.js';
 
 describe('Difficulty Scaling - Reaction Time', () => {
     let context: EntitySystem;
+    let mockContext: ReturnType<typeof createTestContext>;
     let monster: any;
     let enemy: any;
 
     beforeEach(() => {
         // createTestContext is not async
-        const spawnContext = createTestContext();
-        context = spawnContext.entities;
+        mockContext = createTestContext();
+        context = mockContext.entities;
 
         // Use spawnEntity to properly handle entity properties sanitization and system registration (though using factories directly is also common in unit tests if no system needed)
         // Since foundTarget might access system, spawning is safer.
@@ -47,7 +48,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
         foundTarget(monster, createGameFrameContext({
             timeSeconds: baseTime,
             frameNumber: 1
-        }) as any, context);
+        }), context);
 
         // Expected: baseTime + 0.6 (grace) + 0.4 (easy) = baseTime + 1.0
         expect(monster.attack_finished_time).toBeCloseTo(baseTime + 1.0, 1);
@@ -61,7 +62,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
         foundTarget(monster, createGameFrameContext({
             timeSeconds: baseTime,
             frameNumber: 1
-        }) as any, context);
+        }), context);
 
         // Expected: baseTime + 0.6 (grace) + 0.2 (medium) = baseTime + 0.8
         expect(monster.attack_finished_time).toBeCloseTo(baseTime + 0.8, 1);
@@ -75,7 +76,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
         foundTarget(monster, createGameFrameContext({
             timeSeconds: baseTime,
             frameNumber: 1
-        }) as any, context);
+        }), context);
 
         // Expected: baseTime + 0.6 (grace) = baseTime + 0.6
         expect(monster.attack_finished_time).toBeCloseTo(baseTime + 0.6, 1);

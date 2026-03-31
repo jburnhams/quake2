@@ -9,7 +9,7 @@ import {
 } from '../../../../src/combat/weapons/frames.js';
 import { WeaponId } from '../../../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../../../src/inventory/ammo.js';
-import { createPlayerEntityFactory, createTestContext } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createTestContext, createPlayerClientFactory, createTraceMock } from '@quake2ts/test-utils';
 import { createPlayerInventory } from '../../../../src/inventory/playerInventory.js';
 
 describe('Shotgun Animation Logic', () => {
@@ -32,7 +32,7 @@ describe('Shotgun Animation Logic', () => {
             index: 1,
             origin: { x: 0, y: 0, z: 0 },
             angles: { x: 0, y: 0, z: 0 },
-            client: {
+            client: createPlayerClientFactory({
                 weaponstate: WeaponStateEnum.WEAPON_READY,
                 gun_frame: FRAME_SHOTGUN_IDLE_LAST,
                 weapon_think_time: 0,
@@ -46,8 +46,8 @@ describe('Shotgun Animation Logic', () => {
                     }
                 }),
                 angles: { x: 0, y: 0, z: 0 },
-                ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] }
-            } as any
+                ps: { fov: 90, gunindex: 0, blend: [0,0,0,0] } as any
+            })
         }));
     });
 
@@ -65,7 +65,7 @@ describe('Shotgun Animation Logic', () => {
         // Mock trace to avoid error in fireShotgun
         // In createTestContext, trace returns safe default, so we might not need to override unless we want specific hit.
         // But let's ensure it returns fraction 1.0 (miss)
-        (mockSys.trace as any).mockReturnValue({ fraction: 1.0, endpos: {x:0,y:0,z:0}, plane: {normal:{x:0,y:0,z:1}, dist:0, type:0, signbits:0}, ent: null });
+        vi.mocked(mockSys.trace).mockReturnValue(createTraceMock({ fraction: 1.0, endpos: {x:0,y:0,z:0}, ent: null }));
 
         // 2. Firing Frame 8
         // Need to advance time
