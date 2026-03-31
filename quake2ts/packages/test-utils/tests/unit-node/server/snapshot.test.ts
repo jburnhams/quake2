@@ -7,6 +7,7 @@ import {
 } from '../../../src/server/helpers/snapshot';
 import { createMockServerState } from '../../../src/server/mocks/state';
 import { EntityState } from '@quake2ts/shared';
+import { createEntityStateFactory } from '../../../src/game/factories';
 
 describe('Snapshot Helpers', () => {
     describe('createServerSnapshot', () => {
@@ -15,8 +16,8 @@ describe('Snapshot Helpers', () => {
             state.time = 100;
 
             // Add some entities to baselines
-            const ent1: EntityState = { number: 1, origin: {x:0,y:0,z:0} } as any;
-            const ent2: EntityState = { number: 2, origin: {x:10,y:0,z:0} } as any;
+            const ent1: EntityState = createEntityStateFactory({ number: 1, origin: {x:0,y:0,z:0} });
+            const ent2: EntityState = createEntityStateFactory({ number: 2, origin: {x:10,y:0,z:0} });
             state.baselines[1] = ent1;
             state.baselines[2] = ent2;
 
@@ -35,7 +36,7 @@ describe('Snapshot Helpers', () => {
                 serverTime: 100,
                 playerState: {},
                 entities: [
-                    { number: 2, origin: {x:0,y:0,z:0} } as any
+                    createEntityStateFactory({ number: 2, origin: {x:0,y:0,z:0} })
                 ]
             };
 
@@ -43,8 +44,8 @@ describe('Snapshot Helpers', () => {
                 serverTime: 110,
                 playerState: {},
                 entities: [
-                    { number: 2, origin: {x:10,y:0,z:0} } as any, // Changed
-                    { number: 3, origin: {x:50,y:0,z:0} } as any  // New
+                    createEntityStateFactory({ number: 2, origin: {x:10,y:0,z:0} }), // Changed
+                    createEntityStateFactory({ number: 3, origin: {x:50,y:0,z:0} })  // New
                 ]
             };
 
@@ -59,7 +60,7 @@ describe('Snapshot Helpers', () => {
                 serverTime: 100,
                 playerState: {},
                 entities: [
-                    { number: 2, origin: {x:0,y:0,z:0} } as any
+                    createEntityStateFactory({ number: 2, origin: {x:0,y:0,z:0} })
                 ]
             };
 

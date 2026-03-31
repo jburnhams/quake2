@@ -9,7 +9,7 @@ import * as damage from '../../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 vi.mock('../../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
@@ -38,11 +38,10 @@ describe('Weapon Firing Logic', () => {
 
         // Ensure client side is set up with proper types
         if (!player.client) {
-             player.client = {
+             player.client = createPlayerClientFactory({
                  inventory: createPlayerInventory(),
                  weaponStates: createPlayerWeaponStates(),
-                 ps: {} as any
-             } as any;
+             });
         }
 
         // Use helper to create simple target entities
@@ -84,7 +83,7 @@ describe('Weapon Firing Logic', () => {
         it('should use single-player damage values (no significant falloff at close range)', () => {
             mockGame.deathmatch = false;
             // Mock trace to hit.
-            (mockGame.trace as any).mockReturnValue(createTraceMock({
+            vi.mocked(mockGame.trace).mockReturnValue(createTraceMock({
                 ent: target1,
                 endpos: { x: 100, y: 0, z: 0 },
                 fraction: 0.5
@@ -99,7 +98,7 @@ describe('Weapon Firing Logic', () => {
 
         it('should use deathmatch damage values', () => {
             mockGame.deathmatch = true;
-            (mockGame.trace as any).mockReturnValue(createTraceMock({
+            vi.mocked(mockGame.trace).mockReturnValue(createTraceMock({
                 ent: target1,
                 endpos: { x: 100, y: 0, z: 0 },
                 fraction: 0.5
@@ -114,7 +113,7 @@ describe('Weapon Firing Logic', () => {
 
         it('should apply falloff at range', () => {
             mockGame.deathmatch = false;
-            (mockGame.trace as any).mockReturnValue(createTraceMock({
+            vi.mocked(mockGame.trace).mockReturnValue(createTraceMock({
                 ent: target1,
                 endpos: { x: 1000, y: 0, z: 0 },
                 fraction: 0.5
@@ -135,7 +134,7 @@ describe('Weapon Firing Logic', () => {
 
         it('should apply falloff at range (80% at 1000 units)', () => {
             mockGame.deathmatch = false;
-            (mockGame.trace as any).mockReturnValue(createTraceMock({
+            vi.mocked(mockGame.trace).mockReturnValue(createTraceMock({
                 ent: target1,
                 endpos: { x: 1000, y: 0, z: 0 },
                 fraction: 0.5
@@ -156,7 +155,7 @@ describe('Weapon Firing Logic', () => {
 
         it('should NOT apply falloff at range (Shotgun has no falloff in Q2)', () => {
             mockGame.deathmatch = false;
-            (mockGame.trace as any).mockReturnValue(createTraceMock({
+            vi.mocked(mockGame.trace).mockReturnValue(createTraceMock({
                 ent: target1,
                 endpos: { x: 1000, y: 0, z: 0 },
                 fraction: 0.5
@@ -180,7 +179,7 @@ describe('Weapon Firing Logic', () => {
         });
 
         it('should penetrate multiple targets in SP', () => {
-            (mockGame.trace as any)
+            vi.mocked(mockGame.trace)
                 .mockReturnValueOnce(createTraceMock({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 })) // P_ProjectSource
                 .mockReturnValueOnce(createTraceMock({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1 }))
                 .mockReturnValueOnce(createTraceMock({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2 }))
@@ -200,7 +199,7 @@ describe('Weapon Firing Logic', () => {
 
         it('should penetrate multiple targets in DM', () => {
             mockGame.deathmatch = true;
-            (mockGame.trace as any)
+            vi.mocked(mockGame.trace)
                 .mockReturnValueOnce(createTraceMock({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 })) // P_ProjectSource
                 .mockReturnValueOnce(createTraceMock({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1 }))
                 .mockReturnValueOnce(createTraceMock({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2 }))
