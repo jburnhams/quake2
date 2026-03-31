@@ -17,7 +17,7 @@ import {
   type GamepadLike,
   type InputSource,
 } from '../../src/index.js';
-import { TestInputSource } from '@quake2ts/test-utils';
+import { TestInputSource, createMockGamepad, createMockGamepadButton } from '@quake2ts/test-utils';
 
 function createController(): InputController {
   const controller = new InputController({}, createDefaultBindings());
@@ -260,21 +260,20 @@ describe('InputController', () => {
   it('captures gamepad button transitions and default bindings', () => {
     const controller = createController();
 
-    const gamepadPress: GamepadLike = {
-      axes: [0, 0, 0, 0],
-      buttons: Array.from({ length: 8 }, (_, i) => ({ pressed: i === 7, value: i === 7 ? 1 : 0 })),
-      index: 0,
-      connected: true,
-    };
+    const gamepadPress = createMockGamepad({
+      buttons: Array.from({ length: 8 }, (_, i) =>
+        createMockGamepadButton(i === 7, i === 7 ? 1 : 0)
+      ),
+    });
 
     controller.setGamepadState([gamepadPress]);
     controller.buildCommand(16, 16);
     expect(controller.consumeConsoleCommands()).toEqual(['+attack']);
 
-    const gamepadRelease: GamepadLike = {
+    const gamepadRelease = createMockGamepad({
       ...gamepadPress,
-      buttons: gamepadPress.buttons.map(() => ({ pressed: false, value: 0 })),
-    };
+      buttons: gamepadPress.buttons.map(() => createMockGamepadButton(false, 0)),
+    });
 
     controller.setGamepadState([gamepadRelease]);
     controller.buildCommand(16, 32);
@@ -283,12 +282,9 @@ describe('InputController', () => {
 
   it('translates analog stick axes into movement with deadzone clamping', () => {
     const controller = createController();
-    const pad: GamepadLike = {
+    const pad = createMockGamepad({
       axes: [0.5, -1, 0, 0],
-      buttons: [],
-      index: 0,
-      connected: true,
-    };
+    });
 
     controller.setGamepadState([pad]);
     const cmd = controller.buildCommand(40, 40);
@@ -296,7 +292,7 @@ describe('InputController', () => {
     expect(cmd.forwardmove).toBeCloseTo(DEFAULT_FORWARD_SPEED);
     expect(cmd.sidemove).toBeCloseTo(DEFAULT_FORWARD_SPEED * 0.5);
 
-    controller.setGamepadState([{ ...pad, axes: [0.05, 0.05, 0, 0] }]);
+    controller.setGamepadState([createMockGamepad({ ...pad, axes: [0.05, 0.05, 0, 0] })]);
     const noMove = controller.buildCommand(40, 80);
     expect(noMove.forwardmove).toBe(0);
     expect(noMove.sidemove).toBe(0);
@@ -304,12 +300,9 @@ describe('InputController', () => {
 
   it('applies analog look input scaled by yaw/pitch speed and inversion setting', () => {
     const controller = new InputController({ invertGamepadY: true }, createDefaultBindings());
-    const pad: GamepadLike = {
+    const pad = createMockGamepad({
       axes: [0, 0, 0.25, -0.5],
-      buttons: [],
-      index: 0,
-      connected: true,
-    };
+    });
 
     const frameMsec = 50;
     controller.setGamepadState([pad]);
