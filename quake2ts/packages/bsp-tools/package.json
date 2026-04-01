@@ -31,13 +31,15 @@
     "test": "pnpm run test:unit",
     "test:unit": "pnpm run test:unit:node",
     "test:unit:node": "TEST_TYPE=unit-node vitest run --passWithNoTests",
-    "test:bench": "TEST_TYPE=unit-node vitest bench --run --passWithNoTests"
+    "test:bench": "TEST_TYPE=unit-node vitest bench --run --passWithNoTests",
+    "test:coverage": "TEST_TYPE=unit-node vitest run --coverage"
   },
   "dependencies": {
     "@quake2ts/shared": "workspace:*"
   },
   "devDependencies": {
     "@quake2ts/test-utils": "workspace:*",
+    "@vitest/coverage-v8": "^2.1.9",
     "tsup": "^8.5.1",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
