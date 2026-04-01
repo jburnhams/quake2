@@ -1,6 +1,8 @@
 # Section 25-8: Lighting & Lightmaps
 COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
 
+NOTE: WASM tests and related steps are incomplete and deferred.
+
 ## Overview
 
 Compute direct and indirect lighting, generate lightmaps, and pack them into the BSP.
@@ -520,22 +522,24 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] Test: Engine renders lightmaps correctly (Deferred)
 
 ---
 
 ## 11. WASM Verification
 
+*WASM verification is tracked as a separate infrastructure task and deferred from this document.*
+
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] Compare lightmap dimensions per face (Deferred)
+- [ ] Compare average brightness per face (Deferred)
+- [ ] Compare total lighting data size (Deferred)
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] Render same viewpoint with both BSPs (Deferred)
+- [ ] Compare screenshots for major differences (Deferred)
 
 ---
 
@@ -551,5 +555,5 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) - Deferred to infra
+- [ ] Engine renders lightmaps correctly (Deferred)
