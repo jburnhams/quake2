@@ -100,10 +100,10 @@ describe('Chainfist Weapon', () => {
           const start = { x: 80, y: 0, z: 0 };
           const forward = { x: 1, y: 0, z: 0 }; // Facing target
 
-          fireChainfist(gameMock, entity, entity.client!.inventory, {} as any, start, forward);
+          fireChainfist(gameMock, entity, entity.client!.inventory, entity.client!.weaponStates, start, forward);
 
           expect(T_Damage).toHaveBeenCalled();
-          const callArgs = (T_Damage as any).mock.calls[0];
+          const callArgs = vi.mocked(T_Damage).mock.calls[0];
           expect(callArgs[0]).toBe(target);
           expect(callArgs[6]).toBe(7); // Base damage
           expect(callArgs[9]).toBe(DamageMod.CHAINFIST);
@@ -115,7 +115,7 @@ describe('Chainfist Weapon', () => {
           const start = { x: 0, y: 0, z: 0 };
           const forward = { x: 1, y: 0, z: 0 };
 
-          fireChainfist(gameMock, entity, entity.client!.inventory, {} as any, start, forward);
+          fireChainfist(gameMock, entity, entity.client!.inventory, entity.client!.weaponStates, start, forward);
 
           expect(T_Damage).not.toHaveBeenCalled();
       });
@@ -126,7 +126,7 @@ describe('Chainfist Weapon', () => {
           Weapon_ChainFist(entity, sys);
 
           expect(Weapon_Repeating).toHaveBeenCalled();
-          const args = (Weapon_Repeating as any).mock.calls[0];
+          const args = vi.mocked(Weapon_Repeating).mock.calls[0];
 
           expect(args[1]).toBe(4); // Activate Last
           expect(args[2]).toBe(32); // Fire Last
