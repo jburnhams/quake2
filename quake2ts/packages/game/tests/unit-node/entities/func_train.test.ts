@@ -32,10 +32,9 @@ describe('func_train', () => {
     });
 
     // Mock pickTarget to return p1
-    (context.entities.pickTarget as any).mockReturnValue(p1);
+    vi.spyOn(context.entities, 'pickTarget').mockReturnValue(p1);
 
     const spawn = registry.get('func_train');
-    // @ts-ignore
     spawn?.(entity, context);
 
     expect(entity.solid).toBe(Solid.Bsp);
