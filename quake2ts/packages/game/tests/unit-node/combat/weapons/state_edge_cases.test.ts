@@ -1,7 +1,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createPlayerClientFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 import { Entity } from '../../../../src/entities/entity.js';
+import { EntitySystem } from '../../../../src/entities/system.js';
 import { WeaponStateEnum } from '../../../../src/combat/weapons/state.js';
 import { WeaponId } from '../../../../src/inventory/playerInventory.js';
 import { AmmoType } from '../../../../src/inventory/ammo.js';
@@ -43,22 +44,17 @@ describe('Weapon State Machine Edge Cases', () => {
         vi.clearAllMocks();
         context = createTestContext();
         player = context.entities.spawn();
-        player.client = {
+        player.client = createPlayerClientFactory({
             weaponstate: WeaponStateEnum.WEAPON_READY,
             gun_frame: 0,
             weapon_think_time: 0,
             buttons: 0,
-            weaponStates: { states: new Map() },
-            inventory: {
-                ammo: { counts: {} },
-                items: [],
-                powerups: new Set(),
-                currentWeapon: WeaponId.Blaster
-            },
-            newWeapon: null,
+            newWeapon: undefined,
             ping: 0,
-            ps: {} as any
-        } as any;
+            ps: createPlayerStateFactory()
+        });
+
+        player.client.inventory.currentWeapon = WeaponId.Blaster;
 
         // Setup ammo
         player.client!.inventory.ammo.counts[AmmoType.Bullets] = 50;
@@ -85,7 +81,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             null,
             mockFire,
-            mockSys as any
+            mockSys as unknown as EntitySystem
         );
 
         // Expect state to REMAIN firing (cannot interrupt)
@@ -106,7 +102,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             null,
             mockFire,
-            mockSys as any
+            mockSys as unknown as EntitySystem
         );
 
         // NOW it should switch
@@ -133,7 +129,7 @@ describe('Weapon State Machine Edge Cases', () => {
             11, // THROW_HOLD
             12, // THROW_FIRE
             mockFire,
-            mockSys as any
+            mockSys as unknown as EntitySystem
         );
 
         // Expect explosion (mockFire called with held=true)
@@ -169,7 +165,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             [6], // Fire frames
             fireShotgun,
-            mockSys as any
+            mockSys as unknown as EntitySystem
         );
 
         expect(fireShotgun).toHaveBeenCalled();
@@ -191,7 +187,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             [6], // Fire frames
             fireShotgun,
-            mockSys as any
+            mockSys as unknown as EntitySystem
         );
 
         // Should switch now

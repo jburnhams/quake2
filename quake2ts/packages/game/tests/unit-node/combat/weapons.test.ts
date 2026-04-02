@@ -9,7 +9,7 @@ import * as damage from '../../../src/combat/damage.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
 import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory } from '@quake2ts/test-utils';
+import { createMockGameExports, createTraceMock, createPlayerEntityFactory, createEntityFactory, createPlayerStateFactory } from '@quake2ts/test-utils';
 
 vi.mock('../../../src/combat/damage.js', () => ({
     T_Damage: vi.fn(),
@@ -38,11 +38,13 @@ describe('Weapon Firing Logic', () => {
 
         // Ensure client side is set up with proper types
         if (!player.client) {
+             const baseClient = createPlayerClientFactory();
              player.client = {
+                 ...baseClient,
                  inventory: createPlayerInventory(),
                  weaponStates: createPlayerWeaponStates(),
-                 ps: {} as any
-             } as any;
+                 ps: createPlayerStateFactory()
+             };
         }
 
         // Use helper to create simple target entities
