@@ -6,38 +6,33 @@ import { T_Damage } from '../../../src/combat/damage.js';
 import { DamageFlags } from '../../../src/combat/damageFlags.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
 import { ZERO_VEC3 } from '@quake2ts/shared';
-import { createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Environment Suit Powerup', () => {
     let player: Entity;
     let game: any;
 
     beforeEach(() => {
-        player = createPlayerEntityFactory({
+        const client = createPlayerClientFactory({
+            invincible_time: 0,
+            enviro_time: 0,
+            buttons: 0,
+            pm_flags: 0,
+            pm_type: 0,
+            pm_time: 0,
+            gun_frame: 0,
+            rdflags: 0,
+            fov: 90,
+        });
+
+        player = new Entity(1);
+        Object.assign(player, createPlayerEntityFactory({
             takedamage: true,
             health: 100,
             deadflag: DeadFlag.Alive,
             flags: 0,
-            client: {
-                inventory: {
-                    powerups: new Map(),
-                    ammo: { counts: [] },
-                    ownedWeapons: new Set(),
-                    keys: new Set(),
-                    items: new Set(),
-                },
-                weaponStates: {},
-                invincible_time: 0,
-                enviro_time: 0,
-                buttons: 0,
-                pm_flags: 0,
-                pm_type: 0,
-                pm_time: 0,
-                gun_frame: 0,
-                rdflags: 0,
-                fov: 90,
-            } as any
-        }) as Entity;
+            client
+        }));
 
         game = {
             time: 10,
@@ -47,7 +42,7 @@ describe('Environment Suit Powerup', () => {
 
     it('should take damage from SLIME without enviro suit', () => {
         const result = T_Damage(
-            player as any,
+            player,
             null,
             null,
             ZERO_VEC3,
@@ -66,7 +61,7 @@ describe('Environment Suit Powerup', () => {
 
     it('should take damage from LAVA without enviro suit', () => {
         const result = T_Damage(
-            player as any,
+            player,
             null,
             null,
             ZERO_VEC3,
@@ -87,7 +82,7 @@ describe('Environment Suit Powerup', () => {
         player.client!.enviro_time = game.time + 5;
 
         const result = T_Damage(
-            player as any,
+            player,
             null,
             null,
             ZERO_VEC3,
@@ -113,7 +108,7 @@ describe('Environment Suit Powerup', () => {
         player.client!.enviro_time = game.time + 5;
 
         const result = T_Damage(
-            player as any,
+            player,
             null,
             null,
             ZERO_VEC3,
@@ -138,7 +133,7 @@ describe('Environment Suit Powerup', () => {
         player.client!.enviro_time = game.time + 5;
 
         const result = T_Damage(
-            player as any,
+            player,
             null,
             null,
             ZERO_VEC3,
