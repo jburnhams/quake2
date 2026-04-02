@@ -20,7 +20,7 @@ describe('target_autosave', () => {
     });
 
     // Mock timeSeconds on the entities object
-    (context.entities as any).timeSeconds = 100;
+    vi.spyOn(context.entities, 'timeSeconds', 'get').mockReturnValue(100);
 
     // Mock level state
     context.entities.level.next_auto_save = 0;

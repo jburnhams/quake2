@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { registerLightSpawns } from '../../../src/entities/lights.js';
 import { SpawnRegistry } from '../../../src/entities/spawn.js';
 import { Solid, MoveType } from '../../../src/entities/entity.js';
-import { createEntityFactory } from '@quake2ts/test-utils';
+import { createEntityFactory, createTestContext } from '@quake2ts/test-utils';
 
 describe('lights', () => {
   it('should register light spawns', () => {
@@ -18,8 +18,9 @@ describe('lights', () => {
     registerLightSpawns(registry);
     const spawn = registry.get('light');
     const entity = createEntityFactory({ classname: 'light' });
+    const context = createTestContext();
 
-    spawn?.(entity, {} as any);
+    spawn?.(entity, context);
     expect(entity.solid).toBe(Solid.Not);
     expect(entity.movetype).toBe(MoveType.None);
   });
