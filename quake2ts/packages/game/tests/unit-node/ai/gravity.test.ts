@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, MoveType } from '../../../src/entities/entity';
 import { M_CheckBottom } from '../../../src/ai/movement';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createMockSpawnFlags } from '@quake2ts/test-utils';
 
 describe('Gravity Vector Support', () => {
   let entity: Entity;
@@ -22,8 +22,9 @@ describe('Gravity Vector Support', () => {
       movetype: MoveType.Step,
       flags: 0,
     });
-    // Ensure spawnflags is mocked property or we only override the needed flag
-    entity.spawnflags = { has: () => false } as any; // Keeping this one simple or using proper BitSet but game entities use bitset, let's just leave it since it's just a mock
+    // Use the factory from test-utils to mock spawnflags cleanly and avoid code duplication
+    // We cast it to match BitSet interface used within the game code, avoiding "as any".
+    entity.spawnflags = createMockSpawnFlags() as unknown as typeof entity.spawnflags;
   });
 
   it('should check bottom for standard gravity (down)', () => {

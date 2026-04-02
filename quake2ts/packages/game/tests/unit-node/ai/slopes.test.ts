@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Entity, MoveType, Solid, EntityFlags } from '../../../src/entities/entity.js';
 import { M_MoveStep } from '../../../src/ai/movement.js';
 import { MASK_MONSTERSOLID } from '@quake2ts/shared';
-import { createMonsterEntityFactory, createTestContext, spawnEntity } from '@quake2ts/test-utils';
+import { createMonsterEntityFactory, createTestContext, spawnEntity, createMockSpawnFlags } from '@quake2ts/test-utils';
 
 describe('Sloping Surface Traversal', () => {
   let entity: Entity;
@@ -26,7 +26,10 @@ describe('Sloping Surface Traversal', () => {
       waterlevel: 0,
     });
     entity = spawnEntity(mockContext, monsterData);
-    entity.spawnflags = { has: () => false } as any;
+
+    // Use the factory from test-utils to mock spawnflags cleanly and avoid code duplication
+    // We cast it to match BitSet interface used within the game code, avoiding "as any".
+    entity.spawnflags = createMockSpawnFlags() as unknown as typeof entity.spawnflags;
   });
 
   it('should adjust move for slopes when blocked', () => {
