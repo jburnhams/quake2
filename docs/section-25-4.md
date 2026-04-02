@@ -627,7 +627,21 @@ export function buildTestBsp(/* ... */): BspData {
 - [x] BspBuilder compiles simple maps
 - [x] Output BSP passes engine validation
 - [x] Output BSP renders correctly (visual inspection via engine tests)
-- [ ] Player can spawn and move in generated maps
-- [ ] WASM comparison shows matching structure
+- [ ] Player can spawn and move in generated maps (Deferred)
+- [ ] WASM comparison shows matching structure (Deferred)
 - [x] Existing test-utils tests still pass
 - [x] Performance: Simple room builds in <100ms
+
+### Pending Separate Work Items
+
+The following testing and verification features require significant independent effort and have been deferred as separate future work items:
+
+1. **WASM Comparison for Primitive Builder:**
+   - **Description:** Verifying the TS primitive builder matches the original `q2tools` output byte-for-byte or functionally.
+   - **Details Needed:** We need an infrastructure setup where a generated map format (from TS) is passed to a WASM build of `q2tools` and the resulting BSP structure is compared. Specifically, comparing plane counts, node/leaf counts, and overall tree structure.
+   - **Why Deferred:** Building the `emsdk` integration to compile and execute `q2tools` within the vitest environment is a large, separate infrastructure task (noted in Section 25-9).
+
+2. **Player Movement & Spawning Integration Tests:**
+   - **Description:** Full end-to-end testing where a programmatic map is compiled, loaded into a live mock engine instance, and a player entity is spawned and moved around to verify collision and gameplay mechanics.
+   - **Details Needed:** Requires wiring the newly generated BSPs into a headless server/client execution flow, simulating player input, and asserting the physics system (trace) functions correctly against the new geometry.
+   - **Why Deferred:** While the BSP passes structural validation and engine loading tests, full physics simulation tests require more robust mocking of the player movement codebase, which belongs in a separate integration testing initiative.

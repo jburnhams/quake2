@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+PARTIALLY COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. WASM verification and engine rendering are deferred.
 
 ## Overview
 
@@ -551,5 +551,19 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [ ] Engine renders lightmaps correctly (Deferred)
+
+### Pending Separate Work Items
+
+The following testing and verification features require significant independent effort and have been deferred as separate future work items:
+
+1. **WASM Verification for Lighting:**
+   - **Description:** Setting up tests to compile maps using both the new TypeScript tools and the original Quake 2 `q2tools` (compiled to WASM), then comparing the lighting outputs.
+   - **Details Needed:** We need to compare lightmap dimensions per face, average brightness per face (as floating-point calculations and algorithms vary between C and JS), and total lighting data size. We also need to perform visual comparisons by rendering the same viewpoint with both BSPs and using image diffing tools to spot major differences.
+   - **Why Deferred:** This requires robust `emsdk` integration to run `q2tools` in test environments and headless rendering capabilities for image diffs, which is a massive infrastructure undertaking on its own.
+
+2. **Engine Rendering Verification:**
+   - **Description:** An integration test to verify the generated lightmaps are properly loaded and rendered by the `quake2ts` engine.
+   - **Details Needed:** Needs an end-to-end setup that generates a BSP with lighting, loads the BSP via the engine, sets up a camera view, and validates the pixel data (or mock renderer output) matches expectations (e.g., verifying a room is illuminated properly by a point light and cast shadows are present).
+   - **Why Deferred:** The engine's renderer tests are still evolving, and doing pixel-perfect verifications of lightmaps requires a fully functional webgl/webgpu headless testbed which is handled under a separate scope.
