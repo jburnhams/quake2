@@ -50,6 +50,26 @@ export function createCvarMock(name: string, value: string, flags: number = Cvar
   });
 }
 
+export interface MockBitSet {
+  has(index: number): boolean;
+  set(index: number): void;
+  clear(index: number): void;
+  bits: Uint8Array;
+}
+
+/**
+ * Creates a mock BitSet-like object often used for entity spawnflags in tests.
+ * This provides a standard way to avoid 'as any' casts when mocking spawnflags.
+ */
+export function createMockSpawnFlags(): MockBitSet {
+  return {
+    has: () => false,
+    bits: new Uint8Array(0),
+    set: () => {},
+    clear: () => {}
+  };
+}
+
 /**
  * Creates a mock PlayerState with sensible defaults.
  * Corresponds to player_state_t in q_shared.h.

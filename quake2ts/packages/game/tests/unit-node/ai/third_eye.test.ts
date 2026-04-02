@@ -14,17 +14,19 @@ describe('AI Third Eye Detection', () => {
     context = createTestContext();
     mockContext = context.entities;
 
+    // Use createMonsterInfoFactory to properly type the monsterinfo mock
+    // without needing to fall back to 'as any' casting.
     monster = spawnEntity(mockContext, createMonsterEntityFactory('monster_soldier', {
       origin: { x: 0, y: 0, z: 0 },
       mins: { x: -16, y: -16, z: -24 },
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
       enemy: null,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         aiflags: 0,
         sight: vi.fn(),
         last_sighting: { x: 0, y: 0, z: 0 },
-      } as any,
+      }),
       angles: { x: 0, y: 0, z: 0 },
       ideal_yaw: 0,
     }));
