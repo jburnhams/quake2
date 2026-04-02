@@ -1,4 +1,5 @@
 # Section 25-3: Map Parser
+COMPLETED: Implemented tokenizer, map parser, brush parser, entity parser, error handling and builder integration.
 
 ## Overview
 
