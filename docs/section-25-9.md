@@ -297,12 +297,12 @@ Some differences with WASM are acceptable:
 
 - [x] Unit tests for all modules
 - [x] Integration tests for pipelines
-- [ ] WASM comparison infrastructure
+- [ ] (Deferred) WASM comparison infrastructure
 - [x] Test fixture generation
-- [ ] Reference .map files created
+- [ ] (Deferred) Reference .map files created
 - [x] Performance benchmarks
-- [ ] CI pipeline configured
-- [ ] Coverage targets met (>80%)
+- [ ] (Deferred) CI pipeline configured
+- [ ] (Deferred) Coverage targets met (>80%)
 
 ### Pending Separate Work Items
 
