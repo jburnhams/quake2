@@ -1,5 +1,6 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+
+PARTIALLY COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. WASM verification and Engine rendering are deferred as separate work items.
 
 ## Overview
 
@@ -553,3 +554,19 @@ if (!options.noLighting) {
 - [x] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+The following testing features require significant independent effort and are left as future work items:
+
+1. **WASM Verification for Lighting Tools**:
+    - **Infrastructure setup**: Configure emsdk or a WebAssembly environment within Vitest to load the original Quake 2 `q2tools` as a compiled WASM module.
+    - **Lightmap Comparison Strategy**: Implement test functions that feed the same `.map` fixtures into both our `@quake2ts/bsp-tools` lighting compiler and the WASM `q2tools` reference.
+    - **Dimensional and Data Checks**: Add assertions to compare `LightmapInfo` properties such as `width`, `height`, `mins`, and `maxs` per face. Ensure the average brightness metrics and total size of the output `lighting` lump fall within a reasonable tolerance (e.g. ±5-10%) as algorithms and float precision may slightly vary.
+    - **Tooling Execution Scripts**: Add dedicated NPM/pnpm tasks like `pnpm --filter @quake2ts/bsp-tools test:wasm:lighting` specifically to run these comparisons.
+
+2. **Visual Comparison & Engine Rendering for Lightmaps**:
+    - **Test Engine Loading Fixtures**: Using `@quake2ts/test-utils` and `packages/engine`, build test map fixtures specifically crafted with varying light entities (point, spot, sun, surface emissive) and multi-light styles.
+    - **Engine BSP Parsing**: Verify that `packages/engine` can successfully parse the generated `lightMaps` and `styles` lumps, linking face indices accurately.
+    - **Screenshot/Visual Assertions**: Employ Playwright or Puppeteer for headless rendering of the generated map within `packages/engine`. Set up tests to capture screenshots from specific camera coordinates and compare them against baseline images to ensure light falls off correctly, shadows are cast by solid geometry, and different light styles are mapped correctly.
+    - **Light Style Interpolation Checks**: Ensure animated/pulsating light styles (e.g. `11`) render with proper dynamic intensity in the simulated engine environment.
