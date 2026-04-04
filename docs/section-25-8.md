@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+PARTIALLY COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
 
 ## Overview
 
@@ -520,22 +520,17 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] (Deferred) Test: Engine renders lightmaps correctly
 
 ---
 
-## 11. WASM Verification
+## 11. Pending Separate Work Items
 
-### 11.1 Lightmap Comparison
+The following items are deferred due to required external infrastructure setup (WASM) and complex visual integration test requirements:
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
-
-### 11.2 Visual Comparison
-
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+1. **WASM comparison infrastructure:** Set up infrastructure to execute the original q2tools logic compiled to WASM. Compare lightmap data properties including bounding box dimension logic, UV coordinates per face, average face brightness, and total emitted light data sizes against `@quake2ts/bsp-tools` outputs.
+2. **Visual Lightmap Verification:** Setup WebGL/WebGPU headless renderer visual regressions comparing the WASM BSP with TS BSP outputs, by generating and verifying identical static frames from same camera viewpoints.
+3. **Engine renders lightmaps correctly:** Integrate output generated directly from BspCompiler with the `@quake2ts/engine` integration tests.
 
 ---
 
@@ -551,5 +546,5 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] (Deferred) WASM comparison reasonable (lighting varies by implementation)
+- [ ] (Deferred) Engine renders lightmaps correctly
