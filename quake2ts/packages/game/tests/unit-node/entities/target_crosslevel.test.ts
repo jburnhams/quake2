@@ -10,7 +10,7 @@ describe('target_crosslevel', () => {
   beforeEach(() => {
     const { game } = createTestGame();
     sys = game.entities;
-    registry = (sys as any).spawnRegistry;
+    registry = sys.spawnRegistry!;
   });
 
   describe('target_crosslevel_trigger', () => {
