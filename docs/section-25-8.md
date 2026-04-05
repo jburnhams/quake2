@@ -1,5 +1,6 @@
-# Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+# COMPLETED: Section 25-8: Lighting & Lightmaps
+
+**Summary**: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. Deferred WASM comparison to a separate work item.
 
 ## Overview
 
@@ -520,22 +521,24 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] Test: Engine renders lightmaps correctly (Deferred - Requires manual visual verification within engine, tracked separately)
 
 ---
 
 ## 11. WASM Verification
 
+(Deferred to separate infrastructure work - See Section 25-9)
+
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] Compare lightmap dimensions per face (Deferred)
+- [ ] Compare average brightness per face (Deferred)
+- [ ] Compare total lighting data size (Deferred)
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] Render same viewpoint with both BSPs (Deferred)
+- [ ] Compare screenshots for major differences (Deferred)
 
 ---
 
@@ -551,5 +554,10 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [ ] Engine renders lightmaps correctly (Deferred)
+
+### Pending Separate Work Items
+
+1. **WASM comparison for lighting:** We need WASM integration first (see Section 25-9) to compare lightmap generation mathematically, comparing array lengths, dimensions per face, etc.
+2. **Engine rendering visual verification:** Testing engine integration visually requires running the generated BSPs through the `quake2ts` WebGL renderer and ensuring lightmap styles map correctly, which is a manual / E2E process.
