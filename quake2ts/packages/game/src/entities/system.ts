@@ -161,7 +161,7 @@ export class EntitySystem {
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private readonly random: RandomGenerator;
   private readonly callbackToName: Map<AnyCallback, string>;
-  private spawnRegistry?: SpawnRegistry;
+  private _spawnRegistry?: SpawnRegistry;
   private currentTimeSeconds = 0;
   private currentDeltaSeconds = 0;
   private frameNumber = 0;
@@ -189,16 +189,20 @@ export class EntitySystem {
     return this.random;
   }
 
+  get spawnRegistry(): SpawnRegistry | undefined {
+    return this._spawnRegistry;
+  }
+
   setSpawnRegistry(registry: SpawnRegistry): void {
-    this.spawnRegistry = registry;
+    this._spawnRegistry = registry;
   }
 
   registerEntityClass(classname: string, factory: SpawnFunction): void {
-    this.spawnRegistry?.register(classname, factory);
+    this._spawnRegistry?.register(classname, factory);
   }
 
   getSpawnFunction(classname: string): SpawnFunction | undefined {
-    return this.spawnRegistry?.get(classname);
+    return this._spawnRegistry?.get(classname);
   }
 
   readonly engine: GameEngine;

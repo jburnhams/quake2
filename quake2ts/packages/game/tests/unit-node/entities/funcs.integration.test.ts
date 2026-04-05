@@ -2,19 +2,28 @@ import { describe, it, expect, vi } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { DoorState, registerFuncSpawns } from '../../../src/entities/funcs.js';
+import { createGameImportsAndEngine } from '@quake2ts/test-utils';
 
 describe('Funcs Integration', () => {
-  const registry = createDefaultSpawnRegistry(null);
+  const { engine, imports } = createGameImportsAndEngine();
+  const registry = createDefaultSpawnRegistry(engine);
   registerFuncSpawns(registry);
 
 
   it('should open a door when a button is used', () => {
-    // Mock engine to handle sound
-    const mockEngine = {
-      sound: vi.fn(),
-    } as any;
+    // The test expects trace to be mocked such that it doesn't fail movement checks
+    imports.trace.mockReturnValue({
+      allsolid: false,
+      startsolid: false,
+      fraction: 1,
+      endpos: { x: 0, y: 0, z: 0 },
+      plane: null,
+      surfaceFlags: 0,
+      contents: 0,
+      ent: null,
+    });
 
-    const entities = new EntitySystem(mockEngine, null, null, 2048);
+    const entities = new EntitySystem(engine, imports, null, 2048);
     // Note: We set angle to 90 to ensure the door moves in the Y direction.
     // We also set mins/maxs because func_door calculates travel distance based on size.
     const map = `
@@ -45,7 +54,7 @@ describe('Funcs Integration', () => {
     button.use(button, null, null);
 
     expect(door.state).toBe(DoorState.Opening);
-    expect(mockEngine.sound).toHaveBeenCalledTimes(2); // Button sound + Door start sound
+    expect(engine.sound).toHaveBeenCalledTimes(2); // Button sound + Door start sound
 
     // Simulate some time passing.
     entities.beginFrame(0.1);
