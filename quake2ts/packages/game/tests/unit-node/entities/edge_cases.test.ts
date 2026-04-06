@@ -22,8 +22,11 @@ describe('Entity System Edge Cases', () => {
 
   it('handles invalid key-values', () => {
      const ent = game.entities.spawn();
-     (ent as any).health = "invalid";
-     expect((ent as any).health).toBe("invalid");
+     // Test how the engine handles invalid data types during edge case map loading
+     // @ts-expect-error Intentionally assigning string to numeric property for robustness testing
+     ent.health = "invalid";
+     // @ts-expect-error Verify the invalid value is retained
+     expect(ent.health).toBe("invalid");
   });
 
   it('handles circular targets', () => {
