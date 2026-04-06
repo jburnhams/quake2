@@ -1,40 +1,42 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createAmmoPickupEntity } from '../../../../src/entities/items/ammo.js';
 import { AmmoItemId, AmmoType } from '../../../../src/inventory/ammo.js';
 import { Solid } from '../../../../src/entities/entity.js';
 import { Entity } from '../../../../src/entities/entity.js';
-import { createPlayerEntityFactory, createMockGameExports, createMockInventory } from '@quake2ts/test-utils';
+import { createPlayerEntityFactory, createTestGame, createMockInventory, createPlayerClientFactory } from '@quake2ts/test-utils';
+import type { GameExports } from '../../../../src/index.js';
 
 describe('Ammo Pickup Entities', () => {
-    const mockGame = createMockGameExports({
-        sound: vi.fn(),
-        centerprintf: vi.fn(),
-        time: 100,
-        deathmatch: true,
-        entities: {
-            scheduleThink: vi.fn()
-        }
+    let mockGame: GameExports;
+
+    beforeEach(() => {
+        const { game } = createTestGame({ config: { deathmatch: true } });
+        mockGame = game;
+        vi.spyOn(mockGame, 'time', 'get').mockReturnValue(100);
+        vi.spyOn(mockGame, 'sound');
+        vi.spyOn(mockGame, 'centerprintf');
+        vi.spyOn(mockGame.entities, 'scheduleThink');
     });
 
     it('should create an ammo pickup entity', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells);
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells);
         expect(ammo.classname).toBe('ammo_shells');
         expect(ammo.solid).toBe(Solid.Trigger);
         expect(typeof ammo.touch).toBe('function');
     });
 
     it('should pickup ammo when touched by player', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells);
 
         const inventory = createMockInventory();
         // Ensure starting shell count is 0 for clear assertion
         inventory.ammo.counts[AmmoType.Shells] = 0;
 
         const player = createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory
-            } as any
-        }) as Entity;
+            })
+        });
 
         // Ensure touch is defined
         if (!ammo.touch) throw new Error('Touch callback undefined');
@@ -49,7 +51,7 @@ describe('Ammo Pickup Entities', () => {
     });
 
     it('should not pickup if maxed out', () => {
-        const ammo = createAmmoPickupEntity(mockGame as any, AmmoItemId.Shells) as Entity;
+        const ammo = createAmmoPickupEntity(mockGame, AmmoItemId.Shells);
 
         const inventory = createMockInventory();
         // Set to max
@@ -57,10 +59,10 @@ describe('Ammo Pickup Entities', () => {
         const max = inventory.ammo.counts[AmmoType.Shells];
 
         const player = createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory
-            } as any
-        }) as Entity;
+            })
+        });
 
         if (!ammo.touch) throw new Error('Touch callback undefined');
 
