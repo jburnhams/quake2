@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+PARTIALLY COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. Deferring visual/WASM comparisons.
 
 ## Overview
 
@@ -551,5 +551,10 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [ ] Engine renders lightmaps correctly (Deferred)
+
+### Pending Separate Work Items
+The following verification steps are heavily dependent on external systems and are left as future work items:
+1. **WASM Comparison**: Setup and verification against original q2tools to ensure accuracy of radiosity bounces and packing sizes.
+2. **Engine Visual Rendering**: Creation of headless WebGL/WebGPU test beds within the `engine` package to ensure the lighting maps are correctly bound and sampled on surfaces in 3D views.

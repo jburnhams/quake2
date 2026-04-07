@@ -350,6 +350,18 @@ export class BspBuilder {
     throw new Error('Method not implemented.');
   }
 
+  getBrushes(): BrushDef[] {
+    return this.brushes;
+  }
+
+  getEntities(): EntityDef[] {
+    return this.entities;
+  }
+
+  getWorldspawnProps(): Map<string, string> {
+    return this.worldspawnProps;
+  }
+
   // Build final BSP
   build(): BuildResult {
     const start = performance.now();

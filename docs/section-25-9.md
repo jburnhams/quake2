@@ -1,5 +1,5 @@
 # Section 25-9: Testing & Verification Strategy
-COMPLETED: Evaluated and verified that unit tests and integration tests for pipelines are implemented and passing. Detailed pending separate work items for WASM comparison, reference files, benchmarks, CI and coverage.
+PARTIALLY COMPLETED: Evaluated and verified that unit tests and integration tests for pipelines are implemented and passing. Detailed pending separate work items for WASM comparison, reference files, benchmarks, CI and coverage.
 
 ## Overview
 
@@ -297,12 +297,12 @@ Some differences with WASM are acceptable:
 
 - [x] Unit tests for all modules
 - [x] Integration tests for pipelines
-- [ ] WASM comparison infrastructure
+- [ ] WASM comparison infrastructure (Deferred)
 - [x] Test fixture generation
-- [ ] Reference .map files created
+- [ ] Reference .map files created (Deferred)
 - [x] Performance benchmarks
-- [ ] CI pipeline configured
-- [ ] Coverage targets met (>80%)
+- [ ] CI pipeline configured (Deferred)
+- [ ] Coverage targets met (>80%) (Deferred)
 
 ### Pending Separate Work Items
 
