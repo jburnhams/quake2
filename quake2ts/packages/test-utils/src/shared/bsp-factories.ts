@@ -16,7 +16,7 @@ export function createMockBspFace(overrides: Partial<BspFace> = {}): BspFace {
     side: 0,
     firstEdge: 0,
     numEdges: 0,
-    textureInfo: 0,
+    texInfo: 0,
     styles: [0, 255, 255, 255],
     lightOffset: -1,
     ...overrides
@@ -25,14 +25,14 @@ export function createMockBspFace(overrides: Partial<BspFace> = {}): BspFace {
 
 export function createMockBspTexInfo(overrides: Partial<BspTexInfo> = {}): BspTexInfo {
   return {
-    texture: '',
+    s: [0, 0, 0],
+    sOffset: 0,
+    t: [0, 0, 0],
+    tOffset: 0,
     flags: 0,
     value: 0,
+    texture: '',
     nextTexInfo: 0,
-    vecS: { x: 0, y: 0, z: 0 },
-    vecT: { x: 0, y: 0, z: 0 },
-    distS: 0,
-    distT: 0,
     ...overrides
   };
 }

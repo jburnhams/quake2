@@ -19,8 +19,11 @@ describe('target_autosave', () => {
       },
     });
 
-    // Explicitly mock getter using vi.spyOn to enforce strict typing without 'any'
-    vi.spyOn(context.entities, 'timeSeconds', 'get').mockReturnValue(100);
+    // Statically mock getter for timeSeconds using Object.defineProperty to avoid Vitest getter spying errors
+    Object.defineProperty(context.entities, 'timeSeconds', {
+      get: () => 100,
+      configurable: true
+    });
 
     // Mock level state
     context.entities.level.next_auto_save = 0;
