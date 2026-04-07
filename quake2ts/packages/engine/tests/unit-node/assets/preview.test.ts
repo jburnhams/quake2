@@ -11,7 +11,8 @@ import { ImageData } from '@napi-rs/canvas';
 
 // Polyfill ImageData for Node environment
 if (typeof global.ImageData === 'undefined') {
-  (global as any).ImageData = ImageData;
+  // @ts-expect-error ImageData binding for Node
+  global.ImageData = ImageData;
 }
 
 describe('AssetPreviewGenerator', () => {
@@ -147,19 +148,23 @@ describe('AssetPreviewGenerator', () => {
 
   it('generateModelThumbnail creates wireframe for MD3', async () => {
     const mockVertices = [
-      { position: { x: -10, y: -10, z: -10 } },
-      { position: { x: 10, y: -10, z: -10 } },
-      { position: { x: 0, y: 10, z: 0 } }
+      { position: { x: -10, y: -10, z: -10 }, normal: { x: 0, y: 0, z: 1 } },
+      { position: { x: 10, y: -10, z: -10 }, normal: { x: 0, y: 0, z: 1 } },
+      { position: { x: 0, y: 10, z: 0 }, normal: { x: 0, y: 0, z: 1 } }
     ];
 
     // Use centralized mock factory from test-utils
     const mockMd3 = createMockMd3Model({
       surfaces: [{
+        header: {
+          ident: 0, name: '', flags: 0, numFrames: 1, numShaders: 0, numVertices: 3, numTriangles: 1,
+          offsetTriangles: 0, offsetShaders: 0, offsetSt: 0, offsetXyzNormal: 0, offsetEnd: 0
+        },
         shaders: [],
         triangles: [{ indices: [0, 1, 2] }],
         texCoords: [],
-        vertices: [mockVertices as any]
-      } as any]
+        vertices: [mockVertices]
+      }]
     });
 
     vi.spyOn(assetManager, 'loadMd3Model').mockResolvedValue(mockMd3);

@@ -1,4 +1,5 @@
 import { BspLump } from '@quake2ts/engine';
+import type { BspFace, BspTexInfo } from '@quake2ts/engine';
 import { buildTestBsp, encodedVisForClusters } from '../engine/builders/bspBuilder.js';
 
 export function getLumpInfo(buffer: ArrayBuffer, lump: BspLump): { offset: number; length: number } {
@@ -6,6 +7,33 @@ export function getLumpInfo(buffer: ArrayBuffer, lump: BspLump): { offset: numbe
   return {
     offset: view.getInt32(8 + lump * 8, true),
     length: view.getInt32(12 + lump * 8, true),
+  };
+}
+
+export function createMockBspFace(overrides: Partial<BspFace> = {}): BspFace {
+  return {
+    planeIndex: 0,
+    side: 0,
+    firstEdge: 0,
+    numEdges: 0,
+    textureInfo: 0,
+    styles: [0, 255, 255, 255],
+    lightOffset: -1,
+    ...overrides
+  };
+}
+
+export function createMockBspTexInfo(overrides: Partial<BspTexInfo> = {}): BspTexInfo {
+  return {
+    texture: '',
+    flags: 0,
+    value: 0,
+    nextTexInfo: 0,
+    vecS: { x: 0, y: 0, z: 0 },
+    vecT: { x: 0, y: 0, z: 0 },
+    distS: 0,
+    distT: 0,
+    ...overrides
   };
 }
 
