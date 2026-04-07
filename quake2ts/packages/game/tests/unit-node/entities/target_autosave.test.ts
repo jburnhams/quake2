@@ -19,8 +19,11 @@ describe('target_autosave', () => {
       },
     });
 
-    // Mock timeSeconds on the entities object
-    (context.entities as any).timeSeconds = 100;
+    // Statically mock getter for timeSeconds using Object.defineProperty to avoid Vitest getter spying errors
+    Object.defineProperty(context.entities, 'timeSeconds', {
+      get: () => 100,
+      configurable: true
+    });
 
     // Mock level state
     context.entities.level.next_auto_save = 0;
