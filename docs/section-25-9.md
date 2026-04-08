@@ -306,10 +306,31 @@ Some differences with WASM are acceptable:
 
 ### Pending Separate Work Items
 
-The following testing features require significant independent effort and are left as future work items:
+The following testing features require significant independent effort and are left as future work items to be completed separately:
 
-1. **WASM comparison infrastructure:** Set up infrastructure to execute the original q2tools logic compiled to WASM to check byte-for-byte and logical parity. Needs `emsdk` integration.
-2. **Reference .map files created:** Creation and collection of standard Q2 .map files (e.g. from original id software releases) to use in pipeline testing.
-3. **Performance benchmarks:** Writing `bench` scripts and tracking performance to ensure our port meets the Target Performance criteria in Section 4.
-4. **CI pipeline configured:** Updating `.github/workflows/bsp-tools.yml` to automatically execute unit, integration, and WASM verification tasks.
-5. **Coverage targets met (>80%):** Configuring `test:coverage` scripts using vitest/istanbul to guarantee >80% coverage and integrate reporting.
+#### 1. WASM comparison infrastructure
+**What is needed:** Set up infrastructure to execute the original q2tools logic compiled to WASM to check byte-for-byte and logical parity.
+- Needs `emsdk` integration to compile original C tools.
+- Needs a build script (`build.sh`) to emit `q2tools.wasm` and wrappers.
+- Needs test scripts to send `.map` files to both TypeScript and WASM compilers.
+- Needs comparison logic to compare structure (node/leaf/plane counts) and output logic (e.g. tree traversal order, node split heuristics, PVS matching).
+
+#### 2. Reference .map files created
+**What is needed:** Creation and collection of standard Q2 .map files to use in pipeline testing.
+- Locate and extract basic map files from original id software source releases or generate standard fixture map files.
+- Move these `.map` files into `tests/fixtures/reference/`.
+
+#### 3. Performance benchmarks
+**What is needed:** Writing `bench` scripts and tracking performance.
+- Use `vitest bench` to evaluate map compilation speed.
+- Verify our port meets the Target Performance criteria established in Section 4 of this document.
+
+#### 4. CI pipeline configured
+**What is needed:** Update the Github Actions workflow configuration.
+- Update `.github/workflows/bsp-tools.yml` to automatically execute `pnpm test:unit` and `pnpm test:integration`.
+- Add a job to run WASM verification tasks once the `emsdk` infrastructure is set up.
+
+#### 5. Coverage targets met (>80%)
+**What is needed:** Configure coverage reporting tools.
+- Set up `test:coverage` scripts using vitest and istanbul/v8.
+- Guarantee that all logic modules hit the >80% coverage mark to ensure high reliability.
