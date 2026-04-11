@@ -1,3 +1,4 @@
+COMPLETED: Implemented portals, fast VIS, visibility lump formatting. WASM comparisons are deferred as a separate task.
 # Section 25-7: Portals & Visibility
 COMPLETED: Visibility generation using portals, flood-fill connectivity, PHS, full anti-penumbra PVS frustum culling, and run-length-encoded output lumps has been fully implemented, tested, and integrated into the BspCompiler.
 
@@ -439,6 +440,8 @@ if (!options.noVis) {
 
 ## Verification Checklist
 
+(Note: WASM comparison tasks are deferred)
+
 - [x] Portal generation produces correct portals
 - [x] Portal winding clipping correct
 - [x] Flood fill visits all reachable clusters
@@ -449,3 +452,6 @@ if (!options.noVis) {
 - [x] Fast VIS produces valid (if loose) results
 - [x] Visibility lump correctly formatted
 - [ ] WASM comparison passes (Deferred to Separate Work Items)
+
+### Pending Separate Work Items
+All 11. WASM Verification sub-tasks (PVS Comparison and Runtime Verification) are deferred to a separate work item.

@@ -1,3 +1,4 @@
+COMPLETED: Implemented light entity parsing, direct lighting, radiosity patches, lightmap sizing, lightmap packing and multiple styles. WASM comparisons and engine integration testing are deferred as a separate task.
 # Section 25-8: Lighting & Lightmaps
 COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
 
@@ -541,6 +542,8 @@ if (!options.noLighting) {
 
 ## Verification Checklist
 
+(Note: WASM comparison and engine integration tasks are deferred)
+
 - [x] Light entity parsing correct
 - [x] Ray tracing produces correct hits
 - [x] Shadow testing blocks correctly
@@ -553,3 +556,6 @@ if (!options.noLighting) {
 - [x] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+All 11. WASM Verification sub-tasks (Lightmap Comparison and Visual Comparison), as well as engine rendering integration testing, are deferred to a separate work item.

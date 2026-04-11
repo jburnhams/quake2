@@ -264,3 +264,29 @@ describe('flattenTree', () => {
     expect(result.serializedFaces[0]).toBe(dummyFace);
   });
 });
+
+describe('Cluster Assignment during flattenTree', () => {
+  it('assigns incrementing cluster IDs to non-solid leaves', () => {
+    const leafA: TreeElement = { contents: 0, brushes: [], bounds: createEmptyBounds3() };
+    const leafB: TreeElement = { contents: 0, brushes: [], bounds: createEmptyBounds3() };
+    const root: TreeNode = { planeNum: 1, children: [leafA, leafB], bounds: createEmptyBounds3() };
+
+    const faceMap = new Map();
+    const result = flattenTree(root, faceMap);
+
+    expect(result.leafs[0].cluster).toBe(0);
+    expect(result.leafs[1].cluster).toBe(1);
+  });
+
+  it('assigns cluster -1 to solid leaves', () => {
+    const leafSolid: TreeElement = { contents: CONTENTS_SOLID, brushes: [], bounds: createEmptyBounds3() };
+    const leafEmpty: TreeElement = { contents: 0, brushes: [], bounds: createEmptyBounds3() };
+    const root: TreeNode = { planeNum: 1, children: [leafSolid, leafEmpty], bounds: createEmptyBounds3() };
+
+    const faceMap = new Map();
+    const result = flattenTree(root, faceMap);
+
+    expect(result.leafs[0].cluster).toBe(-1);
+    expect(result.leafs[1].cluster).toBe(0); // Only non-solid leaves advance the cluster counter
+  });
+});
