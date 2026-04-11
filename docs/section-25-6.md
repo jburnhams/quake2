@@ -1,3 +1,4 @@
+COMPLETED: Implemented split plane selection, tree building, face extraction, T-junction fixing, cluster assignment, model creation, and edge optimization. WASM comparisons are deferred as a separate task.
 # Section 25-6: BSP Tree Construction (COMPLETED)
 
 **Summary**: Implemented BSP tree construction including recursive splitting, face extraction, T-junction fixing, tree flattening, and edge deduplication. Created `BspCompiler` integrating all stages.
@@ -329,7 +330,7 @@ export function flattenTree(tree: TreeElement): FlattenedTree;
 
 ### 7.1 Assign Clusters to Leaves
 
-- [ ] Implement cluster assignment
+- [x] Implement cluster assignment
 
 ```typescript
 /**
@@ -343,8 +344,8 @@ Clusters group leaves for visibility. Initially 1:1, portals can merge clusters.
 
 ### 7.2 Tests
 
-- [ ] Test: Each empty leaf gets cluster
-- [ ] Test: Solid leaves get cluster -1
+- [x] Test: Each empty leaf gets cluster
+- [x] Test: Solid leaves get cluster -1
 
 ---
 
@@ -380,7 +381,7 @@ Model 0 is always worldspawn. Additional models for `func_*` entities.
 ### 8.2 Tests
 
 - [x] Test: Model 0 is worldspawn
-- [ ] Test: func_door gets separate model
+- [x] Test: func_door gets separate model
 - [x] Test: Model bounds correct
 
 ---
@@ -487,13 +488,24 @@ export interface CompileResult {
 
 ## Verification Checklist
 
+(Note: WASM comparison tasks are deferred)
+
 - [x] Split plane selection produces balanced trees
 - [x] Tree building handles all brush configurations
 - [x] Face extraction produces correct faces
 - [x] T-junction fixing eliminates cracks
 - [x] Node/leaf numbering correct
-- [ ] Cluster assignment correct
+- [x] Cluster assignment correct
 - [x] Models created for brush entities
 - [x] Edges deduplicated correctly
 - [x] Full compiler produces valid BSP
 - [ ] WASM comparison passes
+
+## Update: Cluster Assignment (Completed)
+Cluster assignment has been fully implemented. Non-solid leaves are assigned incrementing cluster IDs, and solid leaves are assigned -1, directly during flattenTree. Tests passing.
+
+## Update: func_door Models (Completed)
+As described in memory, `SimpleCompiler` already handles grouping brushes by their owner entity. Sub-models are successfully generated for each individual entity (such as `func_door`). Tests passing.
+
+### Pending Separate Work Items
+All 11. WASM Verification sub-tasks (Structure Comparison and Semantic Comparison) are deferred to a separate work item.
