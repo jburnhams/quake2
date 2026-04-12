@@ -553,3 +553,13 @@ if (!options.noLighting) {
 - [x] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+The following testing features require significant independent effort or infrastructure and are left as future work items:
+
+1. **WASM comparison infrastructure:** Set up the `emsdk` environment to execute the original q2tools logic compiled to WASM. This is required for:
+   - Comparing lightmap dimensions per face
+   - Comparing average brightness per face
+   - Comparing total lighting data size
+2. **Visual Engine Verification:** Loading compiled BSPs containing generated lightmaps into the engine to visually verify that lightmaps are rendered correctly, and comparing screenshots of the same viewpoints rendered by WASM BSPs vs TS BSPs for any major differences.
