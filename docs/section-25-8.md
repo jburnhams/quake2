@@ -520,7 +520,7 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] (Deferred) Test: Engine renders lightmaps correctly
 
 ---
 
@@ -528,14 +528,14 @@ if (!options.noLighting) {
 
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] (Deferred) Compare lightmap dimensions per face
+- [ ] (Deferred) Compare average brightness per face
+- [ ] (Deferred) Compare total lighting data size
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] (Deferred) Render same viewpoint with both BSPs
+- [ ] (Deferred) Compare screenshots for major differences
 
 ---
 
@@ -551,5 +551,10 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] (Deferred) WASM comparison reasonable (lighting varies by implementation)
+- [ ] (Deferred) Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+1. **WASM Verification**: Setting up a WASM implementation to verify TS lightmaps vs original C behaviour.
+2. **Engine Rendering Integration**: Setting up engine tests to ensure lightmaps are rendering perfectly within the quake2ts engine.

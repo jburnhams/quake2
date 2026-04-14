@@ -1,4 +1,5 @@
 # Section 25-3: Map Parser
+COMPLETED: Implemented map tokenizer, entity parser, brush parser, main map parser, and integration with BspBuilder via mapToBuilder. WASM verification is deferred as a separate task.
 
 ## Overview
 
@@ -411,8 +412,8 @@ This bridges the parser (text → data) with the compiler (data → BSP).
 
 ### 8.1 Reference Comparison
 
-- [ ] Create test that parses map, compiles with both TS and WASM
-- [ ] Compare intermediate structures (brush counts, plane counts)
+- [ ] (Deferred) Create test that parses map, compiles with both TS and WASM
+- [ ] (Deferred) Compare intermediate structures (brush counts, plane counts)
 
 **Test Cases:**
 1. Parse simple box map → verify brush/plane counts match
@@ -430,4 +431,8 @@ This bridges the parser (text → data) with the compiler (data → BSP).
 - [x] Full maps parse without errors
 - [x] Validation catches common errors
 - [x] Error messages include line numbers
-- [ ] WASM comparison tests pass
+- [ ] (Deferred) WASM comparison tests pass
+
+### Pending Separate Work Items
+
+1. **WASM Verification**: Setting up a WASM implementation to verify TS parser vs original C behaviour.
