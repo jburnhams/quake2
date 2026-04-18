@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. Pending separate work items are related to WASM verification and testing engine rendering.
 
 ## Overview
 
@@ -553,3 +553,12 @@ if (!options.noLighting) {
 - [x] Light styles supported
 - [ ] WASM comparison reasonable (lighting varies by implementation)
 - [ ] Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+
+The following testing features require significant independent effort and are left as future work items:
+
+1. **Engine renders lightmaps correctly:** Verifying the lighting displays properly in-game inside the engine.
+2. **WASM comparison reasonable (lighting varies by implementation):** Verifying the lighting values calculated here are within reasonable margins of the WASM version.
+3. **Compare screenshots for major differences:** Taking in-game screenshots to visually compare.
+4. **Compare lightmap dimensions per face, average brightness per face, total lighting data size:** Doing in-depth technical analysis between the TS output and WASM output.
