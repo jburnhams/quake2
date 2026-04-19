@@ -524,6 +524,11 @@ if (!options.noLighting) {
 
 ---
 
+### Pending Separate Work Items
+
+1. **WASM Verification**: Compare TS output vs WASM logic for correctness.
+2. **Engine renders lightmaps correctly**: Integration testing visual output with the web rendering pipeline.
+
 ## 11. WASM Verification
 
 ### 11.1 Lightmap Comparison

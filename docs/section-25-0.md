@@ -1,6 +1,6 @@
-# Section 25-0: BSP Generation Tools - Overview (IN PROGRESS)
+# Section 25-0: BSP Generation Tools - Overview COMPLETED
 
-**Summary**: Implementation of the BSP toolchain is well underway. Foundations, winding math, map parsing, primitive building, CSG, and BSP tree construction (including T-junction fixing) are complete. Visibility generation using portals, flood-fill connectivity, PHS, full anti-penumbra PVS frustum culling, and run-length-encoded output lumps has been implemented and integrated into the BspCompiler. Advanced Lighting is pending.
+**Summary**: Implementation of the BSP toolchain is well underway. Foundations, winding math, map parsing, primitive building, CSG, and BSP tree construction (including T-junction fixing) are complete. Visibility generation using portals, flood-fill connectivity, PHS, full anti-penumbra PVS frustum culling, and run-length-encoded output lumps has been implemented and integrated into the BspCompiler. Advanced Lighting is completed.
 
 ## Purpose
 
@@ -50,7 +50,7 @@ Port the Quake 2 BSP compilation toolchain to TypeScript as `@quake2ts/bsp-tools
 | 25-5 | CSG Operations | **COMPLETED** |
 | 25-6 | BSP Tree Construction | **COMPLETED** |
 | 25-7 | Portals & Visibility | **COMPLETED** |
-| 25-8 | Lighting & Lightmaps | Pending |
+| 25-8 | Lighting & Lightmaps | **COMPLETED** |
 
 ## Key References
 
@@ -82,6 +82,11 @@ Port the Quake 2 BSP compilation toolchain to TypeScript as `@quake2ts/bsp-tools
 2. **Integration Tests**: Test full pipeline stages (parser → builder → compiler)
 3. **WASM Verification**: Compare TypeScript output against q2tools WASM output
 4. **Engine Loading**: Verify generated BSPs load and render correctly
+
+### Pending Separate Work Items
+
+1. **WASM Verification**: Compare TypeScript output against q2tools WASM output.
+2. **Engine Loading Verification**: Ensure runtime engine can load the output.
 
 ## Success Criteria
 
