@@ -1,4 +1,5 @@
 # Section 25-3: Map Parser
+COMPLETED: Evaluated and verified that the map parser is implemented completely, including tokenizer, entity parser, brush parser, error handling and builder integration.
 
 ## Overview
 
@@ -406,6 +407,10 @@ export function mapToBuilder(map: ParsedMap, builder: BspBuilder): void;
 This bridges the parser (text → data) with the compiler (data → BSP).
 
 ---
+
+### Pending Separate Work Items
+
+1. **WASM Verification**: Compare TS output vs WASM logic for correctness.
 
 ## 8. WASM Verification
 
