@@ -520,7 +520,7 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [x] Test: Engine renders lightmaps correctly
 
 ---
 
@@ -528,14 +528,14 @@ if (!options.noLighting) {
 
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] Compare lightmap dimensions per face (Deferred)
+- [ ] Compare average brightness per face (Deferred)
+- [ ] Compare total lighting data size (Deferred)
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] Render same viewpoint with both BSPs (Deferred)
+- [ ] Compare screenshots for major differences (Deferred)
 
 ---
 
@@ -551,5 +551,13 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [x] Engine renders lightmaps correctly
+
+---
+
+### Pending Separate Work Items
+
+The following features require significant independent effort and are deferred as future work items:
+
+1. **WASM Verification**: Setting up the infrastructure to execute the original q2tools logic compiled to WASM requires an `emsdk` execution environment setup. This is needed to systematically compare lightmap dimensions, brightness, and total sizes against the TypeScript implementation.
