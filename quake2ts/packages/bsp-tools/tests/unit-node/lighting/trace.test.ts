@@ -1,3 +1,4 @@
+import { createVector3 } from '@quake2ts/test-utils';
 import { describe, it, expect } from 'vitest';
 import { traceRay, isInShadow } from '../../../src/lighting/trace.js';
 import type { Light } from '../../../src/lighting/lights.js';
@@ -12,7 +13,7 @@ describe('trace', () => {
   // Right child (X < 0): SOLID
   const testPlanes: CompilePlane[] = [
     {
-      normal: { x: 1, y: 0, z: 0 } as Vec3,
+      normal: createVector3(1, 0, 0),
       dist: 0,
       type: 0 // PLANE_X
     }
@@ -38,8 +39,8 @@ describe('trace', () => {
 
   describe('traceRay', () => {
     it('returns no hit when ray is entirely in empty space', () => {
-      const start = { x: 10, y: 0, z: 0 } as Vec3;
-      const end = { x: 5, y: 0, z: 0 } as Vec3;
+      const start = createVector3(10, 0, 0);
+      const end = createVector3(5, 0, 0);
       const result = traceRay(start, end, testTree, testPlanes);
 
       expect(result.hit).toBe(false);
@@ -47,20 +48,20 @@ describe('trace', () => {
     });
 
     it('returns hit when ray goes into solid', () => {
-      const start = { x: 10, y: 0, z: 0 } as Vec3;
-      const end = { x: -10, y: 0, z: 0 } as Vec3;
+      const start = createVector3(10, 0, 0);
+      const end = createVector3(-10, 0, 0);
       const result = traceRay(start, end, testTree, testPlanes);
 
       expect(result.hit).toBe(true);
       expect(result.fraction).toBeCloseTo(0.5); // Starts at 10, ends at -10, hits plane at 0, which is exactly halfway
       expect(result.hitContents).toBe(CONTENTS_SOLID);
       expect(result.hitPoint?.x).toBeCloseTo(0);
-      expect(result.hitNormal).toEqual({ x: 1, y: 0, z: 0 }); // Hit the front side
+      expect(result.hitNormal).toEqual(createVector3(1, 0, 0)); // Hit the front side
     });
 
     it('returns hit immediately if starting in solid', () => {
-      const start = { x: -5, y: 0, z: 0 } as Vec3;
-      const end = { x: -10, y: 0, z: 0 } as Vec3;
+      const start = createVector3(-5, 0, 0);
+      const end = createVector3(-10, 0, 0);
       const result = traceRay(start, end, testTree, testPlanes);
 
       expect(result.hit).toBe(true);
@@ -71,12 +72,12 @@ describe('trace', () => {
 
   describe('isInShadow', () => {
     it('returns false when ray to light passes through empty space', () => {
-      const point = { x: 5, y: 0, z: 0 } as Vec3;
+      const point = createVector3(5, 0, 0);
       const light: Light = {
         type: 'point',
-        origin: { x: 10, y: 0, z: 0 } as Vec3,
+        origin: createVector3(10, 0, 0),
         intensity: 300,
-        color: { x: 1, y: 1, z: 1 } as Vec3
+        color: createVector3(1, 1, 1)
       };
 
       const shadow = isInShadow(point, light, testTree, testPlanes);
@@ -84,12 +85,12 @@ describe('trace', () => {
     });
 
     it('returns true when shadow ray is blocked by solid', () => {
-      const point = { x: 5, y: 0, z: 0 } as Vec3;
+      const point = createVector3(5, 0, 0);
       const light: Light = {
         type: 'point',
-        origin: { x: -5, y: 0, z: 0 } as Vec3, // Light is inside solid
+        origin: createVector3(-5, 0, 0), // Light is inside solid
         intensity: 300,
-        color: { x: 1, y: 1, z: 1 } as Vec3
+        color: createVector3(1, 1, 1)
       };
 
       const shadow = isInShadow(point, light, testTree, testPlanes);

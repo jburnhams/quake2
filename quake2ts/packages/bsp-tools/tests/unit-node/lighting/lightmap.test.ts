@@ -1,3 +1,4 @@
+import { createVector3 } from '@quake2ts/test-utils';
 import { describe, it, expect } from 'vitest';
 import { calculateLightmapSize, generateSamplePoints, toneMapLightmap, packLightmaps } from '../../../src/lighting/lightmap.js';
 import type { CompileFace, CompilePlane } from '../../../src/types/compile.js';
@@ -7,15 +8,15 @@ import type { LightSample } from '../../../src/lighting/direct.js';
 
 describe('lightmap', () => {
   const plane: CompilePlane = {
-    normal: { x: 0, y: 0, z: 1 } as Vec3,
+    normal: createVector3(0, 0, 1),
     dist: 0,
     type: 2
   };
 
   const texInfo: BspTexInfo = {
-    s: { x: 1, y: 0, z: 0 } as Vec3,
+    s: createVector3(1, 0, 0),
     sOffset: 0,
-    t: { x: 0, y: -1, z: 0 } as Vec3,
+    t: createVector3(0, -1, 0),
     tOffset: 0,
     flags: 0,
     value: 0,
@@ -25,10 +26,10 @@ describe('lightmap', () => {
 
   const winding: Winding = {
     points: [
-      { x: 0, y: 0, z: 0 } as Vec3,
-      { x: 32, y: 0, z: 0 } as Vec3,
-      { x: 32, y: 32, z: 0 } as Vec3,
-      { x: 0, y: 32, z: 0 } as Vec3
+      createVector3(0, 0, 0),
+      createVector3(32, 0, 0),
+      createVector3(32, 32, 0),
+      createVector3(0, 32, 0)
     ],
     numPoints: 4,
     maxPoints: 4
@@ -88,7 +89,7 @@ describe('lightmap', () => {
   describe('toneMapLightmap', () => {
     it('correctly clamps values greater than 255 and handles negatives', () => {
       const samples: LightSample[] = [
-        { color: { x: 300, y: 150, z: -50 } as Vec3 }
+        { color: createVector3(300, 150, -50) }
       ];
 
       const lightmap = toneMapLightmap(samples, 1, 1);
@@ -101,7 +102,7 @@ describe('lightmap', () => {
 
     it('applies exposure multiplier', () => {
       const samples: LightSample[] = [
-        { color: { x: 100, y: 100, z: 100 } as Vec3 }
+        { color: createVector3(100, 100, 100) }
       ];
 
       const lightmap = toneMapLightmap(samples, 1, 1, 2.0);
@@ -115,12 +116,12 @@ describe('lightmap', () => {
   describe('packLightmaps', () => {
     it('assembles continuous data and returns correct offsets', () => {
       const samplesMap1 = new Map<number, LightSample[]>();
-      samplesMap1.set(0, [{ color: { x: 100, y: 0, z: 0 } as Vec3 }]);
+      samplesMap1.set(0, [{ color: createVector3(100, 0, 0) }]);
 
       const samplesMap2 = new Map<number, LightSample[]>();
       samplesMap2.set(0, [
-        { color: { x: 0, y: 100, z: 0 } as Vec3 },
-        { color: { x: 0, y: 0, z: 100 } as Vec3 }
+        { color: createVector3(0, 100, 0) },
+        { color: createVector3(0, 0, 100) }
       ]);
 
       const faces = [
@@ -163,7 +164,7 @@ describe('lightmap', () => {
 
     it('skips faces without lightmaps and marks offset as -1', () => {
        const samplesMap2 = new Map<number, LightSample[]>();
-       samplesMap2.set(0, [{ color: { x: 255, y: 255, z: 255 } as Vec3 }]);
+       samplesMap2.set(0, [{ color: createVector3(255, 255, 255) }]);
 
        const faces = [
         {
