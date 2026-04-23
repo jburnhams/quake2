@@ -1,3 +1,4 @@
+import { createVector3 } from '@quake2ts/test-utils';
 import { describe, it, expect, vi } from 'vitest';
 import { calculateDirectLight, lightFace } from '../../../src/lighting/direct.js';
 import type { Light } from '../../../src/lighting/lights.js';
@@ -13,25 +14,25 @@ vi.mock('../../../src/lighting/trace.js', () => ({
 
 describe('direct lighting', () => {
   const planes: CompilePlane[] = [
-    { normal: { x: 0, y: 0, z: 1 } as Vec3, dist: 0, type: 2 }
+    { normal: createVector3(0, 0, 1), dist: 0, type: 2 }
   ];
 
   const tree: TreeElement = {
     contents: CONTENTS_EMPTY,
     brushes: [],
-    bounds: { mins: { x: -100, y: -100, z: -100 } as Vec3, maxs: { x: 100, y: 100, z: 100 } as Vec3 }
+    bounds: { mins: createVector3(-100, -100, -100), maxs: createVector3(100, 100, 100) }
   };
 
   describe('calculateDirectLight', () => {
     it('calculates point light contribution correctly', () => {
-      const normal = { x: 0, y: 0, z: 1 } as Vec3;
-      const point = { x: 0, y: 0, z: 0 } as Vec3;
+      const normal = createVector3(0, 0, 1);
+      const point = createVector3(0, 0, 0);
 
       const light: Light = {
         type: 'point',
-        origin: { x: 0, y: 0, z: 50 } as Vec3, // Directly above
+        origin: createVector3(0, 0, 50), // Directly above
         intensity: 100,
-        color: { x: 1, y: 1, z: 1 } as Vec3,
+        color: createVector3(1, 1, 1),
         falloff: 'inverse_square'
       };
 
@@ -45,14 +46,14 @@ describe('direct lighting', () => {
     });
 
     it('returns zero for lights behind the face', () => {
-      const normal = { x: 0, y: 0, z: 1 } as Vec3;
-      const point = { x: 0, y: 0, z: 0 } as Vec3;
+      const normal = createVector3(0, 0, 1);
+      const point = createVector3(0, 0, 0);
 
       const light: Light = {
         type: 'point',
-        origin: { x: 0, y: 0, z: -50 } as Vec3, // Below the plane
+        origin: createVector3(0, 0, -50), // Below the plane
         intensity: 100,
-        color: { x: 1, y: 1, z: 1 } as Vec3,
+        color: createVector3(1, 1, 1),
         falloff: 'inverse_square'
       };
 
@@ -67,9 +68,9 @@ describe('direct lighting', () => {
   describe('lightFace', () => {
     it('generates light samples for all pixels', () => {
       const texInfo: BspTexInfo = {
-        s: { x: 1, y: 0, z: 0 } as Vec3,
+        s: createVector3(1, 0, 0),
         sOffset: 0,
-        t: { x: 0, y: 1, z: 0 } as Vec3,
+        t: createVector3(0, 1, 0),
         tOffset: 0,
         flags: 0,
         value: 0,
@@ -79,10 +80,10 @@ describe('direct lighting', () => {
 
       const winding: Winding = {
         points: [
-          { x: 0, y: 0, z: 0 } as Vec3,
-          { x: 32, y: 0, z: 0 } as Vec3,
-          { x: 32, y: 32, z: 0 } as Vec3,
-          { x: 0, y: 32, z: 0 } as Vec3
+          createVector3(0, 0, 0),
+          createVector3(32, 0, 0),
+          createVector3(32, 32, 0),
+          createVector3(0, 32, 0)
         ],
         numPoints: 4,
         maxPoints: 4
@@ -106,9 +107,9 @@ describe('direct lighting', () => {
 
       const light: Light = {
         type: 'point',
-        origin: { x: 16, y: 16, z: 64 } as Vec3, // Above center of the first luxel/grid
+        origin: createVector3(16, 16, 64), // Above center of the first luxel/grid
         intensity: 300,
-        color: { x: 1, y: 1, z: 1 } as Vec3,
+        color: createVector3(1, 1, 1),
         falloff: 'inverse'
       };
 
@@ -135,9 +136,9 @@ describe('direct lighting', () => {
       // Alternatively, let's put the light straight over the 0th sample.
       const light2: Light = {
         type: 'point',
-        origin: { x: 8, y: 8, z: 64 } as Vec3,
+        origin: createVector3(8, 8, 64),
         intensity: 300,
-        color: { x: 1, y: 1, z: 1 } as Vec3,
+        color: createVector3(1, 1, 1),
         falloff: 'inverse'
       };
 
