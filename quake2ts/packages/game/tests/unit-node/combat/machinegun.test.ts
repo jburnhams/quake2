@@ -6,7 +6,7 @@ import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fire } from '../../../src/combat/weapons/firing.js';
 import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventory/index.js';
 import * as damage from '../../../src/combat/damage.js';
-import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory, createTraceMock } from '@quake2ts/test-utils';
+import { createTestGame, spawnEntity, createPlayerEntityFactory, createEntityFactory, createTraceMock , createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Machinegun', () => {
     afterEach(() => {
@@ -19,13 +19,13 @@ describe('Machinegun', () => {
         const { game, imports } = createTestGame();
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.Machinegun],
                     ammo: { [AmmoType.Bullets]: 50 },
                 }),
                 weaponStates: { states: new Map() }
-            } as any
+            })
         }));
 
         const target = spawnEntity(game.entities, createEntityFactory({
