@@ -11,7 +11,7 @@ import * as projectiles from '../../../src/entities/projectiles.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { MulticastType } from '../../../src/imports.js';
 import { ServerCommand, TempEntity, MZ_PHALANX, MZ_PHALANX2 } from '@quake2ts/shared';
-import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory } from '@quake2ts/test-utils';
+import { createGameImportsAndEngine, createEntityFactory, createPlayerEntityFactory , createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Phalanx', () => {
     it('should fire standard shot (Frame != 8) with radius 120 and MZ_PHALANX', () => {
@@ -29,7 +29,7 @@ describe('Phalanx', () => {
             origin: { x: 0, y: 0, z: 0 },
             viewheight: 22,
             angles: { x: 0, y: 0, z: 0 },
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.Phalanx],
                     ammo: { [AmmoType.MagSlugs]: 10 },
@@ -37,7 +37,7 @@ describe('Phalanx', () => {
                 weaponStates: createPlayerWeaponStates(),
                 buttons: 1,
                 gun_frame: 0 // Standard Shot
-            } as any
+            })
         }) as Entity;
         game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
@@ -70,7 +70,7 @@ describe('Phalanx', () => {
             origin: { x: 0, y: 0, z: 0 },
             viewheight: 22,
             angles: { x: 0, y: 0, z: 0 },
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.Phalanx],
                     ammo: { [AmmoType.MagSlugs]: 10 },
@@ -78,7 +78,7 @@ describe('Phalanx', () => {
                 weaponStates: createPlayerWeaponStates(),
                 buttons: 1,
                 gun_frame: 8 // Alternate Shot
-            } as any
+            })
         }) as Entity;
         game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);

@@ -8,7 +8,7 @@ import { createPlayerInventory, WeaponId, AmmoType } from '../../../src/inventor
 import * as projectiles from '../../../src/entities/projectiles.js';
 import * as damage from '../../../src/combat/damage.js';
 import { DamageMod } from '../../../src/combat/damageMods.js';
-import { createTestGame, createEntityFactory, createPlayerEntityFactory, spawnEntity } from '@quake2ts/test-utils';
+import { createTestGame, createEntityFactory, createPlayerEntityFactory, spawnEntity , createPlayerClientFactory } from '@quake2ts/test-utils';
 
 describe('Grenade Launcher', () => {
     afterEach(() => {
@@ -21,13 +21,13 @@ describe('Grenade Launcher', () => {
         const { game } = createTestGame();
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.GrenadeLauncher],
                     ammo: { [AmmoType.Grenades]: 10 },
                 }),
                 weaponStates: { states: new Map() }
-            } as any
+            })
         }));
 
         fire(game, player, WeaponId.GrenadeLauncher);

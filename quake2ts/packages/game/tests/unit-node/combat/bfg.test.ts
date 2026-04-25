@@ -14,7 +14,7 @@ import {
     createPlayerEntityFactory,
     createMonsterEntityFactory,
     createTraceMock
-} from '@quake2ts/test-utils';
+, createPlayerClientFactory } from '@quake2ts/test-utils';
 import { ServerFlags } from '../../../src/entities/entity.js';
 
 describe('BFG10K', () => {
@@ -28,13 +28,13 @@ describe('BFG10K', () => {
         const { game } = createTestGame();
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({
                     weapons: [WeaponId.BFG10K],
                     ammo: { [AmmoType.Cells]: 100 },
                 }),
                 weaponStates: { states: new Map() }
-            } as any
+            })
         }));
 
         fire(game, player, WeaponId.BFG10K);
@@ -50,7 +50,7 @@ describe('BFG10K', () => {
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
              origin: { x: 0, y: 0, z: 0 },
-             client: { inventory: { ammo: { counts: [] } } } as any
+             client: createPlayerClientFactory({ inventory: { ammo: { counts: [] } } })
         }));
 
         const target = spawnEntity(game.entities, createMonsterEntityFactory('monster_target', {
@@ -95,10 +95,10 @@ describe('BFG10K', () => {
         });
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
                 weaponStates: { states: new Map() }
-            } as any
+            })
         }));
 
         fire(game, player, WeaponId.BFG10K);
@@ -113,10 +113,10 @@ describe('BFG10K', () => {
         });
 
         const player = spawnEntity(game.entities, createPlayerEntityFactory({
-            client: {
+            client: createPlayerClientFactory({
                 inventory: createPlayerInventory({ weapons: [WeaponId.BFG10K], ammo: { [AmmoType.Cells]: 50 } }),
                 weaponStates: { states: new Map() }
-            } as any
+            })
         }));
 
         fire(game, player, WeaponId.BFG10K);
