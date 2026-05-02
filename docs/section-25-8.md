@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler. WASM verification and engine rendering tests deferred to a separate work item.
 
 ## Overview
 
@@ -520,7 +520,7 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] Test: Engine renders lightmaps correctly (Deferred)
 
 ---
 
@@ -528,14 +528,14 @@ if (!options.noLighting) {
 
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] Compare lightmap dimensions per face (Deferred)
+- [ ] Compare average brightness per face (Deferred)
+- [ ] Compare total lighting data size (Deferred)
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] Render same viewpoint with both BSPs (Deferred)
+- [ ] Compare screenshots for major differences (Deferred)
 
 ---
 
@@ -551,5 +551,13 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [ ] Engine renders lightmaps correctly (Deferred)
+
+### Pending Separate Work Items
+
+The following testing features require significant independent effort and are deferred as future work items:
+
+1. **Engine Lightmap Rendering Verification:** Writing integration tests utilizing `@quake2ts/engine` (potentially via a WebGL/WebGPU headless environment) to load a generated BSP and visually or programmatically verify that lightmaps are rendered correctly onto the corresponding faces.
+2. **WASM Lightmap Comparison:** Setting up infrastructure to compile and run the original `q2tools` logic as WASM, enabling byte-for-byte or statistical comparisons of lightmap dimensions, average brightness, and total data size per face to guarantee identical radiosity implementation.
+3. **Visual Comparison Tooling:** Developing tools to render the exact same viewpoint using both the TypeScript-generated BSP and a WASM-generated BSP, capturing screenshots, and comparing them to ensure there are no major rendering or lighting differences.
