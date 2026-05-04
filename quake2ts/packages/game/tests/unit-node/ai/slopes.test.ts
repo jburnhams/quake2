@@ -8,7 +8,7 @@ import { createMonsterEntityFactory, createTestContext, spawnEntity } from '@qua
 describe('Sloping Surface Traversal', () => {
   let entity: Entity;
   let context: ReturnType<typeof createTestContext>;
-  let mockContext: any; // The entity system part
+  let mockContext: ReturnType<typeof createTestContext>['entities']; // The entity system part
 
   beforeEach(() => {
     context = createTestContext();
@@ -26,55 +26,55 @@ describe('Sloping Surface Traversal', () => {
       waterlevel: 0,
     });
     entity = spawnEntity(mockContext, monsterData);
-    entity.spawnflags = { has: () => false } as any;
+    entity.spawnflags = 0;
   });
 
   it('should adjust move for slopes when blocked', () => {
     const move = { x: 10, y: 0, z: 0 };
 
     // 1. Initial move blocked (hit slope)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 0.5,
       endpos: { x: 5, y: 0, z: 0 },
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // 2. Upward trace (lift step)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 1.0,
       endpos: { x: 0, y: 0, z: 18 }, // Moved up
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // 3. Forward trace (at raised height)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 1.0,
       endpos: { x: 10, y: 0, z: 18 }, // Moved forward at height
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // 4. Downward trace (step down)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
         fraction: 0.5, // Hit slope ground
         endpos: { x: 10, y: 0, z: 5 }, // Landed on slope
         startsolid: false,
         allsolid: false,
         ent: {} // Ground entity
-    });
+    } as any);
 
     // Mock check bottom (ground check)
     // NOTE: CheckBottom calls trace again. We need to make sure it hits something reasonable.
     // If we are at z=5, a check bottom trace from z=5 down to -31 should hit something.
     // Let's say it hits at -20 (solid ground).
-    mockContext.trace.mockReturnValue({
+    vi.mocked(mockContext.trace).mockReturnValue({
         fraction: 0.5,
         endpos: { x: 10, y: 0, z: 5 }, // hit the ground at 5
         ent: {}
-    });
-    mockContext.pointcontents.mockReturnValue(0);
+    } as any);
+    vi.mocked(mockContext.pointcontents).mockReturnValue(0);
 
     const result = M_MoveStep(entity, move, true, mockContext);
 
@@ -88,28 +88,28 @@ describe('Sloping Surface Traversal', () => {
      const move = { x: 10, y: 0, z: 0 };
 
     // 1. Initial move blocked
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 0.5,
       endpos: { x: 5, y: 0, z: 0 },
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // 2. Upward trace (lift step)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 1.0,
       endpos: { x: 0, y: 0, z: 18 },
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // 3. Forward trace (at raised height) blocked by wall
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
       fraction: 0.1,
       endpos: { x: 1, y: 0, z: 18 },
       startsolid: false,
       allsolid: false,
-    });
+    } as any);
 
     // Since forward trace failed (fraction low), it should likely fail or try step
     // The logic in M_MoveStep compares up_trace and fwd_trace.
@@ -117,12 +117,12 @@ describe('Sloping Surface Traversal', () => {
 
     // Let's assume M_MoveStep will trace fwd from original position too
     // 4. Forward trace from original position (blocked)
-    mockContext.trace.mockReturnValueOnce({
+    vi.mocked(mockContext.trace).mockReturnValueOnce({
         fraction: 0.1,
         endpos: { x: 1, y: 0, z: 0 },
         startsolid: false,
         allsolid: false,
-    });
+    } as any);
 
     const result = M_MoveStep(entity, move, true, mockContext);
     expect(result).toBe(false);

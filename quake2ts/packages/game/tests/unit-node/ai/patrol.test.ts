@@ -18,7 +18,7 @@ describe('AI Patrol (path_corner)', () => {
     if (system.targetAwareness) {
         system.targetAwareness.activePlayers = [];
         vi.spyOn(system.targetAwareness, 'monsterAlertedByPlayers').mockReturnValue(null);
-        vi.spyOn(system.targetAwareness, 'soundClient').mockReturnValue(null as any);
+        vi.spyOn(system.targetAwareness, 'soundClient').mockReturnValue(null);
     }
 
     // Mock pickTarget to return entities by name
