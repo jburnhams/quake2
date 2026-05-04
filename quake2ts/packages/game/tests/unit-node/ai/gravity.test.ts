@@ -22,8 +22,8 @@ describe('Gravity Vector Support', () => {
       movetype: MoveType.Step,
       flags: 0,
     });
-    // Ensure spawnflags is mocked property or we only override the needed flag
-    entity.spawnflags = { has: () => false } as any; // Keeping this one simple or using proper BitSet but game entities use bitset, let's just leave it since it's just a mock
+    // Ensure spawnflags is a number as defined in the entity class
+    entity.spawnflags = 0;
   });
 
   it('should check bottom for standard gravity (down)', () => {

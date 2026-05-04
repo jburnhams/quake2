@@ -7,8 +7,8 @@ import { createMonsterEntityFactory, createPlayerEntityFactory, createTestContex
 describe('AI Third Eye Detection', () => {
   let monster: Entity;
   let enemy: Entity;
-  let context: any; // ReturnType<typeof createTestContext>
-  let mockContext: any;
+  let context: ReturnType<typeof createTestContext>;
+  let mockContext: ReturnType<typeof createTestContext>['entities'];
 
   beforeEach(() => {
     context = createTestContext();
@@ -20,11 +20,11 @@ describe('AI Third Eye Detection', () => {
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
       enemy: null,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         aiflags: 0,
         sight: vi.fn(),
         last_sighting: { x: 0, y: 0, z: 0 },
-      } as any,
+      }),
       angles: { x: 0, y: 0, z: 0 },
       ideal_yaw: 0,
     }));
@@ -67,7 +67,7 @@ describe('AI Third Eye Detection', () => {
     mockContext.targetAwareness.sightClient = enemy; // Potential candidate
 
     // Trace returns blocked
-    mockContext.trace.mockReturnValue({ fraction: 0.5, ent: null });
+    vi.mocked(mockContext.trace).mockReturnValue({ fraction: 0.5, ent: null } as any);
 
     const result = findTarget(monster, mockContext.targetAwareness, mockContext, mockContext.trace);
     expect(result).toBe(false);
@@ -80,7 +80,7 @@ describe('AI Third Eye Detection', () => {
     mockContext.targetAwareness.sightClient = enemy; // Potential candidate
 
     // Trace returns blocked
-    mockContext.trace.mockReturnValue({ fraction: 0.5, ent: null });
+    vi.mocked(mockContext.trace).mockReturnValue({ fraction: 0.5, ent: null } as any);
 
     const result = findTarget(monster, mockContext.targetAwareness, mockContext, mockContext.trace);
     expect(result).toBe(true);
@@ -90,7 +90,7 @@ describe('AI Third Eye Detection', () => {
   it('should clear ThirdEye flag after successfully finding target', () => {
      monster.monsterinfo!.aiflags |= AIFlags.ThirdEye;
      mockContext.targetAwareness.sightClient = enemy;
-     mockContext.trace.mockReturnValue({ fraction: 0.5, ent: null });
+     vi.mocked(mockContext.trace).mockReturnValue({ fraction: 0.5, ent: null } as any);
 
      findTarget(monster, mockContext.targetAwareness, mockContext, mockContext.trace);
 
