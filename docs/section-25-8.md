@@ -1,5 +1,5 @@
 # Section 25-8: Lighting & Lightmaps
-COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, lightmap sizing, lightmap packing and multiple styles, integrated with BspCompiler.
+COMPLETED: Implemented light parsing, direct lighting computation, radiosity patches, form factors, lightmap sizing, lightmap packing, multiple styles, and full computeFullLighting logic, integrating it into BspCompiler. WASM comparison and engine render tests are deferred to separate work items.
 
 ## Overview
 
@@ -520,7 +520,7 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+- [ ] Test: Engine renders lightmaps correctly (Deferred to separate integration task)
 
 ---
 
@@ -528,14 +528,14 @@ if (!options.noLighting) {
 
 ### 11.1 Lightmap Comparison
 
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
+- [ ] Compare lightmap dimensions per face (Deferred to separate WASM comparison task)
+- [ ] Compare average brightness per face (Deferred to separate WASM comparison task)
+- [ ] Compare total lighting data size (Deferred to separate WASM comparison task)
 
 ### 11.2 Visual Comparison
 
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+- [ ] Render same viewpoint with both BSPs (Deferred to separate WASM comparison task)
+- [ ] Compare screenshots for major differences (Deferred to separate WASM comparison task)
 
 ---
 
@@ -551,5 +551,10 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] WASM comparison reasonable (lighting varies by implementation) (Deferred)
+- [ ] Engine renders lightmaps correctly (Deferred)
+
+### Pending Separate Work Items
+
+1. **WASM Reference Comparison:** Set up WASM `q2tools` reference integration (using emsdk) to compare generated lightmap dimensions, average brightness, and total lighting data size.
+2. **Engine Integration & Visual Checks:** Verify that the engine correctly renders the lightmaps that `BspCompiler` produces, rendering the same viewpoints using both `@quake2ts/bsp-tools` and the original WASM BSP outputs and comparing visual screenshots for major deviations.
