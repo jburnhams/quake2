@@ -48,9 +48,9 @@ import { generatePortals } from './portals.js';
 import { serializeEntities } from '../output/entityString.js';
 
 // Lighting logic (currently simple placeholders or partial implementations)
-import { generateFullbrightLighting } from './lighting.js';
 import { parseLights } from '../lighting/lights.js';
 import { computeFastLighting } from '../lighting/fast.js';
+import { computeFullLighting } from '../lighting/full.js';
 
 export interface CompilerOptions {
   verbose?: boolean;
@@ -288,14 +288,32 @@ export class BspCompiler {
           }
         }
       } else {
-        lightMaps = generateFullbrightLighting(
-            finalFaces,
-            edgeData.vertices,
-            this.texInfoManager.getTexInfos(),
-            edgeData.surfEdges,
-            edgeData.edges,
-            planes
-        ) as Uint8Array;
+        const lights = parseLights(inputEntities as any);
+        const packed = computeFullLighting(
+          compileFaces,
+          texInfos,
+          lights,
+          root,
+          compilePlanes,
+          {
+            bounces: this.options.radiosity ? 2 : 0,
+            threshold: 1.0,
+            onProgress: (bounce, energy) => this.options.onProgress?.(`lighting bounce ${bounce}`, energy)
+          }
+        );
+
+        lightMaps = packed.data;
+
+        for (let i = 0; i < finalFaces.length; i++) {
+          const offset = packed.faceOffsets[i];
+          if (offset >= 0) {
+            (finalFaces[i] as any).lightOffset = offset;
+            (finalFaces[i] as any).styles = packed.faceStyles[i];
+          } else {
+            (finalFaces[i] as any).lightOffset = -1;
+            (finalFaces[i] as any).styles = [255, 255, 255, 255];
+          }
+        }
       }
     }
 
