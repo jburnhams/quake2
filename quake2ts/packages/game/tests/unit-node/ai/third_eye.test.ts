@@ -20,11 +20,11 @@ describe('AI Third Eye Detection', () => {
       maxs: { x: 16, y: 16, z: 32 },
       viewheight: 22,
       enemy: null,
-      monsterinfo: {
+      monsterinfo: createMonsterInfoFactory({
         aiflags: 0,
         sight: vi.fn(),
         last_sighting: { x: 0, y: 0, z: 0 },
-      } as any,
+      }),
       angles: { x: 0, y: 0, z: 0 },
       ideal_yaw: 0,
     }));
