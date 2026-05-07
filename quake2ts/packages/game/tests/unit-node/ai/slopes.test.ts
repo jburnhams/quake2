@@ -26,7 +26,7 @@ describe('Sloping Surface Traversal', () => {
       waterlevel: 0,
     });
     entity = spawnEntity(mockContext, monsterData);
-    entity.spawnflags = { has: () => false } as any;
+    entity.spawnflags = 0;
   });
 
   it('should adjust move for slopes when blocked', () => {

@@ -34,15 +34,15 @@ describe('Plasma Beam (Heatbeam)', () => {
             classname: 'player',
             origin: { x: 0, y: 0, z: 0 },
             viewheight: 22,
-            client: {
-                inventory: createPlayerInventory({
-                    weapons: [WeaponId.PlasmaBeam],
-                    ammo: { [AmmoType.Cells]: 50 },
-                }),
-                weaponStates: createPlayerWeaponStates(),
-                buttons: 1, // BUTTON_ATTACK
-            } as any
         }) as any;
+
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.PlasmaBeam],
+            ammo: { [AmmoType.Cells]: 50 },
+        });
+        player.client!.weaponStates = createPlayerWeaponStates();
+        player.client!.buttons = 1; // BUTTON_ATTACK
+
         game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 
@@ -101,14 +101,14 @@ describe('Plasma Beam (Heatbeam)', () => {
 
         const player = createPlayerEntityFactory({
             classname: 'player',
-            client: {
-                inventory: createPlayerInventory({
-                    weapons: [WeaponId.PlasmaBeam],
-                    ammo: { [AmmoType.Cells]: 0 },
-                }),
-                weaponStates: createPlayerWeaponStates(),
-            } as any
+        }) as any;
+
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.PlasmaBeam],
+            ammo: { [AmmoType.Cells]: 0 },
         });
+        player.client!.weaponStates = createPlayerWeaponStates();
+
         game.entities.spawn = vi.fn().mockReturnValue(player);
         game.entities.finalizeSpawn(player);
 

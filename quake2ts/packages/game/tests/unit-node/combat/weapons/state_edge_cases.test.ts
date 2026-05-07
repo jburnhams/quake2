@@ -1,6 +1,6 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createTestContext } from '@quake2ts/test-utils';
+import { createTestContext, createPlayerStateFactory } from '@quake2ts/test-utils';
 import { Entity } from '../../../../src/entities/entity.js';
 import { WeaponStateEnum } from '../../../../src/combat/weapons/state.js';
 import { WeaponId } from '../../../../src/inventory/playerInventory.js';
@@ -57,7 +57,7 @@ describe('Weapon State Machine Edge Cases', () => {
             },
             newWeapon: null,
             ping: 0,
-            ps: {} as any
+            ps: createPlayerStateFactory()
         } as any;
 
         // Setup ammo
@@ -85,7 +85,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             null,
             mockFire,
-            mockSys as any
+            context.entities
         );
 
         // Expect state to REMAIN firing (cannot interrupt)
@@ -95,7 +95,7 @@ describe('Weapon State Machine Edge Cases', () => {
 
         // Advance to end of firing
         player.client!.gun_frame = 15; // FIRE_LAST
-        mockSys.timeSeconds = 11; // Advance time to ensure think runs
+        Object.defineProperty(context.entities, 'timeSeconds', { value: 11, configurable: true }); // Advance time to ensure think runs
 
          Weapon_Generic(
             player,
@@ -106,7 +106,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             null,
             mockFire,
-            mockSys as any
+            context.entities
         );
 
         // NOW it should switch
@@ -121,7 +121,7 @@ describe('Weapon State Machine Edge Cases', () => {
         player.client!.buttons = 1; // Holding attack
         player.client!.grenade_time = 10 + 3.0; // Detonates at 13.0
 
-        mockSys.timeSeconds = 13.1;
+        Object.defineProperty(context.entities, 'timeSeconds', { value: 13.1, configurable: true });
 
         Throw_Generic(
             player,
@@ -133,7 +133,7 @@ describe('Weapon State Machine Edge Cases', () => {
             11, // THROW_HOLD
             12, // THROW_FIRE
             mockFire,
-            mockSys as any
+            context.entities
         );
 
         // Expect explosion (mockFire called with held=true)
@@ -148,7 +148,7 @@ describe('Weapon State Machine Edge Cases', () => {
         player.client!.inventory.currentWeapon = WeaponId.Shotgun;
         player.client!.weaponstate = WeaponStateEnum.WEAPON_FIRING;
         player.client!.gun_frame = 6; // Fire frame
-        mockSys.timeSeconds = 10;
+        Object.defineProperty(context.entities, 'timeSeconds', { value: 10, configurable: true });
 
         // Mock fire function that mimics the new checkAmmo behavior
         const fireShotgun = vi.fn((ent) => {
@@ -169,7 +169,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             [6], // Fire frames
             fireShotgun,
-            mockSys as any
+            context.entities
         );
 
         expect(fireShotgun).toHaveBeenCalled();
@@ -180,7 +180,7 @@ describe('Weapon State Machine Edge Cases', () => {
 
         // Advance to end of firing
         player.client!.gun_frame = 15; // FIRE_LAST
-        mockSys.timeSeconds = 11; // Advance time
+        Object.defineProperty(context.entities, 'timeSeconds', { value: 11, configurable: true }); // Advance time
 
         Weapon_Generic(
             player,
@@ -191,7 +191,7 @@ describe('Weapon State Machine Edge Cases', () => {
             null,
             [6], // Fire frames
             fireShotgun,
-            mockSys as any
+            context.entities
         );
 
         // Should switch now
