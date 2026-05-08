@@ -520,22 +520,21 @@ if (!options.noLighting) {
 ### 10.2 Tests
 
 - [x] Test: Compiled BSP has lighting data
-- [ ] Test: Engine renders lightmaps correctly
+
+### Pending Separate Work Items
+- Test: Engine renders lightmaps correctly (requires integration with the engine rendering pipeline and visual verification infrastructure).
 
 ---
 
 ## 11. WASM Verification
 
-### 11.1 Lightmap Comparison
-
-- [ ] Compare lightmap dimensions per face
-- [ ] Compare average brightness per face
-- [ ] Compare total lighting data size
-
-### 11.2 Visual Comparison
-
-- [ ] Render same viewpoint with both BSPs
-- [ ] Compare screenshots for major differences
+### Pending Separate Work Items
+- WASM Comparison Infrastructure: Requires setting up an emsdk execution environment to run q2tools as a WebAssembly module for comparison.
+- Compare lightmap dimensions per face.
+- Compare average brightness per face.
+- Compare total lighting data size.
+- Render same viewpoint with both BSPs.
+- Compare screenshots for major differences.
 
 ---
 
@@ -551,5 +550,5 @@ if (!options.noLighting) {
 - [x] Tone mapping produces valid output
 - [x] Lightmap packing correct
 - [x] Light styles supported
-- [ ] WASM comparison reasonable (lighting varies by implementation)
-- [ ] Engine renders lightmaps correctly
+- [ ] (Deferred) WASM comparison reasonable (lighting varies by implementation)
+- [ ] (Deferred) Engine renders lightmaps correctly
