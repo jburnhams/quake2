@@ -41,7 +41,7 @@
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:*",
     "@types/ws": "^8.18.1",
-    "tsup": "^8.5.1",
+    "tsup": "^9.0.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16"
   }
