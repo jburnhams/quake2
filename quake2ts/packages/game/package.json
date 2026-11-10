@@ -49,6 +49,6 @@
     "@quake2ts/test-utils": "workspace:^",
     "fake-indexeddb": "^6.2.5",
     "gl-matrix": "^3.4.4",
-    "tsup": "^8.5.1"
+    "tsup": "^9.0.0"
   }
 }
