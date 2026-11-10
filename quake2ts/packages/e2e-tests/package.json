@@ -22,7 +22,7 @@
   "devDependencies": {
     "@types/node": "^20.12.12",
     "@types/serve-handler": "^6.1.4",
-    "tsup": "^8.0.2",
+    "tsup": "^9.0.0",
     "typescript": "^5.4.5"
   }
 }
