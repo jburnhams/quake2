@@ -54,7 +54,7 @@
     "gl-matrix": "^3.4.4",
     "jsdom": "27.4.0",
     "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
+    "typescript": "^7.0.2",
     "vitest": "^4.0.16"
   }
 }
