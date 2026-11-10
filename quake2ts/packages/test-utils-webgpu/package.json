@@ -23,7 +23,7 @@
   "dependencies": {
     "@quake2ts/test-utils": "workspace:*",
     "@webgpu/types": "^0.1.68",
-    "vitest": "^4.0.16",
+    "vitest": "^5.1.0",
     "webgpu": "^0.3.8"
   },
   "devDependencies": {
