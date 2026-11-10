@@ -61,7 +61,7 @@
     "@napi-rs/canvas": "^0.1.88",
     "@playwright/test": "^1.57.0",
     "@quake2ts/test-utils": "workspace:^",
-    "@types/node": "^25.0.3",
+    "@types/node": "^26.6.6",
     "@types/pako": "^2.0.4",
     "@types/serve-handler": "^6.1.4",
     "@webgpu/types": "^0.1.68",
