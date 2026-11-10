@@ -23,6 +23,6 @@
     "@types/node": "^20.12.12",
     "@types/serve-handler": "^6.1.4",
     "tsup": "^8.0.2",
-    "typescript": "^5.4.5"
+    "typescript": "^7.0.2"
   }
 }
