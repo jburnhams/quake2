@@ -22,7 +22,7 @@
   },
   "dependencies": {
     "@quake2ts/test-utils": "workspace:*",
-    "pixelmatch": "^7.1.0",
+    "pixelmatch": "^8.0.0",
     "playwright": "^1.57.0",
     "pngjs": "^7.0.0",
     "vitest": "^4.0.16"
