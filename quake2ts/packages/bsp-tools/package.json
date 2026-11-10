@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@quake2ts/test-utils": "workspace:*",
-    "tsup": "^8.5.1",
+    "tsup": "^9.0.0",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"
   }
