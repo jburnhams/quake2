@@ -20,7 +20,7 @@
     "vitest": "^1.6.0"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
+    "@types/node": "^26.6.6",
     "@types/serve-handler": "^6.1.4",
     "tsup": "^8.0.2",
     "typescript": "^5.4.5"
