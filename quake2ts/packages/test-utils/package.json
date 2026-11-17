@@ -64,7 +64,7 @@
     "pngjs": "^7.0.0",
     "serve-handler": "^6.1.6",
     "vitest": "^1.6.0",
-    "webgpu": "^0.3.8"
+    "webgpu": "^0.6.2"
   },
   "peerDependenciesMeta": {
     "@quake2ts/engine": {
@@ -124,7 +124,7 @@
     "tsup": "^8.5.1",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16",
-    "webgpu": "^0.3.8"
+    "webgpu": "^0.6.2"
   },
   "dependencies": {
     "@quake2ts/bsp-tools": "workspace:*",
