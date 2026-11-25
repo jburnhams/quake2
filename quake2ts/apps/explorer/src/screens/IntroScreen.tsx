@@ -64,6 +64,12 @@ export function IntroScreen() {
             title="Explorer"
             description="Every file in the demo's PAK: pictures, textures, models, sounds and maps, with their facts."
           />
+          <LinkCard
+            as="h2"
+            to="/labs/movement"
+            title="Movement lab"
+            description="The game's own player movement on demo1, with its constants on sliders."
+          />
           <LinkCard as="h2" href={REPO} title="Source" description="The code, the plan, and the tests that hold each piece to the original." />
         </LinkCardList>
 

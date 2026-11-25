@@ -13,6 +13,7 @@ export * from './slide.js';
 export * from './snap.js';
 export * from './special.js';
 export * from './stuck.js';
+export * from './tuning.js';
 export * from './types.js';
 export * from './view.js';
 export * from './water.js';
