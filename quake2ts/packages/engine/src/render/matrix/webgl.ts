@@ -37,9 +37,12 @@ export class WebGLMatrixBuilder implements MatrixBuilder {
 
     const rotationQuake = mat4.create();
     mat4.identity(rotationQuake);
-    mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
-    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+    // The camera turns by Rz(yaw)·Ry(pitch)·Rx(roll); the view is its inverse,
+    // Rx(-roll)·Ry(-pitch)·Rz(-yaw). (Built the other way round, a view with both pitch and
+    // yaw looked skewed and rolled.)
     mat4.rotateX(rotationQuake, rotationQuake, -rollRad);
+    mat4.rotateY(rotationQuake, rotationQuake, -pitchRad);
+    mat4.rotateZ(rotationQuake, rotationQuake, -yawRad);
 
     // Combine Quake rotation with coordinate transform
     const rotationGl = mat4.create();

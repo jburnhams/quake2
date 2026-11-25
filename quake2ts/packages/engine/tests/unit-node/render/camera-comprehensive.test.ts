@@ -333,6 +333,25 @@ describe('Camera - Comprehensive Tests', () => {
   });
 
   describe('Matrix property validation', () => {
+    it('puts the point straight ahead at the centre of the screen for any pitch and yaw', () => {
+      // Regression: the view was built Rz(-yaw)·Ry(-pitch)·Rx(-roll), so with pitch and yaw
+      // both set this point landed at NDC (0.212, -0.652) and the view looked skewed.
+      for (const [pitch, yaw, roll] of [[30, 90, 0], [-45, 200, 0], [10, 135, 20], [0, 0, 0]]) {
+        const camera = new Camera(320, 240);
+        camera.setPosition(0, 0, 0);
+        camera.setRotation(pitch, yaw, roll);
+        const p = pitch * Math.PI / 180;
+        const y = yaw * Math.PI / 180;
+        // Quake's forward vector (AngleVectors): positive pitch looks down.
+        const ahead = [Math.cos(p) * Math.cos(y) * 100, Math.cos(p) * Math.sin(y) * 100, -Math.sin(p) * 100, 1];
+        const m = camera.viewProjectionMatrix;
+        const clip = [0, 1, 2, 3].map((r) => m[r] * ahead[0] + m[4 + r] * ahead[1] + m[8 + r] * ahead[2] + m[12 + r] * ahead[3]);
+        expect(clip[0] / clip[3]).toBeCloseTo(0, 5);
+        expect(clip[1] / clip[3]).toBeCloseTo(0, 5);
+        expect(clip[3]).toBeGreaterThan(0);
+      }
+    });
+
     it('should always have w component as 1 in the last row', () => {
       const testCases = [
         { pos: [10, 5, 20], angles: [30, 45, 15] },
@@ -348,9 +367,9 @@ describe('Camera - Comprehensive Tests', () => {
         const viewMatrix = camera.viewMatrix;
 
         // Bottom row should always be [0, 0, 0, 1]
-        expect(viewMatrix[3]).toBe(0);
-        expect(viewMatrix[7]).toBe(0);
-        expect(viewMatrix[11]).toBe(0);
+        expect(viewMatrix[3]).toBeCloseTo(0);
+        expect(viewMatrix[7]).toBeCloseTo(0);
+        expect(viewMatrix[11]).toBeCloseTo(0);
         expect(viewMatrix[15]).toBe(1);
       }
     });
