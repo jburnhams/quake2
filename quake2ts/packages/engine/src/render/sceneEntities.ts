@@ -9,7 +9,7 @@
  */
 import type { Md2Model } from '../assets/md2.js';
 import type { RenderableMd2 } from './scene.js';
-import { brushModelTransform, type BrushModelInstance } from './worldDrawList.js';
+import { rotateForEntity, type BrushModelInstance } from './worldDrawList.js';
 
 type Vec = { readonly x: number; readonly y: number; readonly z: number };
 
@@ -55,14 +55,11 @@ export function brushModelsFromEntities(
 const EF_ROTATE = 1;
 
 /**
- * An alias model's matrix, as R_DrawAliasModel builds it: R_RotateForEntity with the pitch
- * negated, because MD2s are modelled with pitch the other way round.
+ * An alias model's matrix, as R_DrawAliasModel builds it: R_RotateForEntity with only the pitch
+ * negated first ("sigh."), so pitch turns the model like the view and roll keeps the negation.
  */
-export function aliasModelTransform(
-  origin: Vec,
-  angles: Vec
-): Float32Array {
-  return brushModelTransform({ model: 0, origin, angles: { x: -angles.x, y: angles.y, z: angles.z } });
+export function aliasModelTransform(origin: Vec, angles: Vec): Float32Array {
+  return rotateForEntity(origin, { x: -angles.x, y: angles.y, z: angles.z });
 }
 
 export interface ModelEntitiesOptions {

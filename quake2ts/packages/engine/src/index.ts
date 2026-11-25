@@ -258,6 +258,7 @@ export { uploadWorldWebGL, uploadWorldTexture } from './render/uploadWorld.js';
 export {
   buildWorldDrawList,
   brushModelTransform,
+  rotateForEntity,
   type BrushModelInstance,
   type WorldDraw,
   type WorldDrawList,

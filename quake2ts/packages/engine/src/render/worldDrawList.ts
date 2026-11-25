@@ -119,21 +119,32 @@ export function animatedTextureName(map: BspMap, faceIndex: number, timeSeconds:
   return map.texInfo[index]?.texture;
 }
 
+type Angles = { readonly x: number; readonly y: number; readonly z: number };
+
 /**
- * A brush model's model matrix, as R_RotateForEntity builds it: move to the origin, then turn by
- * yaw about z, pitch about y and roll about x (pitch and roll negated, as Quake's angles are).
+ * R_RotateForEntity: move to the origin, then turn by yaw about z, -pitch about y and -roll
+ * about x. Callers flip signs first, as the original's do.
  */
-export function brushModelTransform(instance: BrushModelInstance): Float32Array {
+export function rotateForEntity(origin: Angles, angles: Angles | undefined): Float32Array {
   const m = mat4.create();
-  mat4.translate(m, m, [instance.origin.x, instance.origin.y, instance.origin.z]);
-  const a = instance.angles;
-  if (a) {
+  mat4.translate(m, m, [origin.x, origin.y, origin.z]);
+  if (angles) {
     const rad = Math.PI / 180;
-    if (a.y) mat4.rotateZ(m, m, a.y * rad);
-    if (a.x) mat4.rotateY(m, m, -a.x * rad);
-    if (a.z) mat4.rotateX(m, m, -a.z * rad);
+    if (angles.y) mat4.rotateZ(m, m, angles.y * rad);
+    if (angles.x) mat4.rotateY(m, m, -angles.x * rad);
+    if (angles.z) mat4.rotateX(m, m, -angles.z * rad);
   }
   return m as Float32Array;
+}
+
+/**
+ * A brush model's model matrix. R_DrawBrushModel negates pitch and roll before
+ * R_RotateForEntity ("stupid quake bug"), cancelling its negations, so the drawn model turns the
+ * same way as its collision model (angleVectors with positive pitch and roll).
+ */
+export function brushModelTransform(instance: BrushModelInstance): Float32Array {
+  const a = instance.angles;
+  return rotateForEntity(instance.origin, a && { x: -a.x, y: a.y, z: -a.z });
 }
 
 /** As gl_rsurf.c: a face this close to edge-on still counts as facing the camera. */

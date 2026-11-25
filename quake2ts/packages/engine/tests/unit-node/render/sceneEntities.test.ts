@@ -51,8 +51,8 @@ describe('modelEntitiesFromEntities', () => {
 
 describe('aliasModelTransform', () => {
   it('negates pitch, as R_DrawAliasModel does', () => {
-    // R_RotateForEntity turns a brush model by -pitch about y, so positive pitch tips its +x up;
-    // an alias model's pitch is negated first, so the same pitch tips it down, as a view does.
+    // R_DrawAliasModel negates only pitch before R_RotateForEntity, so positive pitch tips the
+    // model's +x down, as the view's forward vector tips.
     const m = aliasModelTransform(none, { x: 90, y: 0, z: 0 });
     expect(m[2]).toBeCloseTo(-1);
   });

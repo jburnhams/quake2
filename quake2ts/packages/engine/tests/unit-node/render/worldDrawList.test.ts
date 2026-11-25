@@ -109,6 +109,13 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
     const turned = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 90, z: 0 } });
     expect(turned[0]).toBeCloseTo(0);
     expect(turned[1]).toBeCloseTo(1);
+    // Pitch and roll turn the drawn model the way the collision model turns (angleVectors):
+    // R_DrawBrushModel cancels R_RotateForEntity's negations. Pitch 90 tips +x to -z (down).
+    const pitched = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 90, y: 0, z: 0 } });
+    expect(pitched[2]).toBeCloseTo(-1);
+    // Roll 90 turns +y (left) to +z, as angleVectors' right vector (-y at rest) turns to -z.
+    const rolled = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 0, z: 90 } });
+    expect(rolled[6]).toBeCloseTo(1);
   });
 
   it('reads brush models from entities, skipping free slots, hidden entities and non-submodels', () => {
