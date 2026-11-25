@@ -93,6 +93,8 @@ export interface NetRun {
   readonly neverRun: number;
   /** The largest prediction miss the client had to correct, in units. */
   readonly worstMiss: number;
+  /** Client frames where more than CMD_BACKUP commands were unacknowledged, so prediction froze. */
+  readonly frozen: number;
 }
 
 /** A small seeded generator (mulberry32), so a setup always gives the same losses. */
@@ -231,7 +233,7 @@ export function simulateNet(world: LabWorld, setup: NetSetup, predict: boolean, 
       const bytes = serverChan.transmit(u32s([snapshots.length - 1]));
       send('server', bytes, now, { frame: snapshots.length - 1 }, (b, p) => {
         const payload = clientChan.process(b);
-        if (!payload) return;
+        if (!payload) return void (p.discarded = true);
         const snap = snapshots[readU32s(payload)[0]!]!;
         const ack = clientChan.incomingAcknowledged;
         // CL_CheckPredictionError: the snapshot against what was predicted for that command.
@@ -253,6 +255,8 @@ export function simulateNet(world: LabWorld, setup: NetSetup, predict: boolean, 
   events.sort((a, b) => a.at - b.at || a.order - b.order);
   const frames: NetFrame[] = [];
   let next = 0;
+  let lastPredicted: Vec | null = null;
+  let frozen = 0;
   for (let i = 0; i < clientFrames; i++) {
     const now = i * setup.clientMsec;
     while (next < events.length && events[next]!.at <= now) {
@@ -266,13 +270,20 @@ export function simulateNet(world: LabWorld, setup: NetSetup, predict: boolean, 
       }
     }
     // CL_PredictMovement: from the snapshot, replay every command it has not acknowledged.
-    let state = base.state;
+    // When more commands are unacknowledged than it keeps (CMD_BACKUP), id's client freezes rather
+    // than replay a partial history: the view stays where the last prediction left it.
     const current = clientChan.outgoingSequence;
-    for (let s = base.ack + 1; s <= current; s++) {
-      const c = cmds.get(s);
-      if (!c) continue;
-      state = move(state, c);
-      predictedAt.set(s, state.origin);
+    const overflowed = current - base.ack >= CMD_BACKUP;
+    let state = base.state;
+    if (overflowed) {
+      state = { ...state, origin: lastPredicted ?? state.origin };
+      frozen++;
+    } else {
+      for (let s = base.ack + 1; s <= current; s++) {
+        state = move(state, cmds.get(s)!);
+        predictedAt.set(s, state.origin);
+      }
+      lastPredicted = state.origin;
     }
     // How far into the server frame the client is (cl.lerpfrac), for the slide and the interpolation.
     const lerpfrac = Math.min(1, Math.max(0, (now - base.arrived) / setup.serverMsec));
@@ -288,7 +299,7 @@ export function simulateNet(world: LabWorld, setup: NetSetup, predict: boolean, 
     });
   }
   // Remaining events (packets still in flight at the end) are left unrun.
-  return { frames, packets, repeated, neverRun, worstMiss };
+  return { frames, packets, repeated, neverRun, worstMiss, frozen };
 }
 
 /** Where the server had the player at `time`: after the last command it had run by then. */

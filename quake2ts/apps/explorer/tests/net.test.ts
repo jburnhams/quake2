@@ -59,6 +59,18 @@ describe('lag lab run', () => {
     expect(run.packets.some((p) => p.discarded)).toBe(true);
   });
 
+  it('freezes prediction rather than replay a partial history when CMD_BACKUP overflows', () => {
+    const run = simulateNet(world, { ...DEFAULT_NET, latency: 300, clientMsec: 10, serverMsec: 200 }, true);
+    expect(run.frozen).toBeGreaterThan(0);
+    // Lossless and deterministic, so no snapshot may disagree with a prediction.
+    expect(run.worstMiss).toBe(0);
+  });
+
+  it('marks snapshots thrown away for arriving late', () => {
+    const run = simulateNet(world, { ...DEFAULT_NET, jitter: 150, serverMsec: 25 }, true);
+    expect(run.packets.some((p) => p.from === 'server' && p.discarded)).toBe(true);
+  });
+
   it('is the same run for the same seed', () => {
     const setup = { ...DEFAULT_NET, loss: 0.2, jitter: 40 };
     expect(simulateNet(world, setup, true)).toEqual(simulateNet(world, setup, true));
