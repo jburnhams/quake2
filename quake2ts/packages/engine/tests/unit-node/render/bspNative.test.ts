@@ -116,7 +116,7 @@ describe('BSP Native Coordinate System Integration', () => {
         map: map,
         surfaces: [surface],
         lightStyles: [],
-        materials: { update: () => {} }
+        materials: { update: () => {}, getMaterial: () => undefined }
     };
 
     // Execute renderFrame

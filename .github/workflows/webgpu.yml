@@ -33,6 +33,10 @@ jobs:
       - name: Install dependencies
         run: pnpm install
 
+      # demo1 render gate (packages/engine/tests/demo1) needs the demo pak0.pak
+      - name: Demo paks
+        uses: ./.github/actions/demo-paks
+
       - name: Build workspace
         run: pnpm run build
 
@@ -57,3 +61,4 @@ jobs:
           path: |
             quake2ts/visual-tests.json
             quake2ts/packages/engine/tests/webgpu/visual/__snapshots__
+            quake2ts/packages/engine/tests/demo1/__snapshots__

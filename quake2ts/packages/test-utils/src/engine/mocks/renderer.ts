@@ -1,4 +1,5 @@
 import { vi } from 'vitest';
+import type { PreparedWorld, WorldRenderState } from '@quake2ts/engine';
 import {
   Renderer,
   FrameRenderer,
@@ -80,6 +81,7 @@ export function createMockRenderer(overrides?: Partial<Renderer>): Renderer {
     setAreaPortalState: vi.fn(),
     renderInstanced: vi.fn(),
     uploadBspGeometry: vi.fn().mockReturnValue({ surfaces: [], lightmaps: [] }),
+    uploadWorld: vi.fn((world: PreparedWorld): WorldRenderState => ({ map: world.map, surfaces: [] })),
     dispose: vi.fn(),
     ...overrides,
   };

@@ -60,6 +60,8 @@ struct VertexOutput {
     @location(4) screenPos: vec4<f32>,
 }
 
+const OVERBRIGHT: f32 = 2.0;
+
 @vertex
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
@@ -111,7 +113,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
                     if (layer >= -0.5) {
                         let offset = vec2<f32>(0.0, layer * input.lightmapStep);
-                        totalLight += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor;
+                        // Overbright: Quake 2 lightmaps store half intensity, and both original
+                        // renderers double them (ref_soft's light shift, ref_gl's gl_modulate).
+                        totalLight += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor * OVERBRIGHT;
                         hasLight = true;
                     }
                 }
@@ -120,14 +124,16 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
                 // Quake 2 logic usually implies at least one style is active if surfaced has SURF_LIGHT
                 // But if we have no lightmap data, we start black.
                 if (!hasLight) {
-                    // Fallback to avoid pitch black if lightmap intended but missing?
-                    // totalLight = vec3<f32>(1.0, 1.0, 1.0);
+                    totalLight = vec3<f32>(1.0, 1.0, 1.0);
                 }
             }
+            // A surface with no lightmap starts black here but full bright in WebGL; the shared
+            // draw list (docs/renderer-plan.md, phase 2) settles one rule for both.
 
             // Apply Dynamic Lights
-            // Workaround: worldPos appears offset by surface.mins, so we add it back
-            let correctedWorldPos = input.worldPos + surface.surfaceMins;
+            // worldPos is the vertex's world position. (An earlier "add surface mins" workaround
+            // compensated for every face sharing the last face's uniforms; that is fixed.)
+            let correctedWorldPos = input.worldPos;
             for (var i = 0u; i < 32u; i++) {
                 if (i >= frame.numDlights) {
                     break;
@@ -157,15 +163,15 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         // DEBUG: Output corrected worldPos as color (scaled to 0-1 range)
         // Map worldPos components: divide by 256 and take fract to visualize
         // Values 0-255 map to 0-1, values 256-511 wrap back to 0-1, etc.
-        // Use correctedWorldPos (input.worldPos + surface.surfaceMins) for accurate debug output
-        let debugWorldPos = input.worldPos + surface.surfaceMins;
+
+        let debugWorldPos = input.worldPos;
         let posScaled = abs(debugWorldPos) / 256.0;
         finalColor = vec4<f32>(fract(posScaled.x), fract(posScaled.y), fract(posScaled.z), 1.0);
     } else if (surface.renderMode == 4u) {
         // DEBUG: Output distance to first dlight as grayscale
         // Brighter = closer to light. Scale: 0-500 units maps to 1.0-0.0
-        // Use correctedWorldPos (input.worldPos + surface.surfaceMins) for accurate distance calculation
-        let debugWorldPos = input.worldPos + surface.surfaceMins;
+
+        let debugWorldPos = input.worldPos;
         var dist = 500.0;
         if (frame.numDlights > 0u) {
             dist = distance(debugWorldPos, frame.dlights[0].position);

@@ -1,4 +1,4 @@
-import { FrameRenderer, FrameRenderOptions as WebGPUFrameRenderOptions, FrameRenderStats } from './frame.js';
+import { FrameRenderer, FrameRenderOptions as WebGPUFrameRenderOptions, FrameRenderStats, type WebGPUWorldSurface, type WorldRenderState as WebGPUWorldRenderState } from './frame.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
@@ -24,7 +24,8 @@ import { parseColorString } from '../colors.js';
 import { BspSurfaceGeometry } from '../bsp.js';
 import { cullLights } from '../lightCulling.js';
 import { extractFrustumPlanes } from '../culling.js';
-import { FrameRenderOptions } from '../frame.js'; // Shared interface
+import { FrameRenderOptions, WorldRenderState } from '../frame.js'; // Shared interface
+import type { PreparedWorld } from '../prepareWorld.js';
 import { WebGPUProfiler, ProfilingResourceTracker } from './profiling.js';
 
 // WebGPU-specific renderer interface
@@ -42,6 +43,9 @@ export interface WebGPURenderer extends IWebGPURenderer {
 
   // Helper methods to upload geometry
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void;
+
+  /** Uploads a prepared world (prepareWorld) and returns the state renderFrame draws. */
+  uploadWorld(world: PreparedWorld): WorldRenderState;
 }
 
 export class WebGPURendererImpl implements WebGPURenderer {
@@ -174,6 +178,44 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
   // Geometry Management
   // =========================================================================
+
+  uploadWorld(world: PreparedWorld): WorldRenderState {
+    const surfaces: WebGPUWorldSurface[] = [];
+    world.geometry.surfaces.forEach((surface, faceIndex) => {
+      if (!surface) return;
+      const vb = new VertexBuffer(this.device, { size: surface.vertexData.byteLength, label: `world-vb-${faceIndex}` });
+      vb.write(surface.vertexData as unknown as BufferSource);
+      const ib = new IndexBuffer(this.device, { size: surface.indexData.byteLength, label: `world-ib-${faceIndex}` });
+      ib.write(surface.indexData as unknown as BufferSource);
+      surfaces[faceIndex] = { ...surface, gpuVertexBuffer: vb.buffer, gpuIndexBuffer: ib.buffer };
+    });
+
+    const lightmaps = world.geometry.lightmaps.map((atlas) => {
+      const texture = new Texture2D(this.device, { width: atlas.width, height: atlas.height, format: 'rgba8unorm', label: 'lightmap-atlas' });
+      texture.upload(atlas.pixels as unknown as BufferSource);
+      return { texture, width: atlas.width, height: atlas.height, pixels: atlas.pixels };
+    });
+
+    const textures = new Map<string, Texture2D>();
+    for (const [name, prepared] of world.textures) {
+      const texture = new Texture2D(this.device, {
+        width: prepared.width,
+        height: prepared.height,
+        format: 'rgba8unorm',
+        mipLevelCount: prepared.levels.length,
+        label: `world-${name}`,
+      });
+      for (const level of prepared.levels) {
+        texture.upload(level.rgba as unknown as BufferSource, { mipLevel: level.level, width: level.width, height: level.height });
+      }
+      textures.set(name, texture);
+    }
+
+    const state: WebGPUWorldRenderState = { map: world.map, surfaces, lightmaps, textures, lightStyles: world.lightStyles };
+    // IRenderer hands the world back to renderFrame as an opaque value typed with WebGL's
+    // defaults; renderFrame reads it as the WebGPU state it is.
+    return state as unknown as WorldRenderState;
+  }
 
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void {
       for (const surface of surfaces) {

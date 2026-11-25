@@ -34,7 +34,7 @@ describe('BspSurfacePipeline', () => {
 
     expect(device.createBuffer).toHaveBeenCalledWith(expect.objectContaining({
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
-      size: 256 // Surface buffer
+      size: 256 * 1024 // Surface uniforms: one 256-byte slot per draw
     }));
   });
 

@@ -1,5 +1,6 @@
+import type { PreparedWorld } from '../prepareWorld.js';
 import type { IRenderer, Pic } from '../interface.js';
-import type { FrameRenderOptions } from '../frame.js';
+import type { FrameRenderOptions, WorldRenderState } from '../frame.js';
 import type { RenderableEntity } from '../scene.js';
 import { DebugMode } from '../debugMode.js';
 import type { Md2Model } from '../../assets/md2.js';
@@ -24,6 +25,10 @@ export class NullRenderer implements IRenderer {
   constructor(width: number = 800, height: number = 600) {
     this.width = width;
     this.height = height;
+  }
+
+  uploadWorld(world: PreparedWorld): WorldRenderState {
+    return { map: world.map, surfaces: [], lightStyles: world.lightStyles };
   }
 
   renderFrame(
