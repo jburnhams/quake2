@@ -22,7 +22,7 @@ import {
   SIDE_BACK,
   SIDE_ON,
   SIDE_CROSS,
-} from '../../src/math/winding.js';
+} from '../src/index.js';
 import {
   dotVec3,
   subtractVec3,
@@ -30,7 +30,7 @@ import {
   normalizeVec3,
   type Vec3,
   vec3Equals,
-} from '../../src/index.js';
+} from '../src/index.js';
 
 describe('winding', () => {
   it('creates a new winding', () => {

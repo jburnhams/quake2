@@ -6,6 +6,15 @@
     "emitDeclarationOnly": true,
     "declarationMap": true
   },
-  "include": ["src/**/*"],
-  "references": []
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../strata-binary"
+    },
+    {
+      "path": "../strata-math"
+    }
+  ]
 }

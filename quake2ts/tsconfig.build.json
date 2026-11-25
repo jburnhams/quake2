@@ -1,6 +1,8 @@
 {
   "files": [],
   "references": [
+    { "path": "./packages/strata-binary" },
+    { "path": "./packages/strata-math" },
     { "path": "./packages/shared" },
     { "path": "./packages/bsp-tools" },
     { "path": "./packages/engine" },
