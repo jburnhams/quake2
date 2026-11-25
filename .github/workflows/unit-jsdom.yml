@@ -12,17 +12,17 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [25]
+        node-version: [26]
       fail-fast: false
     defaults:
       run:
         working-directory: quake2ts
     steps:
-      - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
         with:
-          version: 9
-      - uses: actions/setup-node@v4
+          package_json_file: quake2ts/package.json
+      - uses: actions/setup-node@v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'pnpm'

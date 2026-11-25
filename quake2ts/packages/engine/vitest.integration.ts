@@ -6,12 +6,7 @@ export default mergeConfig(baseConfig, defineConfig({
     include: ['tests/integration/**/*.test.ts'],
     environment: 'jsdom',
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        maxForks: 1,
-        minForks: 1
-      }
-    },
+    maxWorkers: 1,
     isolate: true,
     fileParallelism: false
   },

@@ -41,17 +41,17 @@ const setupFiles = ['./vitest.setup.ts'];
 export default defineConfig({
   resolve: {
     alias: {
-      '@quake2ts/shared/': path.resolve(__dirname, '../shared/src') + '/',
-      '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
-      '@quake2ts/game': path.resolve(__dirname, '../game/src/index.ts'),
-      '@quake2ts/engine/': path.resolve(__dirname, './src') + '/',
-      '@quake2ts/engine': path.resolve(__dirname, './src/index.ts'),
-      '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(__dirname, '../test-utils/src/engine/mocks/webgpu.ts'),
-      '@quake2ts/test-utils/src/setup/webgpu': path.resolve(__dirname, '../test-utils/src/setup/webgpu.ts'),
-      '@quake2ts/test-utils': path.resolve(__dirname, '../test-utils/src/index.ts'),
-      '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
-      '@quake2ts/client': path.resolve(__dirname, '../client/src/index.ts'),
-      '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
+      '@quake2ts/shared/': path.resolve(import.meta.dirname, '../shared/src') + '/',
+      '@quake2ts/shared': path.resolve(import.meta.dirname, '../shared/src/index.ts'),
+      '@quake2ts/game': path.resolve(import.meta.dirname, '../game/src/index.ts'),
+      '@quake2ts/engine/': path.resolve(import.meta.dirname, './src') + '/',
+      '@quake2ts/engine': path.resolve(import.meta.dirname, './src/index.ts'),
+      '@quake2ts/test-utils/src/engine/mocks/webgpu': path.resolve(import.meta.dirname, '../test-utils/src/engine/mocks/webgpu.ts'),
+      '@quake2ts/test-utils/src/setup/webgpu': path.resolve(import.meta.dirname, '../test-utils/src/setup/webgpu.ts'),
+      '@quake2ts/test-utils': path.resolve(import.meta.dirname, '../test-utils/src/index.ts'),
+      '@quake2ts/server': path.resolve(import.meta.dirname, '../server/src/index.ts'),
+      '@quake2ts/client': path.resolve(import.meta.dirname, '../client/src/index.ts'),
+      '@quake2ts/cgame': path.resolve(import.meta.dirname, '../cgame/src/index.ts'),
     },
   },
   test: {
@@ -62,12 +62,7 @@ export default defineConfig({
     globals: true,
     ...((isIntegration || isWebGPU || isWebGL) ? {
       pool: 'forks',
-      poolOptions: {
-        forks: {
-          maxForks: 1,
-          minForks: 1
-        }
-      },
+      maxWorkers: 1,
       isolate: true,
       fileParallelism: false
     } : {}),

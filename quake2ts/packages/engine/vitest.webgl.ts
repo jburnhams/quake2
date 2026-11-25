@@ -6,12 +6,7 @@ export default mergeConfig(baseConfig, defineConfig({
     include: ['tests/webgl/**/*.test.ts'],
     environment: 'jsdom',
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        maxForks: 1,
-        minForks: 1
-      }
-    },
+    maxWorkers: 1,
     // Disable isolation to allow sharing the Playwright browser instance across test files
     isolate: false,
     fileParallelism: false

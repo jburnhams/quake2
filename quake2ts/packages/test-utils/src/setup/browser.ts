@@ -13,6 +13,21 @@ export interface BrowserSetupOptions {
 }
 
 /**
+ * Puts a value on the global object. Under Vitest's jsdom environment some globals
+ * (`document`, `navigator`) are getter-only accessors, so a plain assignment throws;
+ * redefine those instead.
+ */
+function setGlobal(name: string, value: unknown): void {
+  try {
+    (globalThis as any)[name] = value;
+    if ((globalThis as any)[name] === value) return;
+  } catch {
+    // Getter-only accessor: fall through and redefine it.
+  }
+  Object.defineProperty(globalThis, name, { value, writable: true, configurable: true });
+}
+
+/**
  * Sets up a browser environment for testing using JSDOM and napi-rs/canvas.
  * This should be called in your vitest.setup.ts file.
  */
@@ -33,48 +48,34 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
   });
 
   // Set up global variables
-  global.window = dom.window as any;
-  global.document = dom.window.document;
+  setGlobal('window', dom.window);
+  setGlobal('document', dom.window.document);
 
   // Polyfill global DOM Constructors
-  global.Document = dom.window.Document;
-  global.Element = dom.window.Element;
-  global.Node = dom.window.Node;
+  setGlobal('Document', dom.window.Document);
+  setGlobal('Element', dom.window.Element);
+  setGlobal('Node', dom.window.Node);
 
-  // Handle navigator assignment safely
-  try {
-    // @ts-ignore
-    global.navigator = dom.window.navigator;
-  } catch (e) {
-    try {
-      Object.defineProperty(global, 'navigator', {
-        value: dom.window.navigator,
-        writable: true,
-        configurable: true
-      });
-    } catch (e2) {
-      console.warn('Could not assign global.navigator, skipping.');
-    }
-  }
+  setGlobal('navigator', dom.window.navigator);
 
-  global.location = dom.window.location;
-  global.HTMLElement = dom.window.HTMLElement;
-  global.HTMLCanvasElement = dom.window.HTMLCanvasElement;
+  setGlobal('location', dom.window.location);
+  setGlobal('HTMLElement', dom.window.HTMLElement);
+  setGlobal('HTMLCanvasElement', dom.window.HTMLCanvasElement);
 
   // Polyfill global Event constructors
-  global.Event = dom.window.Event;
-  global.CustomEvent = dom.window.CustomEvent;
-  global.DragEvent = dom.window.DragEvent as any;
-  global.MouseEvent = dom.window.MouseEvent;
-  global.KeyboardEvent = dom.window.KeyboardEvent;
-  global.FocusEvent = dom.window.FocusEvent;
-  global.WheelEvent = dom.window.WheelEvent;
-  global.InputEvent = dom.window.InputEvent;
-  global.UIEvent = dom.window.UIEvent;
+  setGlobal('Event', dom.window.Event);
+  setGlobal('CustomEvent', dom.window.CustomEvent);
+  setGlobal('DragEvent', dom.window.DragEvent);
+  setGlobal('MouseEvent', dom.window.MouseEvent);
+  setGlobal('KeyboardEvent', dom.window.KeyboardEvent);
+  setGlobal('FocusEvent', dom.window.FocusEvent);
+  setGlobal('WheelEvent', dom.window.WheelEvent);
+  setGlobal('InputEvent', dom.window.InputEvent);
+  setGlobal('UIEvent', dom.window.UIEvent);
 
   // Setup Storage mocks
   try {
-      global.localStorage = dom.window.localStorage;
+      setGlobal('localStorage', dom.window.localStorage);
   } catch (e) {
       // Ignore if it fails
   }
@@ -149,8 +150,8 @@ export function setupBrowserEnvironment(options: BrowserSetupOptions = {}) {
       };
   }
 
-  global.Image = Image as any;
-  global.ImageData = ImageData as any;
+  setGlobal('Image', Image);
+  setGlobal('ImageData', ImageData);
 
   if (typeof global.createImageBitmap === 'undefined') {
     global.createImageBitmap = async function (

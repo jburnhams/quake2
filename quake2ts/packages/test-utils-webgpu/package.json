@@ -22,12 +22,12 @@
   },
   "dependencies": {
     "@quake2ts/test-utils": "workspace:*",
-    "@webgpu/types": "^0.1.68",
-    "vitest": "^4.0.16",
-    "webgpu": "^0.3.8"
+    "@webgpu/types": "^0.1.74",
+    "vitest": "^5.1.1",
+    "webgpu": "^0.6.2"
   },
   "devDependencies": {
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3"
+    "tsup": "^9.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2"
   }
 }
