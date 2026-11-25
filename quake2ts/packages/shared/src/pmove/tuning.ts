@@ -3,10 +3,8 @@
  * explorer's movement lab puts each on a slider, and a mod could set its own. `runPmove` takes it
  * as an optional third argument; leaving it out (or any field of it) is the game as it ships.
  *
- * The defaults are the values runPmove used before this object existed. They match
- * rerelease/p_move.cpp:181-188 and qcommon/pmove.c:53-61, except `waterAccelerate`: C has 10,
- * runPmove has always passed 4. It is kept at 4 here so that this change moves nothing; whether
- * 4 is a bug is a question for the movement port, checked against the C oracle.
+ * The defaults are the C values, rerelease/p_move.cpp:181-188 and qcommon/pmove.c:53-61.
+ * `waterAccelerate` was 4 in the port until 2026-11-25; both C sources have 10.
  */
 export interface PmoveTuning {
   /** pm_accelerate: ground acceleration, as a multiple of the wished speed per second. */
@@ -37,7 +35,7 @@ export interface PmoveTuning {
 export const DEFAULT_PMOVE_TUNING: PmoveTuning = Object.freeze({
   accelerate: 10,
   airAccelerate: 1,
-  waterAccelerate: 4,
+  waterAccelerate: 10,
   friction: 6,
   waterFriction: 1,
   stopSpeed: 100,
