@@ -31,7 +31,7 @@ const reached = (t: number | null | undefined, now: number) => ms(t) <= ms(now);
 /** Whether the current weapon has the ammo for a shot (Weapon_HandleReady's check). */
 function hasAmmoForShot(client: NonNullable<Entity['client']>): boolean {
     const weaponId = client.inventory.currentWeapon;
-    if (!weaponId) return false;
+    if (!weaponId) return true;
     const item = Object.values(WEAPON_ITEMS).find((w) => w.weaponId === weaponId);
     if (!item || item.ammoType === null || item.ammoType === undefined) return true;
     return (client.inventory.ammo.counts[item.ammoType] ?? 0) >= (AMMO_PER_SHOT[weaponId] ?? 1);
@@ -230,6 +230,13 @@ export function Weapon_Repeating(
                 client.gun_frame = FRAME_IDLE_FIRST;
                 return;
             }
+            // Out of ammo with attack held: wind down and change weapon, as the rerelease's
+            // repeating fire functions do (Weapon_HyperBlaster_Fire, Chaingun_Fire).
+            if (!hasAmmoForShot(client)) {
+                NoAmmoWeaponChange(ent, sys);
+                client.gun_frame = FRAME_IDLE_FIRST;
+                return;
+            }
             client.gun_frame = client.gun_frame >= FRAME_FIRE_FIRST && client.gun_frame < FRAME_FIRE_LAST ? client.gun_frame + 1 : FRAME_FIRE_FIRST;
             fire(ent);
         }, now);
@@ -263,7 +270,16 @@ export function Throw_Generic(
     }
     client.weapon_think_time = time + 0.1; // Default 10Hz unless modified
 
-    // Handle DROPPING state for grenades.
+    // WEAPON_ACTIVATING: thrown weapons have no raise animation; they are ready on the next
+    // weapon frame (rerelease Throw_Generic).
+    if (client.weaponstate === WeaponStateEnum.WEAPON_ACTIVATING) {
+        client.weaponstate = WeaponStateEnum.WEAPON_READY;
+        client.gun_frame = FRAME_FIRE_LAST + 1;
+        client.weapon_fire_finished = time + Weapon_AnimationTime(ent);
+        return;
+    }
+
+        // Handle DROPPING state for grenades.
     // Since grenades don't have explicit deactivate frames passed in this signature,
     // we use a safe fallback to finalize the switch immediately or animate if frames are known.
     // For robust porting, we should finish the switch to avoid getting stuck.

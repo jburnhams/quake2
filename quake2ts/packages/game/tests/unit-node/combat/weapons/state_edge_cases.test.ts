@@ -165,4 +165,17 @@ describe('Weapon State Machine Edge Cases', () => {
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
         expect(player.client!.newWeapon).toBe('Blaster');
     });
+
+    it('a thrown weapon being raised is ready on its next weapon frame', () => {
+        player.client!.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
+        player.client!.gun_frame = 0;
+        player.client!.weapon_think_time = 0;
+        mockSys.timeSeconds = 10;
+
+        Throw_Generic(player, 10, 20, 5, 15, 8, 11, 12, mockFire, mockSys as any);
+
+        expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
+        expect(player.client!.gun_frame).toBe(11);
+        expect(mockFire).not.toHaveBeenCalled();
+    });
 });

@@ -90,4 +90,18 @@ describe('HyperBlaster Animation', () => {
         expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_LAST + 1);
         expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(50);
     });
+
+    it('out of cells with attack held, it winds down and picks another weapon', () => {
+        player.client.inventory.ammo.counts[AmmoType.Cells] = 1;
+        player.client.inventory.ownedWeapons.add(WeaponId.Blaster);
+        player.client.buttons = 1;
+
+        hyperBlasterThink(player, sys);
+        expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(0);
+
+        player.client.weapon_think_time = 0;
+        hyperBlasterThink(player, sys);
+        expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
+        expect(player.client.newWeapon).toBe(WeaponId.Blaster);
+    });
 });
