@@ -35,7 +35,7 @@ export const EYE_PARAMS: readonly NumberParam<EyeKey>[] = [
   { key: 'x', param: 'x', label: 'East', hint: 'Where the eye is along the map, west to east.', min: -2200, max: 1480, step: 1, unit: 'u' },
   { key: 'y', param: 'y', label: 'North', hint: 'Where the eye is across the map, south to north.', min: -1560, max: 2010, step: 1, unit: 'u' },
   { key: 'z', param: 'z', label: 'Height', hint: 'How high the eye is. A click on a floor puts it 46 units above it, a standing player’s eye.', min: -470, max: 610, step: 1, unit: 'u' },
-  { key: 'yaw', param: 'yaw', label: 'Facing', hint: 'The way the 3D view looks, as a Quake yaw: 0 is east, 90 north.', min: -180, max: 180, step: 5, unit: '°' },
+  { key: 'yaw', param: 'yaw', label: 'Facing', hint: 'The way the 3D view starts out looking, as a Quake yaw: 0 is east, 90 north. Dragging the view turns it from there.', min: -180, max: 180, step: 5, unit: '°' },
 ];
 
 /** demo1's player start, at eye height, facing as it does. */
@@ -123,6 +123,10 @@ function VisibilityView({
   open: boolean;
   moveTo: (eye: { x: number; y: number; z: number }) => void;
 }) {
+  // The way the 3D view faces: the Facing slider sets where it starts, and looking round in the
+  // view turns it, so the plan's line follows the view rather than the slider.
+  const [facing, setFacing] = React.useState(yaw);
+  React.useEffect(() => setFacing(yaw), [yaw]);
   const floors = React.useMemo(() => mapFloors(map), [map]);
   const portals = React.useMemo(() => mapPortals(map), [map]);
   const openSet = React.useMemo(() => new Set(open ? portals.map((p) => p.number) : []), [open, portals]);
@@ -140,7 +144,7 @@ function VisibilityView({
 
   return (
     <div className="grid gap-4 p-4">
-      <PvsPlan floors={floors} view={view} yaw={yaw} onPick={moveTo} />
+      <PvsPlan floors={floors} view={view} yaw={facing} onPick={moveTo} />
 
       <MetricStrip label="What the renderer draws from here">
         <Metric label="Cluster" value={view.cluster < 0 ? format.missing : format.integer.format(view.cluster)} note={clusterNote(view)} />
@@ -167,6 +171,7 @@ function VisibilityView({
         draw={draw}
         standAt
         portals={portalStates}
+        onTurn={(o) => setFacing(o.yaw)}
       />
 
       <section aria-labelledby="pvs-facts" className="grid gap-2">

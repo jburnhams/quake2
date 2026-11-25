@@ -60,9 +60,11 @@ export interface LabSceneProps {
   standAt?: boolean;
   /** Area portals to open or close before drawing (renderer.setAreaPortalState), as [number, open]. */
   portals?: ReadonlyArray<readonly [number, boolean]>;
+  /** Told of every turn of the camera (a drag, a key, a new home), so a lab can show the way it faces elsewhere. */
+  onTurn?: (orbit: Orbit) => void;
 }
 
-export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS }: LabSceneProps) {
+export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, onTurn }: LabSceneProps) {
   const { library } = useLibrary();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [state, setState] = React.useState<SceneState>({ status: 'loading' });
@@ -113,6 +115,11 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
   }, []);
 
   React.useEffect(() => setOrbit(home), [home]);
+
+  // The latest onTurn, so a new function each render does not count as a turn.
+  const turned = React.useRef(onTurn);
+  turned.current = onTurn;
+  React.useEffect(() => turned.current?.(orbit), [orbit]);
 
   // Ctrl or Cmd with the wheel (and a trackpad pinch, which arrives as one) zooms the camera. A
   // native listener, since React's wheel listener is passive and cannot stop the page zooming too.
