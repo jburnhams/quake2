@@ -26,7 +26,7 @@ export interface Demo1Shot {
   /** Draw the monsters and items of the entity lump where the map places them. */
   readonly entities?: boolean;
   /** Draw this first-person weapon at a frame (the blaster's idle frames are 9 to 52; 0 to 4 raise it from below the view). */
-  readonly viewWeapon?: { readonly model: string; readonly frame: number };
+  readonly viewWeapon?: { readonly model: string; readonly frame: number; readonly oldFrame?: number; readonly frameLerp?: number };
 }
 
 const EYE = 22; // viewheight above a spawn point's origin
@@ -46,6 +46,8 @@ export const DEMO1_SHOTS: readonly Demo1Shot[] = [
   // MD2s: soldiers and the jacket armour in the courtyard, and the blaster in first person.
   { name: 'models-courtyard', origin: [480, 272, -40 + EYE], angles: [0, 200, 0], entities: true },
   { name: 'view-blaster', origin: [128, -320, 32 + EYE], angles: [0, 135, 0], viewWeapon: { model: 'models/weapons/v_blast/tris.md2', frame: 10 } },
+  // Halfway between two firing frames, so both backends blend MD2 frames the same way.
+  { name: 'view-blaster-blend', origin: [128, -320, 32 + EYE], angles: [0, 135, 0], viewWeapon: { model: 'models/weapons/v_blast/tris.md2', oldFrame: 5, frame: 6, frameLerp: 0.5 } },
 ];
 
 /** The model each spawned class shows, for the classes demo1's lump has near the shots (the game sets these in SP_*). */

@@ -24,6 +24,12 @@ export interface SceneEntitySource {
   readonly inUse?: boolean;
   /** Animation frame and skin number of an MD2. */
   readonly frame?: number;
+  /**
+   * The frame to blend from and how far toward `frame` (0 to 1), as entity_t's oldframe and
+   * 1 - backlerp. Left out, the current frame is drawn as it is.
+   */
+  readonly oldFrame?: number;
+  readonly frameLerp?: number;
   readonly skin?: number;
   /** EF_ flags; EF_ROTATE (1) spins items in place. */
   readonly effects?: number;
@@ -55,6 +61,18 @@ export function brushModelsFromEntities(
 const EF_ROTATE = 1;
 
 /**
+ * The renderer's blend: frame0 is the old frame, frame1 the current one, lerp how far from the
+ * old to the current (GL_DrawAliasFrameLerp's frontlerp). Frames out of range are clamped.
+ */
+function frameBlend(model: Md2Model, frame: number, oldFrame: number | undefined, frameLerp: number | undefined) {
+  const last = model.frames.length - 1;
+  const clamp = (f: number) => Math.max(0, Math.min(last, f));
+  const current = clamp(frame);
+  if (oldFrame === undefined || frameLerp === undefined || frameLerp >= 1) return { frame0: current, frame1: current, lerp: 0 };
+  return { frame0: clamp(oldFrame), frame1: current, lerp: Math.max(0, frameLerp) };
+}
+
+/**
  * An alias model's matrix, as R_DrawAliasModel builds it: R_RotateForEntity with only the pitch
  * negated first ("sigh."), so pitch turns the model like the view and roll keeps the negation.
  */
@@ -73,8 +91,8 @@ export interface ModelEntitiesOptions {
 
 /**
  * The MD2 models to draw: monsters, items, weapons on the floor, gibs. Each is an entity in use
- * with an `.md2` model that has been loaded, at its frame, with the skin its number picks.
- * Frames are not blended yet; the entity's current frame is drawn.
+ * with an `.md2` model that has been loaded, at its frame (blended from `oldFrame` when the
+ * source gives one), with the skin its number picks.
  */
 export function modelEntitiesFromEntities(
   entities: Iterable<SceneEntitySource>,
@@ -90,7 +108,6 @@ export function modelEntitiesFromEntities(
     const name = modelName(entity.modelindex);
     const model = name ? options.models.get(name) : undefined;
     if (!model) continue;
-    const frame = Math.max(0, Math.min(model.frames.length - 1, entity.frame ?? 0));
     const angles = (entity.effects ?? 0) & EF_ROTATE
       ? { x: 0, y: ((options.timeSeconds ?? 0) * 100) % 360, z: 0 }
       : entity.angles;
@@ -98,7 +115,7 @@ export function modelEntitiesFromEntities(
     drawn.push({
       type: 'md2',
       model,
-      blend: { frame0: frame, frame1: frame, lerp: 0 },
+      blend: frameBlend(model, entity.frame ?? 0, entity.oldFrame, entity.frameLerp),
       transform: aliasModelTransform(entity.origin, angles),
       skin: skin?.name,
       id,
@@ -114,6 +131,9 @@ export interface ViewWeaponOptions {
   /** The weapon's model name ("models/weapons/v_blast/tris.md2") and its frame. */
   readonly model: string | undefined;
   readonly frame: number;
+  /** The frame to blend from and how far toward `frame`, as for an entity. */
+  readonly oldFrame?: number;
+  readonly frameLerp?: number;
   readonly models: ReadonlyMap<string, Md2Model>;
 }
 
@@ -121,11 +141,10 @@ export interface ViewWeaponOptions {
 export function viewWeaponEntity(options: ViewWeaponOptions): RenderableMd2 | undefined {
   const model = options.model ? options.models.get(options.model) : undefined;
   if (!model) return undefined;
-  const frame = Math.max(0, Math.min(model.frames.length - 1, options.frame));
   return {
     type: 'md2',
     model,
-    blend: { frame0: frame, frame1: frame, lerp: 0 },
+    blend: frameBlend(model, options.frame, options.oldFrame, options.frameLerp),
     transform: aliasModelTransform(options.origin, options.angles),
     skin: model.skins[0]?.name,
     isViewModel: true,

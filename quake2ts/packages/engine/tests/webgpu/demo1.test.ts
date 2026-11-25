@@ -67,7 +67,7 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
       const weapon = viewWeaponEntity({
         origin: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
         angles: { x: shot.angles[0], y: shot.angles[1], z: shot.angles[2] },
-        model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, models: models.models,
+        model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, oldFrame: shot.viewWeapon?.oldFrame, frameLerp: shot.viewWeapon?.frameLerp, models: models.models,
       });
       if (weapon) entities.push(weapon);
       renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);

@@ -7,10 +7,12 @@
 // it can, so a frame of game time is run for every 25 ms of real time that has passed (capped,
 // so a tab that was hidden does not fast-forward). Each frame draws the world, the brush models
 // (doors and lifts where the game has moved them), every MD2 the game shows (monsters, items,
-// gibs) and the weapon in the player's hands. Models are loaded the first time the game names
-// them, in the background, so one that appears mid-game (a gib) shows a frame or two later.
+// gibs) and the weapon in the player's hands, each blended between animation frames as the original
+// renderers do. Models are loaded the first time the game names them, in the background, so one
+// that appears mid-game (a gib) shows a frame or two later.
 import {
   Camera,
+  FrameLerpTracker,
   brushModelsFromEntities,
   createRenderer,
   modelEntitiesFromEntities,
@@ -87,6 +89,8 @@ export class GameSession {
   /** MD2s loaded so far by name, and every model name already asked for. */
   private readonly models = new Map<string, Md2Model>();
   private readonly requested = new Set<string>();
+  /** Blends each model from its last frame to its current one over the 100 ms animation step. */
+  private readonly frameLerp = new FrameLerpTracker();
 
   private constructor(
     private readonly options: SessionOptions,
@@ -202,21 +206,42 @@ export class GameSession {
     }
     this.gl.viewport(0, 0, canvas.width, canvas.height);
     this.loadNewModels();
+    // Game time now, between game frames: the 25 ms frames run so far plus the time owed to the next.
+    const nowMs = this.host.timeSeconds * 1000 + this.owed;
     const entities: SceneEntitySource[] = [];
-    this.host.map.game.entities.forEachEntity((entity) => entities.push(entity));
+    let viewer: SceneEntitySource | undefined;
+    this.host.map.game.entities.forEachEntity((entity) => {
+      const source: SceneEntitySource = {
+        modelindex: entity.modelindex,
+        origin: entity.origin,
+        angles: entity.angles,
+        svflags: entity.svflags,
+        inUse: entity.inUse,
+        frame: entity.frame,
+        skin: entity.skin,
+        effects: entity.effects,
+        ...(entity.modelindex ? this.frameLerp.sample(entity.index, entity.modelindex, entity.frame ?? 0, nowMs) : {}),
+      };
+      if (entity === player) viewer = source;
+      entities.push(source);
+    });
     const modelName = (i: number) => this.host.modelName(i);
     const drawn: RenderableEntity[] = modelEntitiesFromEntities(entities, modelName, {
       models: this.models,
       timeSeconds,
-      viewer: player,
+      viewer,
     });
     const gunindex = player?.client?.gunindex ?? 0;
+    const gunFrame = player?.client?.gun_frame ?? 0;
+    const gunBlend = gunindex ? this.frameLerp.sample(-1, gunindex, gunFrame, nowMs) : undefined;
+    this.frameLerp.endFrame();
     const weapon = player && gunindex
       ? viewWeaponEntity({
+          ...gunBlend,
           origin: { x: this.camera.position[0], y: this.camera.position[1], z: this.camera.position[2] },
           angles: { x: this.camera.angles[0], y: this.camera.angles[1], z: this.camera.angles[2] },
           model: this.host.modelName(gunindex),
-          frame: player.client?.gun_frame ?? 0,
+          frame: gunFrame,
           models: this.models,
         })
       : undefined;
