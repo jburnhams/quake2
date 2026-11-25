@@ -1,3 +1,4 @@
+import type { ParticleSystem } from './particleSystem.js';
 import type { BspMap } from '../assets/bsp.js';
 import { applySurfaceState, BspSurfacePipeline } from './bspPipeline.js';
 import { gatherVisibleFaces } from './bspTraversal.js';
@@ -74,7 +75,13 @@ interface FrameRenderOptions {
   readonly viewModel?: ViewModelRenderState;
   readonly dlights?: readonly DLight[];
   readonly timeSeconds?: number;
+  /** Seconds since the last frame: the particles drawn are moved on by it first. */
   readonly deltaTime?: number;
+  /**
+   * The particles to draw, when the caller owns them (a client's effects, a test with a seeded
+   * generator); left out, the renderer's own `particleSystem`.
+   */
+  readonly particles?: ParticleSystem;
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly disableLightmaps?: boolean; // New option to toggle lightmaps

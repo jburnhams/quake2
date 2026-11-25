@@ -1,4 +1,4 @@
-import { Vec3 } from '@quake2ts/shared';
+import { Vec3, angleVectors } from '@quake2ts/shared';
 import { IndexBuffer, VertexArray, VertexBuffer } from './resources.js';
 import { ShaderProgram } from './shaderProgram.js';
 import { RandomGenerator } from '@quake2ts/shared';
@@ -32,8 +32,11 @@ export interface ParticleSimulationOptions {
   readonly floorZ?: number;
 }
 
-interface ParticleMeshBatch {
+export interface ParticleMeshBatch {
   readonly blendMode: ParticleBlendMode;
+  /** The texture the batch's particles name (0, the default, is the soft dot). */
+  readonly textureIndex: number;
+  /** First index and index count, in the mesh's index buffer. */
   readonly start: number;
   readonly count: number;
 }
@@ -179,6 +182,8 @@ export class ParticleSystem {
     readonly position: Vec3;
     readonly velocity: Vec3;
     readonly remaining: number;
+    readonly lifetime: number;
+    readonly fade: boolean;
     readonly color: readonly [number, number, number, number];
     readonly size: number;
     readonly blendMode: ParticleBlendMode;
@@ -197,6 +202,8 @@ export class ParticleSystem {
         z: this.velocityZ[index],
       },
       remaining: this.remaining[index],
+      lifetime: this.lifetime[index],
+      fade: this.fade[index] === 1,
       color: [this.colorR[index], this.colorG[index], this.colorB[index], this.colorA[index]],
       size: this.size[index],
       blendMode: this.blendMode[index] === 1 ? 'additive' : 'alpha',
@@ -204,23 +211,24 @@ export class ParticleSystem {
     };
   }
 
+  /**
+   * The camera-facing quads both backends draw: four vertices a particle (position, uv, colour
+   * with the fade applied), alpha-blended batches first, then additive ones, each split by texture.
+   */
   buildMesh(viewRight: Vec3, viewUp: Vec3): ParticleMesh {
     const vertices: number[] = [];
     const indices: number[] = [];
     const batches: ParticleMeshBatch[] = [];
 
-    const buildBatch = (mode: ParticleBlendMode): void => {
-      const startIndex = indices.length;
-      let particleCount = 0;
+    const buildBatches = (mode: ParticleBlendMode): void => {
+      const order: number[] = [];
       for (let i = 0; i < this.maxParticles; i += 1) {
-        if (!this.alive[i]) {
-          continue;
-        }
-        if ((mode === 'additive' ? 1 : 0) !== this.blendMode[i]) {
-          continue;
-        }
-
-        particleCount += 1;
+        if (this.alive[i] && (mode === 'additive' ? 1 : 0) === this.blendMode[i]) order.push(i);
+      }
+      order.sort((a, b) => this.textureIndex[a] - this.textureIndex[b] || a - b);
+      let batchStart = indices.length;
+      for (let n = 0; n < order.length; n += 1) {
+        const i = order[n];
         const baseVertex = vertices.length / 9;
         const size = this.size[i] * 0.5;
         const fade = this.fade[i] ? Math.max(this.remaining[i] / this.lifetime[i], 0) : 1;
@@ -271,15 +279,16 @@ export class ParticleSystem {
         });
 
         indices.push(baseVertex, baseVertex + 1, baseVertex + 2, baseVertex + 2, baseVertex + 1, baseVertex + 3);
-      }
-
-      if (particleCount > 0) {
-        batches.push({ blendMode: mode, start: startIndex, count: indices.length - startIndex });
+        const next = order[n + 1];
+        if (next === undefined || this.textureIndex[next] !== this.textureIndex[i]) {
+          batches.push({ blendMode: mode, textureIndex: this.textureIndex[i], start: batchStart, count: indices.length - batchStart });
+          batchStart = indices.length;
+        }
       }
     };
 
-    buildBatch('alpha');
-    buildBatch('additive');
+    buildBatches('alpha');
+    buildBatches('additive');
 
     return { vertices: new Float32Array(vertices), indices: new Uint16Array(indices), batches };
   }
@@ -292,6 +301,16 @@ export class ParticleSystem {
     }
     return -1;
   }
+}
+
+/**
+ * The view's right and up vectors in world space, from the camera's Quake angles (AngleVectors,
+ * as ref_gl's GL_DrawParticles takes vright and vup), so a particle quad faces the camera in
+ * every backend whatever its matrix conventions.
+ */
+export function particleViewBasis(angles: ArrayLike<number>): { right: Vec3; up: Vec3 } {
+  const { right, up } = angleVectors({ x: angles[0] ?? 0, y: angles[1] ?? 0, z: angles[2] ?? 0 });
+  return { right, up };
 }
 
 export const PARTICLE_VERTEX_SHADER = `#version 300 es
@@ -331,6 +350,8 @@ export interface ParticleRenderOptions {
   readonly viewProjection?: Float32List; // Optional override, prefer CameraState
   readonly viewRight?: Vec3; // Optional override, extracted from view matrix if not provided
   readonly viewUp?: Vec3; // Optional override, extracted from view matrix if not provided
+  /** The particles to draw instead of the system the renderer was made with. */
+  readonly system?: ParticleSystem;
 }
 
 export class ParticleRenderer {
@@ -341,8 +362,6 @@ export class ParticleRenderer {
   readonly indexBuffer: IndexBuffer;
   readonly vertexArray: VertexArray;
   private matrixBuilder = new WebGLMatrixBuilder();
-  private tempViewRight = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
-  private tempViewUp = { x: 0, y: 0, z: 0 }; // Reused to avoid GC pressure (mutable)
 
   private vertexCapacity = 0;
   private indexCapacity = 0;
@@ -392,23 +411,10 @@ export class ParticleRenderer {
     } else {
       const matrices = buildMatrices(this.matrixBuilder, cameraState);
       vp = matrices.viewProjection as Float32Array;
-
-      // Extract right and up vectors from view matrix (reuse pre-allocated vectors)
-      // View matrix columns contain the basis vectors
-      // Column 0 (indices 0,1,2) = right vector
-      // Column 1 (indices 4,5,6) = up vector
-      const view = matrices.view;
-      this.tempViewRight.x = view[0];
-      this.tempViewRight.y = view[1];
-      this.tempViewRight.z = view[2];
-      this.tempViewUp.x = view[4];
-      this.tempViewUp.y = view[5];
-      this.tempViewUp.z = view[6];
-      viewRight = this.tempViewRight;
-      viewUp = this.tempViewUp;
+      ({ right: viewRight, up: viewUp } = particleViewBasis(cameraState.angles));
     }
 
-    const mesh = this.system.buildMesh(viewRight, viewUp);
+    const mesh = (options.system ?? this.system).buildMesh(viewRight, viewUp);
     if (mesh.indices.length === 0) {
       return;
     }
@@ -429,26 +435,30 @@ export class ParticleRenderer {
       this.indexBuffer.update(indexData);
     }
 
+    // Particles are depth tested against the world but write no depth, and blend without
+    // touching the framebuffer's alpha, as every other translucent draw here does.
+    this.gl.enable(this.gl.DEPTH_TEST);
     this.gl.depthMask(false);
+    this.gl.enable(this.gl.BLEND);
     this.program.use();
     const vpLoc = this.program.getUniformLocation('u_viewProjection');
     this.gl.uniformMatrix4fv(vpLoc, false, vp);
+    // The element buffer binding belongs to the bound vertex array; the upload above may have
+    // bound it to another one, so bind it again with this one.
     this.vertexArray.bind();
+    this.indexBuffer.bind();
 
     for (const batch of mesh.batches) {
+      const gl = this.gl;
       if (batch.blendMode === 'additive') {
-        this.gl.blendFunc(this.gl.SRC_ALPHA, this.gl.ONE);
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE, gl.ZERO, gl.ONE);
       } else {
-        this.gl.blendFuncSeparate(
-          this.gl.SRC_ALPHA,
-          this.gl.ONE_MINUS_SRC_ALPHA,
-          this.gl.ONE,
-          this.gl.ONE_MINUS_SRC_ALPHA
-        );
+        gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
       }
       this.gl.drawElements(this.gl.TRIANGLES, batch.count, this.gl.UNSIGNED_SHORT, batch.start * 2);
     }
 
+    this.gl.disable(this.gl.BLEND);
     this.gl.depthMask(true);
   }
 

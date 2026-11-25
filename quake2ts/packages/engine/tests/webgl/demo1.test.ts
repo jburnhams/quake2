@@ -7,13 +7,14 @@ import type { Page } from 'playwright';
 import { createWebGLPlaywrightSetup } from '@quake2ts/test-utils';
 import {
   DEMO1_SHOTS, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, DEMO_PAK, type Demo1Shot,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, shotParticles, DEMO_PAK, type Demo1Shot,
 } from '../demo1/shots.js';
 import fs from 'node:fs';
 import { PakArchive } from '../../src/assets/pak.js';
 import { parseBsp, type BspMap } from '../../src/assets/bsp.js';
 import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
 import type { SceneEntitySource } from '../../src/render/sceneEntities.js';
+import type { ParticleSpawnOptions } from '../../src/render/particleSystem.js';
 
 interface PageResult {
   readonly pixels: string; // base64 RGBA, top row first
@@ -26,8 +27,9 @@ async function renderShotInPage(
   shot: Demo1Shot,
   brushModels: BrushModelInstance[],
   scene: { names: string[]; entities: SceneEntitySource[] },
+  particles: ParticleSpawnOptions[],
 ): Promise<PageResult> {
-  return page.evaluate(async ({ shot, width, height, clearColor, brushModels, scene }) => {
+  return page.evaluate(async ({ shot, width, height, clearColor, brushModels, scene, particles }) => {
     const w = window as any;
     const E = w.Quake2Engine;
     const canvas: HTMLCanvasElement = w.testCanvas;
@@ -64,6 +66,8 @@ async function renderShotInPage(
       model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, oldFrame: shot.viewWeapon?.oldFrame, frameLerp: shot.viewWeapon?.frameLerp, models: models.models,
     });
     if (weapon) entities.push(weapon);
+    w.testRenderer.particleSystem.killAll();
+    for (const particle of particles) w.testRenderer.particleSystem.spawn(particle);
     w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0, brushModels }, entities);
 
     const glErrors: number[] = [];
@@ -78,7 +82,7 @@ async function renderShotInPage(
     let binary = '';
     for (let i = 0; i < flipped.length; i += 0x8000) binary += String.fromCharCode(...flipped.subarray(i, i + 0x8000));
     return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing };
-  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene });
+  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene, particles });
 }
 
 describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
@@ -97,7 +101,7 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
 
   for (const shot of DEMO1_SHOTS) {
     it(`renders ${shot.name} textured and lit`, async () => {
-      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot));
+      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot), shotParticles(shot));
       expect(result.missingTextures).toEqual([]);
       expect(result.glErrors).toEqual([]);
 

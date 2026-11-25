@@ -15,7 +15,7 @@ import type { RenderableEntity } from '../../src/render/scene.js';
 import type { WorldRenderState } from '../../src/render/frame.js';
 import {
   DEMO1_SHOTS, DEMO_PAK, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, shotParticles,
 } from '../demo1/shots.js';
 
 const toArrayBuffer = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
@@ -70,6 +70,8 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
         model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, oldFrame: shot.viewWeapon?.oldFrame, frameLerp: shot.viewWeapon?.frameLerp, models: models.models,
       });
       if (weapon) entities.push(weapon);
+      renderer.particleSystem.killAll();
+      for (const particle of shotParticles(shot)) renderer.particleSystem.spawn(particle);
       renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
       const validation = await renderer.device.popErrorScope();
       expect(validation?.message ?? null).toBeNull();

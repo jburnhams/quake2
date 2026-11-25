@@ -5,6 +5,8 @@ import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
+import { ParticleRenderer } from './pipelines/particleSystem.js';
+import type { ParticleSystem } from '../particleSystem.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { RenderableEntity } from '../scene.js';
@@ -43,6 +45,8 @@ export interface FrameRenderOptions {
   readonly sky?: SkyRenderState;
   readonly timeSeconds?: number;
   readonly deltaTime?: number;
+  /** Live particles to draw after the world and models (the renderer passes its own system). */
+  readonly particles?: ParticleSystem;
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly underwaterWarp?: boolean; // Enable underwater distortion
@@ -108,7 +112,8 @@ export class FrameRenderer {
       bsp: BspSurfacePipeline;
       md2: Md2Pipeline;
       postProcess: PostProcessPipeline;
-      // TODO: Add MD3 and Particles pipelines
+      particles: ParticleRenderer;
+      // TODO: Add the MD3 pipeline
     }
   ) {
       this.sampler = createLinearSampler(this.context.device).sampler;
@@ -452,7 +457,7 @@ export class FrameRenderer {
                 this.pipelines.md2.draw(opaquePass, mesh);
                 stats.drawCalls++;
             }
-            // TODO: Handle MD3 and Particles rendering
+            // TODO: Handle MD3 rendering
         }
 
         opaquePass.end();
@@ -479,6 +484,18 @@ export class FrameRenderer {
         transparentPass.end();
     } else {
         opaquePass.end();
+    }
+
+    // --- Particles: after the world and models, depth tested, writing no depth ---
+    if (options.particles && options.particles.aliveCount() > 0) {
+        const particlePass = commandEncoder.beginRenderPass({
+            colorAttachments: [{ view: renderPassTarget, loadOp: 'load', storeOp: 'store' }],
+            depthStencilAttachment: { view: depthTexture, depthLoadOp: 'load', depthStoreOp: 'store' },
+            label: 'particle-render-pass'
+        });
+        const cameraState = options.cameraState ?? options.camera.toState();
+        this.pipelines.particles.render(particlePass, viewProjection, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, options.particles, undefined, cameraState);
+        particlePass.end();
     }
 
     // --- Pass 3: Post Processing (Bloom, Warp) ---

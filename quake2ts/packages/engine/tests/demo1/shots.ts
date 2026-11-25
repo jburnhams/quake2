@@ -10,6 +10,11 @@ import { fileURLToPath } from 'node:url';
 import type { BspMap } from '../../src/assets/bsp.js';
 import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
 import type { SceneEntitySource } from '../../src/render/sceneEntities.js';
+import { ParticleSystem, spawnExplosion, spawnRailTrail, type ParticleSpawnOptions } from '../../src/render/particleSystem.js';
+import { RandomGenerator } from '@quake2ts/shared';
+
+type Point = readonly [number, number, number];
+const vec = (p: Point) => ({ x: p[0], y: p[1], z: p[2] });
 
 export interface Demo1Shot {
   readonly name: string;
@@ -27,6 +32,13 @@ export interface Demo1Shot {
   readonly entities?: boolean;
   /** Draw this first-person weapon at a frame (the blaster's idle frames are 9 to 52; 0 to 4 raise it from below the view). */
   readonly viewWeapon?: { readonly model: string; readonly frame: number; readonly oldFrame?: number; readonly frameLerp?: number };
+  /** Effects spawned with a seeded generator and run for `age` seconds before the shot. */
+  readonly particles?: {
+    readonly seed: number;
+    readonly age: number;
+    readonly explosions?: readonly Point[];
+    readonly railTrails?: readonly (readonly [Point, Point])[];
+  };
 }
 
 const EYE = 22; // viewheight above a spawn point's origin
@@ -47,8 +59,40 @@ export const DEMO1_SHOTS: readonly Demo1Shot[] = [
   { name: 'models-courtyard', origin: [480, 272, -40 + EYE], angles: [0, 200, 0], entities: true },
   { name: 'view-blaster', origin: [128, -320, 32 + EYE], angles: [0, 135, 0], viewWeapon: { model: 'models/weapons/v_blast/tris.md2', frame: 10 } },
   // Halfway between two firing frames, so both backends blend MD2 frames the same way.
+  // Particles: an explosion and a rail trail in the courtyard, a tenth of a second in.
+  {
+    name: 'effects-courtyard', origin: [480, 272, -40 + EYE], angles: [0, 200, 0],
+    particles: { seed: 1234, age: 0.1, explosions: [[340, 220, -20]], railTrails: [[[460, 300, -10], [200, 150, -10]]] },
+  },
   { name: 'view-blaster-blend', origin: [128, -320, 32 + EYE], angles: [0, 135, 0], viewWeapon: { model: 'models/weapons/v_blast/tris.md2', oldFrame: 5, frame: 6, frameLerp: 0.5 } },
 ];
+
+/**
+ * A shot's particles as they stand at its age, frozen into spawn options (no velocity, the fade
+ * folded into alpha) so a page can draw them without the simulation or the generator.
+ */
+export function shotParticles(shot: Demo1Shot): ParticleSpawnOptions[] {
+  const spec = shot.particles;
+  if (!spec) return [];
+  const system = new ParticleSystem(4096, new RandomGenerator({ seed: spec.seed }));
+  for (const origin of spec.explosions ?? []) spawnExplosion({ system, origin: vec(origin) });
+  for (const [start, end] of spec.railTrails ?? []) spawnRailTrail({ system, start: vec(start), end: vec(end) });
+  system.update(spec.age);
+  const frozen: ParticleSpawnOptions[] = [];
+  for (let i = 0; i < system.maxParticles; i++) {
+    const p = system.getState(i);
+    if (!p.alive) continue;
+    const fade = p.fade ? Math.max(p.remaining / p.lifetime, 0) : 1;
+    frozen.push({
+      position: p.position,
+      color: [p.color[0], p.color[1], p.color[2], p.color[3] * fade],
+      size: p.size,
+      lifetime: 1000,
+      blendMode: p.blendMode,
+    });
+  }
+  return frozen;
+}
 
 /** The model each spawned class shows, for the classes demo1's lump has near the shots (the game sets these in SP_*). */
 const CLASS_MODELS: Readonly<Record<string, { readonly model: string; readonly skin?: number }>> = {
