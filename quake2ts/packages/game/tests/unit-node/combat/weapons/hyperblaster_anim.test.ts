@@ -53,49 +53,33 @@ describe('HyperBlaster Animation', () => {
         player.client.weapon_think_time = 0;
     });
 
-    it('should fire and loop animation when button is pressed', () => {
+    it('fires as soon as attack is pressed, then once a weapon frame, looping the fire frames', () => {
         player.client.buttons = 1; // BUTTON_ATTACK
-
-        // Initial state: Ready
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
 
-        // Run think
+        // Ready -> firing, and the first shot in the same think.
         hyperBlasterThink(player, sys);
-
-        // Should transition to FIRING
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
-        // Start frame is FRAME_FIRE_FRAME - 1 + 1 (via Generic) = ACTIVATE_LAST + 1 = 6?
-        // Wait, repeating weapon delegates to Generic for activation.
-        // ACTIVATE_LAST passed is FRAME_FIRE_FRAME - 1 = 5.
-        // So generic sets gun_frame to 5 + 1 = 6.
-        expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_FRAME); // 6
-
-        // Advance time to trigger fire logic (since it delegates to generic for first frame? No, repeating logic handles fire immediately?)
-        // Wait, repeating weapon logic:
-        // if (firing) check frame.
-        // If we just transitioned, next think handles it.
-        game.frame({ frame: 1, deltaMs: 100, startTimeMs: 1000 });
-        player.client.weapon_think_time = 0;
-
-        // Note: game.frame() executes the frame which runs player think.
-        // We do not need to call hyperBlasterThink(player, sys) manually.
-
-        // Check ammo consumed
+        expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_FRAME);
         expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
 
-        // Expect frame to advance
-        expect(player.client.gun_frame).toBe(7);
+        // Nothing more until the next weapon frame.
+        hyperBlasterThink(player, sys);
+        expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(49);
 
-        // Advance to end of fire loop
-        player.client.gun_frame = FRAME_HYPERBLASTER_FIRE_LAST; // 9
-        game.frame({ frame: 2, deltaMs: 100, startTimeMs: 1100 });
         player.client.weapon_think_time = 0;
+        hyperBlasterThink(player, sys);
+        expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(48);
+        expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_FRAME + 1);
 
-        // Should loop back to FRAME_FIRE_FRAME
+        // From the last fire frame it loops back to the first.
+        player.client.gun_frame = FRAME_HYPERBLASTER_FIRE_LAST;
+        player.client.weapon_think_time = 0;
+        hyperBlasterThink(player, sys);
         expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_FRAME);
     });
 
-    it('should stop firing when button released', () => {
+    it('goes back to idle when the button is let go', () => {
         player.client.buttons = 0;
         player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
         player.client.gun_frame = FRAME_HYPERBLASTER_FIRE_FRAME;
@@ -103,6 +87,21 @@ describe('HyperBlaster Animation', () => {
         hyperBlasterThink(player, sys);
 
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
-        expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_IDLE_LAST + 1);
+        expect(player.client.gun_frame).toBe(FRAME_HYPERBLASTER_FIRE_LAST + 1);
+        expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(50);
+    });
+
+    it('out of cells with attack held, it winds down and picks another weapon', () => {
+        player.client.inventory.ammo.counts[AmmoType.Cells] = 1;
+        player.client.inventory.ownedWeapons.add(WeaponId.Blaster);
+        player.client.buttons = 1;
+
+        hyperBlasterThink(player, sys);
+        expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(0);
+
+        player.client.weapon_think_time = 0;
+        hyperBlasterThink(player, sys);
+        expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
+        expect(player.client.newWeapon).toBe(WeaponId.Blaster);
     });
 });

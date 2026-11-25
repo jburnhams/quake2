@@ -4,9 +4,8 @@
  * frame at a time through real pmove, doors, buttons and lifts. It passes when the exit
  * trigger asks the server to change level to demo2.
  *
- * God mode and notarget for now: monsters notice and fight the player (the second test), but
- * the player's weapons do not fire yet (Think_Weapon is not ported), so the walker cannot clear
- * the soldiers that stand in its way. This gate is still about the route.
+ * No god mode: the soldiers on the way notice the player and come for him, and the walker
+ * shoots back with the blaster (Think_Weapon from ClientThink) as it walks, as a player would.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -44,9 +43,8 @@ function loadDemo1(): LocalHost {
 describe('demo1 walkthrough', () => {
   it('walks from the start to the exit and changes level to demo2', () => {
     const host = loadDemo1();
-    host.map.game.setGodMode(true);
-    host.map.game.setNotarget(true);
     host.run(0.5);
+    const player = host.player!;
 
     // Every monster in the level is standing on something, not falling out of the world.
     const falling: string[] = [];
@@ -62,19 +60,22 @@ describe('demo1 walkthrough', () => {
     }
     host.run(1);
     expect(host.serverCommands.some((c) => /^changelevel\s+demo2/.test(c))).toBe(true);
+    expect(player.health).toBeGreaterThan(0);
   }, 120_000);
 
-  it('the soldiers on the way to the lift button notice the player and come for him', () => {
+  it('on the way to the lift button the soldiers come for the player, and he shoots them dead', () => {
     const host = loadDemo1();
-    host.map.game.setGodMode(true);
     host.run(0.5);
     const player = host.player!;
     const leg = walkObjective(host, objectives[0]);
-    // Whether or not they block the way, someone has seen him and is fighting.
     const hunters: string[] = [];
+    const killed: string[] = [];
     host.map.game.entities.forEachEntity((e) => {
-      if (e.classname?.startsWith('monster_') && e.enemy === player) hunters.push(e.classname);
+      if (!e.classname?.startsWith('monster_') || e.enemy !== player) return;
+      hunters.push(e.classname);
+      if (e.health <= 0) killed.push(e.classname);
     });
     expect(hunters.length, `${leg.objective}: ${leg.failure ?? 'reached'}`).toBeGreaterThan(0);
+    expect(killed.length).toBeGreaterThan(0);
   }, 120_000);
 });

@@ -282,15 +282,9 @@ describe('Chaingun', () => {
              // Clear mocks to check fire
              trace.mockClear();
 
-             // 1st tick: Transitions to FIRING state
+             // Ready -> firing, and Weapon_Repeating fires in the same think.
              chaingunThink(player, game.entities);
              expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
-
-             // 2nd tick: Should fire
-             // Advance time by 0.1s (100ms)
-             mockTime += 100;
-
-             chaingunThink(player, game.entities);
 
              // Assert
              // fireChaingun increments spinupCount by 1 more

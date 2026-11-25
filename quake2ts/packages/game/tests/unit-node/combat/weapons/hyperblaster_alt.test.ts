@@ -42,16 +42,10 @@ describe('HyperBlaster Alt-Fire', () => {
 
     it('should fire normal shots with primary fire', () => {
         player.client.buttons = 1; // Attack
-        hyperBlasterThink(player, sys); // Ready -> Firing
+        // Ready -> firing, and Weapon_Repeating fires in the same think.
+        hyperBlasterThink(player, sys);
 
         expect(player.client.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
-
-        // Advance frame to fire
-        // Weapon_Repeating logic
-        player.client.weapon_think_time = 0;
-        player.client.gun_frame = 6; // Fire Frame
-
-        hyperBlasterThink(player, sys);
 
         // 1 cell per shot
         expect(player.client.inventory.ammo.counts[AmmoType.Cells]).toBe(99);

@@ -66,9 +66,9 @@ describe('Weapon Switching', () => {
 
       NoAmmoWeaponChange(entity);
 
-      // Should initiate drop of Railgun
+      // It picks the weapon; Weapon_Generic then puts the railgun down.
       expect(entity.client!.newWeapon).toBe(WeaponId.Shotgun);
-      expect(entity.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_DROPPING);
+      expect(entity.client!.weaponstate).not.toBe(WeaponStateEnum.WEAPON_DROPPING);
   });
 
   it('should finalize switch when ChangeWeapon called without ID', () => {
