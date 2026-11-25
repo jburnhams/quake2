@@ -54,6 +54,10 @@ can be linked.
   the run, pure and tested in Node on demo1. Its second view (`?view=air`, `AirView.tsx`, `air.ts`)
   takes one frame of the air move apart to show why strafe-jumping beats the top speed, with presets
   for Quake III and QuakeWorld.
+- `src/labs/net/`: the lag lab (`/labs/lag`): one player through a client, a server and a network
+  with latency, jitter and loss, on the port's NetChan and runPmove arranged as id's client and
+  server are (`simulate.ts`: three commands a packet, net_drop, CL_PredictMovement,
+  CL_CheckPredictionError), with a packet strip and id's code beside the port's.
 - `src/labs/source/`: id's code beside the port's. `excerpt.ts` cuts a function out of a file by
   name; the labs read `rerelease/` and `full/` (outside the workspace, allowed in `vite.config.ts`)
   and the port's files with `?raw`, so what is shown is what runs.

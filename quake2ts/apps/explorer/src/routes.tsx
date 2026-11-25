@@ -6,6 +6,7 @@ import { IntroScreen } from './screens/IntroScreen';
 import { PlayScreen } from './screens/PlayScreen';
 import { LAB_PATH, MovementLab } from './labs/movement/MovementLab';
 import { TRACES_PATH, TracesLab } from './labs/traces/TracesLab';
+import { LAG_PATH, NetLab } from './labs/net/NetLab';
 
 /** The site's route tree: the intro at /, the explorer at /explore, the game at /play, the movement lab at /labs/movement. The library sits above them all, so the demo downloads once. Shared by main.tsx and the tests (renderRoutes). */
 export const routes: RouteObject[] = [
@@ -22,6 +23,7 @@ export const routes: RouteObject[] = [
       { path: '/play', element: <PlayScreen /> },
       { path: LAB_PATH, element: <MovementLab /> },
       { path: TRACES_PATH, element: <TracesLab /> },
+      { path: LAG_PATH, element: <NetLab /> },
     ],
   },
 ];
