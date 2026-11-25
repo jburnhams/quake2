@@ -214,18 +214,36 @@ function gainNote(f: AirFrame, gain: number): string {
 function AirDiagram({ frame }: { frame: AirFrame }) {
   const W = 480;
   const H = 300;
-  const O = { x: W / 2, y: H - 40 };
-  const reach = Math.max(frame.speedBefore, frame.comparedSpeed, 50);
-  const k = 200 / reach;
   /** Added speed is a few units against hundreds, so it is drawn this many times longer. */
   const ZOOM = 8;
-  const pt = (x: number, y: number) => ({ x: O.x + x * k, y: O.y - y * k });
-  const v = pt(frame.velocity.x, frame.velocity.y);
+  const reach = Math.max(frame.speedBefore, frame.comparedSpeed, 50);
   const w = frame.wishdir;
-  const foot = pt(w.x * frame.currentspeed, w.y * frame.currentspeed);
-  const wish = pt(w.x * frame.comparedSpeed, w.y * frame.comparedSpeed);
-  const addTip = pt(frame.velocity.x + w.x * frame.accelspeed * ZOOM, frame.velocity.y + w.y * frame.accelspeed * ZOOM);
-  const farWish = pt(w.x * reach * 1.15, w.y * reach * 1.15);
+  const along = (d: number) => ({ x: w.x * d, y: w.y * d });
+  // Every point the diagram draws, in units, so the view fits all of them: a projection behind the
+  // player (an angle over 90°) and the stretched tip included.
+  const world = {
+    origin: { x: 0, y: 0 },
+    v: { x: frame.velocity.x, y: frame.velocity.y },
+    foot: along(frame.currentspeed),
+    wish: along(frame.comparedSpeed),
+    addTip: { x: frame.velocity.x + w.x * frame.accelspeed * ZOOM, y: frame.velocity.y + w.y * frame.accelspeed * ZOOM },
+    farWish: along(reach * 1.15),
+  };
+  const all = Object.values(world);
+  const min = { x: Math.min(...all.map((p) => p.x)), y: Math.min(...all.map((p) => p.y)) };
+  const max = { x: Math.max(...all.map((p) => p.x)), y: Math.max(...all.map((p) => p.y)) };
+  const PAD = 44;
+  const k = Math.min((W - 2 * PAD) / Math.max(max.x - min.x, 1), (H - 2 * PAD) / Math.max(max.y - min.y, 1));
+  // Centred in the box, with +y (left of the velocity) drawn up.
+  const ox = (W - (max.x - min.x) * k) / 2 - min.x * k;
+  const oy = (H + (max.y - min.y) * k) / 2 + min.y * k;
+  const pt = (p: { x: number; y: number }) => ({ x: ox + p.x * k, y: oy - p.y * k });
+  const O = pt(world.origin);
+  const v = pt(world.v);
+  const foot = pt(world.foot);
+  const wish = pt(world.wish);
+  const addTip = pt(world.addTip);
+  const farWish = pt(world.farWish);
   const id = React.useId();
   return (
     <figure className="grid gap-2">
