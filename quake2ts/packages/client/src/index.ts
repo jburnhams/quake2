@@ -1555,7 +1555,10 @@ export function createClient(imports: ClientImports): ClientExports {
   // no models, sounds, images, light styles or skins from them.
   multiplayer.setConfigStringListener({
     set: (index, value) => clientExports.ParseConfigString(index, value),
-    clear: () => configStrings.clear(),
+    clear: () => {
+      configStrings.clear();
+      clearLightStyles();
+    },
   });
 
   return clientExports;
