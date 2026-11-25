@@ -77,6 +77,24 @@ int main(int argc, char **argv) {
 				&mins[0], &mins[1], &mins[2], &maxs[0], &maxs[1], &maxs[2], &mask, &headnode) != 14) break;
 			trace_t t = CM_BoxTrace(s, e, mins, maxs, headnode, mask);
 			print_trace(&t);
+		} else if (!strcmp(op, "ttrace") || !strcmp(op, "btrace")) {
+			/* ttrace: a submodel (headnode) moved to origin and turned by angles.
+			   btrace: a box hull of bmins/bmaxs moved to origin (boxes never rotate). */
+			int box = !strcmp(op, "btrace");
+			vec3_t s, e, mins, maxs, bmins, bmaxs, o, a = {0, 0, 0}; int mask, headnode = 0;
+			if (scanf("%f %f %f %f %f %f %f %f %f %f %f %f %d", &s[0], &s[1], &s[2], &e[0], &e[1], &e[2],
+				&mins[0], &mins[1], &mins[2], &maxs[0], &maxs[1], &maxs[2], &mask) != 13) break;
+			if (box) {
+				if (scanf("%f %f %f %f %f %f %f %f %f", &bmins[0], &bmins[1], &bmins[2], &bmaxs[0], &bmaxs[1], &bmaxs[2],
+					&o[0], &o[1], &o[2]) != 9) break;
+				headnode = CM_HeadnodeForBox(bmins, bmaxs);
+			} else if (scanf("%d %f %f %f %f %f %f", &headnode, &o[0], &o[1], &o[2], &a[0], &a[1], &a[2]) != 7) break;
+			trace_t t = CM_TransformedBoxTrace(s, e, mins, maxs, headnode, mask, o, a);
+			print_trace(&t);
+		} else if (!strcmp(op, "tcontents")) {
+			vec3_t p, o, a; int headnode;
+			if (scanf("%f %f %f %d %f %f %f %f %f %f", &p[0], &p[1], &p[2], &headnode, &o[0], &o[1], &o[2], &a[0], &a[1], &a[2]) != 10) break;
+			printf("{\"contents\":%d}\n", CM_TransformedPointContents(p, headnode, o, a));
 		} else if (!strcmp(op, "contents")) {
 			vec3_t p; int headnode;
 			if (scanf("%f %f %f %d", &p[0], &p[1], &p[2], &headnode) != 4) break;

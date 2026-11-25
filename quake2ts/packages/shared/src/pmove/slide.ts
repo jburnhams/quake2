@@ -158,14 +158,11 @@ export function slideMove(params: SlideMoveParams): SlideMoveOutcome {
     const end = addVec3(origin, scaleVec3(velocity, timeLeft));
     const tr = trace(origin, end, mins, maxs);
 
-    if (tr.allsolid) {
+    // Trapped in a solid: stay put. cmodel.c leaves fraction at 1 and endpos at the
+    // requested end for a move that starts inside a brush, so endpos must not be used here.
+    if (tr.allsolid || tr.startsolid) {
       const velocity = hasTime ? primalVelocity : ZERO_VEC3;
-      return { origin: tr.endpos, velocity, planes, stopped: true, blocked };
-    }
-
-    if (tr.startsolid) {
-      const velocity = hasTime ? primalVelocity : ZERO_VEC3;
-      return { origin: tr.endpos, velocity, planes, stopped: true, blocked };
+      return { origin, velocity, planes, stopped: true, blocked };
     }
 
     if (tr.fraction > 0) {

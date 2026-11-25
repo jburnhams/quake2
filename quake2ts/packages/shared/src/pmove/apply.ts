@@ -145,7 +145,8 @@ export const applyPmove = (
 
   return {
     ...newState,
-    origin: traceResult.endpos,
+    // A move that starts inside a brush reports endpos at the requested end; stay put instead.
+    origin: traceResult.startsolid || traceResult.allsolid ? origin : traceResult.endpos,
     velocity: finalVelocity,
   };
 };
