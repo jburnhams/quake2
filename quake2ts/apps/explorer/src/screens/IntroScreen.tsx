@@ -70,6 +70,12 @@ export function IntroScreen() {
             title="Movement lab"
             description="The game's own player movement on demo1, with its constants on sliders."
           />
+          <LinkCard
+            as="h2"
+            to="/labs/traces"
+            title="Traces lab"
+            description="Sweep a box through demo1 as the game does for every move and shot, and see the face it stops on."
+          />
           <LinkCard as="h2" href={REPO} title="Source" description="The code, the plan, and the tests that hold each piece to the original." />
         </LinkCardList>
 

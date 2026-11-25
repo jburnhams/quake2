@@ -2,33 +2,21 @@
 // differs from the game's: the same scripted run (forward, one jump, let go) on demo1, through
 // the game's own runPmove and the map's collision, drawn beside the run the shipped values give.
 // The constants are sliders on the left and live in the URL; the run is redrawn on every change,
-// since 100 frames of runPmove take a few milliseconds. The charts are SVG for now; the 3D view
-// takes the stage when the renderer library lands (plan, Track C).
+// since 100 frames of runPmove take a few milliseconds. The stage is demo1 in 3D through the
+// engine's renderer (RunScene) with both paths drawn in it, then the figures and the charts,
+// which say the same in numbers and stand in when the browser has no WebGL 2.
 import * as React from 'react';
 import {
-  ButtonLink,
-  ColorSchemeChoice,
-  DataView,
-  EmptyState,
-  Field,
   LineChart,
   Metric,
   MetricStrip,
-  Pane,
-  Skeleton,
-  Slider,
-  Split,
-  TextLink,
-  Workspace,
   format,
-  useLoad,
-  useWorkspaceState,
   type ChartSpan,
   type Point,
 } from 'strata-react';
-import { RotateCcw } from 'lucide-react';
-import { parseBsp } from '@quake2ts/formats/bsp';
-import { useDemoPak, useLibrary } from '../../library/context';
+import type { BspMap } from '@quake2ts/formats/bsp';
+import { LabScreen } from '../LabScreen';
+import { RunScene } from './RunScene';
 import { CONSTANTS, useLabTuning } from './constants';
 import {
   DEFAULT_LAB_TUNING,
@@ -37,99 +25,32 @@ import {
   RELEASE_FRAME,
   simulateRun,
   summarise,
-  worldFromMap,
   type MovementFrame,
   type MovementWorld,
 } from './simulate';
 
-export const LAB_MAP = 'maps/demo1.bsp';
 export const LAB_PATH = '/labs/movement';
 
 export function MovementLab() {
-  const workspace = useWorkspaceState('movement-lab');
-  const demo = useDemoPak();
-  const { library, version } = useLibrary();
   const lab = useLabTuning();
-  const world = useLoad<MovementWorld | null>({
-    queryKey: ['lab-world', version, LAB_MAP],
-    enabled: demo.status !== 'loading',
-    staleTime: Infinity,
-    retry: false,
-    queryFn: async () => (library.vfs.hasFile(LAB_MAP) ? worldFromMap(parseBsp(await library.read(LAB_MAP))) : null),
-    describeError: (e) => `${LAB_MAP} could not be read: ${e instanceof Error ? e.message : String(e)}.`,
-  });
-
   return (
-    <div className="h-dvh">
-      <Workspace label="Movement lab" state={workspace} narrowBelow={720}>
-        <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
-          <h1 className="type-label">Movement lab</h1>
-          <p className="type-body-sm text-muted-foreground" aria-live="polite">
-            {lab.changed.length
-              ? `${format.count(lab.changed.length, 'constant')} changed: ${lab.changed.map((c) => c.label.toLowerCase()).join(', ')}`
-              : "Every constant at the game's value"}
-          </p>
-          <div className="ms-auto flex items-center gap-2">
-            <TextLink to="/explore">Explorer</TextLink>
-            <ColorSchemeChoice compact />
-          </div>
-        </header>
-        <Split direction="row">
-          <Pane
-            id="constants"
-            name="Constants"
-            size={320}
-            min={260}
-            max={480}
-            collapsible
-            actions={
-              lab.changed.length ? (
-                <ButtonLink to={LAB_PATH} size="sm" variant="ghost" icon={RotateCcw}>
-                  Reset
-                </ButtonLink>
-              ) : null
-            }
-          >
-            <div className="grid gap-4 p-3">
-              {CONSTANTS.map((c) => (
-                <Field
-                  key={c.key}
-                  label={c.label}
-                  hint={`${c.hint} The game uses ${format.decimal.format(DEFAULT_LAB_TUNING[c.key])}${c.unit ? ` ${c.unit}` : ''}.`}
-                >
-                  <Slider
-                    value={lab.tuning[c.key]}
-                    onChange={(v) => lab.set(c.key, v)}
-                    min={c.min}
-                    max={c.max}
-                    step={c.step}
-                    unit={c.unit}
-                  />
-                </Field>
-              ))}
-            </div>
-          </Pane>
-          <Pane id="run" name="Run on demo1" grow>
-            <DataView
-              state={world}
-              skeleton={<RunSkeleton />}
-              isEmpty={(w) => w === null}
-              empty={
-                <EmptyState title="demo1 is not open">
-                  The lab runs on {LAB_MAP}, from the demo PAK. Open a PAK that has it in the <TextLink to="/explore">explorer</TextLink>.
-                </EmptyState>
-              }
-            >
-              {(w) => <RunView world={w!} />}
-            </DataView>
-          </Pane>
-        </Split>
-      </Workspace>
-    </div>
+    <LabScreen
+      title="Movement lab"
+      path={LAB_PATH}
+      stageName="Run on demo1"
+      params={CONSTANTS}
+      state={lab}
+      defaults={DEFAULT_LAB_TUNING}
+      defaultWords="The game uses"
+      unchanged="Every constant at the game's value"
+      noun="constant"
+    >
+      {({ map, world }) => <RunView map={map} world={world} />}
+    </LabScreen>
   );
 }
 
-function RunView({ world }: { world: MovementWorld }) {
+function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
   const { tuning } = useLabTuning();
   const base = React.useMemo(() => simulateRun(world), [world]);
   const run = React.useMemo(() => simulateRun(world, tuning), [world, ...Object.values(tuning)]);
@@ -147,6 +68,7 @@ function RunView({ world }: { world: MovementWorld }) {
         The player runs forward from demo1's start, jumps after {seconds((JUMP_FRAME * FRAME_MSEC) / 1000)}, lets go after{' '}
         {seconds((RELEASE_FRAME * FRAME_MSEC) / 1000)} and slides to a stop, through the game's own movement code and the map's walls and floors.
       </p>
+      <RunScene map={map} world={world} run={run} base={base} />
       <MetricStrip label="This run">
         <Metric label="Top speed" value={units(mine.topSpeed, 'u/s')} note={against(mine.topSpeed, game.topSpeed, (g) => units(g, 'u/s'))} />
         <Metric label="Highest point" value={units(mine.peakHeight, 'u')} note={against(mine.peakHeight, game.peakHeight, (g) => units(g, 'u'))} />
@@ -207,14 +129,4 @@ function airborne(frames: readonly MovementFrame[]): ChartSpan[] {
     }
   });
   return spans;
-}
-
-function RunSkeleton() {
-  return (
-    <div className="grid gap-4 p-4" aria-hidden>
-      <Skeleton className="h-16 w-full" />
-      <Skeleton className="h-56 w-full" />
-      <Skeleton className="h-48 w-full" />
-    </div>
-  );
 }

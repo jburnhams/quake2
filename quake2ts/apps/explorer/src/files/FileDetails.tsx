@@ -7,7 +7,7 @@ import { KIND_NAMES, kindOf, type Decoded } from '../preview/decode';
 import { isEmptyFile, useDecodedFile } from '../preview/Preview';
 
 // From q_shared.h (SURF_*).
-const SURFACE_FLAGS: [number, string][] = [
+export const SURFACE_FLAGS: [number, string][] = [
   [0x1, 'Light'],
   [0x2, 'Slick'],
   [0x4, 'Sky'],
@@ -19,7 +19,7 @@ const SURFACE_FLAGS: [number, string][] = [
 ];
 
 // From q_shared.h (CONTENTS_*), the bits a texture can carry onto its brush.
-const CONTENTS: [number, string][] = [
+export const CONTENTS: [number, string][] = [
   [0x1, 'Solid'],
   [0x2, 'Window'],
   [0x4, 'Aux'],
