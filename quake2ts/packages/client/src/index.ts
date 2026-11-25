@@ -1535,5 +1535,10 @@ export function createClient(imports: ClientImports): ClientExports {
       }
   });
 
+  // CL_ParseConfigString: a configstring from a server reaches the client and cgame as one from a
+  // demo or the local game does. Before, the connection only stored them, so a networked game got
+  // no models, sounds, images, light styles or skins from them.
+  multiplayer.setConfigStringListener((index, value) => clientExports.ParseConfigString(index, value));
+
   return clientExports;
 }

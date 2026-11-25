@@ -165,4 +165,11 @@ describe('Music Integration', () => {
         client.ParseConfigString(ConfigStringIndex.CdTrack, '9');
         expect(mockEngine.audio.play_music).toHaveBeenCalledWith('music/track09.ogg');
     });
+
+    it('plays the CD track a server sends over the network', () => {
+        const client = createClient({ engine: mockEngine, host: mockHost });
+        client.multiplayer.onConfigString(ConfigStringIndex.CdTrack, '5');
+        expect(mockEngine.audio.play_track).toHaveBeenCalledWith(5);
+        expect(client.configStrings.get(ConfigStringIndex.CdTrack)).toBe('5');
+    });
 });

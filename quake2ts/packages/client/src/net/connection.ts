@@ -76,6 +76,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   // Demo Recording
   private demoRecorder: DemoRecorder | null = null;
+  private configStringListener: ((index: number, value: string) => void) | null = null;
 
   // Events
   public onConnectionStateChange?: (state: ConnectionState) => void;
@@ -112,6 +113,14 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   public setDemoRecorder(recorder: DemoRecorder) {
       this.demoRecorder = recorder;
+  }
+
+  /**
+   * Told of every configstring the server sends, after it is stored: the client parses it as
+   * CL_ParseConfigString does (models, sounds, images, light styles, skins, the CD track).
+   */
+  public setConfigStringListener(listener: ((index: number, value: string) => void) | null) {
+    this.configStringListener = listener;
   }
 
   public setEffectSystem(system: ClientEffectSystem) {
@@ -320,6 +329,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onConfigString(index: number, str: string): void {
       this.configStrings.set(index, str);
+      this.configStringListener?.(index, str);
   }
 
   onSpawnBaseline(entity: EntityState): void {

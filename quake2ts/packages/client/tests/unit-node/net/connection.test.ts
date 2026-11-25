@@ -43,6 +43,14 @@ describe('MultiplayerConnection', () => {
         vi.restoreAllMocks();
     });
 
+    it('stores a configstring and tells the listener, as CL_ParseConfigString is called', () => {
+        const heard: [number, string][] = [];
+        connection.setConfigStringListener((index, value) => heard.push([index, value]));
+        connection.onConfigString(33, 'models/items/armor/tris.md2');
+        expect(connection.configStrings.get(33)).toBe('models/items/armor/tris.md2');
+        expect(heard).toEqual([[33, 'models/items/armor/tris.md2']]);
+    });
+
     it('should initialize in disconnected state', () => {
         expect(connection.isConnected()).toBe(false);
         expect(connection.getPing()).toBe(0);
