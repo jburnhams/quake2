@@ -17,6 +17,15 @@ Differential tests that run the TypeScript port and id Software's original C cod
   submodel (doors, plats) moved and turned, and against `CM_HeadnodeForBox` box hulls
   (monsters, players, items), with a floor on the share of traces that hit something.
 
+- `msg_harness.c` links `full/qcommon/common.c`, `crc.c` and `full/client/cl_ents.c` unchanged into
+  `build/q2msg` (`--gc-sections` drops the engine they would otherwise pull in): MSG_Write* for
+  coordinates, angles, directions, usercmd and entity deltas, MSG_ReadDir, CRC_Block,
+  COM_BlockSequenceCRCByte, and the client's CL_ParseEntityBits + CL_ParseDelta.
+- `tests/msg.oracle.test.ts` checks BinaryWriter's coordinates, angles and directions, readDir,
+  `crcBlock` and `blockSequenceCrcByte`, shared `writeDeltaEntity` and the demo `MessageWriter`
+  byte for byte against MSG_WriteDeltaEntity on random protocol 34 states (laser-colour skins,
+  high effect bits, beams, unchanged and forced entities), and the demo parser's entity reader
+  against CL_ParseDelta on the C's bytes.
 - `tests/pmove.oracle.test.ts` runs seeded random trajectories on demo1 (starts on floors, in the
   air and in water; walking, strafing, jumping, crouching and turning at 8 to 50 ms frames) through
   both, starting each TS frame from the C's previous result so a difference is that frame's own.
@@ -24,8 +33,8 @@ Differential tests that run the TypeScript port and id Software's original C cod
   jump sound, step clip, impact delta and the touch count.
 
 Run it with `pnpm test:oracle`. `ORACLE_QUERIES=200000` runs a bigger collision sample and
-`ORACLE_PMOVE_RUNS=5000` a bigger movement one (40 frames each); `Q2ORACLE_BIN` and `Q2PMOVE_BIN`
-point at prebuilt binaries. To chase a movement difference, `ORACLE_DUMP=file.json` writes every
+`ORACLE_PMOVE_RUNS=5000` a bigger movement one (40 frames each), `ORACLE_MSG_QUERIES` the message one; `Q2ORACLE_BIN`, `Q2PMOVE_BIN` and `Q2MSG_BIN`
+point at prebuilt binaries (`tests/build.global.ts` builds them once per run otherwise). To chase a movement difference, `ORACLE_DUMP=file.json` writes every
 differing frame, and `Q2PMOVE_LOG=1` makes q2pmove print each trace it makes to stderr.
 
 Floats: the C works in 32-bit floats, and ties decide real outcomes (a box that starts inside
@@ -43,3 +52,14 @@ air moves steered by the full pitch (p_move.cpp divides it by 3), swimming steer
 water jump or teleport pause), no ladders, no stuck fix, `sv_airaccelerate`'s path taken by default,
 the trace mask ignored (ladders and water checks need theirs), dead players frozen in place.
 `runPmove` is now a port of `Pmove` (`frame.ts`); the old pure helpers beside it are unchanged.
+
+What the message oracle found (2026-11-25): both entity delta writers (shared `writeDeltaEntity`,
+used by the server and the game's demo serializer, and the engine's `MessageWriter`) never sent
+old_origin (a laser's far end; and the bit, when set, wrote nothing), cut skins, effects and
+renderfx above 16 bits (laser colours, high effect flags), sent `event` only when it changed
+(the C sends any non-zero event), and `force` set every bit instead of only writing an empty
+header. The engine writer also left out any field that changed to 0. `writeAngle16` put angles
+far outside 0..360 one step off (doubles, not floats). Fixed; reading was already right. Not
+fixed, for the netcode work: the client's clc_move checksum is `crc8`, not COM_BlockSequenceCRCByte
+(now in `shared/protocol/crc.ts` as `blockSequenceCrcByte`), and usercmds go out whole
+(`writeUserCommand`), not as MSG_WriteDeltaUsercmd deltas (the oracle's `cmd` op is ready for it).

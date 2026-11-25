@@ -103,3 +103,10 @@ export function runOracleLines(bin: string, args: string[], lines: readonly stri
   if (answers.length !== lines.length) throw new Error(`${bin} answered ${answers.length} of ${lines.length} lines`);
   return answers;
 }
+
+/** Path of the message-encoding oracle (common.c and crc.c), built alongside q2oracle. */
+export function msgOracleBin(): string {
+  if (process.env.Q2MSG_BIN) return process.env.Q2MSG_BIN;
+  buildOracle();
+  return join(BUILD_DIR, 'q2msg');
+}

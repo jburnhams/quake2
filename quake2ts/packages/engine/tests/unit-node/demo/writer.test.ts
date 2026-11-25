@@ -89,51 +89,18 @@ describe('MessageWriter', () => {
 
         expect(reader.readByte()).toBe(WIRE_PACKETENTITIES);
 
-        // Entity 1 header
+        // Entity 1 against the null baseline, as MSG_WriteDeltaEntity writes a new entity:
+        // only the changed model, plus old_origin (U_OLDORIGIN, bit 24), so all four header bytes.
+        expect(reader.readByte()).toBe(U_MOREBITS1); // 0x80
+        expect(reader.readByte()).toBe(0x88); // U_MODEL (bit 11) | U_MOREBITS2 (bit 15)
+        expect(reader.readByte()).toBe(0x80); // U_MOREBITS3 (bit 23)
+        expect(reader.readByte()).toBe(0x01); // U_OLDORIGIN (bit 24)
 
-        const b1 = reader.readByte();
-        expect(b1 & U_MOREBITS1).toBe(U_MOREBITS1);
-
-        const b2 = reader.readByte();
-        expect(b2 & 0xFF).toBe(216); // 11011000 (No U_ALPHA)
-
-        const b3 = reader.readByte();
-        expect(b3).toBe(241); // 11110001
-
-        const b4 = reader.readByte();
-        expect(b4).toBe(12); // 00001100 (U_SOUND, U_SOLID only)
-
-        // b5 not written in Protocol 34 (no High bits)
-
-        // Write Number (1)
-        expect(reader.readByte()).toBe(1);
-
-        // Fields:
-        // U_MODEL (bit 11). b2 & 8 (bit 3). Yes.
+        expect(reader.readByte()).toBe(1); // number
         expect(reader.readByte()).toBe(10); // modelindex
-
-        // U_FRAME8 (bit 4). In b1. b1 = 144 (10010000). Bit 4 is set.
-        expect(reader.readByte()).toBe(0); // frame
-
-        // U_SKIN8 (bit 16). In b3 (bit 0).
-        expect(reader.readByte()).toBe(0);
-
-        // U_EFFECTS8 (bit 14). In b2 (bit 6).
-        expect(reader.readByte()).toBe(0);
-
-        // U_RENDERFX8 (bit 12). In b2 (bit 4).
-        expect(reader.readByte()).toBe(0);
-
-        // U_MODEL2 (bit 20). In b3 (bit 4).
-        expect(reader.readByte()).toBe(0);
-        // U_MODEL3 (bit 21). In b3 (bit 5).
-        expect(reader.readByte()).toBe(0);
-        // U_MODEL4 (bit 22). In b3 (bit 6).
-        expect(reader.readByte()).toBe(0);
-
-        // U_SOUND (bit 26) and U_SOLID (bit 27) from b4
-        expect(reader.readByte()).toBe(0); // sound
-        expect(reader.readShort()).toBe(0); // solid
+        expect(reader.readShort()).toBe(0); // old_origin
+        expect(reader.readShort()).toBe(0);
+        expect(reader.readShort()).toBe(0);
 
         // Terminator (0)
         expect(reader.readShort()).toBe(0);
