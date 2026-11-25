@@ -9,9 +9,17 @@ libraries (`strata-vfs`, `@quake2ts/formats`) rather than the whole engine.
 pnpm --filter @quake2ts/explorer dev      # http://localhost:5173, opens on the demo PAK
 pnpm --filter @quake2ts/explorer test     # Vitest + Testing Library + MSW, against the demo PAK
 pnpm --filter @quake2ts/explorer build    # typecheck, then dist/
+apps/explorer/scripts/build-site.sh .paks/q2-314-demo-x86.exe   # the Pages site (from quake2ts/)
 ```
 
-It opens on the committed demo PAK (`public/pak.pak` links to `quake2ts/pak.pak`). **Open PAK files**
+The site is this app: the intro at `/` (`src/screens/IntroScreen.tsx`) and the explorer at `/explore`.
+`.github/workflows/pages.yml` builds and deploys it on every push to main that touches `quake2ts/`.
+`scripts/fetch-paks.sh --unpinned` keeps the archive in `.paks/` for a local site build.
+
+It opens on the committed demo PAK (`public/pak.pak` links to `quake2ts/pak.pak`); the GitHub Pages
+build opens on the demo's whole `baseq2/pak0.pak` instead, which the browser takes out of the original
+demo archive (`src/library/demo.ts`, `src/library/zip.ts`), since id's demo licence lets only the
+unmodified archive be passed on. The archive is kept in Cache Storage, so it downloads once. **Open PAK files**
 mounts more above it, as the game's search path does, so a later PAK wins any path it shares.
 
 | File | Shown as |

@@ -1,124 +1,76 @@
 name: Deploy to GitHub Pages
 
+# The site is the explorer app (quake2ts/apps/explorer): an intro at /quake2/, the explorer at
+# /quake2/explore. It carries the original Quake 2 demo archive, which the browser unpacks;
+# see apps/explorer/scripts/build-site.sh for why.
+
 on:
-  workflow_run:
-    workflows: ["WebGpu Tests", "WebGL Visual Tests"]
-    types:
-      - completed
+  push:
+    branches: [ main ]
+    paths:
+      - 'quake2ts/**'
+      - '.github/workflows/pages.yml'
   workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
-  actions: read # Required for gh run list/download
 
 concurrency:
   group: "pages"
   cancel-in-progress: false
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  build:
     runs-on: ubuntu-latest
-    if: ${{ ((github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.head_branch == 'main') || github.event_name == 'workflow_dispatch') }}
+    defaults:
+      run:
+        working-directory: quake2ts
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
-      - name: Setup Node
-        uses: actions/setup-node@v7
-        with:
-          node-version: 26
-
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v6
+      - uses: pnpm/action-setup@v6
         with:
           package_json_file: quake2ts/package.json
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v6
-
-      - name: Build quake2ts packages
-        working-directory: quake2ts
-        run: |
-          pnpm install
-          pnpm run build
-
-      - name: Download Artifacts
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          mkdir -p visual-test-results
-          mkdir -p webgl-visual-test-results
-
-          # Function to download latest artifact for a workflow
-          download_latest() {
-            WORKFLOW_NAME="$1"
-            ARTIFACT_NAME="$2"
-            DEST_DIR="$3"
-
-            echo "Looking for latest success of '$WORKFLOW_NAME'..."
-            RUN_ID=$(gh run list --workflow "$WORKFLOW_NAME" --branch main --status success --limit 1 --json databaseId -q ".[0].databaseId")
-
-            if [ -n "$RUN_ID" ]; then
-              echo "Found Run ID: $RUN_ID. Downloading '$ARTIFACT_NAME'..."
-              gh run download $RUN_ID -n "$ARTIFACT_NAME" -D "$DEST_DIR" || echo "Artifact not found in run $RUN_ID"
-            else
-              echo "No successful run found for $WORKFLOW_NAME"
-            fi
-          }
-
-          download_latest "webgpu.yml" "visual-test-results" "visual-test-results"
-          download_latest "webgl-visual.yml" "webgl-visual-test-results" "webgl-visual-test-results"
-
-      - name: Build React App
-        working-directory: pages
-        run: |
-          npm ci
-          npm run build
-
-      - name: Prepare Gallery Data
-        run: |
-          # Ensure target directories exist in the build output
-          mkdir -p pages/dist/webgpu/snapshots
-          mkdir -p pages/dist/webgl/snapshots
-
-          # --- Process WebGPU Results ---
-          if [ -f "visual-test-results/visual-tests.json" ]; then
-            echo "Processing WebGPU results..."
-            cp visual-test-results/visual-tests.json pages/dist/visual-tests.json
-
-            # Copy snapshots
-            mkdir -p pages/dist/webgpu/snapshots/{baselines,actual,diff}
-            find visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgpu/snapshots/baselines/ \; || true
-            find visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgpu/snapshots/actual/ \; || true
-            find visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgpu/snapshots/diff/ \; || true
-          else
-             echo "[]" > pages/dist/visual-tests.json
-          fi
-
-          # --- Process WebGL Results ---
-          if [ -f "webgl-visual-test-results/webgl-visual-tests.json" ]; then
-            echo "Processing WebGL results..."
-            cp webgl-visual-test-results/webgl-visual-tests.json pages/dist/webgl-visual-tests.json
-
-            # Copy snapshots
-            mkdir -p pages/dist/webgl/snapshots/{baselines,actual,diff}
-            find webgl-visual-test-results -type d -name "baselines" -exec cp -r {}/. pages/dist/webgl/snapshots/baselines/ \; || true
-            find webgl-visual-test-results -type d -name "actual" -exec cp -r {}/. pages/dist/webgl/snapshots/actual/ \; || true
-            find webgl-visual-test-results -type d -name "diff" -exec cp -r {}/. pages/dist/webgl/snapshots/diff/ \; || true
-          else
-             echo "[]" > pages/dist/webgl-visual-tests.json
-          fi
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v5
+      - uses: actions/setup-node@v7
         with:
-          path: 'pages/dist'
+          node-version: 26
+          cache: 'pnpm'
+          cache-dependency-path: quake2ts/pnpm-lock.yaml
 
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck and test the explorer
+        run: |
+          pnpm --filter @quake2ts/explorer typecheck
+          pnpm --filter @quake2ts/explorer test
+
+      - name: Fetch the demo archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download demo-paks --repo "$GITHUB_REPOSITORY" --pattern q2-314-demo-x86.exe --dir "$RUNNER_TEMP" --clobber
+
+      - name: Build the site
+        env:
+          SITE_BASE: /${{ github.event.repository.name }}/
+        run: apps/explorer/scripts/build-site.sh "$RUNNER_TEMP/q2-314-demo-x86.exe"
+
+      - uses: actions/configure-pages@v6
+
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: quake2ts/apps/explorer/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
