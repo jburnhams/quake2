@@ -7,7 +7,7 @@
  */
 
 import type { CGameImport, CGameExport, PmoveInfo } from './types.js';
-import { PlayerState, PlayerStat, Vec3, applyPmove, PmoveTraceResult, WEAPON_WHEEL_ORDER, WEAPON_AMMO_MAP, G_GetAmmoStat, G_GetPowerupStat, PowerupId } from '@quake2ts/shared';
+import { PlayerState, PlayerStat, Vec3, PmoveTraceResult, WEAPON_WHEEL_ORDER, WEAPON_AMMO_MAP, G_GetAmmoStat, G_GetPowerupStat, PowerupId } from '@quake2ts/shared';
 import { LayoutFlags } from '@quake2ts/shared';
 import { CG_InitScreen, CG_TouchPics, CG_DrawHUD, CG_GetMessageSystem, CG_GetSubtitleSystem } from './screen.js';
 import { CG_ParseConfigString } from './parse.js';
@@ -18,6 +18,7 @@ export type { CGameImport, CGameExport } from './types.js';
 export * from './view/camera.js';
 export * from './view/effects.js';
 export * from './prediction/index.js';
+import { predictMove } from './prediction/index.js';
 
 // Module-level state
 let cgi: CGameImport | null = null;
@@ -144,7 +145,7 @@ function GetHitMarkerDamage(ps: PlayerState): number {
 
 /**
  * Pmove implementation for client-side prediction.
- * Calls the shared Pmove() function (applyPmove in TS port).
+ * Calls the shared Pmove() (runPmove, through predictMove), as the server does.
  *
  * @param pmove - PmoveInfo structure (similar to pmove_t)
  */
@@ -180,28 +181,24 @@ function Pmove(pmove: unknown): void {
         return tr.contents || 0;
     };
 
-    // Check for prediction errors if enabled
-    // Note: The actual prediction logic (reconciliation) happens in ClientPrediction class which
-    // drives the client-side state update. However, Pmove here is called by the client engine
-    // to execute the *current* frame's prediction during the client loop.
-
-    // In Quake 2, CL_PredictMovement calls Pmove repeatedly.
-    // The client prediction class we built (ClientPrediction) encapsulates state management.
-    // Ideally, the client engine should use ClientPrediction to get the state to render.
-
-    // But keeping with the Pmove API:
-    // This function simply advances the physics for one command.
-
-    // Call shared Pmove implementation
-    // This returns a NEW PlayerState, so we must update pm.s
-    const newState = applyPmove(pm.s, pm.cmd, traceAdapter, pointContentsAdapter);
+    // CL_PredictMovement's Pmove: the server's own player move, through predictMove.
+    const s0 = pm.s;
+    const next = predictMove(
+        { ...s0, pmFlags: s0.pm_flags, pmType: s0.pm_type, waterLevel: s0.waterLevel },
+        pm.cmd,
+        { trace: traceAdapter, pointContents: pointContentsAdapter },
+    );
 
     // Update mutable state
-    pm.s.origin = newState.origin;
-    pm.s.velocity = newState.velocity;
-    pm.s.onGround = newState.onGround;
-    pm.s.waterLevel = newState.waterLevel;
-    // applyPmove might update other fields in the future
+    s0.origin = next.origin;
+    s0.velocity = next.velocity;
+    s0.onGround = next.onGround;
+    s0.waterLevel = next.waterLevel;
+    s0.watertype = next.watertype;
+    s0.mins = next.mins;
+    s0.maxs = next.maxs;
+    s0.pm_flags = next.pmFlags;
+    s0.pm_type = next.pmType;
 
     // If debug enabled, we might log something here, but Pmove is high frequency.
     // We defer logging to the reconciliation step in ClientPrediction.

@@ -1,7 +1,7 @@
 import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState } from './client.js';
-import { ClientMessageParser } from './protocol.js';
+import { ClientMessageParser, type MoveCommands } from './protocol.js';
 import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
 import { parseBsp, PakArchive } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
@@ -580,7 +580,13 @@ export class DedicatedServer implements GameEngine {
         }
     }
 
-    private handleMove(client: Client, cmd: UserCommand, checksum: number, lastFrame: number) {
+    /**
+     * clc_move (SV_ExecuteClientMessage, server/sv_user.c): every command runs as it arrives,
+     * each with its own msec. When packets were lost (netchan.dropped), the older commands this
+     * packet repeats stand in for theirs, and beyond two the last command runs again, up to 20.
+     * Until 2026-11-25 the port kept only the newest command and ran it once per server frame.
+     */
+    private handleMove(client: Client, commands: MoveCommands, checksum: number, lastFrame: number) {
         if (lastFrame > 0 && lastFrame <= client.lastFrame && lastFrame > client.lastFrame - UPDATE_BACKUP) {
              const frameIdx = lastFrame % UPDATE_BACKUP;
              const frame = client.frames[frameIdx];
@@ -590,9 +596,26 @@ export class DedicatedServer implements GameEngine {
              }
         }
 
-        client.lastCmd = cmd;
         client.lastMessage = this.sv.frame;
         client.commandCount++;
+
+        const think = (cmd: UserCommand) => {
+            if (this.game && client.state === ClientState.Active && client.edict) {
+                this.game.clientThink(client.edict, cmd);
+            }
+        };
+
+        let netDrop = client.netchan.dropped;
+        if (netDrop < 20) {
+            while (netDrop > 2) {
+                think(client.lastCmd);
+                netDrop--;
+            }
+            if (netDrop > 1) think(commands.oldest);
+            if (netDrop > 0) think(commands.old);
+        }
+        think(commands.current);
+        client.lastCmd = commands.current;
     }
 
     private handleUserInfo(client: Client, info: string) {
@@ -824,7 +847,7 @@ export class DedicatedServer implements GameEngine {
 
                 const reader = new BinaryStream(buffer);
                 const parser = new ClientMessageParser(reader, {
-                    onMove: (checksum, lastFrame, cmd) => this.handleMove(client, cmd, checksum, lastFrame),
+                    onMove: (checksum, lastFrame, commands) => this.handleMove(client, commands, checksum, lastFrame),
                     onUserInfo: (info) => this.handleUserInfo(client, info),
                     onStringCmd: (cmd) => this.handleStringCmd(client, cmd),
                     onNop: () => {},
@@ -853,7 +876,7 @@ export class DedicatedServer implements GameEngine {
         // 1. Read network packets
         this.SV_ReadPackets();
 
-        // 2. Run client commands
+        // 2. Check on clients (their commands ran as they arrived, in SV_ReadPackets)
         for (const client of this.svs.clients) {
             if (!client || client.state === ClientState.Free) continue;
 
@@ -883,8 +906,6 @@ export class DedicatedServer implements GameEngine {
                      this.dropClient(client);
                      continue;
                 }
-
-                this.game.clientThink(client.edict, client.lastCmd);
             }
         }
 

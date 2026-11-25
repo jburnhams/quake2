@@ -89,9 +89,19 @@ describe('NetChan Fragmentation', () => {
     // Receiver state: received 1024 bytes. Expecting 1024 offset.
     expect(receiver.fragmentReceived).toBe(1024);
 
-    // Sender loop check:
-    // Sender thinks it sent everything. It needs to loop back.
-    // We call transmit again. It should see offset >= length and reset to 0.
+    // As net_chan.c does, the sender waits: it sends the message again only once the receiver
+    // has acknowledged a packet sent after the last fragment (incoming_acknowledged >
+    // last_reliable_sequence) without toggling its reliable bit.
+    const hasReliable = (packet: Uint8Array) =>
+      (new DataView(packet.buffer, packet.byteOffset).getUint32(0, true) & 0x80000000) !== 0;
+    for (let i = 0; i < 2; i++) {
+      const idle = sender.transmit();
+      expect(hasReliable(idle)).toBe(false);
+      receiver.process(idle);
+      sender.process(receiver.transmit());
+    }
+
+    // Now it starts over from the first fragment.
     const packet1Retransmit = sender.transmit(); // Fragment 1 again
 
     // Receiver gets packet 1 again.

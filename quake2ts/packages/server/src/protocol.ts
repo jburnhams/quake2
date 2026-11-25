@@ -1,7 +1,18 @@
 import { BinaryStream, ClientCommand, UserCommand } from '@quake2ts/shared';
 
+/** The three commands of one clc_move, oldest first. */
+export interface MoveCommands {
+  readonly oldest: UserCommand;
+  readonly old: UserCommand;
+  readonly current: UserCommand;
+}
+
 export interface ClientMessageHandler {
-  onMove(checksum: number, lastFrame: number, userCmd: UserCommand): void;
+  /**
+   * clc_move: the oldest, the older and the newest command (CL_SendCmd sends three, so the
+   * commands of lost packets arrive in the next one).
+   */
+  onMove(checksum: number, lastFrame: number, commands: MoveCommands): void;
   onUserInfo(info: string): void;
   onStringCmd(cmd: string): void;
   onNop(): void;
@@ -47,10 +58,16 @@ export class ClientMessageParser {
     const checksum = this.stream.readByte();
     const lastFrame = this.stream.readLong();
 
-    // Read UserCmd
-    // TODO: support delta compression if needed (Q2 uses delta compression for usercmds)
-    // For now, assume full UserCmd or implement basic read
+    // SV_ExecuteClientMessage reads three commands: oldest, old, new. id delta-compresses them
+    // (MSG_ReadDeltaUsercmd); the port's client writes each whole (writeMoveCommands).
+    const oldest = this.readUserCommand();
+    const old = this.readUserCommand();
+    const current = this.readUserCommand();
 
+    this.handler.onMove(checksum, lastFrame, { oldest, old, current });
+  }
+
+  private readUserCommand(): UserCommand {
     const msec = this.stream.readByte();
     const buttons = this.stream.readByte();
     const angles = {
@@ -62,9 +79,9 @@ export class ClientMessageParser {
     const sidemove = this.stream.readShort();
     const upmove = this.stream.readShort();
     const impulse = this.stream.readByte();
-    const lightlevel = this.stream.readByte(); // Used for light-based stealth, usually ignored by server logic except for stats
+    const lightlevel = this.stream.readByte();
 
-    const userCmd: UserCommand = {
+    return {
       msec,
       buttons,
       angles,
@@ -73,10 +90,8 @@ export class ClientMessageParser {
       upmove,
       impulse,
       lightlevel,
-      sequence: 0 // Server doesn't read sequence from packet body in standard protocol, it tracks it
+      sequence: 0, // the server tracks sequence itself; it is not on the wire
     };
-
-    this.handler.onMove(checksum, lastFrame, userCmd);
   }
 
   private parseUserInfo(): void {

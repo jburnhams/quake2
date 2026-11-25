@@ -110,7 +110,9 @@ describe('DedicatedServer', () => {
 
     vi.advanceTimersByTime(FRAME_TIME_MS);
 
-    expect(mockGame.clientThink).toHaveBeenCalledWith(fakeClient.edict, fakeClient.lastCmd);
+    // Commands run as their packets arrive (SV_ExecuteClientMessage); with none, the frame
+    // does not run the last one again.
+    expect(mockGame.clientThink).not.toHaveBeenCalled();
     expect(mockGame.frame).toHaveBeenCalledTimes(1);
     expect(mockGame.frame).toHaveBeenCalledWith(expect.objectContaining({ frame: 2 }));
 

@@ -5,7 +5,7 @@ import {
   BinaryStream,
   crc8,
   BinaryWriter,
-  writeUserCommand,
+  writeMoveCommands,
   CMD_BACKUP,
   UserCommand,
   Vec3
@@ -203,7 +203,7 @@ export class ClientConnection implements NetworkMessageHandler {
     const checksum = this.frameCRCs.get(this.latestServerFrame) || 0;
     writer.writeByte(checksum);
     writer.writeLong(this.latestServerFrame);
-    writeUserCommand(writer, commandWithFrame);
+    writeMoveCommands(writer, this.commandHistory);
 
     this.transmit(writer.getData());
   }

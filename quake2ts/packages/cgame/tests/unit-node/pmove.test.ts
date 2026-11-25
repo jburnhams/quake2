@@ -1,25 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { GetCGameAPI, CGameImport, PmoveInfo } from '../../src/index.js';
 import { PlayerState, UserCommand } from '@quake2ts/shared';
-import * as shared from '@quake2ts/shared';
-
-// We need to mock applyPmove in shared.
-vi.mock('@quake2ts/shared', async (importOriginal) => {
-    const actual = await importOriginal() as any;
-    return {
-        ...actual,
-        applyPmove: vi.fn((state, cmd, trace, pointContents) => {
-            // Return modified state
-            return {
-                ...state,
-                origin: { x: state.origin.x + 10, y: state.origin.y, z: state.origin.z },
-                velocity: { x: 100, y: 0, z: 0 },
-                onGround: true,
-                waterLevel: 0
-            };
-        })
-    };
-});
+import { DEFAULT_PMOVE_TUNING, PmFlag, PmType, runPmove } from '@quake2ts/shared';
 
 describe('CGame Pmove', () => {
     let mockImports: CGameImport;
@@ -76,92 +58,84 @@ describe('CGame Pmove', () => {
         } as unknown as CGameImport;
     });
 
-    it('should call applyPmove and update state', () => {
-        const cgame = GetCGameAPI(mockImports);
-
-        const state = {
-            origin: { x: 0, y: 0, z: 0 },
-            velocity: { x: 0, y: 0, z: 0 },
-            onGround: false,
-            waterLevel: 0,
-        } as PlayerState;
-
-        const cmd = {
-            forwardmove: 100,
-            sidemove: 0,
-            upmove: 0,
-            buttons: 0,
-            msec: 100,
-            angles: { x: 0, y: 0, z: 0 }
-        } as UserCommand;
-
-        const pmoveInfo: PmoveInfo = {
-            s: state,
-            cmd: cmd
+    // Open space with a floor at z = 0: the player's box (mins.z -24) stands on it at z = 24.
+    const floorTrace = (start: any, end: any, mins: any) => {
+        const bottom = (mins?.z ?? 0);
+        const floorZ = -bottom;
+        if (end.z >= floorZ || start.z < floorZ) {
+            return { fraction: 1, endpos: end, allsolid: false, startsolid: false, contents: 0 };
+        }
+        const fraction = (start.z - floorZ) / (start.z - end.z);
+        const endpos = {
+            x: start.x + (end.x - start.x) * fraction,
+            y: start.y + (end.y - start.y) * fraction,
+            z: floorZ,
         };
+        return { fraction, endpos, allsolid: false, startsolid: false, planeNormal: { x: 0, y: 0, z: 1 }, contents: 1 };
+    };
+
+    const standing = () => ({
+        origin: { x: 0, y: 0, z: 24 },
+        velocity: { x: 0, y: 0, z: 0 },
+        viewAngles: { x: 0, y: 0, z: 0 },
+        onGround: true,
+        waterLevel: 0,
+        watertype: 0,
+        mins: { x: -16, y: -16, z: -24 },
+        maxs: { x: 16, y: 16, z: 32 },
+        pm_flags: PmFlag.OnGround,
+        pm_type: PmType.Normal,
+    }) as unknown as PlayerState;
+
+    const forward = {
+        forwardmove: 400,
+        sidemove: 0,
+        upmove: 0,
+        buttons: 0,
+        msec: 25,
+        angles: { x: 0, y: 0, z: 0 },
+    } as UserCommand;
+
+    it('predicts with the server\'s move: the same origin and velocity runPmove gives', () => {
+        mockTrace.mockImplementation(floorTrace);
+        const cgame = GetCGameAPI(mockImports);
+        const pmoveInfo: PmoveInfo = { s: standing(), cmd: forward };
 
         cgame.Pmove(pmoveInfo);
 
-        // Expect applyPmove to have been called (verified implicitly by result change due to mock)
-        expect(pmoveInfo.s.origin.x).toBe(10);
-        expect(pmoveInfo.s.velocity.x).toBe(100);
+        const start = standing();
+        const server = runPmove(
+            {
+                pmType: PmType.Normal,
+                pmFlags: PmFlag.OnGround,
+                origin: start.origin,
+                velocity: start.velocity,
+                angles: start.viewAngles,
+                viewAngles: forward.angles,
+                viewHeight: 22,
+                waterlevel: 0,
+                watertype: 0,
+                cmd: { ...forward },
+                delta_angles: { x: 0, y: 0, z: 0 },
+                gravity: 800,
+                mins: start.mins,
+                maxs: start.maxs,
+            },
+            { trace: floorTrace as any, pointcontents: () => 0 },
+            DEFAULT_PMOVE_TUNING,
+        );
+
+        expect(pmoveInfo.s.origin.x).toBeGreaterThan(0);
+        expect(pmoveInfo.s.origin).toEqual(server.origin);
+        expect(pmoveInfo.s.velocity).toEqual(server.velocity);
         expect(pmoveInfo.s.onGround).toBe(true);
-
-        // Also verify trace was called (via adapter)
-        // Check if shared.applyPmove was called.
-        // Since we mocked it, we can import it and check.
-        // NOTE: In Vitest, mocking via vi.mock happens before imports.
-        // So importing '@quake2ts/shared' should give us the mocked version if configured correctly.
-        // But since we are using ESM, `import * as shared` might be tricky with `vi.mock` if not handled carefully.
-        // We can access the mock via the module object if we use `vi.importMock` or if we use the mocked implementation logic to set a flag.
-
-        // Let's rely on the side effect: the state was updated.
-        // If applyPmove wasn't called, origin.x would be 0.
     });
 
-    it('should pass correct trace adapter to applyPmove', () => {
+    it('traces through the client\'s PM_Trace', () => {
+        mockTrace.mockImplementation(floorTrace);
         const cgame = GetCGameAPI(mockImports);
 
-        // We want to verify that the trace adapter passed to applyPmove actually calls PM_Trace
-
-        // We can capture the trace adapter from the mock call
-        let capturedTraceAdapter: any;
-
-        // Update mock implementation to capture arguments
-        const { applyPmove } = shared; // This might be the original or the mock depending on hoisting.
-        // Wait, `vi.mock` is hoisted. `import` follows.
-
-        // Let's assume the previous test confirmed applyPmove is called.
-        // Now let's try to capture the callback.
-        // We can't easily change the mock implementation inside the test if it's defined in vi.mock factory.
-        // But we can use `vi.spyOn(shared, 'applyPmove')` if we didn't use `vi.mock` factory, but we need to mock it because it's an external module.
-
-        // Instead, let's redefine the mock using a variable that we can access.
-        // Vitest factories are isolated.
-
-        // Alternative: Verify logic by ensuring trace calls happen if we simulate applyPmove logic.
-        // But we are MOCKING applyPmove. So applyPmove logic is REPLACED.
-        // So we can only verify that `applyPmove` was CALLED with SOME function.
-        // To verify that function works, we'd need to execute it.
-
-        // Let's modify the mock to execute the passed trace adapter.
-        // (We already did that in the factory? No, we returned a fixed object).
-
-        // We can make the mock call the trace adapter!
-        // But we need to update the mock implementation.
-        // Since `vi.mock` factory is static/hoisted, we can use `vi.mocked(shared.applyPmove).mockImplementation(...)`.
-
-        // Let's try to update the mock implementation in this test.
-        vi.mocked(shared.applyPmove).mockImplementation((state, cmd, trace, pointContents) => {
-            // Call the trace adapter
-            trace({x:0,y:0,z:0}, {x:10,y:0,z:0});
-            return state;
-        });
-
-        const state = { origin: { x: 0, y: 0, z: 0 } } as PlayerState;
-        const cmd = { } as UserCommand;
-
-        cgame.Pmove({ s: state, cmd });
+        cgame.Pmove({ s: standing(), cmd: forward });
 
         expect(mockTrace).toHaveBeenCalled();
     });

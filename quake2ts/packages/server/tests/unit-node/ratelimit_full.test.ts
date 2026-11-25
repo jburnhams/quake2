@@ -47,17 +47,19 @@ describe('Full Stack Rate Limiting', () => {
         writer.writeByte(ClientCommand.move);
         writer.writeByte(0); // Checksum
         writer.writeLong(0); // LastFrame
-        // UserCommand
-        writer.writeByte(16); // msec
-        writer.writeByte(0); // buttons
-        writer.writeAngle16(0); // angles
-        writer.writeAngle16(0);
-        writer.writeAngle16(0);
-        writer.writeShort(0); // forward
-        writer.writeShort(0); // side
-        writer.writeShort(0); // up
-        writer.writeByte(0); // impulse
-        writer.writeByte(0); // lightlevel
+        // Three UserCommands (oldest, old, new), as CL_SendCmd sends them
+        for (let c = 0; c < 3; c++) {
+            writer.writeByte(16); // msec
+            writer.writeByte(0); // buttons
+            writer.writeAngle16(0); // angles
+            writer.writeAngle16(0);
+            writer.writeAngle16(0);
+            writer.writeShort(0); // forward
+            writer.writeShort(0); // side
+            writer.writeShort(0); // up
+            writer.writeByte(0); // impulse
+            writer.writeByte(0); // lightlevel
+        }
 
         const packetData = writer.getData();
 
