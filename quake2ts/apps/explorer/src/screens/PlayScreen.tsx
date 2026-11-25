@@ -27,7 +27,7 @@ export function PlayScreen() {
   const { library } = useLibrary();
   return (
     <div className="flex h-dvh flex-col bg-background">
-      <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
+      <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
         <h1 className="type-label">Play demo1</h1>
         <p className="type-body-sm text-muted-foreground">
           The world is drawn; doors, lifts, monsters and items act in the game but are not drawn yet.

@@ -9,7 +9,8 @@ const router = createBrowserRouter(routes, { basename: import.meta.env.BASE_URL.
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
-    <ThemeProvider>
+    {/* The Quake look is drawn for the dark first (a lit HUD on gunmetal); light stays one click away. */}
+    <ThemeProvider defaultPreference="dark">
       <StrataQueryProvider>
         <RouterProvider router={router} />
       </StrataQueryProvider>
