@@ -1,3 +1,4 @@
+import { flymonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -225,10 +226,9 @@ export function SP_monster_icarus(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = icarus_run;
   self.monsterinfo.attack = icarus_attack;
 
-  self.think = monster_think;
+  flymonster_start(self, context.entities);
 
   icarus_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerIcarusSpawns(registry: SpawnRegistry): void {

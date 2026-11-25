@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { angleVectors, normalizeVec3, subtractVec3, Vec3, addVec3, scaleVec3, vectorToAngles } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -438,10 +439,9 @@ export function SP_monster_soldier(self: Entity, context: SpawnContext): void {
   };
   self.monsterinfo.idle = (self) => soldier_idle(self, context.entities);
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   soldier_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function SP_monster_soldier_light(self: Entity, context: SpawnContext): void {

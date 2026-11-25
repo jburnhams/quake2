@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   normalizeVec3,
@@ -542,10 +543,9 @@ export function SP_monster_parasite(self: Entity, context: SpawnContext): void {
   };
   self.monsterinfo.idle = parasite_idle;
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   parasite_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerParasiteSpawns(registry: SpawnRegistry): void {

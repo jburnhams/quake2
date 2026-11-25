@@ -209,6 +209,8 @@ export interface MonsterInfo {
   pausetime: number;
   run?: MonsterAction;
   stand?: MonsterAction;
+  /** [Paril-KEX] called when the monster lands or leaves the ground (SV_Physics_Step). */
+  physics_change?: MonsterAction;
   sight?: MonsterSightCallback;
   idle?: MonsterAction;
   search?: MonsterAction;
@@ -307,7 +309,8 @@ export class Entity {
   angles: Vec3 = copyVec3();
   pos1: Vec3 = copyVec3();
   pos2: Vec3 = copyVec3();
-  gravityVector: Vec3 = copyVec3();
+  /** G_InitEdict: gravity pulls down. */
+  gravityVector: Vec3 = { x: 0, y: 0, z: -1 };
 
   viewheight = 0;
 
@@ -366,6 +369,8 @@ export class Entity {
   attack_finished_time = 0;
   pain_finished_time = 0;
   pain_debounce_time = 0;
+  /** When a monster runs out of air (M_WorldEffects). */
+  air_finished = 0;
   trail_time = 0;
 
   groundentity: Entity | null = null;
@@ -498,7 +503,7 @@ export class Entity {
     this.angles = copyVec3();
     this.pos1 = copyVec3();
     this.pos2 = copyVec3();
-    this.gravityVector = copyVec3();
+    this.gravityVector = { x: 0, y: 0, z: -1 };
     this.viewheight = 0;
 
     this.mins = copyVec3();
@@ -550,6 +555,7 @@ export class Entity {
     this.attack_finished_time = 0;
     this.pain_finished_time = 0;
     this.pain_debounce_time = 0;
+    this.air_finished = 0;
     this.trail_time = 0;
 
     this.groundentity = null;
@@ -701,6 +707,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'attack_finished_time', type: 'float', save: true },
   { name: 'pain_finished_time', type: 'float', save: true },
   { name: 'pain_debounce_time', type: 'float', save: true },
+  { name: 'air_finished', type: 'float', save: true },
   { name: 'trail_time', type: 'float', save: true },
   { name: 'groundentity', type: 'entity', save: true },
   { name: 'groundentity_linkcount', type: 'int', save: true },

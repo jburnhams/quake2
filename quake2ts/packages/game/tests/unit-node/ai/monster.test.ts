@@ -47,9 +47,8 @@ describe('Monster AI - Soldier', () => {
 
     expect(soldier.frame).toBe(0);
 
-    if (soldier.think) {
-        soldier.think(soldier, system);
-    }
+    // The spawn's own think is walkmonster_start_go; monster_think animates once it has run.
+    monster_think(soldier, system);
 
     expect(soldier.frame).toBe(1);
     expect(soldier.nextthink).toBeGreaterThan(soldier.timestamp);
@@ -68,15 +67,13 @@ describe('Monster AI - Soldier', () => {
     soldier.frame = move.lastframe;
 
     system.beginFrame(1.0);
-    if (soldier.think) {
-        soldier.think(soldier, system);
-    }
+    // The spawn's own think is walkmonster_start_go; monster_think animates once it has run.
+    monster_think(soldier, system);
 
     expect(soldier.frame).toBe(move.lastframe + 1);
 
-    if (soldier.think) {
-        soldier.think(soldier, system);
-    }
+    // The spawn's own think is walkmonster_start_go; monster_think animates once it has run.
+    monster_think(soldier, system);
 
     expect(soldier.frame).toBe(move.firstframe + 1);
   });

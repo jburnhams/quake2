@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   normalizeVec3,
@@ -1007,8 +1008,7 @@ export function SP_monster_guncmdr(self: Entity, context: SpawnContext): void {
 
     M_SetAnimation(self, stand_move, context.entities);
 
-    self.think = monster_think;
-    self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
+    walkmonster_start(self, context.entities);
 }
 
 export function registerGunCommanderSpawns(registry: SpawnRegistry): void {

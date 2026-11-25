@@ -4,7 +4,8 @@
  * frame at a time through real pmove, doors, buttons and lifts. It passes when the exit
  * trigger asks the server to change level to demo2.
  *
- * God mode for now: monsters still fall out of the world, and this gate is about the route.
+ * God mode for now: monsters stand on the floor, but their AI does not notice the player yet
+ * (FindTarget and AI_GetSightClient are not ported), so this gate is still about the route.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -39,6 +40,14 @@ describe('demo1 walkthrough', () => {
     host.command('map demo1');
     host.map.game.setGodMode(true);
     host.run(0.5);
+
+    // Every monster in the level is standing on something, not falling out of the world.
+    const falling: string[] = [];
+    host.map.game.entities.forEachEntity((e) => {
+      if (!e.classname?.startsWith('monster_') || !e.solid) return;
+      if (!e.groundentity || e.velocity.z !== 0) falling.push(`${e.classname} at z ${Math.round(e.origin.z)}`);
+    });
+    expect(falling).toEqual([]);
 
     for (const objective of objectives) {
       const leg = walkObjective(host, objective);

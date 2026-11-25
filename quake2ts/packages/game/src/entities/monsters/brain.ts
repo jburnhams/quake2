@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -673,10 +674,9 @@ export function SP_monster_brain(self: Entity, context: SpawnContext): void {
   self.monsterinfo.power_armor_type = 1; // POWER_ARMOR_SCREEN
   self.monsterinfo.power_armor_power = 100;
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   brain_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerBrainSpawns(registry: SpawnRegistry): void {

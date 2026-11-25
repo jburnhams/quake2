@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { angleVectors, normalizeVec3, subtractVec3, Vec3, vectorToAngles } from '@quake2ts/shared';
 import {
     ai_charge,
@@ -557,10 +558,9 @@ export function SP_monster_gunner(self: Entity, context: SpawnContext): void {
         context.entities.sound?.(self, 0, 'gunner/sight1.wav', 1, 1, 0);
     };
 
-    self.think = monster_think;
+    walkmonster_start(self, context.entities);
 
     gunner_stand(self);
-    self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerGunnerSpawns(registry: SpawnRegistry): void {

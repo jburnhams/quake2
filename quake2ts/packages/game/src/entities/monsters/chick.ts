@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   normalizeVec3,
@@ -480,7 +481,7 @@ export function SP_monster_chick(self: Entity, context: SpawnContext): void {
   };
   self.monsterinfo.blocked = chick_blocked;
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   context.entities.linkentity(self);
 

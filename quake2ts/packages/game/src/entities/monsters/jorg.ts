@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -372,10 +373,9 @@ export function SP_monster_jorg(self: Entity, context: SpawnContext): void {
       context.entities.sound?.(self, 0, 'boss3/sight1.wav', 1, 1, 0);
   };
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   jorg_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerJorgSpawns(registry: SpawnRegistry): void {

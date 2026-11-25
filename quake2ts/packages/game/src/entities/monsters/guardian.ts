@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   scaleVec3,
@@ -622,8 +623,7 @@ export function SP_monster_guardian(self: Entity, context: SpawnContext): void {
 
   M_SetAnimation(self, guardian_move_stand, context.entities);
 
-  self.think = monster_think;
-  self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
+  walkmonster_start(self, context.entities);
 }
 
 export function registerGuardianSpawns(registry: SpawnRegistry): void {

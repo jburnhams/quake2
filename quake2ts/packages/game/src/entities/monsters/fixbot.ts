@@ -1,3 +1,4 @@
+import { flymonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   addVec3,
@@ -439,8 +440,7 @@ export function SP_monster_fixbot(self: Entity, context: SpawnContext): void {
     // Flight handling
     // flymonster_start(self);
     // Mimic flymonster_start
-    self.think = monster_think;
-    self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
+    flymonster_start(self, context.entities);
     self.flags |= EntityFlags.Fly; // Not strictly FL_FLY but used for floating
 }
 

@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, lengthVec3, MASK_SHOT, angleVectors, scaleVec3, addVec3, vectorToYaw } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -479,10 +480,9 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.blindfire = true;
   self.monsterinfo.idle = (self) => tank_idle(self, context.entities);
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   tank_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerTankSpawns(registry: SpawnRegistry): void {

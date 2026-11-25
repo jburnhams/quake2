@@ -1,3 +1,4 @@
+import { flymonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -303,10 +304,9 @@ export function SP_monster_boss2(self: Entity, context: SpawnContext): void {
       context.entities.sound?.(self, 0, 'boss2/sight.wav', 1, 1, 0);
   };
 
-  self.think = monster_think;
+  flymonster_start(self, context.entities);
 
   boss2_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerBoss2Spawns(registry: SpawnRegistry): void {

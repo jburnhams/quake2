@@ -1,6 +1,7 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement, runStep } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
+import { physicsStep } from '../physics/step.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
@@ -748,10 +749,9 @@ export class EntitySystem {
         break;
       case MoveType.Step:
       case MoveType.Walk:
-        // SV_Physics_Step: move, then think.
-        runStep(ent, this, this.imports, this.gravity, frametime);
+        // SV_Physics_Step: moves, then thinks.
         ent.timestamp = this.currentTimeSeconds;
-        this.runThink(ent);
+        physicsStep(ent, this, -this.gravity.z);
         break;
       case MoveType.Toss:
       case MoveType.Bounce:

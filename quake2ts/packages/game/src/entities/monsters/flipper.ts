@@ -1,3 +1,4 @@
+import { swimmonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -293,7 +294,7 @@ export function SP_monster_flipper(self: Entity, context: SpawnContext): void {
       else s.skin = 0;
   }
 
-  self.think = monster_think;
+  swimmonster_start(self, context.entities);
 
   flipper_set_fly_parameters(self);
 
