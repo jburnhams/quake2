@@ -45,6 +45,8 @@ trace end point in `packages/shared/src/bsp/collision.ts`, and all of `packages/
 round with `Math.fround` after each operation as SSE does. Since 2026-11-25: 0 of 200,000 world
 traces and 0 of 180,000 movement frames differ; about 1 in 50,000 submodel traces still does
 (the transform is in doubles). Inputs are rounded to float32 before both sides see them.
+The oracles build with `-ffp-contract=off`: a compiler targeting FMA (as the CI runner's does) fuses
+`a*b+c` into one rounding, which the original builds never did, and that moved two landing frames.
 
 What the movement oracle found on its first run (2026-11-25), 58% of frames differing: ground and
 air moves steered by the full pitch (p_move.cpp divides it by 3), swimming steered by `upmove`
