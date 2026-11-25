@@ -104,6 +104,20 @@ export function LabScene({ label, shows, legend, map, model, home, draw }: LabSc
 
   React.useEffect(() => setOrbit(home), [home]);
 
+  // Ctrl or Cmd with the wheel (and a trackpad pinch, which arrives as one) zooms the camera. A
+  // native listener, since React's wheel listener is passive and cannot stop the page zooming too.
+  React.useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const onWheel = (e: WheelEvent) => {
+      if (!e.ctrlKey && !e.metaKey) return;
+      e.preventDefault();
+      setOrbit((o) => zoomOrbit(o, e.deltaY > 0 ? 1.1 : 0.9));
+    };
+    canvas.addEventListener('wheel', onWheel, { passive: false });
+    return () => canvas.removeEventListener('wheel', onWheel);
+  }, [state.status]);
+
   // Draw whenever the drawing, the camera or the size change.
   React.useEffect(() => {
     if (state.status !== 'ready' || !size.width || !size.height) return;
@@ -132,11 +146,6 @@ export function LabScene({ label, shows, legend, map, model, home, draw }: LabSc
     e.preventDefault();
     setOrbit(next);
   };
-  const onWheel = (e: React.WheelEvent) => {
-    if (!e.ctrlKey && !e.metaKey) return;
-    e.preventDefault();
-    setOrbit((o) => zoomOrbit(o, e.deltaY > 0 ? 1.1 : 0.9));
-  };
 
   return (
     <section aria-label={label} className="grid gap-2">
@@ -154,7 +163,6 @@ export function LabScene({ label, shows, legend, map, model, home, draw }: LabSc
             aria-label={`${shows} ${describeOrbit(orbit)} Drag or use the arrow keys to turn, Control and the wheel or plus and minus to zoom, 0 to go back.`}
             className="block aspect-video w-full cursor-grab touch-none rounded-surface bg-muted active:cursor-grabbing"
             onKeyDown={onKeyDown}
-            onWheel={onWheel}
             onPointerDown={(e) => {
               e.currentTarget.setPointerCapture(e.pointerId);
               drag.current = { x: e.clientX, y: e.clientY };
