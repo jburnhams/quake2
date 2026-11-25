@@ -7,8 +7,9 @@ import { UserCommand } from '@quake2ts/shared';
 const GRAVITY = { x: 0, y: 0, z: -800 } as const;
 
 const mockEngine = {
-  trace(start: typeof GRAVITY, end: typeof GRAVITY) {
-    return { start, end, fraction: 1, allsolid: false, startsolid: false };
+  // An empty world: every move completes.
+  trace(start: typeof GRAVITY, _mins: unknown, _maxs: unknown, end: typeof GRAVITY) {
+    return { fraction: 1, endpos: { ...end }, allsolid: false, startsolid: false, plane: null, surfaceFlags: 0, contents: 0, ent: null };
   },
   pointcontents() { return 0; },
   linkentity() { },

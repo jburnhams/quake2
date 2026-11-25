@@ -10,6 +10,9 @@ import { parseBsp, collisionModelFromBsp } from '@quake2ts/engine';
 import {
   traceBox,
   pointContents,
+  transformedBoxTrace,
+  transformedPointContents,
+  headnodeForBox,
   RandomGenerator,
   MASK_ALL,
   MASK_SOLID,
@@ -41,6 +44,12 @@ interface Diff {
 }
 
 const close = (a: number, b: number, tol: number) => Math.abs(a - b) <= tol;
+
+/** Guards against a generator that only makes misses, which would compare nothing. */
+function expectSomeHits(answers: OracleTrace[]): void {
+  const hits = answers.filter((a) => a.fraction < 1 || a.startsolid).length;
+  expect(hits / answers.length).toBeGreaterThan(0.15);
+}
 
 function compareTrace(ts: ReturnType<typeof traceBox>, c: OracleTrace): string | null {
   if (ts.startsolid !== c.startsolid) return 'startsolid';
@@ -133,5 +142,108 @@ describe.each(MAPS)('collision matches cmodel.c on %s', (mapPath) => {
       if (why) diffs.push({ query: q, ts: { fraction: ts.fraction, endpos: ts.endpos, startsolid: ts.startsolid, allsolid: ts.allsolid, normal: ts.plane?.normal }, c: answers[i], why });
     });
     expect(diffs, summarize(diffs, queries.length)).toHaveLength(0);
+  });
+
+  // Doors, plats and other brush entities: their submodel moved to an origin and turned.
+  // Moves start near the submodel so most of them touch it.
+  const nearSubmodel = (rng: RandomGenerator, i: number, origin: Vec3, slack: number): Vec3 => {
+    const b = model.bmodels[i];
+    return f32({
+      x: origin.x + rng.frandomRange(b.mins.x - slack, b.maxs.x + slack),
+      y: origin.y + rng.frandomRange(b.mins.y - slack, b.maxs.y + slack),
+      z: origin.z + rng.frandomRange(b.mins.z - slack, b.maxs.z + slack),
+    });
+  };
+  const randomPlacement = (rng: RandomGenerator, i: number): { origin: Vec3; angles: Vec3 } => {
+    const origin = f32({ x: rng.crandom() * 64, y: rng.crandom() * 64, z: rng.crandom() * 64 });
+    // A third unrotated (doors, plats), a third turned about z (rotating doors), a third any way.
+    const kind = i % 3;
+    const angles = f32(
+      kind === 0
+        ? { x: 0, y: 0, z: 0 }
+        : kind === 1
+          ? { x: 0, y: rng.frandomRange(0, 360), z: 0 }
+          : { x: rng.frandomRange(-90, 90), y: rng.frandomRange(0, 360), z: rng.frandomRange(-45, 45) },
+    );
+    return { origin, angles };
+  };
+
+  it('submodel traces', () => {
+    const rng = new RandomGenerator({ seed: SEED + 2 });
+    const submodels = model.bmodels.length - 1;
+    expect(submodels).toBeGreaterThan(0);
+    const queries: OracleQuery[] = [];
+    for (let i = 0; i < QUERIES / 4; i++) {
+      const index = 1 + (i % submodels);
+      const { origin, angles } = randomPlacement(rng, i);
+      const start = nearSubmodel(rng, index, origin, 48);
+      // Half the moves aim into the submodel's bounds, so plenty of them hit.
+      const reach = i % 10 === 9 ? 0 : 96;
+      const end =
+        i % 2 === 0
+          ? nearSubmodel(rng, index, origin, 0)
+          : f32({ x: start.x + rng.crandom() * reach, y: start.y + rng.crandom() * reach, z: start.z + rng.crandom() * reach });
+      const [mins, maxs] = BOXES[i % BOXES.length];
+      queries.push({ op: 'ttrace', start, end, mins, maxs, mask: MASKS[(i >> 2) % MASKS.length], headnode: model.bmodels[index].headnode, origin, angles });
+    }
+    const answers = runOracle(bin, file, queries) as OracleTrace[];
+    const diffs: Diff[] = [];
+    queries.forEach((q, i) => {
+      if (q.op !== 'ttrace') return;
+      const ts = transformedBoxTrace({ model, start: q.start, end: q.end, mins: q.mins, maxs: q.maxs, contentMask: q.mask >>> 0, headnode: q.headnode, origin: q.origin, angles: q.angles });
+      const why = compareTrace(ts, answers[i]);
+      if (why) diffs.push({ query: q, ts: { fraction: ts.fraction, endpos: ts.endpos, startsolid: ts.startsolid, allsolid: ts.allsolid, normal: ts.plane?.normal }, c: answers[i], why });
+    });
+    expect(diffs, summarize(diffs, queries.length)).toHaveLength(0);
+    expectSomeHits(answers);
+  });
+
+  it('submodel point contents', () => {
+    const rng = new RandomGenerator({ seed: SEED + 3 });
+    const submodels = model.bmodels.length - 1;
+    const queries: OracleQuery[] = [];
+    for (let i = 0; i < QUERIES / 4; i++) {
+      const index = 1 + (i % submodels);
+      const { origin, angles } = randomPlacement(rng, i);
+      queries.push({ op: 'tcontents', point: nearSubmodel(rng, index, origin, 16), headnode: model.bmodels[index].headnode, origin, angles });
+    }
+    const answers = runOracle(bin, file, queries);
+    const diffs: Diff[] = [];
+    queries.forEach((q, i) => {
+      if (q.op !== 'tcontents') return;
+      const ts = transformedPointContents(q.point, model, q.headnode, q.origin, q.angles);
+      if (ts !== answers[i].contents) diffs.push({ query: q, ts, c: answers[i].contents, why: 'contents' });
+    });
+    expect(diffs, summarize(diffs, queries.length)).toHaveLength(0);
+  });
+
+  // Monsters, players and items: a bounding box turned into a six-plane hull.
+  it('box hull traces', () => {
+    const rng = new RandomGenerator({ seed: SEED + 4 });
+    const queries: OracleQuery[] = [];
+    for (let i = 0; i < QUERIES / 4; i++) {
+      const [boxMins, boxMaxs] = BOXES[1 + (i % 3)];
+      const origin = randomPoint(rng);
+      const start = f32({ x: origin.x + rng.crandom() * 64, y: origin.y + rng.crandom() * 64, z: origin.z + rng.crandom() * 64 });
+      // Half the moves aim at the box, so plenty of them hit.
+      const reach = i % 10 === 9 ? 0 : 96;
+      const end =
+        i % 2 === 0
+          ? f32({ x: origin.x + rng.crandom() * 8, y: origin.y + rng.crandom() * 8, z: origin.z + rng.crandom() * 8 })
+          : f32({ x: start.x + rng.crandom() * reach, y: start.y + rng.crandom() * reach, z: start.z + rng.crandom() * reach });
+      const [mins, maxs] = BOXES[i % BOXES.length];
+      queries.push({ op: 'btrace', start, end, mins, maxs, mask: MASKS[(i >> 2) % MASKS.length], boxMins, boxMaxs, origin });
+    }
+    const answers = runOracle(bin, file, queries) as OracleTrace[];
+    const diffs: Diff[] = [];
+    queries.forEach((q, i) => {
+      if (q.op !== 'btrace') return;
+      const headnode = headnodeForBox(model, q.boxMins, q.boxMaxs);
+      const ts = transformedBoxTrace({ model, start: q.start, end: q.end, mins: q.mins, maxs: q.maxs, contentMask: q.mask >>> 0, headnode, origin: q.origin });
+      const why = compareTrace(ts, answers[i]);
+      if (why) diffs.push({ query: q, ts: { fraction: ts.fraction, endpos: ts.endpos, startsolid: ts.startsolid, allsolid: ts.allsolid, normal: ts.plane?.normal }, c: answers[i], why });
+    });
+    expect(diffs, summarize(diffs, queries.length)).toHaveLength(0);
+    expectSomeHits(answers);
   });
 });

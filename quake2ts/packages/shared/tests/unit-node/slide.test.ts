@@ -338,3 +338,18 @@ describe('stepSlideMove', () => {
     expect(result.origin).toEqual({ x: 10, y: 0, z: 0 });
   });
 });
+
+describe('slideMove from inside a brush', () => {
+  // cmodel.c leaves fraction 1 and endpos at the requested end when the move starts
+  // inside a brush, so the slide must keep its own origin rather than take endpos.
+  it.each([
+    ['allsolid', { allsolid: true, startsolid: true }],
+    ['startsolid', { allsolid: false, startsolid: true }],
+  ])('stays put when the trace is %s', (_name, flags) => {
+    const origin = { x: 10, y: 20, z: 30 };
+    const trace: PmoveTraceFn = (_start, end) => ({ fraction: 1, endpos: end, planeNormal: undefined, ...flags });
+    const result = slideMove({ origin, velocity: { x: 300, y: 0, z: 0 }, frametime: 0.1, overbounce: OVERBOUNCE, trace });
+    expect(result.origin).toEqual(origin);
+    expect(result.stopped).toBe(true);
+  });
+});

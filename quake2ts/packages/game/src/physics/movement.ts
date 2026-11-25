@@ -247,6 +247,11 @@ export function runPush(
     z: pusher.avelocity.z * frametime,
   };
 
+  // SV_Physics_Pusher only pushes when the pusher is moving or turning.
+  if (!move.x && !move.y && !move.z && !amove.x && !amove.y && !amove.z) {
+    return true;
+  }
+
   // 1. Calculate the swept bounding box of the pusher to find potential collisions
   // We need to encompass the entire movement
   // Note: Quake 2 does 'mins - move - 2' logic implicitly via box check

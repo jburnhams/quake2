@@ -30,6 +30,8 @@ export interface PmoveCmd {
   readonly impulse?: number;
   readonly lightlevel?: number;
   readonly angles: Vec3;
+  /** Milliseconds this command covers; the move lasts msec / 1000 seconds. */
+  readonly msec?: number;
 }
 
 export interface PmoveWishResult {

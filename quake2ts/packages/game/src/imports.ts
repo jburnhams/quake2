@@ -43,6 +43,10 @@ export interface GameImports {
   pointcontents: PointContentsFunction;
 
   linkentity(ent: Entity): void;
+  /** gi.unlinkentity: takes the entity out of the server's collision world. Called on free, as G_FreeEdict does. */
+  unlinkentity?(ent: Entity): void;
+  /** gi.setmodel: sets modelindex, and for a submodel ("*3") its mins and maxs. */
+  setmodel?(ent: Entity, name: string): void;
 
   areaEdicts(mins: Vec3, maxs: Vec3): number[] | null;
 

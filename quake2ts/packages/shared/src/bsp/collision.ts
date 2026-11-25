@@ -1,4 +1,5 @@
-import { CONTENTS_TRIGGER } from './contents.js';
+import { CONTENTS_MONSTER, CONTENTS_TRIGGER } from './contents.js';
+import { angleVectors } from '../math/angles.js';
 import type { Vec3 } from '../math/vec3.js';
 import { ZERO_VEC3, addVec3, scaleVec3, subtractVec3 } from '../math/vec3.js';
 import { createSpatialTree, linkEntityToSpatialTree, querySpatialTree, SpatialNode } from './spatial.js';
@@ -794,6 +795,154 @@ export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: Collisi
   traverse(headnode);
 
   return contents;
+}
+
+interface BoxHull {
+  readonly headnode: number;
+  readonly planes: CollisionPlane[];
+}
+
+const boxHulls = new WeakMap<CollisionModel, BoxHull>();
+
+/**
+ * CM_InitBoxHull: appends a six-node tree with one CONTENTS_MONSTER brush to the model,
+ * once per model, so a bounding box can be traced exactly like BSP geometry.
+ */
+function boxHullFor(model: CollisionModel): BoxHull {
+  const existing = boxHulls.get(model);
+  if (existing) return existing;
+
+  // cmodel.c's emptyleaf: the first leaf after the solid leaf 0 with no contents.
+  let emptyLeaf = -1;
+  for (let i = 1; i < model.leaves.length; i += 1) {
+    if (model.leaves[i].contents === 0) {
+      emptyLeaf = i;
+      break;
+    }
+  }
+  if (emptyLeaf === -1) {
+    emptyLeaf = model.leaves.length;
+    model.leaves.push({ contents: 0, cluster: -1, area: 0, firstLeafBrush: 0, numLeafBrushes: 0 });
+  }
+
+  const headnode = model.nodes.length;
+  const planes: CollisionPlane[] = [];
+  for (let i = 0; i < 6; i += 1) {
+    const axis = i >> 1;
+    const pos = { x: 0, y: 0, z: 0 };
+    const neg = { x: 0, y: 0, z: 0 };
+    (pos as { x: number; y: number; z: number })[axis === 0 ? 'x' : axis === 1 ? 'y' : 'z'] = 1;
+    (neg as { x: number; y: number; z: number })[axis === 0 ? 'x' : axis === 1 ? 'y' : 'z'] = -1;
+    // cmodel.c leaves signbits at 0 for these planes, negative normals included.
+    planes.push({ normal: pos, dist: 0, type: axis, signbits: 0 });
+    planes.push({ normal: neg, dist: 0, type: 3 + axis, signbits: 0 });
+  }
+
+  const brush: CollisionBrush = { contents: CONTENTS_MONSTER, sides: [], checkcount: 0 };
+  const boxLeaf = model.leaves.length;
+  model.leaves.push({ contents: CONTENTS_MONSTER, cluster: -1, area: 0, firstLeafBrush: model.leafBrushes.length, numLeafBrushes: 1 });
+  model.leafBrushes.push(model.brushes.length);
+  model.brushes.push(brush);
+
+  for (let i = 0; i < 6; i += 1) {
+    const side = i & 1;
+    brush.sides.push({ plane: planes[i * 2 + side], surfaceFlags: 0 });
+    const children: [number, number] = [0, 0];
+    children[side] = -1 - emptyLeaf;
+    children[side ^ 1] = i !== 5 ? headnode + i + 1 : -1 - boxLeaf;
+    model.nodes.push({ plane: planes[i * 2], children });
+  }
+
+  const hull = { headnode, planes };
+  boxHulls.set(model, hull);
+  return hull;
+}
+
+/**
+ * CM_HeadnodeForBox: points the model's box hull at mins/maxs and returns its headnode.
+ * Like the C original there is one hull per model, so use the result before the next call.
+ */
+export function headnodeForBox(model: CollisionModel, mins: Vec3, maxs: Vec3): number {
+  const { headnode, planes } = boxHullFor(model);
+  planes[0].dist = maxs.x;
+  planes[1].dist = -maxs.x;
+  planes[2].dist = mins.x;
+  planes[3].dist = -mins.x;
+  planes[4].dist = maxs.y;
+  planes[5].dist = -maxs.y;
+  planes[6].dist = mins.y;
+  planes[7].dist = -mins.y;
+  planes[8].dist = maxs.z;
+  planes[9].dist = -maxs.z;
+  planes[10].dist = mins.z;
+  planes[11].dist = -mins.z;
+  return headnode;
+}
+
+function isBoxHeadnode(model: CollisionModel, headnode: number): boolean {
+  return boxHulls.get(model)?.headnode === headnode;
+}
+
+function isRotated(angles: Vec3 | undefined): angles is Vec3 {
+  return !!angles && (angles.x !== 0 || angles.y !== 0 || angles.z !== 0);
+}
+
+/** Into a model's frame: dot with forward, minus dot with right, dot with up (cmodel.c's convention). */
+function rotateInto(v: Vec3, forward: Vec3, right: Vec3, up: Vec3): Vec3 {
+  return {
+    x: v.x * forward.x + v.y * forward.y + v.z * forward.z,
+    y: -(v.x * right.x + v.y * right.y + v.z * right.z),
+    z: v.x * up.x + v.y * up.y + v.z * up.z,
+  };
+}
+
+export interface TransformedTraceParams extends CollisionTraceParams {
+  readonly headnode: number;
+  readonly origin: Vec3;
+  readonly angles?: Vec3;
+}
+
+/** CM_TransformedBoxTrace: traces against a moved and rotated submodel (a door, a plat) or a box hull. */
+export function transformedBoxTrace(params: TransformedTraceParams): CollisionTraceResult {
+  const { model, start, end, headnode, origin, angles } = params;
+  let startL = subtractVec3(start, origin);
+  let endL = subtractVec3(end, origin);
+
+  const rotated = !isBoxHeadnode(model, headnode) && isRotated(angles);
+  if (rotated) {
+    const { forward, right, up } = angleVectors(angles);
+    startL = rotateInto(startL, forward, right, up);
+    endL = rotateInto(endL, forward, right, up);
+  }
+
+  const trace = traceBox({ ...params, start: startL, end: endL, headnode });
+
+  let plane = trace.plane;
+  if (rotated && trace.fraction !== 1 && plane) {
+    const back = angleVectors({ x: -angles.x, y: -angles.y, z: -angles.z });
+    plane = { ...plane, normal: rotateInto(plane.normal, back.forward, back.right, back.up) };
+  }
+
+  return {
+    ...trace,
+    plane,
+    planeNormal: plane?.normal,
+    endpos: {
+      x: start.x + trace.fraction * (end.x - start.x),
+      y: start.y + trace.fraction * (end.y - start.y),
+      z: start.z + trace.fraction * (end.z - start.z),
+    },
+  };
+}
+
+/** CM_TransformedPointContents. */
+export function transformedPointContents(point: Vec3, model: CollisionModel, headnode: number, origin: Vec3, angles?: Vec3): number {
+  let p = subtractVec3(point, origin);
+  if (!isBoxHeadnode(model, headnode) && isRotated(angles)) {
+    const { forward, right, up } = angleVectors(angles);
+    p = rotateInto(p, forward, right, up);
+  }
+  return model.leaves[findLeafIndex(p, model, headnode)].contents;
 }
 
 export function inPVS(p1: Vec3, p2: Vec3, model: CollisionModel, headnode = 0): boolean {

@@ -302,6 +302,13 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
     return null;
   }
 
+  // Brush entities name a submodel ("*3"). The original spawn functions call gi.setmodel,
+  // which sets modelindex and copies the submodel's bounds; doing it here, before the spawn
+  // function runs, gives doors and plats the size their movement is worked out from.
+  if (entity.model && entity.model.startsWith('*')) {
+    options.entities.setModel(entity, entity.model);
+  }
+
   spawnFunc(entity, context);
 
   if (!entity.inUse) {

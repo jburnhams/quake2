@@ -25,7 +25,10 @@ export interface OracleTrace {
 
 export type OracleQuery =
   | { op: 'trace'; start: Vec3; end: Vec3; mins: Vec3; maxs: Vec3; mask: number; headnode: number }
-  | { op: 'contents'; point: Vec3; headnode: number };
+  | { op: 'contents'; point: Vec3; headnode: number }
+  | { op: 'ttrace'; start: Vec3; end: Vec3; mins: Vec3; maxs: Vec3; mask: number; headnode: number; origin: Vec3; angles: Vec3 }
+  | { op: 'btrace'; start: Vec3; end: Vec3; mins: Vec3; maxs: Vec3; mask: number; boxMins: Vec3; boxMaxs: Vec3; origin: Vec3 }
+  | { op: 'tcontents'; point: Vec3; headnode: number; origin: Vec3; angles: Vec3 };
 
 /** Builds the oracle binary if needed and returns its path. Throws if no C compiler is available. */
 export function buildOracle(): string {
@@ -52,6 +55,15 @@ const f = (v: Vec3) => `${v.x} ${v.y} ${v.z}`;
 function encode(q: OracleQuery): string {
   if (q.op === 'trace') {
     return `trace ${f(q.start)} ${f(q.end)} ${f(q.mins)} ${f(q.maxs)} ${q.mask | 0} ${q.headnode}`;
+  }
+  if (q.op === 'ttrace') {
+    return `ttrace ${f(q.start)} ${f(q.end)} ${f(q.mins)} ${f(q.maxs)} ${q.mask | 0} ${q.headnode} ${f(q.origin)} ${f(q.angles)}`;
+  }
+  if (q.op === 'btrace') {
+    return `btrace ${f(q.start)} ${f(q.end)} ${f(q.mins)} ${f(q.maxs)} ${q.mask | 0} ${f(q.boxMins)} ${f(q.boxMaxs)} ${f(q.origin)}`;
+  }
+  if (q.op === 'tcontents') {
+    return `tcontents ${f(q.point)} ${q.headnode} ${f(q.origin)} ${f(q.angles)}`;
   }
   return `contents ${f(q.point)} ${q.headnode}`;
 }

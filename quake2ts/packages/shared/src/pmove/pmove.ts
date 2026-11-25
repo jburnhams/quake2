@@ -18,7 +18,8 @@ import { categorizePosition } from './categorize.js';
 import { checkDuckState, DuckTraceParams } from './duck.js';
 // import { updateViewOffsets } from './view.js';
 
-const FRAMETIME = 0.025; // Define FRAMETIME here or import if available in constants? Using local definition for now as per previous context.
+/** Frame length when a command carries no msec: one 40 Hz frame. */
+const DEFAULT_FRAMETIME = 0.025;
 
 /**
  * Pure version of PM_Friction from rerelease p_move.cpp.
@@ -218,6 +219,9 @@ export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
  * Runs the full player movement simulation for a single frame.
  */
 export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
+  // pml.frametime = pm->cmd.msec * 0.001
+  const frametime = state.cmd.msec !== undefined ? state.cmd.msec * 0.001 : DEFAULT_FRAMETIME;
+
   if (state.pmType === PmType.Dead) {
     return state;
   }
@@ -298,7 +302,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
   const velocityBeforeFriction = nextState.velocity;
   nextState.velocity = applyPmoveFriction({
       velocity: nextState.velocity,
-      frametime: FRAMETIME,
+      frametime: frametime,
       onGround,
       groundIsSlick: false,
       onLadder: false, // Defaulting to false for now as ladder logic is complex
@@ -319,7 +323,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
          y: forward.y * nextState.cmd.forwardmove + right.y * nextState.cmd.sidemove,
          z: nextState.cmd.upmove
     };
-    const scale = FRAMETIME; // Just move by velocity
+    const scale = frametime; // Just move by velocity
     // Actually we need to apply velocity based on input
     // But sticking to just what's needed for jumping/movement:
     nextState.velocity = wishvel; // Simple override for noclip
@@ -333,7 +337,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
     const outcome = applyPmoveWaterMove({
         origin: nextState.origin,
         velocity: nextState.velocity,
-        frametime: FRAMETIME,
+        frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
         trace: imports.trace,
@@ -361,7 +365,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
      const outcome = applyPmoveAirMove({
         origin: nextState.origin,
         velocity: nextState.velocity,
-        frametime: FRAMETIME,
+        frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
         trace: imports.trace,
@@ -392,7 +396,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
      const outcome = applyPmoveWalkMove({
         origin: nextState.origin,
         velocity: nextState.velocity,
-        frametime: FRAMETIME,
+        frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
         trace: imports.trace,
