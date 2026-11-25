@@ -307,6 +307,19 @@ export class ClientPrediction {
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
+  /**
+   * Forgets the last server's frames and commands, as CL_ClearState does when a new server's
+   * serverdata arrives: frame numbers start again with each server, and a base frame kept from
+   * the last one would make every new snapshot look old.
+   */
+  reset(): void {
+    this.baseFrame = { frame: 0, timeMs: 0, state: defaultPredictionState() };
+    this.baseAck = 0;
+    this.commands = [];
+    this.predicted = this.baseFrame.state ?? defaultPredictionState();
+    this.predictionError = ZERO_VEC3;
+  }
+
   setPredictionEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
