@@ -2,8 +2,9 @@
 // differs from the game's: the same scripted run (forward, one jump, let go) on demo1, through
 // the game's own runPmove and the map's collision, drawn beside the run the shipped values give.
 // The constants are sliders on the left and live in the URL; the run is redrawn on every change,
-// since 100 frames of runPmove take a few milliseconds. The charts are SVG for now; the 3D view
-// takes the stage when the renderer library lands (plan, Track C).
+// since 100 frames of runPmove take a few milliseconds. The stage is demo1 in 3D through the
+// engine's renderer (RunScene) with both paths drawn in it, then the figures and the charts,
+// which say the same in numbers and stand in when the browser has no WebGL 2.
 import * as React from 'react';
 import {
   ButtonLink,
@@ -27,7 +28,8 @@ import {
   type Point,
 } from 'strata-react';
 import { RotateCcw } from 'lucide-react';
-import { parseBsp } from '@quake2ts/formats/bsp';
+import { parseBsp, type BspMap } from '@quake2ts/formats/bsp';
+import { RunScene } from './RunScene';
 import { useDemoPak, useLibrary } from '../../library/context';
 import { CONSTANTS, useLabTuning } from './constants';
 import {
@@ -50,12 +52,16 @@ export function MovementLab() {
   const demo = useDemoPak();
   const { library, version } = useLibrary();
   const lab = useLabTuning();
-  const world = useLoad<MovementWorld | null>({
+  const world = useLoad<{ map: BspMap; world: MovementWorld } | null>({
     queryKey: ['lab-world', version, LAB_MAP],
     enabled: demo.status !== 'loading',
     staleTime: Infinity,
     retry: false,
-    queryFn: async () => (library.vfs.hasFile(LAB_MAP) ? worldFromMap(parseBsp(await library.read(LAB_MAP))) : null),
+    queryFn: async () => {
+      if (!library.vfs.hasFile(LAB_MAP)) return null;
+      const map = parseBsp(await library.read(LAB_MAP));
+      return { map, world: worldFromMap(map) };
+    },
     describeError: (e) => `${LAB_MAP} could not be read: ${e instanceof Error ? e.message : String(e)}.`,
   });
 
@@ -120,7 +126,7 @@ export function MovementLab() {
                 </EmptyState>
               }
             >
-              {(w) => <RunView world={w!} />}
+              {(w) => <RunView map={w!.map} world={w!.world} />}
             </DataView>
           </Pane>
         </Split>
@@ -129,7 +135,7 @@ export function MovementLab() {
   );
 }
 
-function RunView({ world }: { world: MovementWorld }) {
+function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
   const { tuning } = useLabTuning();
   const base = React.useMemo(() => simulateRun(world), [world]);
   const run = React.useMemo(() => simulateRun(world, tuning), [world, ...Object.values(tuning)]);
@@ -147,6 +153,7 @@ function RunView({ world }: { world: MovementWorld }) {
         The player runs forward from demo1's start, jumps after {seconds((JUMP_FRAME * FRAME_MSEC) / 1000)}, lets go after{' '}
         {seconds((RELEASE_FRAME * FRAME_MSEC) / 1000)} and slides to a stop, through the game's own movement code and the map's walls and floors.
       </p>
+      <RunScene map={map} world={world} run={run} base={base} />
       <MetricStrip label="This run">
         <Metric label="Top speed" value={units(mine.topSpeed, 'u/s')} note={against(mine.topSpeed, game.topSpeed, (g) => units(g, 'u/s'))} />
         <Metric label="Highest point" value={units(mine.peakHeight, 'u')} note={against(mine.peakHeight, game.peakHeight, (g) => units(g, 'u'))} />
