@@ -40,3 +40,34 @@ describe('the movement lab', () => {
     expect(await screen.findByRole('slider', { name: 'Gravity' })).toHaveValue('800');
   });
 });
+
+describe("the movement lab's air view", () => {
+  it('takes one frame of the air move apart, with the code beside it', async () => {
+    render('/labs/movement?view=air');
+    expect(await screen.findByRole('heading', { name: 'The frame in PM_Accelerate' })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: 'Air strafing' })).toHaveAttribute('aria-selected', 'true');
+    expect(screen.getByRole('slider', { name: 'Angle to the wish direction' })).toHaveValue('45');
+    expect(screen.getAllByRole('link', { name: /rerelease\/p_move\.cpp, lines \d+–\d+/ }).length).toBe(3);
+    expect(screen.getAllByRole('link', { name: /packages\/shared\/src\/pmove\/(pmove|move)\.ts, lines/ }).length).toBe(3);
+    // PM_Accelerate and PM_AirAccelerate both take the dot product.
+    expect(screen.getAllByText(/currentspeed = pml\.velocity\.dot\(wishdir\);/, { selector: 'code' })).toHaveLength(2);
+  });
+
+  it('sets the constants as QuakeWorld ships them from its preset', async () => {
+    render('/labs/movement?view=air');
+    const preset = await screen.findByRole('link', { name: 'QuakeWorld' });
+    expect(preset).toHaveAttribute('href', '/labs/movement?view=air&maxspeed=320&friction=4&airaccel=10');
+    await userEvent.click(preset);
+    expect(await screen.findByRole('heading', { name: 'The frame in PM_AirAccelerate' })).toBeInTheDocument();
+    expect(screen.getByText('wishspd (capped)')).toBeInTheDocument();
+    expect(screen.getByText(/3\sconstants changed: top speed, air acceleration, friction/)).toBeInTheDocument();
+  });
+
+  it('turns the wish direction from the keyboard and writes it to the URL', async () => {
+    const { router } = render('/labs/movement?view=air');
+    const angle = await screen.findByRole('slider', { name: 'Angle to the wish direction' });
+    angle.focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(router.state.location.search).toBe('?view=air&angle=46');
+  });
+});
