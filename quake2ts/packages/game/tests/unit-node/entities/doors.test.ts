@@ -279,3 +279,21 @@ describe('func_button', () => {
     expect(b.activator).toBe(p);
   });
 });
+
+describe('pusher physics', () => {
+  it('calls entity.blocked on movers that have no moveinfo.blocked', () => {
+    let blocker: Entity | null = null;
+    const w = level(door('"targetname" "d1"'), (passent) => passent === blocker);
+    const d = w.spawned[0];
+    d.moveinfo!.blocked = null;
+    const blocked = vi.fn();
+    d.blocked = blocked;
+    blocker = visitor(w.entities, { x: 0, y: 30, z: 24 });
+    blocker.movetype = MoveType.Step;
+    blocker.client = undefined as any;
+    d.use!(d, null, null);
+    w.run(0.1);
+    expect(blocked).toHaveBeenCalled();
+    expect(blocked.mock.calls[0][1]).toBe(blocker);
+  });
+});

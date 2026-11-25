@@ -186,7 +186,10 @@ export function physicsPusher(ent: Entity, sys: EntitySystem): void {
 
     if (blockedPart && obstacle) {
       // Call the blocked function if there is one; otherwise wait for the obstacle to go.
-      blockedPart.moveinfo?.blocked?.(blockedPart, obstacle);
+      // The movers not yet ported to movers.ts (plats, trains, rotating and secret doors)
+      // still set entity.blocked rather than moveinfo.blocked.
+      if (blockedPart.moveinfo?.blocked) blockedPart.moveinfo.blocked(blockedPart, obstacle);
+      else blockedPart.blocked?.(blockedPart, obstacle, sys);
       if (!obstacle.inUse || obstacle.freePending) continue; // retry
       return;
     }
