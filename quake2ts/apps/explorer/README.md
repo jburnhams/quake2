@@ -9,9 +9,21 @@ libraries (`strata-vfs`, `@quake2ts/formats`) rather than the whole engine.
 pnpm --filter @quake2ts/explorer dev      # http://localhost:5173, opens on the demo PAK
 pnpm --filter @quake2ts/explorer test     # Vitest + Testing Library + MSW, against the demo PAK
 pnpm --filter @quake2ts/explorer build    # typecheck, then dist/
+apps/explorer/scripts/build-site.sh .paks/q2-314-demo-x86.exe   # the Pages site (from quake2ts/)
 ```
 
-It opens on the committed demo PAK (`public/pak.pak` links to `quake2ts/pak.pak`). **Open PAK files**
+The site is this app: the intro at `/` (`src/screens/IntroScreen.tsx`), the explorer at `/explore`,
+and the game at `/play` (`src/screens/PlayScreen.tsx`, `src/play/session.ts`): `LocalHost` runs
+`map demo1` at 40 Hz and the engine's WebGL renderer draws the world from the player's eyes. It
+imports `@quake2ts/engine` and `@quake2ts/server` from their `dist/`, so run `pnpm run build` in
+`quake2ts/` before the typecheck or a build.
+`.github/workflows/pages.yml` builds and deploys it on every push to main that touches `quake2ts/`.
+`scripts/fetch-paks.sh --unpinned` keeps the archive in `.paks/` for a local site build.
+
+It opens on the committed demo PAK (`public/pak.pak` links to `quake2ts/pak.pak`); the GitHub Pages
+build opens on the demo's whole `baseq2/pak0.pak` instead, which the browser takes out of the original
+demo archive (`src/library/demo.ts`, `src/library/zip.ts`), since id's demo licence lets only the
+unmodified archive be passed on. The archive is kept in Cache Storage, so it downloads once. **Open PAK files**
 mounts more above it, as the game's search path does, so a later PAK wins any path it shares.
 
 | File | Shown as |
@@ -33,6 +45,9 @@ can be linked.
 - `src/files/`: the tree (strata `Tree`) and the details pane (strata `Inspector`).
 - `src/preview/`: `decode.ts` (bytes to what is drawn; tested in Node) and the previews.
 - `src/screens/ExplorerScreen.tsx`: the strata `Workspace` of three panes.
+- `src/labs/movement/`: the movement lab (`/labs/movement`): the game's `runPmove` on demo1 with its
+  constants on sliders held in the URL, drawn beside the run the game's values give. `simulate.ts` is
+  the run, pure and tested in Node on demo1.
 - `src/routes.tsx`: the route tree, shared by `main.tsx` and the tests (`renderRoutes`).
 
 ## Still in the old explorer
