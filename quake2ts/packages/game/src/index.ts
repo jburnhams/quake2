@@ -475,6 +475,7 @@ export function createGame(
           planeNormal: result.plane?.normal,
           contents: result.contents,
           surfaceFlags: result.surfaceFlags,
+          ent: result.ent ?? undefined,
         };
       },
       pointcontents: (point) => pointcontents(point),
@@ -498,6 +499,13 @@ export function createGame(
     }
     // Through the entity system, so its fallback grid moves with the player too.
     entities.linkentity(player);
+
+    // ClientThink: set off the triggers the player is in, then touch what the move ran into.
+    if (pmType !== PmType.NoClip) entities.touchTriggers(player);
+    for (const tr of next.touch ?? []) {
+      const other = tr.ent as Entity | undefined;
+      if (other && other.touch) other.touch(other, player, null, null);
+    }
   };
 
   const gameExports: GameExports = {

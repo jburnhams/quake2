@@ -20,6 +20,8 @@ import { checkDuckState, DuckTraceParams } from './duck.js';
 
 /** Frame length when a command carries no msec: one 40 Hz frame. */
 const DEFAULT_FRAMETIME = 0.025;
+/** MAXTOUCH in q_shared.h. */
+const MAX_TOUCH = 32;
 
 /**
  * Pure version of PM_Friction from rerelease p_move.cpp.
@@ -228,6 +230,21 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
 
   let nextState = { ...state };
 
+  // pm.touch (PM_RecordTrace): each thing a movement trace ran into, once. The move traces
+  // are recorded as a whole, which also takes in the step probes; p_move.cpp records only
+  // the slide hits and the ground, so a step probe that hits a different entity is extra.
+  const touch: PmoveTraceResult[] = [];
+  const recordTrace = (tr: PmoveTraceResult) => {
+    if (tr.ent === undefined || touch.length >= MAX_TOUCH) return;
+    if (touch.some((t) => t.ent === tr.ent)) return;
+    touch.push(tr);
+  };
+  const moveTrace: PmoveImports['trace'] = (start, end, mins, maxs) => {
+    const tr = imports.trace(start, end, mins, maxs);
+    if (tr.allsolid || tr.fraction < 1) recordTrace(tr);
+    return tr;
+  };
+
   // Categorize Position
   const catResult = categorizePosition({
     pmType: nextState.pmType,
@@ -340,7 +357,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
-        trace: imports.trace,
+        trace: moveTrace,
         cmd: nextState.cmd,
         forward,
         right,
@@ -368,7 +385,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
-        trace: imports.trace,
+        trace: moveTrace,
         cmd: nextState.cmd,
         forward,
         right,
@@ -399,7 +416,7 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         frametime: frametime,
         mins: nextState.mins,
         maxs: nextState.maxs,
-        trace: imports.trace,
+        trace: moveTrace,
         cmd: nextState.cmd,
         forward,
         right,
@@ -442,6 +459,8 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
   nextState.pmFlags = catResultEnd.pmFlags;
   nextState.waterlevel = catResultEnd.waterlevel;
   nextState.watertype = catResultEnd.watertype;
+  if (catResultEnd.onGround && catResultEnd.groundTrace) recordTrace(catResultEnd.groundTrace);
+  nextState.touch = touch;
 
   // Update view offsets (bobbing, etc)
   // nextState = updateViewOffsets(nextState);

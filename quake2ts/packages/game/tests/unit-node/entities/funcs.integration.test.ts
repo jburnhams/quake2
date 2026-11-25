@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
-import { DoorState, registerFuncSpawns } from '../../../src/entities/funcs.js';
+import { registerFuncSpawns } from '../../../src/entities/funcs.js';
+import { STATE_BOTTOM, STATE_UP } from '../../../src/entities/movers.js';
 
 describe('Funcs Integration', () => {
   const registry = createDefaultSpawnRegistry(null);
@@ -21,6 +22,8 @@ describe('Funcs Integration', () => {
     {
       "classname" "func_button"
       "target" "door1"
+      "mins" "-4 -4 0"
+      "maxs" "4 4 8"
     }
     {
       "classname" "func_door"
@@ -40,18 +43,20 @@ describe('Funcs Integration', () => {
 
     const originalPos = { ...door.origin };
 
-    expect(door.state).toBe(DoorState.Closed);
+    expect(door.moveinfo.state).toBe(STATE_BOTTOM);
 
     button.use(button, null, null);
+    expect(mockEngine.sound).toHaveBeenCalledTimes(1); // the button's sound
 
-    expect(door.state).toBe(DoorState.Opening);
-    expect(mockEngine.sound).toHaveBeenCalledTimes(2); // Button sound + Door start sound
+    // The button fires its targets once it is all the way in (button_wait), so run frames.
+    for (let t = 0.025; t <= 1; t += 0.025) {
+      entities.beginFrame(t);
+      entities.runFrame();
+    }
 
-    // Simulate some time passing.
-    entities.beginFrame(0.1);
-    entities.runFrame();
-    entities.beginFrame(0.2);
-    entities.runFrame();
+    expect(door.moveinfo.state).not.toBe(STATE_BOTTOM);
+    // + the door's start sound (and its end sound, if it has already arrived)
+    expect(mockEngine.sound.mock.calls.length).toBeGreaterThanOrEqual(2);
 
     expect(door.origin.y).toBeGreaterThan(originalPos.y);
   });

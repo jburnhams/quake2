@@ -45,7 +45,7 @@ function toggleSolid(self: Entity): void {
 
 export function registerTriggerHurt(registry: SpawnRegistry): void {
   registry.register('trigger_hurt', (entity, context) => {
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
 
     entity.dmg = entity.dmg || 5;
     const touchHandler: TouchCallback = (self, other) => hurtTouch(self, other, context.entities);

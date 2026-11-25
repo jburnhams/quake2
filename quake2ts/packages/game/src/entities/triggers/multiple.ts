@@ -72,7 +72,7 @@ function useMulti(self: Entity, _other: Entity | null, activator: Entity | null,
 
 export function registerTriggerMultiple(registry: SpawnRegistry): void {
   registry.register('trigger_multiple', (entity, context) => {
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
 
     if (entity.wait === 0) {
       entity.wait = 0.2;

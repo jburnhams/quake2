@@ -51,12 +51,19 @@ export class LocalHost {
   /** Model names by index; index 1 is the world, then the submodels, as SV_SpawnServer lays them out. */
   private models: string[] = [];
   private sounds: string[] = [];
+  /** Commands the game sent to the server (gi.AddCommandString), such as `changelevel demo2`. */
+  readonly serverCommands: string[] = [];
 
   constructor(private readonly options: LocalHostOptions) {}
 
   get map(): LoadedMap {
     if (!this.current) throw new Error('No map loaded; run the map command first');
     return this.current;
+  }
+
+  /** Level time in seconds. */
+  get timeSeconds(): number {
+    return this.timeMs / 1000;
   }
 
   get loaded(): boolean {
@@ -94,6 +101,7 @@ export class LocalHost {
     this.models = ['', path];
     for (let i = 1; i < model.bmodels.length; i++) this.models.push(`*${i}`);
     this.sounds = [''];
+    this.serverCommands.length = 0;
     this.frameNumber = 0;
     this.timeMs = 0;
 
@@ -127,6 +135,9 @@ export class LocalHost {
       areaEdicts: (mins, maxs) =>
         [...world.areaEdicts(mins, maxs, AreaType.Solid), ...world.areaEdicts(mins, maxs, AreaType.Triggers)].map((e) => e.index),
       configstring: (index, value) => this.configstrings.set(index, value),
+      serverCommand: (cmd) => {
+        this.serverCommands.push(cmd.trim());
+      },
     };
 
     game = createGame(

@@ -1,6 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement, runPush, runStep } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement, runStep } from '../physics/movement.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
@@ -14,7 +14,8 @@ import {
   FL_NOTARGET
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
-import { ThinkScheduler, type ThinkScheduleEntry } from './thinkScheduler.js';
+import type { ThinkScheduleEntry } from './thinkScheduler.js';
+import { physicsPusher } from '../physics/pusher.js';
 import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
@@ -155,9 +156,11 @@ interface ExtendedTargetAwarenessState extends TargetAwarenessState {
   soundClient(): Entity | null;
 }
 
+/** Allowance for float rounding when comparing a nextthink with level time. */
+const THINK_TIME_EPSILON = 1e-4;
+
 export class EntitySystem {
   private readonly pool: EntityPool;
-  private readonly thinkScheduler: ThinkScheduler;
   private readonly targetNameIndex = new Map<string, Set<Entity>>();
   private readonly random: RandomGenerator;
   private readonly callbackToName: Map<AnyCallback, string>;
@@ -264,7 +267,6 @@ export class EntitySystem {
     readonly friendlyFire: boolean = false
   ) {
     this.pool = new EntityPool(maxEntities);
-    this.thinkScheduler = new ThinkScheduler();
     this.engine = engine;
     this.deathmatch = deathmatch ?? false;
     this.coop = coop ?? false;
@@ -428,7 +430,6 @@ export class EntitySystem {
   free(entity: Entity): void {
     this.scriptHooks?.onEntityRemove?.(entity);
     this.unregisterTarget(entity);
-    this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
     this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
@@ -437,7 +438,6 @@ export class EntitySystem {
 
   freeImmediate(entity: Entity): void {
     this.unregisterTarget(entity);
-    this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
     this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
@@ -498,8 +498,59 @@ export class EntitySystem {
     this.imports.unicast(ent, reliable, event, ...args);
   }
 
+  /** Sets ent.nextthink; G_RunFrame runs the think when level time reaches it. */
   scheduleThink(entity: Entity, nextThinkSeconds: number): void {
-    this.thinkScheduler.schedule(entity, nextThinkSeconds);
+    entity.nextthink = nextThinkSeconds;
+  }
+
+  /** gi.frame_time_s: the length of the frame being run. */
+  get frameTimeSeconds(): number {
+    return this.currentDeltaSeconds;
+  }
+
+  /** level.current_entity: the entity G_RunFrame is running, or null outside the loop. */
+  currentEntity: Entity | null = null;
+
+  get capacity(): number {
+    return this.pool.capacity;
+  }
+
+  /** Whether the entity is linked into the world (gi.linkentity and not since unlinked). */
+  isLinked(ent: Entity): boolean {
+    return this.linkedEntities.has(ent);
+  }
+
+  /**
+   * SV_RunThink: runs the entity's think if its nextthink has come, and says whether it
+   * did not (so callers can carry on). Times are float seconds here, so "has come" allows
+   * for the rounding of sums like 0.1 + 0.2.
+   */
+  runThink(ent: Entity): boolean {
+    const thinktime = ent.nextthink;
+    if (thinktime <= 0) return true;
+    if (thinktime > this.currentTimeSeconds + THINK_TIME_EPSILON) return true;
+    ent.nextthink = 0;
+    ent.think?.(ent, this);
+    return false;
+  }
+
+  /**
+   * G_TouchTriggers: calls the touch function of every trigger the entity's box is in.
+   * Dead players and monsters don't set triggers off.
+   */
+  touchTriggers(ent: Entity): void {
+    if ((ent.client || ent.svflags & ServerFlags.Monster) && ent.health <= 0) return;
+    for (const hit of this.findInBox(ent.absmin, ent.absmax)) {
+      if (hit === ent || hit.solid !== Solid.Trigger || !hit.touch) continue;
+      if (!hit.inUse || hit.freePending) continue;
+      if (
+        ent.absmin.x > hit.absmax.x || ent.absmax.x < hit.absmin.x ||
+        ent.absmin.y > hit.absmax.y || ent.absmax.y < hit.absmin.y ||
+        ent.absmin.z > hit.absmax.z || ent.absmax.z < hit.absmin.z
+      )
+        continue;
+      hit.touch(hit, ent);
+    }
   }
 
   beginFrame(timeSeconds: number): void {
@@ -649,53 +700,78 @@ export class EntitySystem {
     this.useTargetsImmediate(entity, activator ?? entity);
   }
 
+  /**
+   * The entity loop of G_RunFrame (g_main.cpp) with G_RunEntity (g_phys.cpp): every entity
+   * in index order runs its physics, and its think from inside that physics, as the
+   * original does. Clients move by their usercmds (ClientThink), not here.
+   */
   runFrame(): void {
-    this.thinkScheduler.runDueThinks(this.currentTimeSeconds, this);
-
-    for (const ent of this.pool) {
-      if (!ent.inUse || ent.freePending) {
+    const capacity = this.pool.capacity;
+    for (let i = 0; i < capacity; i++) {
+      const ent = this.pool.getByIndex(i);
+      if (!ent || !ent.inUse || ent.freePending) continue;
+      this.currentEntity = ent;
+      if (ent.client) {
+        // ClientBeginServerFrame; the port still gives clients their think here.
+        this.runThink(ent);
         continue;
       }
+      this.runEntity(ent);
+    }
+    this.currentEntity = null;
+    this.pool.flushFreeList();
+  }
 
-      if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
-        checkWater(ent, this, this.imports);
-      }
+  /** G_RunEntity: one entity's physics for this frame, by its movetype. */
+  private runEntity(ent: Entity): void {
 
-      const frametime = this.currentTimeSeconds - (ent.timestamp || 0);
-      switch (ent.movetype) {
-        case MoveType.Toss:
-          runGravity(ent, this.gravity, frametime);
-          runBouncing(ent, this, this.imports, frametime);
-          ent.timestamp = this.currentTimeSeconds;
-          break;
-        case MoveType.Bounce:
-          runBouncing(ent, this, this.imports, frametime);
-          ent.timestamp = this.currentTimeSeconds;
-          break;
-        case MoveType.FlyMissile:
-          runProjectileMovement(ent, this.imports, frametime);
-          ent.timestamp = this.currentTimeSeconds;
-          break;
-        case MoveType.Push:
-          runPush(ent, this, this.imports, frametime);
-          break;
-        case MoveType.Step:
-          runStep(ent, this, this.imports, this.gravity, frametime);
-          ent.timestamp = this.currentTimeSeconds;
-          break;
-        case MoveType.Walk:
-          // MOVETYPE_WALK is typically for clients or monsters behaving like clients
-          // If it has no client attached, treat it as STEP (Quake 2 logic)
-          if (!ent.client) {
-             runStep(ent, this, this.imports, this.gravity, frametime);
-             ent.timestamp = this.currentTimeSeconds;
-          }
-          break;
-      }
+    const frametime = this.currentDeltaSeconds;
+    if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
+      checkWater(ent, this, this.imports);
     }
 
-    this.runTouches();
-    this.pool.flushFreeList();
+    switch (ent.movetype) {
+      case MoveType.Push:
+      case MoveType.Stop:
+        physicsPusher(ent, this);
+        break;
+      case MoveType.None:
+        this.runThink(ent);
+        break;
+      case MoveType.Noclip:
+        // SV_Physics_Noclip
+        if (this.runThink(ent) && ent.inUse) {
+          ent.angles = { x: ent.angles.x + ent.avelocity.x * frametime, y: ent.angles.y + ent.avelocity.y * frametime, z: ent.angles.z + ent.avelocity.z * frametime };
+          ent.origin = { x: ent.origin.x + ent.velocity.x * frametime, y: ent.origin.y + ent.velocity.y * frametime, z: ent.origin.z + ent.velocity.z * frametime };
+          this.linkentity(ent);
+        }
+        break;
+      case MoveType.Step:
+      case MoveType.Walk:
+        // SV_Physics_Step: move, then think.
+        runStep(ent, this, this.imports, this.gravity, frametime);
+        ent.timestamp = this.currentTimeSeconds;
+        this.runThink(ent);
+        break;
+      case MoveType.Toss:
+      case MoveType.Bounce:
+      case MoveType.Fly:
+      case MoveType.FlyMissile:
+      case MoveType.WallBounce:
+        // SV_Physics_Toss: think, then move.
+        this.runThink(ent);
+        if (!ent.inUse || ent.freePending) break;
+        if (ent.movetype === MoveType.Toss) runGravity(ent, this.gravity, frametime);
+        if (ent.movetype === MoveType.FlyMissile) runProjectileMovement(ent, this.imports, frametime);
+        else if (ent.movetype !== MoveType.Fly) runBouncing(ent, this, this.imports, frametime);
+        ent.timestamp = this.currentTimeSeconds;
+        break;
+      default:
+        this.runThink(ent);
+        break;
+    }
+
+    ent.postthink?.(ent, this);
   }
 
   createSnapshot(): EntitySystemSnapshot {
@@ -732,7 +808,7 @@ export class EntitySystem {
       timeSeconds: this.currentTimeSeconds,
       pool: this.pool.createSnapshot(),
       entities,
-      thinks: this.thinkScheduler.snapshot(),
+      thinks: [],
       awareness: {
         frameNumber: this.targetAwareness.frameNumber,
         sightEntityIndex: this.targetAwareness.sightEntity?.index ?? null,
@@ -853,40 +929,8 @@ export class EntitySystem {
       assignField(ref.entity, ref.name, target as Entity[SerializableFieldName]);
     }
 
-    this.thinkScheduler.restore(snapshot.thinks, (index) => indexToEntity.get(index));
   }
 
-  private runTouches(): void {
-    // Spatial optimization using areaEdicts
-    const world = this.pool.world;
-    const activeEntities: Entity[] = [];
-
-    // Collect active entities that can touch or be touched
-    // Optimizing this collection might be hard without a separate "active" list,
-    // but the nested loop is the killer.
-    for (const entity of this.pool) {
-      if (entity === world) continue;
-      if (!entity.inUse || entity.freePending || entity.solid === Solid.Not) continue;
-      activeEntities.push(entity);
-    }
-
-    // New optimized approach
-    for (const first of activeEntities) {
-       const candidates = this.findInBox(first.absmin, first.absmax);
-       const firstBounds = computeBounds(first);
-
-       for (const second of candidates) {
-         if (first === second) continue;
-         if (!first.touch) continue; // Only process if first has a touch callback
-         // AABB check again just in case areaEdicts is coarse
-         const secondBounds = computeBounds(second);
-         if (!boundsIntersect(firstBounds, secondBounds)) continue;
-
-         first.touch(first, second);
-         // Do not call second.touch(second, first) here; it will be called when the outer loop reaches 'second'.
-       }
-    }
-  }
 
   private registerTarget(entity: Entity): void {
     if (!entity.targetname) {

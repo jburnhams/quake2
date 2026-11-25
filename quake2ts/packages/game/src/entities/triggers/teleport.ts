@@ -48,7 +48,7 @@ export function registerTriggerTeleport(registry: SpawnRegistry): void {
       entity.wait = 0.2;
     }
 
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
 
     if (entity.targetname) {
       entity.use = (self) => {
