@@ -36,6 +36,11 @@ paths keep working through re-exports while code moves.
 - A private package's `exports` point at its TypeScript source, so Vitest, Vite and `tsc -b`
   (through project references) use it without a build or an alias. Packages that are published
   bundle it (`tsup` inlines it), so it is a `devDependency` of theirs.
+- A library that simulates (movement, collision, monster AI, the renderer) can be driven on its
+  own, because the explorer's labs run the real code with sliders on its behaviour: a pure step
+  (state in, state out, the world as functions such as `trace`), its constants as one typed
+  object whose defaults are the game's (`PmoveTuning` and `DEFAULT_PMOVE_TUNING` for `runPmove`),
+  output a demo can draw, and no game, DOM or GPU dependency.
 - Released per library, once the explorer ([`apps/explorer`](apps/explorer), on strata-react) uses it.
 
 ## Consumers

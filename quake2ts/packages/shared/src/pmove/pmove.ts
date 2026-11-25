@@ -15,6 +15,7 @@ import { PlayerButton, PmFlag, PmType, addPmFlag, removePmFlag } from './constan
 import { checkJump } from './jump.js';
 import { applyPmoveAirMove, applyPmoveWaterMove, applyPmoveWalkMove } from './move.js';
 import { categorizePosition } from './categorize.js';
+import { DEFAULT_PMOVE_TUNING, type PmoveTuning } from './tuning.js';
 import { checkDuckState, DuckTraceParams } from './duck.js';
 // import { updateViewOffsets } from './view.js';
 
@@ -218,9 +219,11 @@ export function buildWaterWish(params: PmoveWishParams): PmoveWishResult {
 }
 
 /**
- * Runs the full player movement simulation for a single frame.
+ * Runs the full player movement simulation for a single frame. `tuning` changes the movement
+ * constants (any field left out keeps the game's value, DEFAULT_PMOVE_TUNING).
  */
-export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
+export function runPmove(state: PmoveState, imports: PmoveImports, tuning?: Partial<PmoveTuning>): PmoveState {
+  const tune: PmoveTuning = tuning ? { ...DEFAULT_PMOVE_TUNING, ...tuning } : DEFAULT_PMOVE_TUNING;
   // pml.frametime = pm->cmd.msec * 0.001
   const frametime = state.cmd.msec !== undefined ? state.cmd.msec * 0.001 : DEFAULT_FRAMETIME;
 
@@ -297,7 +300,8 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
     waterlevel: nextState.waterlevel,
     onGround: (nextState.pmFlags & PmFlag.OnGround) !== 0,
     velocity: nextState.velocity,
-    origin: nextState.origin
+    origin: nextState.origin,
+    jumpHeight: tune.jumpSpeed,
   });
 
   nextState.pmFlags = jumpResult.pmFlags;
@@ -324,9 +328,9 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
       groundIsSlick: false,
       onLadder: false, // Defaulting to false for now as ladder logic is complex
       waterlevel: nextState.waterlevel,
-      pmFriction: 6, // Default
-      pmStopSpeed: 100, // Default
-      pmWaterFriction: 1 // Default
+      pmFriction: tune.friction,
+      pmStopSpeed: tune.stopSpeed,
+      pmWaterFriction: tune.waterFriction,
   });
 
   // Calculate view vectors from angles
@@ -363,17 +367,17 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         right,
         pmFlags: nextState.pmFlags,
         onGround,
-        pmMaxSpeed: 300,
-        pmDuckSpeed: 100,
-        pmWaterAccelerate: 4,
-        pmWaterSpeed: 400,
+        pmMaxSpeed: tune.maxSpeed,
+        pmDuckSpeed: tune.duckSpeed,
+        pmWaterAccelerate: tune.waterAccelerate,
+        pmWaterSpeed: tune.waterSpeed,
         onLadder: false,
         watertype: nextState.watertype,
         groundContents: 0, // Should be passed in?
         waterlevel: nextState.waterlevel,
         viewPitch: nextState.viewAngles.x,
         ladderMod: 1,
-        stepSize: 18 // Added stepSize for consistency, though water move might not use it heavily
+        stepSize: tune.stepSize,
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
@@ -393,18 +397,18 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         onGround,
         gravity: nextState.gravity,
         pmType: nextState.pmType,
-        pmAccelerate: 10,
-        pmAirAccelerate: 1,
-        pmMaxSpeed: 300,
-        pmDuckSpeed: 100,
+        pmAccelerate: tune.accelerate,
+        pmAirAccelerate: tune.airAccelerate,
+        pmMaxSpeed: tune.maxSpeed,
+        pmDuckSpeed: tune.duckSpeed,
         onLadder: false,
         waterlevel: nextState.waterlevel,
         watertype: nextState.watertype,
         groundContents: 0,
         viewPitch: nextState.viewAngles.x,
         ladderMod: 1,
-        pmWaterSpeed: 400,
-        stepSize: 18 // Added stepSize
+        pmWaterSpeed: tune.waterSpeed,
+        stepSize: tune.stepSize,
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
@@ -424,17 +428,17 @@ export function runPmove(state: PmoveState, imports: PmoveImports): PmoveState {
         onGround,
         gravity: nextState.gravity,
         pmType: nextState.pmType,
-        pmAccelerate: 10,
-        pmMaxSpeed: 300,
-        pmDuckSpeed: 100,
+        pmAccelerate: tune.accelerate,
+        pmMaxSpeed: tune.maxSpeed,
+        pmDuckSpeed: tune.duckSpeed,
         onLadder: false,
         waterlevel: nextState.waterlevel,
         watertype: nextState.watertype,
         groundContents: 0,
         viewPitch: nextState.viewAngles.x,
         ladderMod: 1,
-        pmWaterSpeed: 400,
-        stepSize: 18 // Added stepSize
+        pmWaterSpeed: tune.waterSpeed,
+        stepSize: tune.stepSize,
     });
     nextState.origin = outcome.origin;
     nextState.velocity = outcome.velocity;
