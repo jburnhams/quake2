@@ -36,6 +36,8 @@ export interface PmoveTuning {
   readonly stepSize: number;
   /** The upward speed a jump starts with (270 in p_move.cpp's PM_CheckJump). */
   readonly jumpSpeed: number;
+  /** pm_config.n64_physics: no trick jumps or ducking, a landing pause after every fall. */
+  readonly n64Physics?: boolean;
 }
 
 /** The game as it ships. */
