@@ -58,7 +58,13 @@ export interface PmoveTraceResult {
   readonly ent?: unknown;
 }
 
-export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => PmoveTraceResult;
+/**
+ * A box trace for the movement code. `contentMask` is what p_move.cpp passes to pm->trace:
+ * MASK_PLAYERSOLID for most moves, CONTENTS_LADDER for the ladder probe, MASK_SOLID and
+ * MASK_WATER for the water checks, MASK_DEADSOLID for a dead player. An import that leaves it
+ * out traces the player's usual mask, so ladders and water jumps are not found.
+ */
+export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3, contentMask?: number) => PmoveTraceResult;
 
 export type PmovePointContentsFn = (point: Vec3) => ContentsFlag;
 
@@ -83,9 +89,27 @@ export interface PmoveState {
    * for the game to call touch functions on. Filled in by runPmove.
    */
   touch?: readonly PmoveTraceResult[];
+  /** pm_time: milliseconds left on a timed flag (water jump, landing, teleport, trick jump). */
+  pmTime?: number;
+  /** pm->snapinitial: the state was changed outside pmove, so nudge it out of solids first. */
+  snapInitial?: boolean;
+  /** Out: standing on something (pm->groundentity is set). */
+  onGround?: boolean;
+  /** Out: pm->groundentity, the `ent` of the ground trace, or null. */
+  groundEntity?: unknown;
+  /** Out: pm->groundplane's normal. */
+  groundPlaneNormal?: Vec3;
+  /** Out: pm->jump_sound, a jump started this frame. */
+  jumpSound?: boolean;
+  /** Out: pm->step_clip, the move clipped up onto a step while rising. */
+  stepClip?: boolean;
+  /** Out: pm->impact_delta, the vertical speed lost on landing (for falling damage). */
+  impactDelta?: number;
 }
 
 export interface PmoveImports {
   trace: PmoveTraceFn;
   pointcontents: PmovePointContentsFn;
+  /** pm->clip: the world only, for spectators. Falls back to `trace` with MASK_SOLID. */
+  clip?: PmoveTraceFn;
 }

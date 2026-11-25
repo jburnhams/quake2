@@ -320,6 +320,12 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
   let getout = false; // True if the end point is outside at least one plane (not trapped in brush)
   let startout = false; // True if the start point is outside at least one plane (not starting stuck)
 
+  // The arithmetic is cmodel.c's, in 32-bit floats (Math.fround after each operation, as SSE
+  // does), because the answer turns on exact ties: a start inside the DIST_EPSILON band that
+  // moves along a wall gives f = -1 exactly in floats (no hit) and -0.99996 in doubles (a hit
+  // at fraction 0), which stopped a player sliding along a wall (oracle/tests/pmove).
+  const F = Math.fround;
+  const dot = (a: Vec3, n: Vec3) => F(F(F(F(a.x) * n.x) + F(F(a.y) * n.y)) + F(F(a.z) * n.z));
   for (const side of brush.sides) {
     const { plane } = side;
     let dist = plane.dist;
@@ -327,51 +333,43 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
     // Expand the plane by the box extents to perform a point-plane test.
     // This reduces the AABB sweep vs convex brush problem to a line segment vs expanded planes problem.
     if (!isPoint) {
-      const ofsX = plane.normal.x < 0 ? maxs.x : mins.x;
-      const ofsY = plane.normal.y < 0 ? maxs.y : mins.y;
-      const ofsZ = plane.normal.z < 0 ? maxs.z : mins.z;
-      dist -= plane.normal.x * ofsX + plane.normal.y * ofsY + plane.normal.z * ofsZ;
+      const ofs = {
+        x: plane.normal.x < 0 ? maxs.x : mins.x,
+        y: plane.normal.y < 0 ? maxs.y : mins.y,
+        z: plane.normal.z < 0 ? maxs.z : mins.z,
+      };
+      dist = F(dist - dot(ofs, plane.normal));
     }
 
     // d1: Distance of start point from the (expanded) plane. Positive = in front (outside).
     // d2: Distance of end point from the (expanded) plane.
-    const d1 = start.x * plane.normal.x + start.y * plane.normal.y + start.z * plane.normal.z - dist;
-    const d2 = end.x * plane.normal.x + end.y * plane.normal.y + end.z * plane.normal.z - dist;
+    const d1 = F(dot(start, plane.normal) - dist);
+    const d2 = F(dot(end, plane.normal) - dist);
 
     if (d2 > 0) getout = true;
     if (d1 > 0) startout = true;
 
-    // Case 1: Entirely outside this plane.
-    // Since brushes are convex intersections of half-spaces (defined by planes pointing OUT),
-    // being in front of ANY plane means being outside the brush.
-    // The d2 >= d1 check handles the case where the line is parallel or moving away from the plane.
+    // Entirely in front of this plane (or moving away from it): outside the convex brush.
     if (d1 > 0 && d2 >= d1) {
       return;
     }
 
-    // Case 2: Entirely inside this plane (back side).
-    // Does not restrict the entry/exit interval further than other planes might.
+    // Entirely behind this plane: does not narrow the interval.
     if (d1 <= 0 && d2 <= 0) {
       continue;
     }
 
-    // Case 3: Line intersects the plane.
-    // d1 > d2 means we are moving from Front (outside) to Back (inside) -> Entering.
+    // Crosses the plane. DIST_EPSILON stops the box short of it on the way in and lets it
+    // go past on the way out.
     if (d1 > d2) {
-      // Calculate intersection fraction f.
-      // DIST_EPSILON is subtracted to ensure we stop slightly *before* the plane,
-      // preventing the object from getting stuck in the next frame due to float precision.
-      const f = (d1 - DIST_EPSILON) / (d1 - d2);
+      const f = F((d1 - DIST_EPSILON) / F(d1 - d2)); // DIST_EPSILON is a double literal
       if (f > enterfrac) {
         enterfrac = f;
         clipplane = plane;
         leadside = side;
       }
     } else {
-      // Moving from Back (inside) to Front (outside) -> Leaving.
-      // DIST_EPSILON is added to push the exit point slightly further out (or in depending on perspective),
-      // effectively narrowing the "inside" interval.
-      const f = (d1 + DIST_EPSILON) / (d1 - d2);
+      const f = F((d1 + DIST_EPSILON) / F(d1 - d2));
       if (f < leavefrac) leavefrac = f;
     }
   }
@@ -441,7 +439,7 @@ function lerpPoint(start: Vec3, end: Vec3, t: number): Vec3 {
 function finalizeTrace(trace: TraceResult, start: Vec3, end: Vec3): CollisionTraceResult {
   // CM_BoxTrace: endpos is the end point when nothing was hit, else start + fraction * (end - start).
   // The fraction is not clamped for allsolid; callers check allsolid/startsolid themselves.
-  const endpos = trace.fraction === 1 ? { x: end.x, y: end.y, z: end.z } : lerpPoint(start, end, trace.fraction);
+  const endpos = trace.fraction === 1 ? { x: end.x, y: end.y, z: end.z } : lerpPointF(start, end, trace.fraction);
 
   return {
     fraction: trace.fraction,
@@ -604,19 +602,21 @@ function recursiveHullCheck(state: HullTraceState, num: number, p1f: number, p2f
   let t2: number;
   let offset: number;
 
+  // In 32-bit floats as cmodel.c computes it (see clipBoxToBrush); DIST_EPSILON and 1.0 are
+  // double literals there, so those sums and the division are rounded once.
+  const F = Math.fround;
   if (plane.type < 3) {
     const axis = plane.type === 0 ? 'x' : plane.type === 1 ? 'y' : 'z';
-    t1 = p1[axis] - plane.dist;
-    t2 = p2[axis] - plane.dist;
+    t1 = F(p1[axis] - plane.dist);
+    t2 = F(p2[axis] - plane.dist);
     offset = state.extents[axis];
   } else {
-    t1 = plane.normal.x * p1.x + plane.normal.y * p1.y + plane.normal.z * p1.z - plane.dist;
-    t2 = plane.normal.x * p2.x + plane.normal.y * p2.y + plane.normal.z * p2.z - plane.dist;
+    const n = plane.normal;
+    t1 = F(F(F(F(n.x * p1.x) + F(n.y * p1.y)) + F(n.z * p1.z)) - plane.dist);
+    t2 = F(F(F(F(n.x * p2.x) + F(n.y * p2.y)) + F(n.z * p2.z)) - plane.dist);
     offset = state.isPoint
       ? 0
-      : Math.abs(state.extents.x * plane.normal.x) +
-        Math.abs(state.extents.y * plane.normal.y) +
-        Math.abs(state.extents.z * plane.normal.z);
+      : F(Math.abs(F(state.extents.x * n.x)) + Math.abs(F(state.extents.y * n.y)) + Math.abs(F(state.extents.z * n.z)));
   }
 
   // see which sides we need to consider
@@ -634,15 +634,15 @@ function recursiveHullCheck(state: HullTraceState, num: number, p1f: number, p2f
   let frac: number;
   let frac2: number;
   if (t1 < t2) {
-    const idist = 1 / (t1 - t2);
+    const idist = F(1 / F(t1 - t2));
     side = 1;
-    frac2 = (t1 + offset + DIST_EPSILON) * idist;
-    frac = (t1 - offset + DIST_EPSILON) * idist;
+    frac2 = F((F(t1 + offset) + DIST_EPSILON) * idist);
+    frac = F((F(t1 - offset) + DIST_EPSILON) * idist);
   } else if (t1 > t2) {
-    const idist = 1 / (t1 - t2);
+    const idist = F(1 / F(t1 - t2));
     side = 0;
-    frac2 = (t1 - offset - DIST_EPSILON) * idist;
-    frac = (t1 + offset + DIST_EPSILON) * idist;
+    frac2 = F((F(t1 - offset) - DIST_EPSILON) * idist);
+    frac = F((F(t1 + offset) + DIST_EPSILON) * idist);
   } else {
     side = 0;
     frac = 1;
@@ -652,16 +652,26 @@ function recursiveHullCheck(state: HullTraceState, num: number, p1f: number, p2f
   // move up to the node
   if (frac < 0) frac = 0;
   if (frac > 1) frac = 1;
-  let midf = p1f + (p2f - p1f) * frac;
-  let mid = lerpPoint(p1, p2, frac);
+  let midf = F(p1f + F(F(p2f - p1f) * frac));
+  let mid = lerpPointF(p1, p2, frac);
   recursiveHullCheck(state, children[side], p1f, midf, p1, mid);
 
   // go past the node
   if (frac2 < 0) frac2 = 0;
   if (frac2 > 1) frac2 = 1;
-  midf = p1f + (p2f - p1f) * frac2;
-  mid = lerpPoint(p1, p2, frac2);
+  midf = F(p1f + F(F(p2f - p1f) * frac2));
+  mid = lerpPointF(p1, p2, frac2);
   recursiveHullCheck(state, children[side ^ 1], midf, p2f, mid, p2);
+}
+
+/** p1 + frac * (p2 - p1) per axis, in 32-bit floats as cmodel.c does it. */
+function lerpPointF(p1: Vec3, p2: Vec3, frac: number): Vec3 {
+  const F = Math.fround;
+  return {
+    x: F(p1.x + F(frac * F(p2.x - p1.x))),
+    y: F(p1.y + F(frac * F(p2.y - p1.y))),
+    z: F(p1.z + F(frac * F(p2.z - p1.z))),
+  };
 }
 
 export interface CollisionTraceParams {

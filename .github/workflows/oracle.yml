@@ -1,7 +1,8 @@
 name: C Oracle (differential tests)
 
-# Runs the TS collision code against id Software's original cmodel.c on the
-# same random inputs. Any difference fails the build.
+# Runs the TS collision and player movement against id Software's cmodel.c and the
+# rerelease's p_move.cpp (and the other oracles in quake2ts/oracle) on the same random
+# inputs. Any difference fails the build. The job name is kept for branch protection.
 on:
   push:
     branches: [ main ]

@@ -82,3 +82,24 @@ export function runOracle(bin: string, bspFile: string, queries: readonly Oracle
   }
   return answers;
 }
+
+/** Path of the player-movement oracle (rerelease p_move.cpp), built alongside q2oracle. */
+export function pmoveOracleBin(): string {
+  if (process.env.Q2PMOVE_BIN) return process.env.Q2PMOVE_BIN;
+  buildOracle();
+  const bin = join(BUILD_DIR, 'q2pmove');
+  if (!existsSync(bin)) throw new Error('q2pmove did not build (needs a C++20 compiler)');
+  return bin;
+}
+
+/** Sends raw command lines to an oracle binary and returns one parsed JSON answer per line. */
+export function runOracleLines(bin: string, args: string[], lines: readonly string[]): any[] {
+  const res = spawnSync(bin, args, { input: lines.join('\n') + '\n', maxBuffer: 512 * 1024 * 1024 });
+  if (res.status !== 0) throw new Error(`${bin} failed: ${res.stderr.toString()}`);
+  const out = res.stdout.toString().trim().split('\n');
+  const ready = JSON.parse(out[0]);
+  if (!ready.ready) throw new Error(`${bin} did not start: ${out[0]}`);
+  const answers = out.slice(1).map((l) => JSON.parse(l));
+  if (answers.length !== lines.length) throw new Error(`${bin} answered ${answers.length} of ${lines.length} lines`);
+  return answers;
+}
