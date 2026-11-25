@@ -45,6 +45,7 @@
     "gl-matrix": "^3.4.4",
     "tsup": "^9.0.0",
     "strata-binary": "workspace:*",
-    "strata-math": "workspace:*"
+    "strata-math": "workspace:*",
+    "@quake2ts/formats": "workspace:*"
   }
 }

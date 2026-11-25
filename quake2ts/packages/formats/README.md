@@ -1,8 +1,9 @@
 # @quake2ts/formats
 
 Readers (and a PAK writer) for Quake 2's file formats. Quake 2 tier of the library split (see
-[`../../LIBRARIES.md`](../../LIBRARIES.md)); it builds on `strata-vfs` and `strata-math`, and on
-`@quake2ts/shared` for the MD2 normal table.
+[`../../LIBRARIES.md`](../../LIBRARIES.md)); it builds on `strata-vfs` and `strata-math` only. It also holds
+Quake 2's table of 162 normals (`ANORMS`), which MD2 vertices and the network protocol index into;
+`@quake2ts/shared` re-exports it.
 
 | Format | Entry | Gives |
 |---|---|---|

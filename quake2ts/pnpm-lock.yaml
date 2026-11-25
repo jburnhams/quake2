@@ -502,9 +502,6 @@ importers:
 
   packages/formats:
     dependencies:
-      '@quake2ts/shared':
-        specifier: workspace:*
-        version: link:../shared
       strata-math:
         specifier: workspace:*
         version: link:../strata-math
@@ -570,6 +567,9 @@ importers:
 
   packages/shared:
     devDependencies:
+      '@quake2ts/formats':
+        specifier: workspace:*
+        version: link:../formats
       gl-matrix:
         specifier: ^3.4.4
         version: 3.4.4

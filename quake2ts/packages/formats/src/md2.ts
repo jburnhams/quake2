@@ -1,4 +1,4 @@
-import { ANORMS as MD2_NORMALS } from '@quake2ts/shared';
+import { ANORMS as MD2_NORMALS } from './anorms.js';
 import type { Vec3 } from 'strata-math';
 import type { FileSource } from './fileSource.js';
 
