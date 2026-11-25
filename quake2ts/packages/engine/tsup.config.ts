@@ -26,8 +26,10 @@ const rawPlugin: Plugin = {
 const baseConfigs = createLibraryConfig({
   globalName: 'Quake2Engine',
   browserBundle: true,
+  // @quake2ts/formats and the strata-* libraries are private workspace packages for now, so they
+  // are bundled in rather than left as imports a consumer could not resolve.
   external: [
-    /@quake2ts\/.*/,
+    /@quake2ts\/(?!formats)/,
     'gl-matrix',
     '@wasm-audio-decoders/ogg-vorbis',
   ],

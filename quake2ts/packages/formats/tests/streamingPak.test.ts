@@ -1,7 +1,7 @@
 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { StreamingPakArchive } from '../../../src/assets/streamingPak.js';
-import { PakDirectoryEntry } from '../../../src/assets/pak.js';
+import { StreamingPakArchive } from '../src/streamingPak.js';
+import { PakDirectoryEntry } from '../src/pak.js';
 
 // Mock Blob implementation to avoid JSDOM issues
 class MockBlob {

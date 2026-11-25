@@ -10,7 +10,7 @@ paths keep working through re-exports while code moves.
 |---|---|---|---|
 | [`strata-binary`](packages/strata-binary) | Little-endian reader and growable writer | `shared/src/io` | Split |
 | [`strata-math`](packages/strata-math) | vec3, mat4, angles, windings, MT19937 | `shared/src/math` | Split |
-| `strata-vfs` | Mount archives in order, look up, list and stream files | `engine/src/assets/vfs.ts`, `streamingPak.ts`, `cache.ts` | Next |
+| [`strata-vfs`](packages/strata-vfs) | Mount archives in order, look up, list and stream files; LRU cache | `engine/src/assets/vfs.ts`, `cache.ts` | Split |
 | `strata-loop` | Fixed-step simulation tick with render interpolation | `engine/src/loop.ts` | Planned |
 | `strata-console` | Cvars with flags, command registry and parser | `engine/src/cvars.ts`, `commands.ts` | Planned |
 | `strata-gl` | WebGL shader programs, buffers, atlas packing | `engine/src/render` (non-Quake parts) | Planned |
@@ -22,7 +22,7 @@ paths keep working through re-exports while code moves.
 
 | Package | Holds | Comes from | Status |
 |---|---|---|---|
-| `@quake2ts/formats` | PAK, BSP, MD2, MD3, SP2, PCX, WAL, TGA, WAV, entity lump | `engine/src/assets` | Next |
+| [`@quake2ts/formats`](packages/formats) | PAK, BSP, MD2, MD3, SP2, PCX, WAL, TGA, WAV, entity lump | `engine/src/assets` | Split |
 | `@quake2ts/demo` | Protocol 34 and rerelease messages, dm2 read and write | `engine/src/demo`, `shared/src/protocol` | Planned |
 | `@quake2ts/renderer` | BSP world, lightmaps, sky, MD2 and MD3, particles | `engine/src/render` | After first light |
 | `@quake2ts/pmove` | `runPmove` and its helpers | `shared/src/pmove` | After the pmove oracle passes |

@@ -78,6 +78,8 @@
     "pngjs": "^7.0.0",
     "tsup": "^9.0.0",
     "vitest": "^5.1.1",
-    "webgpu": "^0.6.2"
+    "webgpu": "^0.6.2",
+    "@quake2ts/formats": "workspace:*",
+    "strata-vfs": "workspace:*"
   }
 }
