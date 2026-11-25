@@ -169,6 +169,8 @@ export class EntitySystem {
 
   private spatialGrid: SpatialGrid;
   private spatialGridInUse = false;
+  /** Entities linked and not since unlinked or freed: what the grid holds once it is in use. */
+  private readonly linkedEntities = new Set<Entity>();
 
   // We will lazily access this.scriptHooks from _game or via a property if passed.
   // Actually, EntitySystem doesn't own the registry, GameExports does.
@@ -326,6 +328,7 @@ export class EntitySystem {
         }
         // The local grid only serves findInBox when the host has no area query of its own,
         // so it is kept up to date only once findInBox has needed it.
+        this.linkedEntities.add(ent);
         if (this.spatialGridInUse) this.spatialGrid.update(ent);
     };
 
@@ -427,6 +430,7 @@ export class EntitySystem {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
+    this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
     this.pool.deferFree(entity);
   }
@@ -435,6 +439,7 @@ export class EntitySystem {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
+    this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
     this.pool.freeImmediate(entity);
   }
@@ -481,6 +486,7 @@ export class EntitySystem {
   /** gi.unlinkentity: out of the local spatial grid and the server's collision world. */
   unlink(ent: Entity): void {
     this.spatialGrid.remove(ent);
+    this.linkedEntities.delete(ent);
     this.imports.unlinkentity?.(ent);
   }
 
@@ -546,9 +552,7 @@ export class EntitySystem {
       // No area query from the host: use the local grid, filling it the first time.
       if (!this.spatialGridInUse) {
         this.spatialGridInUse = true;
-        for (const entity of this.pool) {
-          if (entity.inUse && !entity.freePending) this.spatialGrid.update(entity);
-        }
+        for (const entity of this.linkedEntities) this.spatialGrid.update(entity);
       }
       const candidates = this.spatialGrid.query(mins, maxs);
       const results: Entity[] = [];
@@ -756,6 +760,7 @@ export class EntitySystem {
 
   restore(snapshot: EntitySystemSnapshot, callbackRegistry?: CallbackRegistry): void {
     this.spatialGrid.clear(); // Clear grid before restoring
+    this.linkedEntities.clear();
     this.currentTimeSeconds = snapshot.timeSeconds;
     this.crossLevelFlags = snapshot.crossLevelFlags ?? 0;
     this.crossUnitFlags = snapshot.crossUnitFlags ?? 0;
@@ -840,6 +845,7 @@ export class EntitySystem {
 
       // Re-add to spatial grid AFTER fields are restored
       this.spatialGrid.insert(entity);
+      this.linkedEntities.add(entity);
     }
 
     for (const ref of pendingEntityRefs) {

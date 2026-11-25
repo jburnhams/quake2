@@ -23,8 +23,9 @@ describe('createGame', () => {
     // We need the trace to return the end position as if it was a clear path,
     // to match the original test's assumption that movement succeeds fully.
     const { game } = createTestGame({
-      engine: {
-        trace: vi.fn((start, end) => createTraceMock({
+      // An empty world: every move completes (game traces are start, mins, maxs, end).
+      imports: {
+        trace: vi.fn((start, _mins, _maxs, end) => createTraceMock({
           fraction: 1,
           endpos: end
         }))
@@ -35,7 +36,9 @@ describe('createGame', () => {
     game.init(0);
     game.spawnWorld();
 
-    const first = game.frame({ frame: 1, deltaMs: 25, nowMs: 25 });
+    // The player is moved by pmove, one user command per frame, as in ClientThink.
+    const idle = { msec: 25, buttons: 0, angles: { x: 0, y: 0, z: 0 }, forwardmove: 0, sidemove: 0, upmove: 0 } as any;
+    const first = game.frame({ frame: 1, deltaMs: 25, nowMs: 25 }, idle);
     const player = game.entities.find((e) => e.classname === 'player');
 
     expect(player?.velocity.z).toBeCloseTo(-20, 5);
@@ -43,7 +46,7 @@ describe('createGame', () => {
     expect(first.state?.level.frameNumber).toBe(1);
     expect(first.state?.level.timeSeconds).toBeCloseTo(0.025, 5);
 
-    const second = game.frame({ frame: 2, deltaMs: 25, nowMs: 50 });
+    const second = game.frame({ frame: 2, deltaMs: 25, nowMs: 50 }, idle);
     const secondPlayer = game.entities.find((e) => e.classname === 'player');
     expect(secondPlayer?.velocity.z).toBeCloseTo(-40, 5);
     expect(secondPlayer?.origin.z).toBeCloseTo(-1.5, 5);

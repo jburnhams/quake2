@@ -456,6 +456,7 @@ export function createGame(
         upmove: command.upmove,
         buttons: command.buttons,
         angles: command.angles,
+        msec: command.msec,
       },
       delta_angles: ZERO_VEC3,
       gravity: -gravity.z,
