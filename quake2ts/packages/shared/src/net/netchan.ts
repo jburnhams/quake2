@@ -410,6 +410,17 @@ export class NetChan {
     return new Uint8Array(0);
   }
 
+  /**
+   * Netchan_NeedReliable: whether the next transmit carries reliable data. That is queued
+   * bytes with nothing in flight, fragments of the message in flight not yet sent, or a message
+   * in flight that was lost (the other side acknowledged a later packet without it).
+   */
+  needReliable(): boolean {
+    if (this.reliableInFlight === 0) return this.reliableLength > 0;
+    if (this.reliableInFlight > NetChan.FRAGMENT_SIZE && this.fragmentSendOffset < this.reliableInFlight) return true;
+    return this.incomingAcknowledged > this.lastReliableSequence;
+  }
+
   /** Removes the acknowledged message from the front of the queue. */
   private dropAcknowledged(): void {
     const rest = this.reliableLength - this.reliableInFlight;

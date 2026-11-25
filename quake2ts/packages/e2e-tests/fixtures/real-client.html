@@ -201,10 +201,10 @@
                 // Monkey-patch predict to ensure commands are sent if we believe we are connected,
                 // bypassing internal state checks that might lag or mismatch in the harness.
                 client.predict = function(cmd) {
-                    if (window.clientConnected) {
-                        client.multiplayer.sendCommand(cmd);
-                    }
-                    return client.prediction.enqueueCommand(cmd);
+                    // Predict with the command as sent: sendCommand numbers it by its packet,
+                    // which is what the server's snapshots acknowledge.
+                    const sent = window.clientConnected ? client.multiplayer.sendCommand(cmd) : cmd;
+                    return client.prediction.enqueueCommand(sent);
                 };
 
                 window.clientInstance = client;

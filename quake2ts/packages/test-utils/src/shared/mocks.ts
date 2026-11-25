@@ -78,6 +78,7 @@ export interface NetChanMock {
   writeReliableString: LegacyMock;
   getReliableData: LegacyMock<[], Uint8Array>;
   needsKeepalive: LegacyMock<[], boolean>;
+  needReliable: LegacyMock<[], boolean>;
   isTimedOut: LegacyMock<[], boolean>;
 }
 
@@ -126,6 +127,7 @@ export const createNetChanMock = (): NetChanMock => ({
   writeReliableString: vi.fn(),
   getReliableData: legacyFn<[], Uint8Array>(() => new Uint8Array(0)),
   needsKeepalive: vi.fn(() => false),
+  needReliable: vi.fn(() => false),
   isTimedOut: vi.fn(() => false),
 });
 

@@ -6,7 +6,7 @@ import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, Colli
 import { parseBsp, PakArchive } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
+import { createPlayerInventory, createPlayerWeaponStates, spawnEntitiesFromText } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity, writeRemoveEntity } from '@quake2ts/shared';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
@@ -111,6 +111,7 @@ export class DedicatedServer implements GameEngine {
             frame: 0,
             name: '',
             collisionModel: null,
+            entityString: '',
             configStrings: new Array(MAX_CONFIGSTRINGS).fill(''),
             baselines: new Array(MAX_EDICTS).fill(null),
             multicastBuf: new Uint8Array(0)
@@ -305,6 +306,7 @@ export class DedicatedServer implements GameEngine {
             }
 
             const bspMap = parseBsp(arrayBuffer);
+            this.sv.entityString = bspMap.entities.raw;
 
             // Convert BspMap to CollisionModel manually
             const planes = bspMap.planes.map(p => {
@@ -482,6 +484,18 @@ export class DedicatedServer implements GameEngine {
         });
 
         this.game.init(0);
+        // SV_SpawnServer: client edicts come first (1..maxclients), then ge->SpawnEntities
+        // puts the map's entities in the world. Until 2026-11-25 the dedicated server spawned
+        // none, so there were no spawn points, doors or triggers and players began at the origin.
+        this.game.entities.reserveClientSlots(this.options.maxPlayers ?? 1);
+        if (this.sv.entityString) {
+            const game = this.game;
+            spawnEntitiesFromText(this.sv.entityString, {
+                registry: { get: (classname: string) => game.entities.getSpawnFunction(classname) } as never,
+                entities: game.entities,
+                onWarning: () => {},
+            });
+        }
         this.game.spawnWorld();
 
         this.populateBaselines();
@@ -952,9 +966,17 @@ export class DedicatedServer implements GameEngine {
     }
 
     private SV_SendClientMessages(snapshot: GameStateSnapshot) {
+        const now = Date.now();
         for (const client of this.svs.clients) {
             if (client && client.state === ClientState.Active) {
                 this.SV_SendClientFrame(client, snapshot);
+            } else if (client && client.state !== ClientState.Free && client.net) {
+                // SV_SendClientMessages: a client still connecting gets no frame, but its
+                // reliable messages (serverdata, configstrings) go out as they are due, and a
+                // keepalive each second. The port's fragments need a packet each to go out.
+                if (client.netchan.needReliable() || client.netchan.needsKeepalive(now)) {
+                    client.net.send(client.netchan.transmit());
+                }
             }
         }
     }

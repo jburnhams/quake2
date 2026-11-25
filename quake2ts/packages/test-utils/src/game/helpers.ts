@@ -585,6 +585,8 @@ export function createMockGameExports(overrides: Partial<any> = {}): any {
           findByClassname: vi.fn(),
           findByRadius: vi.fn(() => []),
           forEachEntity: vi.fn(),
+          reserveClientSlots: vi.fn(),
+          getSpawnFunction: vi.fn(),
           timeSeconds: 0,
           ...overrides.entities,
       },
