@@ -13,11 +13,38 @@ import { LocalHost } from '@quake2ts/server';
 
 const FRAME_MS = 25;
 const MAX_CATCH_UP_FRAMES = 8;
-const BUTTON_ATTACK = 1;
+// The usercmd button bits (PlayerButton in @quake2ts/shared): BUTTON_ATTACK, BUTTON_JUMP, BUTTON_CROUCH.
+const BUTTON_ATTACK = 1 << 0;
+const BUTTON_JUMP = 1 << 3;
+const BUTTON_CROUCH = 1 << 4;
 /** Run speed, as cl_forwardspeed and cl_sidespeed are in the original (200 walking, doubled to run). */
 const MOVE_SPEED = 400;
 const UP_SPEED = 200;
 const MOUSE_DEGREES_PER_PIXEL = 0.022 * 3; // m_pitch/m_yaw 0.022 at sensitivity 3, the original defaults.
+
+export type InputState = { keys: ReadonlySet<string>; attack: boolean; pitch: number; yaw: number };
+
+/**
+ * The held keys and mouse as the usercmd the game reads each frame. The rerelease's pmove jumps
+ * and crouches on the BUTTON_JUMP and BUTTON_CROUCH bits, not on upmove (cl_input.cpp sets both
+ * from +moveup and +movedown), so a jump needs the bit; holding it jumps once, as PMF_JUMP_HELD
+ * waits for the key to be let go.
+ */
+export function toUserCommand({ keys, attack, pitch, yaw }: InputState) {
+  const held = (...codes: string[]) => codes.some((c) => keys.has(c));
+  const axis = (plus: boolean, minus: boolean) => (plus ? 1 : 0) - (minus ? 1 : 0);
+  const jump = held('Space');
+  const crouch = held('KeyC', 'ControlLeft');
+  const up = axis(jump, crouch);
+  return {
+    angles: { x: pitch, y: yaw, z: 0 },
+    forwardmove: MOVE_SPEED * axis(held('KeyW', 'ArrowUp'), held('KeyS', 'ArrowDown')),
+    sidemove: MOVE_SPEED * axis(held('KeyD'), held('KeyA')),
+    upmove: UP_SPEED * up,
+    buttons:
+      (attack || held('ControlRight') ? BUTTON_ATTACK : 0) | (jump ? BUTTON_JUMP : 0) | (crouch ? BUTTON_CROUCH : 0),
+  };
+}
 
 export type PlayerStatus = { health: number; dead: boolean; map: string };
 
@@ -124,15 +151,7 @@ export class GameSession {
   }
 
   private command() {
-    const held = (...codes: string[]) => codes.some((c) => this.keys.has(c));
-    const axis = (plus: boolean, minus: boolean) => (plus ? 1 : 0) - (minus ? 1 : 0);
-    return {
-      angles: { x: this.pitch, y: this.yaw, z: 0 },
-      forwardmove: MOVE_SPEED * axis(held('KeyW', 'ArrowUp'), held('KeyS', 'ArrowDown')),
-      sidemove: MOVE_SPEED * axis(held('KeyD'), held('KeyA')),
-      upmove: UP_SPEED * axis(held('Space'), held('KeyC', 'ControlLeft')),
-      buttons: this.attack || held('ControlRight') ? BUTTON_ATTACK : 0,
-    };
+    return toUserCommand({ keys: this.keys, attack: this.attack, pitch: this.pitch, yaw: this.yaw });
   }
 
   private draw(timeSeconds: number): void {
