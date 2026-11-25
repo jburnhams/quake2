@@ -171,5 +171,9 @@ describe('Music Integration', () => {
         client.multiplayer.onConfigString(ConfigStringIndex.CdTrack, '5');
         expect(mockEngine.audio.play_track).toHaveBeenCalledWith(5);
         expect(client.configStrings.get(ConfigStringIndex.CdTrack)).toBe('5');
+
+        // A new server starts from none (CL_ClearState).
+        client.multiplayer.onServerData(34, 2, 0, 'baseq2', 0, 'demo2');
+        expect(client.configStrings.get(ConfigStringIndex.CdTrack)).toBeUndefined();
     });
 });
