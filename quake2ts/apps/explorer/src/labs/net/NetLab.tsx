@@ -54,7 +54,7 @@ const C_VIEW = excerpt(clEnts, 'if ((cl_predict->value) && !(cl.frame.playerstat
 const C_MOVE = excerpt(svUser, 'case clc_move:', { comment: false, upTo: 'cl->lastcmd = newcmd;' });
 const C_TRANSMIT = excerpt(netChanC, 'void Netchan_Transmit (netchan_t *chan, int length, byte *data)');
 const TS_PREDICT = excerpt(cgamePrediction, 'export function predictMove(');
-const TS_AUTHORITATIVE = excerpt(cgamePrediction, '  setAuthoritative(frame: GameFrameResult<PredictionState>): PredictionState {');
+const TS_AUTHORITATIVE = excerpt(cgamePrediction, '  setAuthoritative(frame: GameFrameResult<PredictionState>');
 const TS_MOVE = excerpt(serverTs, '    private handleMove(client: Client, commands: MoveCommands');
 const TS_TRANSMIT = excerpt(netChanTs, '  transmit(unreliableData?: Uint8Array): Uint8Array {');
 

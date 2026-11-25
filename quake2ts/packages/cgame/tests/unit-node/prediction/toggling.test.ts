@@ -122,3 +122,17 @@ describe('ClientPrediction Toggling', () => {
         expect(error.z).toBe(0);
     });
 });
+
+describe('ClientPrediction reset', () => {
+    it('accepts a new server’s first frames after reset, which it would ignore as old', () => {
+        const trace = vi.fn().mockReturnValue(createTraceMock({ fraction: 1, endpos: { x: 0, y: 0, z: 0 } }));
+        const prediction = new ClientPrediction({ trace, pointContents: vi.fn().mockReturnValue(0) });
+        prediction.setAuthoritative({ frame: 5000, timeMs: 500000, state: { ...defaultPredictionState(), origin: { x: 900, y: 0, z: 0 } } });
+
+        const young = { frame: 3, timeMs: 300, state: { ...defaultPredictionState(), origin: { x: 10, y: 20, z: 30 } } };
+        expect(prediction.setAuthoritative(young).origin.x).toBe(900);
+
+        prediction.reset();
+        expect(prediction.setAuthoritative(young).origin).toEqual({ x: 10, y: 20, z: 30 });
+    });
+});

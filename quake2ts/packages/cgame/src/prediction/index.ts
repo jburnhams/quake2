@@ -291,6 +291,8 @@ export class ClientPrediction {
     timeMs: 0,
     state: defaultPredictionState(),
   } satisfies GameFrameResult<PredictionState>;
+  /** The last command the base frame includes. */
+  private baseAck = 0;
   private commands: UserCommand[] = [];
   private predicted: PredictionState = defaultPredictionState();
   private predictionError: Vec3 = ZERO_VEC3;
@@ -302,11 +304,30 @@ export class ClientPrediction {
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
 
+  /**
+   * Forgets the last server's frames and commands, as CL_ClearState does when a new server's
+   * serverdata arrives: frame numbers start again with each server, and a base frame kept from
+   * the last one would make every new snapshot look old.
+   */
+  reset(): void {
+    this.baseFrame = { frame: 0, timeMs: 0, state: defaultPredictionState() };
+    this.baseAck = 0;
+    this.commands = [];
+    this.predicted = this.baseFrame.state ?? defaultPredictionState();
+    this.predictionError = ZERO_VEC3;
+  }
+
   setPredictionEnabled(enabled: boolean): void {
     this.enabled = enabled;
   }
 
-  setAuthoritative(frame: GameFrameResult<PredictionState>): PredictionState {
+  /**
+   * A snapshot from the server: the state after every command up to `ack`. Over the network
+   * that is the netchan's incoming acknowledged sequence (CL_PredictMovement's `ack`), as the
+   * commands are numbered by the packets that carry them; a local game whose commands are
+   * numbered by frame leaves it out.
+   */
+  setAuthoritative(frame: GameFrameResult<PredictionState>, ack: number = frame.frame): PredictionState {
     const normalized = normalizeState(frame.state);
 
     if (frame.frame <= this.baseFrame.frame) {
@@ -324,9 +345,9 @@ export class ClientPrediction {
       let predictedAtFrame: PredictionState | undefined;
 
       // We can only check error if we have the commands to reproduce the state up to this point
-      const relevantCommands = this.commands.filter(c => c.sequence <= frame.frame && c.sequence > this.baseFrame.frame);
+      const relevantCommands = this.commands.filter(c => c.sequence <= ack && c.sequence > this.baseAck);
 
-      if (relevantCommands.length > 0 || this.baseFrame.frame === frame.frame) {
+      if (relevantCommands.length > 0 || this.baseAck === ack) {
           let tempState = normalizeState(this.baseFrame.state);
           for (const cmd of relevantCommands) {
               tempState = predictMove(tempState, cmd, this.physics, this.tuning);
@@ -362,9 +383,10 @@ export class ClientPrediction {
     }
 
     this.baseFrame = { ...frame, state: normalized };
+    this.baseAck = ack;
 
     // Discard commands that have been acknowledged/processed by the server
-    this.commands = this.commands.filter((cmd) => cmd.sequence > frame.frame);
+    this.commands = this.commands.filter((cmd) => cmd.sequence > ack);
 
     return this.recompute();
   }

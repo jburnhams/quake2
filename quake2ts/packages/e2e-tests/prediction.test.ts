@@ -131,62 +131,52 @@ describe('E2E Prediction and Reconciliation Test', () => {
           return Math.sqrt(dx*dx + dy*dy + dz*dz);
       });
 
-      expect(errorMagnitude).toBeLessThan(10.0);
+      // With nothing pressed, the prediction is the server's snapshot plus a few idle
+      // commands: within a unit (the snapshot's eighth-unit rounding and one frame of gravity).
+      expect(errorMagnitude).toBeLessThan(1.0);
+  });
+
+  it('predicts from the server\'s snapshots, acknowledged by packet', async () => {
+      const { page } = testClient;
+      const base = await page.evaluate(() => {
+          const prediction = (window as any).clientInstance.prediction;
+          return {
+              frame: prediction.baseFrame.frame,
+              origin: prediction.baseFrame.state.origin,
+              pending: prediction.commands.length,
+          };
+      });
+      const player = (server as any).svs.clients.find((c: any) => c)?.edict;
+
+      // A real snapshot, of the player where the server has it (demo1's start, not the origin).
+      expect(base.frame).toBeGreaterThan(0);
+      expect(Math.hypot(base.origin.x, base.origin.y)).toBeGreaterThan(100);
+      expect(Math.abs(base.origin.x - player.origin.x)).toBeLessThan(1);
+      expect(Math.abs(base.origin.y - player.origin.y)).toBeLessThan(1);
+      // Commands the server has acknowledged are dropped; only the last round trip's remain.
+      expect(base.pending).toBeLessThan(16);
   });
 
   it('should correct position when server disagrees (Task 4.5.3)', async () => {
-      // 1. Move client forward
       const { page } = testClient;
-
-      await page.evaluate(() => {
-          (window as any).testInput = {
-            angles: {x:0, y:0, z:0},
-            forwardmove: 400,
-            sidemove: 0,
-            upmove: 0,
-            buttons: 0,
-            impulse: 0,
-            msec: 16
-          };
-      });
-
-      // 2. Wait for client to predict movement
+      (await page.evaluate(() => { (window as any).testInput = null; }));
       await page.waitForTimeout(500);
 
-      const divergedState = await page.evaluate(() => {
-           const client = (window as any).clientInstance;
-           return client.prediction.getPredictedState().origin;
-      });
+      // The server moves the player 128 units along x, as a teleporter would; the client
+      // cannot have predicted it.
+      const player = (server as any).svs.clients.find((c: any) => c)?.edict;
+      const before = await page.evaluate(() => ({ ...(window as any).clientInstance.prediction.getPredictedState().origin }));
+      player.origin = { ...player.origin, x: player.origin.x + 128 };
+      player.velocity = { x: 0, y: 0, z: 0 };
+      const target = { ...player.origin };
 
-      // If local prediction test failed (Task 4.5.1), this will likely fail too (x won't increase).
-      // However, we check if it reconciled.
-      // If divergedState.x is 0, we can't test snap back from divergence.
-      // So we skip assertions if movement didn't happen (likely due to menu blocking).
+      // Within a few snapshots the prediction starts from where the server put the player.
+      await page.waitForTimeout(1000);
+      const after = await page.evaluate(() => ({ ...(window as any).clientInstance.prediction.getPredictedState().origin }));
 
-      if (divergedState.x > 10) {
-          expect(divergedState.x).toBeGreaterThan(50);
-
-          // 3. Stop moving
-          await page.evaluate(() => { (window as any).testInput = null; });
-
-          // 4. Wait for server acknowledgements (server stays at 0)
-          await page.waitForTimeout(2000);
-
-          // 5. Verify client position snapped back to near start (0)
-          const reconciledState = await page.evaluate(() => {
-               const client = (window as any).clientInstance;
-               const baseFrame = client.prediction.baseFrame;
-               return {
-                   origin: client.prediction.getPredictedState().origin,
-                   serverOrigin: baseFrame ? baseFrame.state.origin : {x:0, y:0, z:0}
-               };
-          });
-
-          const diffX = Math.abs(reconciledState.origin.x - reconciledState.serverOrigin.x);
-          expect(diffX).toBeLessThan(20.0);
-      } else {
-          console.warn('Skipping reconciliation test assertions because local prediction did not move player.');
-      }
+      expect(Math.abs(after.x - before.x)).toBeGreaterThan(100);
+      expect(Math.abs(after.x - target.x)).toBeLessThan(1);
+      expect(Math.abs(after.y - target.y)).toBeLessThan(1);
   });
 
 });

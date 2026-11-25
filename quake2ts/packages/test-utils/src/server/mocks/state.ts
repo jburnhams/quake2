@@ -40,6 +40,7 @@ export function createMockServerState(overrides?: Partial<Server>): Server {
         frame: 0,
         name: 'test_map',
         collisionModel: null,
+        entityString: '',
         configStrings: new Array(MAX_CONFIGSTRINGS).fill(''),
         baselines: new Array(MAX_EDICTS).fill(null),
         multicastBuf: new Uint8Array(0),
@@ -92,6 +93,8 @@ export function createMockServerClient(clientNum: number, overrides?: Partial<Cl
             writeReliableLong: vi.fn(),
             writeReliableString: vi.fn(),
             writeReliableData: vi.fn(),
+            needReliable: vi.fn(() => false),
+            needsKeepalive: vi.fn(() => false),
         } as any, // Cast as any because NetChan might be complex to fully mock here
         userInfo: '',
         lastMessage: 0,

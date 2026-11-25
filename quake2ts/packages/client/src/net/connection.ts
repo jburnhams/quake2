@@ -200,24 +200,24 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       return this.currentPing;
   }
 
-  public sendCommand(cmd: UserCommand): void {
-      if (this.state !== ConnectionState.Active) return;
+  /**
+   * Sends one command (CL_SendCmd) and returns it as sent, numbered with the netchan sequence of
+   * the packet that carries it. That number is what a snapshot acknowledges (the netchan's
+   * incoming acknowledged sequence), so the caller predicts with the returned command.
+   */
+  public sendCommand(cmd: UserCommand): UserCommand {
+      if (this.state !== ConnectionState.Active) return cmd;
 
-      // Assign the last acknowledged server frame to this command
       const commandWithFrame: UserCommand = {
           ...cmd,
+          sequence: this.netchan.outgoingSequence + 1,
           serverFrame: cmd.serverFrame ?? this.latestServerFrame
       };
 
-      // Buffer command for retransmission/prediction
+      // Buffer command for retransmission
       this.commandHistory.push(commandWithFrame);
       if (this.commandHistory.length > CMD_BACKUP) {
           this.commandHistory.shift();
-      }
-
-      // Enqueue to local prediction system if available
-      if (this.prediction) {
-          this.prediction.enqueueCommand(commandWithFrame);
       }
 
       const writer = new BinaryWriter();
@@ -234,6 +234,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       // Use NetChan to wrap the command
       const packet = this.netchan.transmit(writer.getData());
       this.driver.send(packet);
+      return commandWithFrame;
   }
 
   private handleMessage(data: Uint8Array): void {
@@ -325,6 +326,8 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.gameDir = gameDir;
       this.playerNum = playerNum;
       this.levelName = levelName;
+      // CL_ParseServerData begins with CL_ClearState: a new server numbers its frames afresh.
+      this.prediction?.reset();
 
       this.setState(ConnectionState.Connected);
 
@@ -419,7 +422,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
             state: predState
         };
 
-        this.prediction.setAuthoritative(gameFrame);
+        // CL_PredictMovement replays from the last command the server had when it sent this
+        // snapshot: the netchan's incoming acknowledged sequence, which this packet just set.
+        this.prediction.setAuthoritative(gameFrame, this.netchan.incomingAcknowledged);
     }
   }
 

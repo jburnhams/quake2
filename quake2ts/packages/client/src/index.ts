@@ -367,6 +367,8 @@ export function createClient(imports: ClientImports): ClientExports {
       netchan
   });
   multiplayer.setDemoRecorder(demoRecorder);
+  // Snapshots from the server become prediction's base (CL_PredictMovement starts from them).
+  multiplayer.setPrediction(prediction);
   multiplayer.setEffectSystem(effectSystem); // Inject Effect System
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
@@ -733,11 +735,9 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       // If connected to multiplayer, send command to server
-      if (multiplayer.isConnected()) {
-          multiplayer.sendCommand(command);
-      }
-
-      return prediction.enqueueCommand(command);
+      // Predict with the command as sent, numbered by the packet that carries it.
+      const sent = multiplayer.isConnected() ? multiplayer.sendCommand(command) : command;
+      return prediction.enqueueCommand(sent);
     },
 
     handleInput(key: string, down: boolean): boolean {
