@@ -84,7 +84,7 @@ export interface FrameRenderOptions {
   readonly portalState?: ReadonlyArray<boolean>;
 }
 
-export { WebGPUContextState };
+export type { WebGPUContextState };
 
 export interface FrameContext {
   device: GPUDevice;

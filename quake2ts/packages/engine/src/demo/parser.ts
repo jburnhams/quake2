@@ -26,16 +26,11 @@ export {
 
 // Export types and factories
 export {
-    EntityState,
-    ProtocolPlayerState,
     createEmptyEntityState,
     createEmptyProtocolPlayerState,
-    MutableVec3,
-    FrameData,
-    FogData,
-    DamageIndicator,
     PROTOCOL_VERSION_RERELEASE
 };
+export type { EntityState, ProtocolPlayerState, MutableVec3, FrameData, FogData, DamageIndicator };
 
 const RECORD_NETWORK = 0x00;
 const RECORD_CLIENT  = 0x01;

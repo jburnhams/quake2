@@ -9,7 +9,7 @@ import { WebGPUMatrixBuilder } from '../../matrix/webgpu.js';
 import { CameraState } from '../../types/camera.js';
 
 // Re-export common types from WebGL pipeline
-export { Md3FrameBlend, Md3LightingOptions, Md3DynamicLight, Md3TagTransform } from '../../md3Pipeline.js';
+export type { Md3FrameBlend, Md3LightingOptions, Md3DynamicLight, Md3TagTransform } from '../../md3Pipeline.js';
 
 export class Md3SurfaceMeshGPU {
   readonly device: GPUDevice;

@@ -1,7 +1,7 @@
 import { Entity } from './entities/entity.js';
 import { ScriptHooks } from './scripting/hooks.js';
 
-export { ScriptHooks };
+export type { ScriptHooks };
 
 /**
  * Mod API for registering custom entities and hooks.

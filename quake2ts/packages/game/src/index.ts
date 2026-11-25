@@ -31,7 +31,7 @@ export interface GameCreateOptions {
 
 import { ServerCommand, EntityState } from '@quake2ts/shared';
 import { MulticastType, GameEngine } from './imports.js';
-export { MulticastType, GameEngine } from './imports.js'; // Export MulticastType
+export { MulticastType, type GameEngine } from './imports.js'; // Export MulticastType
 
 export interface GameStateSnapshot {
   readonly gravity: Vec3;
@@ -87,14 +87,14 @@ import { GameTraceResult } from './imports.js';
 import { throwGibs } from './entities/gibs.js';
 
 import { CustomEntityRegistration } from './mod.js';
-export { CustomEntityRegistration, ModAPI } from './mod.js';
+export type { CustomEntityRegistration, ModAPI } from './mod.js';
 
 import { giveItem } from './inventory/index.js';
 import { T_Damage, DamageFlags, DamageMod, Damageable } from './combat/index.js';
 
 // Script hooks
 import { ScriptHookRegistry, ScriptHooks } from './scripting/hooks.js';
-export { ScriptHookRegistry, ScriptHooks } from './scripting/hooks.js';
+export { ScriptHookRegistry, type ScriptHooks } from './scripting/hooks.js';
 import { ModAPI } from './mod.js';
 
 export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEntityRegistration {
@@ -149,7 +149,7 @@ export interface GameExports extends GameSimulation<GameStateSnapshot>, CustomEn
 export { hashGameState, hashEntitySystem } from './checksum.js';
 export * from './save/index.js';
 import { SerializedGameState, createSerializedGameState, applySerializedGameState } from './save/adapter.js';
-export { SerializedGameState };
+export type { SerializedGameState };
 export * from './demo/serializer.js';
 export * from './combat/index.js';
 export * from './inventory/index.js';
