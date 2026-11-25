@@ -1,0 +1,5 @@
+/* Strata's default look; the explorer has no subject colours of its own yet. */
+@import "tailwindcss";
+@import "strata-react/strata.css";
+
+@source "./";

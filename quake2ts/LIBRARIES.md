@@ -36,4 +36,9 @@ paths keep working through re-exports while code moves.
 - A private package's `exports` point at its TypeScript source, so Vitest, Vite and `tsc -b`
   (through project references) use it without a build or an alias. Packages that are published
   bundle it (`tsup` inlines it), so it is a `devDependency` of theirs.
-- Released per library, once the explorer (`apps/explorer`, moving in) uses it.
+- Released per library, once the explorer ([`apps/explorer`](apps/explorer), on strata-react) uses it.
+
+## Consumers
+
+- [`apps/explorer`](apps/explorer): the PAK browser, on `strata-vfs` and `@quake2ts/formats`.
+- The game packages (`engine`, `client`, `server`, `game`), through the old paths for now.
