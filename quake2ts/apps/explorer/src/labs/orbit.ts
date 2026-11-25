@@ -81,11 +81,12 @@ export function keyOrbit(o: Orbit, key: string, home: Orbit): Orbit | null {
   }
 }
 
-/** The view in words, for the canvas's description. */
-export function describeOrbit(o: Orbit): string {
+/** The view in words, for the canvas's description; `standing` for a camera at the target looking out. */
+export function describeOrbit(o: Orbit, standing = false): string {
   const compass = ['east', 'north-east', 'north', 'north-west', 'west', 'south-west', 'south', 'south-east'];
   const facing = compass[Math.round((((o.yaw % 360) + 360) % 360) / 45) % 8];
   const tilt = o.pitch > 5 ? `looking down ${Math.round(o.pitch)}°` : o.pitch < -5 ? `looking up ${Math.round(-o.pitch)}°` : 'level';
+  if (standing) return `Facing ${facing}, ${tilt}.`;
   return `Facing ${facing}, ${tilt}, ${Math.round(o.distance)} units from the middle of what is drawn.`;
 }
 

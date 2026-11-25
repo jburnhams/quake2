@@ -24,6 +24,6 @@ export interface LabTuningState extends NumberParams<TunedKey> {
 
 /** The lab's constants, read from and written to the URL. */
 export function useLabTuning(): LabTuningState {
-  const { values, set, changed } = useNumberParams(CONSTANTS, DEFAULT_LAB_TUNING);
-  return { values, set, changed, tuning: { ...DEFAULT_LAB_TUNING, ...values } };
+  const state = useNumberParams(CONSTANTS, DEFAULT_LAB_TUNING);
+  return { ...state, tuning: { ...DEFAULT_LAB_TUNING, ...state.values } };
 }

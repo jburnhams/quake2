@@ -82,6 +82,12 @@ export function IntroScreen() {
             title="Lag lab"
             description="One player through a client, a server and a network: why your keys answer at once when the server is far away."
           />
+          <LinkCard
+            as="h2"
+            to="/labs/pvs"
+            title="Visibility lab"
+            description="Click anywhere on demo1 to see what the renderer draws from there, and the doors that cut off the rest."
+          />
           <LinkCard as="h2" href={REPO} title="Source" description="The code, the plan, and the tests that hold each piece to the original." />
         </LinkCardList>
 

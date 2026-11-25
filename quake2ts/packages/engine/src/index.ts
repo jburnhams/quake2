@@ -276,7 +276,7 @@ export {
 export { prepareModels, type PreparedModels } from './render/prepareModels.js';
 export { ANIMATION_STEP_MS, FrameLerpTracker, type FrameBlendSample } from './render/frameLerp.js';
 export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
-export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
+export { calculateReachableAreas, findLeafForPoint, gatherVisibleFaces, isClusterVisible, type VisibleFace } from './render/bspTraversal.js';
 export {
   applySurfaceState,
   BspSurfacePipeline,
