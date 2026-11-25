@@ -6,8 +6,30 @@ import {
     U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME,
     U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH,
-    BinaryWriter, ServerCommand, ANORMS
+    BinaryWriter, ServerCommand, ANORMS, writeDeltaEntity as writeDeltaEntity34,
+    type EntityState as NetEntityState,
 } from '@quake2ts/shared';
+
+/** The demo's entity state in the shared protocol's field names. */
+function toNetEntity(e: EntityState): NetEntityState {
+    return {
+        number: e.number,
+        origin: { x: e.origin.x, y: e.origin.y, z: e.origin.z },
+        angles: { x: e.angles.x, y: e.angles.y, z: e.angles.z },
+        oldOrigin: { x: e.old_origin.x, y: e.old_origin.y, z: e.old_origin.z },
+        modelIndex: e.modelindex,
+        modelIndex2: e.modelindex2,
+        modelIndex3: e.modelindex3,
+        modelIndex4: e.modelindex4,
+        frame: e.frame,
+        skinNum: e.skinnum,
+        effects: e.effects,
+        renderfx: e.renderfx,
+        solid: e.solid,
+        sound: e.sound,
+        event: e.event,
+    };
+}
 
 // Use Legacy opcodes for testing until we unify
 const PROTO34_SERVERDATA = 13;
@@ -254,7 +276,17 @@ export class MessageWriter {
         this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocol);
     }
 
+    /**
+     * Writes one entity delta. Protocol 34 goes through the shared writer, which matches
+     * MSG_WriteDeltaEntity byte for byte (oracle/tests/msg.oracle.test.ts); `force` there is
+     * also the C's `newentity`, so old_origin goes with it. This one used to leave out fields
+     * that changed to 0, old_origin (a laser's far end) and the high bits of skin and effects.
+     */
     writeDeltaEntity(from: EntityState, to: EntityState, force: boolean): void {
+        if (this.protocol === 34) {
+            writeDeltaEntity34(toNetEntity(from), toNetEntity(to), this.writer, force, force);
+            return;
+        }
         let bits = 0;
         let bitsHigh = 0;
 

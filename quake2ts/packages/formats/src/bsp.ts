@@ -338,26 +338,7 @@ export function createBspMap(data: BspData): BspMap {
       return closest;
     },
     findLeaf(origin: Vec3): BspLeaf {
-      const headNode = data.models[0].headNode;
-      let nodeIndex = headNode;
-
-      while (nodeIndex >= 0) {
-        const node = data.nodes[nodeIndex];
-        const plane = data.planes[node.planeIndex];
-        const distance =
-          plane.normal[0] * origin[0] +
-          plane.normal[1] * origin[1] +
-          plane.normal[2] * origin[2] -
-          plane.dist;
-
-        if (distance >= 0) {
-          nodeIndex = node.children[0];
-        } else {
-          nodeIndex = node.children[1];
-        }
-      }
-
-      return data.leafs[-(nodeIndex + 1)];
+      return data.leafs[pointInLeaf(data, origin)];
     },
     calculatePVS(origin: Vec3): Uint8Array | undefined {
       const leaf = this.findLeaf(origin);
@@ -888,6 +869,79 @@ export function createFaceLightmap(
     return undefined;
   }
   return lightMaps.subarray(face.lightOffset, face.lightOffset + length);
+}
+
+/**
+ * Mod_PointInLeaf (gl_model.c): the leaf index a point is in, walking from node 0. The distance
+ * is a float dot product, and a point on a plane (distance 0) goes to the back child. That is
+ * the renderer's rule; the collision code's CM_PointLeafnum sends it to the front.
+ */
+export function pointInLeaf(map: Pick<BspData, 'nodes' | 'planes'>, point: Vec3): number {
+  const F = Math.fround;
+  let node = 0;
+  while (node >= 0) {
+    const n = map.nodes[node];
+    const p = map.planes[n.planeIndex];
+    const d = F(F(F(F(point[0] * p.normal[0]) + F(point[1] * p.normal[1])) + F(point[2] * p.normal[2])) - p.dist);
+    node = d > 0 ? n.children[0] : n.children[1];
+  }
+  return -1 - node;
+}
+
+/** A face's lightmap placement in texture space, as ref_gl's CalcSurfaceExtents computes it. */
+export interface SurfaceExtents {
+  /** floor(min / 16) * 16 on s and t. */
+  readonly textureMins: [number, number];
+  /** (ceil(max / 16) - floor(min / 16)) * 16; the lightmap is extents / 16 + 1 luxels across. */
+  readonly extents: [number, number];
+}
+
+const SURF_WARP_FLAG = 0x8;
+
+/**
+ * CalcSurfaceExtents (gl_model.c), in 32-bit floats as the C does: a vertex's s and t are float
+ * dot products, so a vertex that lands on a multiple of 16 in doubles can fall either side of
+ * it, and the lightmap is then a luxel wider or narrower. Warped faces get the C's fixed
+ * 16384 and -8192 (they have no lightmap). Results are shorts, as msurface_t stores them.
+ */
+export function surfaceExtents(map: Pick<BspData, 'faces' | 'texInfo' | 'surfEdges' | 'edges' | 'vertices'>, faceIndex: number): SurfaceExtents {
+  const F = Math.fround;
+  const face = map.faces[faceIndex];
+  const tex = map.texInfo[face.texInfo];
+  if (tex.flags & SURF_WARP_FLAG) return { textureMins: [-8192, -8192], extents: [16384, 16384] };
+  const axes = [
+    [tex.s, tex.sOffset],
+    [tex.t, tex.tOffset],
+  ] as const;
+  const mins = [999999, 999999];
+  const maxs = [-99999, -99999];
+  for (let i = 0; i < face.numEdges; i++) {
+    const e = map.surfEdges[face.firstEdge + i];
+    const v = map.vertices[e >= 0 ? map.edges[e].vertices[0] : map.edges[-e].vertices[1]];
+    for (let j = 0; j < 2; j++) {
+      const [vec, offset] = axes[j];
+      const val = F(F(F(F(v[0] * vec[0]) + F(v[1] * vec[1])) + F(v[2] * vec[2])) + offset);
+      if (val < mins[j]) mins[j] = val;
+      if (val > maxs[j]) maxs[j] = val;
+    }
+  }
+  const short = (n: number) => (n << 16) >> 16;
+  const bmins = [Math.floor(F(mins[0] / 16)), Math.floor(F(mins[1] / 16))];
+  const bmaxs = [Math.ceil(F(maxs[0] / 16)), Math.ceil(F(maxs[1] / 16))];
+  return {
+    textureMins: [short(bmins[0] * 16), short(bmins[1] * 16)],
+    extents: [short((bmaxs[0] - bmins[0]) * 16), short((bmaxs[1] - bmins[1]) * 16)],
+  };
+}
+
+/**
+ * How many textures a texinfo's animation cycles through, as Mod_LoadTexinfo counts them: follow
+ * nexttexinfo until it comes back or ends. Like the C, 0 (and anything below 1) ends a chain.
+ */
+export function textureAnimationFrames(texInfo: readonly BspTexInfo[], index: number): number {
+  let frames = 1;
+  for (let step = texInfo[index].nextTexInfo; step > 0 && step !== index && frames <= texInfo.length; step = texInfo[step].nextTexInfo) frames++;
+  return frames;
 }
 
 export function parseWorldspawnSettings(entities: BspEntities): Record<string, string> {

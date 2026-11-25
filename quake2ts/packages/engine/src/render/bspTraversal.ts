@@ -6,6 +6,7 @@ import type {
   BspPlane,
   BspVisibility,
 } from '../assets/bsp.js';
+import { pointInLeaf } from '../assets/bsp.js';
 import { boxIntersectsFrustum, type FrustumPlane } from './culling.js';
 
 export interface VisibleFace {
@@ -49,32 +50,10 @@ function leafIntersectsFrustum(leaf: BspLeaf, planes: readonly FrustumPlane[]): 
   return boxIntersectsFrustum(mins, maxs, planes);
 }
 
+/** The view leaf, as the renderer's Mod_PointInLeaf finds it (see `pointInLeaf`). */
 export function findLeafForPoint(map: BspMap, point: Vec3): number {
-  if (map.models.length === 0) {
-    return -1;
-  }
-
-  let nodeIndex = map.models[0].headNode;
-
-  // If map is a single leaf (headNode < 0), this loop won't execute and we handle it below
-  while (nodeIndex >= 0) {
-    const node: BspNode = map.nodes[nodeIndex];
-    const plane = map.planes[node.planeIndex];
-    const dist = distanceToPlane(plane, point);
-    const side = dist >= 0 ? 0 : 1;
-    const child = node.children[side];
-    if (childIsLeaf(child)) {
-      return childLeafIndex(child);
-    }
-    nodeIndex = child;
-  }
-
-  // Handle case where headNode points directly to a leaf
-  if (childIsLeaf(nodeIndex)) {
-      return childLeafIndex(nodeIndex);
-  }
-
-  return -1;
+  if (map.nodes.length === 0) return map.leafs.length > 0 ? 0 : -1;
+  return pointInLeaf(map, [point.x, point.y, point.z]);
 }
 
 function collectFacesFromLeaf(map: BspMap, leafIndex: number): number[] {

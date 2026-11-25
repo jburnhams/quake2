@@ -445,6 +445,7 @@ export function createGame(
     const state: PmoveState = {
       pmType,
       pmFlags: client?.pm_flags ?? 0,
+      pmTime: client?.pm_time ?? 0,
       origin: player.origin,
       velocity: player.velocity,
       angles: player.angles,
@@ -467,8 +468,9 @@ export function createGame(
     };
 
     const next = runPmove(state, {
-      trace: (start, end, mins, maxs) => {
-        const result = trace(start, mins ?? player.mins, maxs ?? player.maxs, end, player, MASK_PLAYERSOLID);
+      // p_move.cpp passes its own mask for the ladder probe and the water checks.
+      trace: (start, end, mins, maxs, mask) => {
+        const result = trace(start, mins ?? player.mins, maxs ?? player.maxs, end, player, mask ?? MASK_PLAYERSOLID);
         return {
           fraction: result.fraction,
           endpos: result.endpos,
@@ -496,6 +498,7 @@ export function createGame(
     if (client) {
       client.pm_flags = next.pmFlags;
       client.pm_type = next.pmType;
+      client.pm_time = next.pmTime ?? 0;
       // The full view (pitch included) is what aim and the camera use.
       client.v_angle = { ...command.angles };
     }
