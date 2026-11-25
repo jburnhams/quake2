@@ -55,10 +55,10 @@ export const DEFAULT_LAB_TUNING: LabTuning = Object.freeze({ ...DEFAULT_PMOVE_TU
 const PLAYER_MINS = { x: -16, y: -16, z: -24 };
 const PLAYER_MAXS = { x: 16, y: 16, z: 32 };
 
-/** Runs the script in the world with the given constants and returns every frame. */
-export function simulateRun(world: MovementWorld, tuning: LabTuning = DEFAULT_LAB_TUNING): MovementFrame[] {
-  const { model, start } = world;
-  const imports: PmoveImports = {
+/** The player's box traced through the world, as pmove asks for it (MASK_PLAYERSOLID). */
+export function pmoveImports(world: LabWorld): PmoveImports {
+  const { model } = world;
+  return {
     trace: (from, to, mins, maxs) => {
       const tr = traceBox({ model, start: from, end: to, mins: mins ?? PLAYER_MINS, maxs: maxs ?? PLAYER_MAXS, contentMask: MASK_PLAYERSOLID });
       return {
@@ -73,32 +73,49 @@ export function simulateRun(world: MovementWorld, tuning: LabTuning = DEFAULT_LA
     },
     pointcontents: (p) => pointContents(p, model),
   };
-  const angles = { x: 0, y: start.yaw, z: 0 };
-  const cmd = (frame: number): PmoveCmd => ({
-    forwardmove: frame < RELEASE_FRAME ? FORWARD : 0,
-    sidemove: 0,
-    upmove: 0,
-    buttons: frame === JUMP_FRAME ? PlayerButton.Jump : 0,
-    angles,
-    msec: FRAME_MSEC,
-  });
+}
 
-  let state: PmoveState = {
+/** A player standing at the world's start, facing its heading, about to run `cmd`. */
+export function startState(world: LabWorld, tuning: LabTuning, cmd: PmoveCmd): PmoveState {
+  const angles = { x: 0, y: world.start.yaw, z: 0 };
+  return {
     pmType: PmType.Normal,
     pmFlags: 0,
-    origin: start.origin,
+    origin: world.start.origin,
     velocity: { x: 0, y: 0, z: 0 },
     angles,
     viewAngles: angles,
     viewHeight: 22,
     waterlevel: 0,
     watertype: 0,
-    cmd: cmd(0),
+    cmd,
     delta_angles: { x: 0, y: 0, z: 0 },
     gravity: tuning.gravity,
     mins: PLAYER_MINS,
     maxs: PLAYER_MAXS,
   };
+}
+
+/** The run's script: forward from the start, one jump, then let go. */
+export function scriptedCmd(world: LabWorld, frame: number, msec: number = FRAME_MSEC): PmoveCmd {
+  const angles = { x: 0, y: world.start.yaw, z: 0 };
+  const t = frame * msec;
+  return {
+    forwardmove: t < RELEASE_FRAME * FRAME_MSEC ? FORWARD : 0,
+    sidemove: 0,
+    upmove: 0,
+    buttons: t <= JUMP_FRAME * FRAME_MSEC && t + msec > JUMP_FRAME * FRAME_MSEC ? PlayerButton.Jump : 0,
+    angles,
+    msec,
+  };
+}
+
+/** Runs the script in the world with the given constants and returns every frame. */
+export function simulateRun(world: MovementWorld, tuning: LabTuning = DEFAULT_LAB_TUNING): MovementFrame[] {
+  const { start } = world;
+  const imports = pmoveImports(world);
+  const cmd = (frame: number) => scriptedCmd(world, frame);
+  let state = startState(world, tuning, cmd(0));
 
   const states: PmoveState[] = [];
   for (let i = 0; i < RUN_FRAMES; i++) {

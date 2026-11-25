@@ -76,6 +76,12 @@ export function IntroScreen() {
             title="Traces lab"
             description="Sweep a box through demo1 as the game does for every move and shot, and see the face it stops on."
           />
+          <LinkCard
+            as="h2"
+            to="/labs/lag"
+            title="Lag lab"
+            description="One player through a client, a server and a network: why your keys answer at once when the server is far away."
+          />
           <LinkCard as="h2" href={REPO} title="Source" description="The code, the plan, and the tests that hold each piece to the original." />
         </LinkCardList>
 
