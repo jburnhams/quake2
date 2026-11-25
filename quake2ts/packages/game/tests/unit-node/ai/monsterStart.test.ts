@@ -7,7 +7,7 @@ import { MASK_MONSTERSOLID, type Vec3 } from '@quake2ts/shared';
 import { createDefaultSpawnRegistry, spawnEntitiesFromText } from '../../../src/entities/spawn.js';
 import { EntitySystem } from '../../../src/entities/system.js';
 import { EntityFlags, MoveType, ServerFlags, Solid, type Entity } from '../../../src/entities/entity.js';
-import { M_CheckGround } from '../../../src/ai/monsterStart.js';
+import { M_CheckGround, M_WorldEffects } from '../../../src/ai/monsterStart.js';
 import { physicsStep } from '../../../src/physics/step.js';
 
 const FRAME = 0.025;
@@ -86,6 +86,16 @@ describe('monster_start', () => {
     expect(m.origin.z).toBeCloseTo(-m.mins.z, 3);
   });
 
+  it('a monster spawned dead plays its death move through and rests as a corpse', () => {
+    const { spawned, run } = floorWorld('{ "classname" "monster_soldier" "origin" "0 0 100" "spawnflags" "65536" }');
+    const m = spawned[0];
+    run(FRAME);
+    expect(m.health).toBeLessThanOrEqual(0);
+    const move = m.monsterinfo.current_move!;
+    expect(m.frame).toBe(move.lastframe);
+    expect(m.monsterinfo.aiflags & (1 << 26)).toBe(0); // never AI_SPAWNED_ALIVE
+  });
+
   it('flying monsters are not dropped and get FL_FLY', () => {
     const { spawned, run } = floorWorld('{ "classname" "monster_flyer" "origin" "0 0 200" }');
     const m = spawned[0];
@@ -131,6 +141,37 @@ describe('SV_Physics_Step', () => {
     run(2);
     expect(e.velocity.x).toBe(0);
     expect(e.origin.z).toBeCloseTo(24, 3);
+  });
+
+  it('a land monster under water runs out of air and drowns; it does not become a swimmer', () => {
+    const { entities } = floorWorld('');
+    const e = body(entities, { x: 0, y: 0, z: 24 });
+    e.svflags |= ServerFlags.Monster;
+    e.health = 100;
+    e.takedamage = true;
+    entities.beginFrame(1);
+    e.waterlevel = 3;
+    e.watertype = 32; // CONTENTS_WATER
+    e.air_finished = 0.5;
+    M_WorldEffects(e, entities);
+    expect(e.flags & EntityFlags.Swim).toBe(0);
+    expect(e.health).toBeLessThan(100);
+  });
+
+  it('a monster whose ground moves checks it again and falls if it is gone', () => {
+    const { entities, run } = floorWorld('');
+    const e = body(entities, { x: 0, y: 0, z: 200 });
+    e.svflags |= ServerFlags.Monster;
+    const lift = entities.spawn();
+    lift.classname = 'func_plat';
+    e.groundentity = lift;
+    e.groundentity_linkcount = lift.linkcount;
+    run(0.5);
+    expect(e.origin.z).toBe(200); // still on the lift
+    lift.linkcount++; // the lift moved away
+    run(2);
+    expect(e.origin.z).toBeCloseTo(24, 3);
+    expect(e.groundentity).toBe(entities.world);
   });
 
   it('runs the think after moving', () => {

@@ -211,6 +211,8 @@ export interface MonsterInfo {
   stand?: MonsterAction;
   /** [Paril-KEX] called when the monster lands or leaves the ground (SV_Physics_Step). */
   physics_change?: MonsterAction;
+  /** The frame a spawned-dead monster rests on, when not the death move's last. */
+  start_frame?: number;
   sight?: MonsterSightCallback;
   idle?: MonsterAction;
   search?: MonsterAction;

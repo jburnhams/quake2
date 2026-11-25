@@ -39,6 +39,7 @@ export const SPAWNFLAG_MONSTER_SCENIC = 1 << 19;
 /** monsterinfo.aiflags bits the TS AIFlags enum does not name yet. */
 const AI_DO_NOT_COUNT = 1 << 21;
 const AI_SPAWNED_ALIVE = 1 << 26;
+const AI_SPAWNED_DEAD = 1 << 27;
 
 const FRAME_TIME = (sys: EntitySystem) => sys.frameTimeSeconds || 0.025;
 const HOLD_FOREVER = Number.MAX_SAFE_INTEGER;
@@ -337,9 +338,28 @@ export function monster_start_go(self: Entity, sys: EntitySystem): void {
   }
 
   if (spawnDead) {
-    // To spawn dead, mimic dying naturally.
+    // To spawn dead, mimic dying naturally: die, then play the death move through to its end.
     self.health = 0;
+    const f = { ...self.origin };
     self.die?.(self, self, self, 0, ZERO, DamageMod.SUICIDE);
+    if (!self.inUse) return;
+    self.monsterinfo.setskin?.(self);
+    self.monsterinfo.aiflags |= AI_SPAWNED_DEAD;
+
+    const move = self.monsterinfo.current_move;
+    if (move) {
+      for (let i = move.firstframe; i < move.lastframe; i++) {
+        self.frame = i;
+        move.frames[i - move.firstframe]?.think?.(self, sys);
+        if (!self.inUse) return;
+      }
+      move.endfunc?.(self, sys);
+      if (!self.inUse) return;
+      self.frame = self.monsterinfo.start_frame || move.lastframe;
+    }
+    self.origin = f;
+    sys.linkentity(self);
+    self.monsterinfo.aiflags &= ~AI_SPAWNED_DEAD;
     return;
   }
 
