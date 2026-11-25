@@ -80,6 +80,7 @@ export { ViewEffects } from '@quake2ts/cgame';
 export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
+export { ClientEffectSystem, type EntityProvider } from './effects-system.js';
 export * from './scoreboard.js';
 
 export { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';

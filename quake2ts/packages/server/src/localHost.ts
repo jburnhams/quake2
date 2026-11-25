@@ -9,7 +9,7 @@
  */
 import { collisionModelFromBsp, parseBsp, type BspMap } from '@quake2ts/engine';
 import type { CollisionModel, UserCommand, Vec3 } from '@quake2ts/shared';
-import { inPHS } from '@quake2ts/shared';
+import { inPHS, ServerCommand, type TempEntity } from '@quake2ts/shared';
 import {
   createGame,
   spawnEntitiesFromText,
@@ -20,6 +20,7 @@ import {
 } from '@quake2ts/game';
 import type { GameFrameResult } from '@quake2ts/engine';
 import { AreaType, World } from './world.js';
+import { tempEntityFields, type TempEntityFields } from './protocol/write.js';
 
 /** Game frames run at 40 Hz, as the rerelease does. */
 export const FRAME_MSEC = 25;
@@ -30,6 +31,15 @@ export interface LocalHostOptions {
   readonly skill?: number;
   readonly onWarning?: (message: string) => void;
 }
+
+/**
+ * What the game showed this frame that is not an entity: a muzzle flash (svc_muzzleflash, the
+ * entity that fired and its MZ_ number) or a temp entity (svc_temp_entity: an impact, an
+ * explosion, a trail) with its points. A client draws them as effects.
+ */
+export type LocalEffectEvent =
+  | { readonly kind: 'muzzleflash'; readonly entity: number; readonly weapon: number }
+  | ({ readonly kind: 'tempEntity'; readonly type: TempEntity } & TempEntityFields);
 
 export interface LoadedMap {
   readonly name: string;
@@ -54,6 +64,8 @@ export class LocalHost {
   private sounds: string[] = [];
   /** Commands the game sent to the server (gi.AddCommandString), such as `changelevel demo2`. */
   readonly serverCommands: string[] = [];
+  /** Effects the game multicast since the last takeEffects(), oldest first. */
+  private effects: LocalEffectEvent[] = [];
 
   constructor(private readonly options: LocalHostOptions) {}
 
@@ -103,6 +115,7 @@ export class LocalHost {
     for (let i = 1; i < model.bmodels.length; i++) this.models.push(`*${i}`);
     this.sounds = [''];
     this.serverCommands.length = 0;
+    this.effects = [];
     this.frameNumber = 0;
     this.timeMs = 0;
 
@@ -140,6 +153,16 @@ export class LocalHost {
       serverCommand: (cmd) => {
         this.serverCommands.push(cmd.trim());
       },
+      // One player in the same process sees every multicast; PVS and PHS filtering is moot.
+      multicast: (_origin, _type, event, ...args) => {
+        if (event === ServerCommand.muzzleflash) {
+          this.effects.push({ kind: 'muzzleflash', entity: args[0] as number, weapon: args[1] as number });
+        } else if (event === ServerCommand.temp_entity) {
+          const type = args[0] as TempEntity;
+          const fields = tempEntityFields(type, args.slice(1));
+          if (fields) this.effects.push({ kind: 'tempEntity', type, ...fields });
+        }
+      },
     };
 
     game = createGame(
@@ -168,6 +191,13 @@ export class LocalHost {
 
     this.current = { name, bsp, model, world, game, spawned: spawned.length };
     return this.current;
+  }
+
+  /** The effect events since the last call, oldest first; the queue is emptied. */
+  takeEffects(): LocalEffectEvent[] {
+    const taken = this.effects;
+    this.effects = [];
+    return taken;
   }
 
   modelIndex(name: string): number {

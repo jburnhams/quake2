@@ -212,8 +212,9 @@ export const createRenderer = (
         queuedInstances.length = 0;
         instanceCount = 0;
 
+        const particles = options.particles ?? particleSystem;
         if (options.deltaTime) {
-            particleSystem.update(options.deltaTime);
+            particles.update(options.deltaTime);
         }
 
         gl.disable(gl.BLEND);
@@ -628,7 +629,7 @@ export const createRenderer = (
         // Use CameraState for particle rendering
         // ParticleRenderer now builds matrices internally from cameraState
         if (cameraState) {
-            particleRenderer.render({ cameraState });
+            particleRenderer.render({ cameraState, system: particles });
         } else {
             // Fallback to camera for legacy/test paths
             const vm = options.camera.viewMatrix;
@@ -645,7 +646,8 @@ export const createRenderer = (
                 },
                 viewProjection: viewProjection as Float32Array,
                 viewRight,
-                viewUp
+                viewUp,
+                system: particles
             });
         }
 

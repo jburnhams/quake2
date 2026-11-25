@@ -471,6 +471,16 @@ export class BspSurfacePipeline {
       }
   }
 
+  /**
+   * Draws a batch: `count` 32-bit indices from `firstIndex` of the frame's world index buffer,
+   * into the world's one vertex buffer.
+   */
+  drawRange(passEncoder: GPURenderPassEncoder, vertices: GPUBuffer, indices: GPUBuffer, firstIndex: number, count: number): void {
+    passEncoder.setVertexBuffer(0, vertices);
+    passEncoder.setIndexBuffer(indices, 'uint32');
+    passEncoder.drawIndexed(count, 1, firstIndex);
+  }
+
   destroy(): void {
     this.frameUniformBuffer.destroy();
     this.surfaceUniformBuffer.destroy();

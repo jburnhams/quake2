@@ -71,7 +71,7 @@ describe('Particle System Visual Tests', () => {
           colorAttachments: [{
               view: renderTargetView,
               loadOp: 'clear',
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
               storeOp: 'store'
           }]
       });
@@ -135,7 +135,7 @@ describe('Particle System Visual Tests', () => {
             colorAttachments: [{
                 view: renderTargetView,
                 loadOp: 'clear',
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                clearValue: { r: 0, g: 0, b: 0, a: 1 },
                 storeOp: 'store'
             }]
         });
@@ -198,7 +198,7 @@ describe('Particle System Visual Tests', () => {
             colorAttachments: [{
                 view: renderTargetView,
                 loadOp: 'clear',
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                clearValue: { r: 0, g: 0, b: 0, a: 1 },
                 storeOp: 'store'
             }]
         });
@@ -261,7 +261,7 @@ describe('Particle System Visual Tests', () => {
             colorAttachments: [{
                 view: renderTargetView,
                 loadOp: 'clear',
-                clearValue: { r: 0, g: 0, b: 0, a: 0 },
+                clearValue: { r: 0, g: 0, b: 0, a: 1 },
                 storeOp: 'store'
             }]
         });
@@ -321,7 +321,7 @@ describe('Particle System Visual Tests', () => {
           colorAttachments: [{
               view: renderTargetView,
               loadOp: 'clear',
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
               storeOp: 'store'
           }]
       });
@@ -405,7 +405,7 @@ describe('Particle System Visual Tests', () => {
           colorAttachments: [{
               view: renderTargetView,
               loadOp: 'clear',
-              clearValue: { r: 0, g: 0, b: 0, a: 0 },
+              clearValue: { r: 0, g: 0, b: 0, a: 1 },
               storeOp: 'store'
           }]
       });
@@ -418,7 +418,7 @@ describe('Particle System Visual Tests', () => {
       const pixels = await captureTexture(device, renderTarget, 256, 256);
       await expectSnapshot(pixels, {
           name: 'particles-textured',
-          description: 'Particles with custom textures. Left: Default soft circle (Red). Right: Checkerboard texture (Green).',
+          description: 'Particles with custom textures. Left: the plain soft dot (red). Right: a checkerboard texture inside the dot (green).',
           width: 256,
           height: 256,
           snapshotDir,

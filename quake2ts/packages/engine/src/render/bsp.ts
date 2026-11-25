@@ -37,6 +37,12 @@ export interface LightmapPlacement {
 
 export interface BspSurfaceGeometry {
   readonly vao: VertexArray;
+  /**
+   * The world's one vertex array (every face's vertices, see PackedBspGeometry.vertices), shared
+   * by all faces of an uploaded world; the frame draws whole batches from it.
+   */
+  readonly worldVao?: VertexArray;
+  readonly firstVertex?: number;
   readonly vertexBuffer: VertexBuffer;
   readonly indexBuffer: IndexBuffer;
   readonly indexCount: number;
@@ -434,6 +440,8 @@ export interface PackedBspSurface {
   readonly indexData: Uint16Array;
   readonly vertexCount: number;
   readonly indexCount: number;
+  /** Where this face's vertices start in the geometry's one `vertices` array. */
+  readonly firstVertex?: number;
   readonly mins?: { readonly x: number; readonly y: number; readonly z: number };
   readonly maxs?: { readonly x: number; readonly y: number; readonly z: number };
 }
@@ -453,6 +461,12 @@ export interface PackedLightmapAtlas {
 export interface PackedBspGeometry {
   readonly surfaces: readonly (PackedBspSurface | undefined)[];
   readonly lightmaps: readonly PackedLightmapAtlas[];
+  /**
+   * Every face's vertices in one array (8 floats each, in the order the faces were packed), so a backend
+   * keeps the world in one vertex buffer and draws batches of faces with one call. Each
+   * surface's `firstVertex` says where its own start.
+   */
+  readonly vertices?: Float32Array;
 }
 
 function hiddenFacesFor(map: BspMap | undefined, hiddenClassnames: Set<string> | undefined): Set<number> {
@@ -493,6 +507,7 @@ export function packBspGeometry(
 
   const atlasBuilders: AtlasBuilder[] = [];
   const packed: (PackedBspSurface | undefined)[] = [];
+  let worldVertexCount = 0;
 
   for (const surface of kept) {
     let placement: LightmapPlacement | undefined;
@@ -533,13 +548,17 @@ export function packBspGeometry(
       indexData,
       vertexCount: vertexData.length / 8,
       indexCount: indexData.length,
+      firstVertex: worldVertexCount,
       mins: surface.mins,
       maxs: surface.maxs,
     };
+    worldVertexCount += vertexData.length / 8;
   }
 
   const lightmaps = atlasBuilders.map((b) => ({ width: b.width, height: b.height, pixels: b.data }));
-  return { surfaces: packed, lightmaps };
+  const vertices = new Float32Array(worldVertexCount * 8);
+  for (const surface of packed) if (surface) vertices.set(surface.vertexData, surface.firstVertex! * 8);
+  return { surfaces: packed, lightmaps, vertices };
 }
 
 /** Uploads packed geometry to WebGL. The result keeps `packBspGeometry`'s face-number indexing. */
@@ -556,6 +575,14 @@ export function uploadBspGeometry(gl: WebGL2RenderingContext, geometry: PackedBs
     return { texture, width: atlas.width, height: atlas.height, pixels: atlas.pixels };
   });
 
+  let worldVao: VertexArray | undefined;
+  if (geometry.vertices) {
+    const worldBuffer = new VertexBuffer(gl, gl.STATIC_DRAW, gl.ARRAY_BUFFER);
+    worldBuffer.upload(geometry.vertices as unknown as BufferSource);
+    worldVao = new VertexArray(gl);
+    worldVao.configureAttributes(BSP_VERTEX_LAYOUT, worldBuffer);
+  }
+
   const surfaces: BspSurfaceGeometry[] = [];
   geometry.surfaces.forEach((surface, faceIndex) => {
     if (!surface) return;
@@ -565,7 +592,13 @@ export function uploadBspGeometry(gl: WebGL2RenderingContext, geometry: PackedBs
     indexBuffer.upload(surface.indexData as unknown as BufferSource);
     const vao = new VertexArray(gl);
     vao.configureAttributes(BSP_VERTEX_LAYOUT, vertexBuffer);
-    surfaces[faceIndex] = { ...surface, vao, vertexBuffer, indexBuffer };
+    surfaces[faceIndex] = {
+      ...surface,
+      vao,
+      vertexBuffer,
+      indexBuffer,
+      worldVao: worldVao && surface.firstVertex !== undefined ? worldVao : undefined,
+    };
   });
 
   return { surfaces, lightmaps };

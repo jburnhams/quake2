@@ -183,3 +183,47 @@ function writeTempEntity(writer: BinaryWriter, type: TempEntity, args: any[]): v
             break;
     }
 }
+
+/** A temp entity's points, as the client's effects read them (CL_ParseTEnt's pos, dir and pos2). */
+export interface TempEntityFields {
+    readonly pos: Vec3;
+    readonly dir?: Vec3;
+    readonly pos2?: Vec3;
+}
+
+/**
+ * The points of a temp entity the game multicast, laid out as writeTempEntity writes them, for a
+ * client in the same process that reads the event without a network message in between.
+ */
+export function tempEntityFields(type: TempEntity, args: readonly unknown[]): TempEntityFields | undefined {
+    switch (type) {
+        case TempEntity.RAILTRAIL:
+        case TempEntity.DEBUGTRAIL:
+        case TempEntity.BUBBLETRAIL:
+        case TempEntity.BUBBLETRAIL2:
+        case TempEntity.BFG_LASER:
+        case TempEntity.LIGHTNING_BEAM:
+        case TempEntity.LIGHTNING:
+            return { pos: args[0] as Vec3, pos2: args[1] as Vec3 };
+        case TempEntity.LASER_SPARKS:
+        case TempEntity.WELDING_SPARKS:
+        case TempEntity.TUNNEL_SPARKS:
+        case TempEntity.ELECTRIC_SPARKS:
+        case TempEntity.HEATBEAM_SPARKS:
+        case TempEntity.HEATBEAM_STEAM:
+        case TempEntity.STEAM:
+        case TempEntity.SPLASH:
+        case TempEntity.POWER_SPLASH:
+        case TempEntity.WIDOWSPLASH:
+            return { pos: args[1] as Vec3, dir: args[2] as Vec3 };
+        case TempEntity.PARASITE_ATTACK:
+        case TempEntity.MEDIC_CABLE_ATTACK:
+            return { pos: args[1] as Vec3, pos2: args[2] as Vec3 };
+        default: {
+            const pos = args[0] as Vec3 | undefined;
+            if (!pos || typeof pos !== 'object') return undefined;
+            const dir = args[1] as Vec3 | undefined;
+            return dir && typeof dir === 'object' ? { pos, dir } : { pos };
+        }
+    }
+}

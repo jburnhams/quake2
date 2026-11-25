@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { PakArchive } from '@quake2ts/engine';
-import { MASK_PLAYERSOLID, CONTENTS_SOLID } from '@quake2ts/shared';
+import { MASK_PLAYERSOLID, CONTENTS_SOLID, MZ_BLASTER, TempEntity } from '@quake2ts/shared';
 import { Solid } from '@quake2ts/game';
 import { LocalHost } from '../../src/localHost.js';
 
@@ -80,4 +80,24 @@ describe('LocalHost: map demo1', () => {
     expect(player.origin.x - east.x).toBeLessThan(250);
     expect(player.origin.z).toBeCloseTo(east.z, 1); // still on the floor
   });
+
+  it("hands a client the blaster's muzzle flash and the bolt's impact, once each", () => {
+    host.run(1, {});
+    host.takeEffects();
+    host.run(0.1, { buttons: 1 });
+    host.run(2, {});
+    const effects = host.takeEffects();
+    const flash = effects.find((e) => e.kind === 'muzzleflash');
+    expect(flash).toEqual({ kind: 'muzzleflash', entity: 1, weapon: MZ_BLASTER });
+    const impact = effects.find((e) => e.kind === 'tempEntity');
+    expect(impact).toMatchObject({ kind: 'tempEntity', type: TempEntity.BLASTER });
+    if (impact?.kind === 'tempEntity') {
+      // The bolt stops on a wall; a unit out along the wall's normal is open space.
+      const { pos, dir } = impact;
+      const outside = { x: pos.x + dir!.x, y: pos.y + dir!.y, z: pos.z + dir!.z };
+      expect(host.map.world.pointContents(outside) & CONTENTS_SOLID).toBe(0);
+    }
+    expect(host.takeEffects()).toEqual([]);
+  });
 });
+

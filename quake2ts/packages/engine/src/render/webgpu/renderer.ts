@@ -4,6 +4,8 @@ import { SkyboxPipeline } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
+import { ParticleRenderer } from './pipelines/particleSystem.js';
+import { RandomGenerator } from '@quake2ts/shared';
 import { createWebGPUContext, WebGPUContextOptions, WebGPUContextState } from './context.js';
 import { Camera } from '../camera.js';
 import { IWebGPURenderer, Pic, WebGPUCapabilities, ComputePipeline } from '../interface.js';
@@ -95,6 +97,7 @@ export class WebGPURendererImpl implements WebGPURenderer {
         bsp: BspSurfacePipeline;
         md2: Md2Pipeline;
         postProcess: PostProcessPipeline;
+        particles: ParticleRenderer;
     },
     debugRenderer: WebGPUDebugRenderer,
     profiler?: WebGPUProfiler
@@ -115,7 +118,8 @@ export class WebGPURendererImpl implements WebGPURenderer {
 
     // Create stub instances for other properties
     this.collisionVis = null as any;
-    this.particleSystem = null as any;
+    // The same pool size and seeding as the WebGL renderer's; effects spawn into it.
+    this.particleSystem = new ParticleSystem(4096, new RandomGenerator({ seed: Date.now() }));
   }
 
   get device(): GPUDevice {
@@ -159,9 +163,15 @@ export class WebGPURendererImpl implements WebGPURenderer {
         );
     }
 
+    const particles = localOptions.particles ?? this.particleSystem;
+    if (localOptions.deltaTime) {
+        particles.update(localOptions.deltaTime);
+    }
+
     // Apply render state to options
     const augmentedOptions: WebGPUFrameRenderOptions = {
         ...localOptions,
+        particles,
         dlights: culledLights,
         brightness: this.renderState.brightness,
         gamma: this.renderState.gamma,
@@ -182,9 +192,21 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
 
   uploadWorld(world: PreparedWorld): WorldRenderState {
+    let worldVertexBuffer: GPUBuffer | undefined;
+    const vertices = world.geometry.vertices;
+    if (vertices && vertices.byteLength > 0) {
+      const vb = new VertexBuffer(this.device, { size: vertices.byteLength, label: 'world-vertices' });
+      vb.write(vertices as unknown as BufferSource);
+      worldVertexBuffer = vb.buffer;
+    }
     const surfaces: WebGPUWorldSurface[] = [];
     world.geometry.surfaces.forEach((surface, faceIndex) => {
       if (!surface) return;
+      // A face in the world buffer is drawn from it; only a face outside it needs buffers of its own.
+      if (worldVertexBuffer && surface.firstVertex !== undefined) {
+        surfaces[faceIndex] = { ...surface, worldVertexBuffer };
+        return;
+      }
       const vb = new VertexBuffer(this.device, { size: surface.vertexData.byteLength, label: `world-vb-${faceIndex}` });
       vb.write(surface.vertexData as unknown as BufferSource);
       const ib = new IndexBuffer(this.device, { size: surface.indexData.byteLength, label: `world-ib-${faceIndex}` });
@@ -600,8 +622,9 @@ export class WebGPURendererImpl implements WebGPURenderer {
     this.pipelines.bsp.destroy();
     this.pipelines.md2.dispose();
     this.pipelines.postProcess.destroy();
+    this.pipelines.particles.dispose();
     this.debug.destroy();
-    // TODO: Dispose md3 and particle pipelines once added
+    // TODO: Dispose the md3 pipeline once added
 
     for (const texture of this.picCache.values()) {
       (texture as Texture2D).destroy();
@@ -643,6 +666,7 @@ export async function createWebGPURenderer(
   );
 
   const md2Pipeline = new Md2Pipeline(context.device, context.format);
+  const particleRenderer = new ParticleRenderer(context.device, context.format, depthFormat);
   const postProcessPipeline = new PostProcessPipeline(context.device, context.format);
 
   // Initialize Debug Renderer
@@ -655,7 +679,8 @@ export async function createWebGPURenderer(
     bsp: bspPipeline,
     md2: md2Pipeline,
     postProcess: postProcessPipeline,
-    // TODO: Add MD3 and Particles
+    particles: particleRenderer,
+    // TODO: Add MD3
   };
 
   if (canvas) {
