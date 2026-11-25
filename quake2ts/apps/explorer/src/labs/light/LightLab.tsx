@@ -178,7 +178,12 @@ function LightView({
   React.useEffect(() => setTenth(0), [pattern]);
 
   const home = React.useMemo<Orbit>(() => ({ target: place.eye, yaw: place.yaw, pitch: place.pitch, distance: 64 }), [place]);
-  const lightStyles = React.useMemo(() => [[place.style, pattern] as const], [place.style, pattern]);
+  // The game's whole table, as SP_worldspawn sets it, with this place's style changed: every other
+  // light plays as in the game, and a style changed at the last place goes back to its own.
+  const lightStyles = React.useMemo(
+    () => [...DEFAULT_LIGHT_STYLES].map(([n, s]) => [n, n === place.style ? pattern : s.pattern] as const),
+    [place.style, pattern],
+  );
   const draw = React.useCallback(() => {}, []);
   const letter = pattern[at] ?? 'm';
   const value = values[at]!;
