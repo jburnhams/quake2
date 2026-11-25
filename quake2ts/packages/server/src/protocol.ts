@@ -1,4 +1,17 @@
-import { BinaryStream, ClientCommand, UserCommand } from '@quake2ts/shared';
+import {
+  BinaryStream,
+  ClientCommand,
+  CM_ANGLE1,
+  CM_ANGLE2,
+  CM_ANGLE3,
+  CM_BUTTONS,
+  CM_FORWARD,
+  CM_IMPULSE,
+  CM_SIDE,
+  CM_UP,
+  NULL_USER_COMMAND,
+  UserCommand,
+} from '@quake2ts/shared';
 
 /** The three commands of one clc_move, oldest first. */
 export interface MoveCommands {
@@ -58,27 +71,30 @@ export class ClientMessageParser {
     const checksum = this.stream.readByte();
     const lastFrame = this.stream.readLong();
 
-    // SV_ExecuteClientMessage reads three commands: oldest, old, new. id delta-compresses them
-    // (MSG_ReadDeltaUsercmd); the port's client writes each whole (writeMoveCommands).
-    const oldest = this.readUserCommand();
-    const old = this.readUserCommand();
-    const current = this.readUserCommand();
+    // SV_ExecuteClientMessage reads three commands, each a delta from the one before, the
+    // oldest from the null command (MSG_ReadDeltaUsercmd).
+    const oldest = this.readDeltaUserCommand(NULL_USER_COMMAND);
+    const old = this.readDeltaUserCommand(oldest);
+    const current = this.readDeltaUserCommand(old);
 
     this.handler.onMove(checksum, lastFrame, { oldest, old, current });
   }
 
-  private readUserCommand(): UserCommand {
-    const msec = this.stream.readByte();
-    const buttons = this.stream.readByte();
+  /** MSG_ReadDeltaUsercmd: `from` with the fields the bit byte names replaced. */
+  private readDeltaUserCommand(from: UserCommand): UserCommand {
+    const bits = this.stream.readByte();
+    const angle = () => this.stream.readShort() * (360.0 / 65536.0);
     const angles = {
-      x: this.stream.readShort() * (360.0 / 65536.0),
-      y: this.stream.readShort() * (360.0 / 65536.0),
-      z: this.stream.readShort() * (360.0 / 65536.0),
+      x: bits & CM_ANGLE1 ? angle() : from.angles.x,
+      y: bits & CM_ANGLE2 ? angle() : from.angles.y,
+      z: bits & CM_ANGLE3 ? angle() : from.angles.z,
     };
-    const forwardmove = this.stream.readShort();
-    const sidemove = this.stream.readShort();
-    const upmove = this.stream.readShort();
-    const impulse = this.stream.readByte();
+    const forwardmove = bits & CM_FORWARD ? this.stream.readShort() : from.forwardmove;
+    const sidemove = bits & CM_SIDE ? this.stream.readShort() : from.sidemove;
+    const upmove = bits & CM_UP ? this.stream.readShort() : from.upmove;
+    const buttons = bits & CM_BUTTONS ? this.stream.readByte() : from.buttons;
+    const impulse = bits & CM_IMPULSE ? this.stream.readByte() : from.impulse;
+    const msec = this.stream.readByte();
     const lightlevel = this.stream.readByte();
 
     return {
