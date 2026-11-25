@@ -43,6 +43,7 @@ export class MockWebGL2RenderingContext {
   readonly BLEND = 0x0be2;
   readonly SRC_ALPHA = 0x0302;
   readonly ONE_MINUS_SRC_ALPHA = 0x0303;
+  readonly ZERO = 0;
   readonly ONE = 1;
   readonly BACK = 0x0405;
   readonly LEQUAL = 0x0203;
