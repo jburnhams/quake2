@@ -1,5 +1,7 @@
-/* Strata's default look; the explorer has no subject colours of its own yet. */
+/* Strata's default look, then the Quake theme over it (packages/theme): gunmetal and HUD amber,
+   Teko and VT323, metal-plate pane headers. Its reasons are in that package. */
 @import "tailwindcss";
 @import "strata-react/strata.css";
+@import "@quake2ts/theme/quake.css";
 
 @source "./";

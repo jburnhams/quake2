@@ -1,0 +1,219 @@
+/* @quake2ts/theme: a Quake look for a strata-react app. Import it after strata-react's default look,
+   which it overrides value by value (strata-react CLAUDE.md, "The stance": a later :root, .dark or
+   @theme block wins):
+
+     @import "tailwindcss";
+     @import "strata-react/strata.css";
+     @import "@quake2ts/theme/quake.css";
+
+   Everything is drawn with CSS: colours from scripts/palette.mjs, metal plates from gradients and
+   inset shadows, grime from SVG noise. No pixel of id Software's art is used or committed, so the
+   theme carries no licence beyond this repository's.
+
+   Where strata-react gives a hook, the theme uses it (the token contract, the type-step variables of
+   strata-react issue #210, `data-variant` on buttons, `data-pane` on panes). Where it has none, a rule
+   below says so and names the structure it leans on, so a strata-react change that moves it is found. */
+
+/* Teko: condensed, squared, heavy at the top of its range, the shape of a status bar's numbers and a
+   level's stencilled signs. VT323: a bitmap terminal face, for code, paths and the console. Both OFL. */
+@import "@fontsource-variable/teko";
+@import "@fontsource/vt323";
+
+@import "./palette.generated.css";
+
+@theme {
+  /* Text stays in strata's Instrument Sans (long reading in a bitmap or condensed face is tiring);
+     titles, headings, pane names and figures take Teko, code takes VT323. */
+  --font-display: "Teko Variable", "Arial Narrow", sans-serif;
+  --font-mono: "VT323", ui-monospace, "SFMono-Regular", Menlo, monospace;
+
+  /* Machined, not rounded: the three radii still differ so nesting reads, but barely. */
+  --radius-control: 2px;
+  --radius-surface: 3px;
+  --radius-overlay: 4px;
+
+  /* What floats is a plate bolted on: a hard dark rim and a deep, untinted drop. */
+  --shadow-overlay: 0 0 0 1px oklch(0% 0 0 / 0.45), 0 2px 0 oklch(0% 0 0 / 0.3), 0 14px 32px oklch(0% 0 0 / 0.45);
+}
+
+:root {
+  /* The title's voice: Teko in capitals reads as a sign on a bulkhead. Teko is small for its em, so
+     the steps that use it are set larger (strata-react #210's per-step variables). */
+  --title-weight: 600;
+  --title-stretch: 100%;
+  --title-tracking: 0.03em;
+  --type-title-size: 2.75rem;
+  --type-title-leading: 2.75rem;
+  --type-heading-size: 1.5rem;
+  --type-heading-leading: 1.75rem;
+  --type-heading-weight: 500;
+
+  /* Big numbers are the status bar's: Teko, in the HUD's ink. */
+  --figure-font: var(--font-display);
+  --figure-stretch: 100%;
+  --type-figure-weight: 500;
+  --type-figure-size: 2.75rem;
+  --type-figure-leading: 2.5rem;
+  --hud-ink: var(--primary-11);
+
+  /* Light from above on a metal plate: the top edge catches it, the bottom falls into shade. */
+  --plate-top: var(--neutral-4);
+  --plate-bottom: var(--neutral-2);
+  --plate-highlight: oklch(100% 0 0 / 0.55);
+  --plate-shade: oklch(0% 0 0 / 0.12);
+
+  /* Hazard stripes under a screen's top bar: the game's yellow-and-black, from the palette. */
+  --hazard-a: var(--primary-9);
+  --hazard-b: var(--neutral-12);
+
+  /* Grime: fine grain plus a few broad stains, both SVG fractal noise, laid over grounds and panes.
+     Light pages get dark grain and rust stains; dark pages get pale grain. */
+  --grime:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 .09 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0078125' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .2 0 0 0 0 .05 0 0 0 -.5 .22'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+
+  /* Strata's status inks are solved for its own ground; on the bleached-concrete ground they still
+     clear 4.5:1 (tests/palette.test.ts), so they are kept and a status means the same in every app. */
+
+  /* The light info wash, greyed toward steel for the same reason as the dark one below. */
+  --info-subtle: oklch(89% 0.025 235);
+
+  scrollbar-color: var(--neutral-8) var(--neutral-3);
+}
+
+.dark {
+  --plate-top: var(--neutral-4);
+  --plate-bottom: var(--neutral-2);
+  --plate-highlight: oklch(100% 0 0 / 0.07);
+  --plate-shade: oklch(0% 0 0 / 0.5);
+  --hazard-a: var(--primary-9);
+  --hazard-b: var(--neutral-1);
+  /* Strata's dark info wash is a saturated navy that reads as a hole in brown metal; this is the same
+     hue family, greyed to steel, so "info" still means info. Its ink is unchanged. */
+  --info-subtle: oklch(28% 0.018 235);
+  --grime:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 .05 0 0 0 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='640' height='640'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.0078125' numOctaves='3' seed='7' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .5 0 0 0 0 .22 0 0 0 0 .05 0 0 0 -.5 .2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  body {
+    background-color: var(--background);
+    background-image: var(--grime);
+    background-attachment: fixed;
+  }
+
+  ::selection {
+    background: var(--primary-6);
+    color: var(--foreground);
+  }
+
+  /* VT323 has a small x-height for its em; this sizes it to read like the mono it replaces, and
+     keeps the fallback the same size while the face loads. */
+  :where(code, kbd, samp, pre, .font-mono) {
+    font-size-adjust: ex-height 0.52;
+  }
+}
+
+@layer components {
+  /* Grounds and panes carry the grime. `bg-background`/`bg-card` set only a colour, so the image
+     sits under the content without changing it. No strata hook: this reads the role class names. */
+  .bg-background,
+  .bg-card,
+  [data-pane] {
+    background-image: var(--grime);
+    /* Fixed to the viewport, so nested grounds line up and the stains never show a seam. */
+    background-attachment: fixed;
+  }
+
+  /* Headings speak in the title's voice. The step utilities set no family, so this adds one. */
+  .type-title,
+  .type-heading {
+    font-family: var(--font-display);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+  .type-figure {
+    color: var(--hud-ink);
+  }
+
+  /* A pane's header is a metal plate with its name stencilled in the HUD's ink. No strata hook names
+     the header, so this leans on Workspace's markup: `section[data-pane] > header > h2`. */
+  [data-pane] > header:not(:has(> h2.sr-only)) {
+    background-image: linear-gradient(to bottom, var(--plate-top), var(--plate-bottom));
+    box-shadow: inset 0 1px 0 var(--plate-highlight), inset 0 -1px 0 var(--plate-shade);
+  }
+  [data-pane] > header > h2 {
+    font-family: var(--font-display);
+    font-size: 1.125rem;
+    line-height: 1;
+    padding-top: 0.15em;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--hud-ink);
+  }
+
+  /* Buttons are pressed plates: a lit top edge and a shaded bottom, which the press turns over.
+     `data-variant` is strata's own (Button and ButtonLink set it for its tests). */
+  [data-variant="default"] {
+    background-image: linear-gradient(to bottom, oklch(100% 0 0 / 0.16), oklch(100% 0 0 / 0) 50%, oklch(0% 0 0 / 0.1));
+    box-shadow: inset 0 1px 0 oklch(100% 0 0 / 0.35), inset 0 -2px 0 oklch(0% 0 0 / 0.22), 0 1px 0 oklch(0% 0 0 / 0.35);
+    font-weight: 600;
+  }
+  [data-variant="outline"] {
+    background-image: linear-gradient(to bottom, var(--plate-top), var(--plate-bottom));
+    box-shadow: inset 0 1px 0 var(--plate-highlight), 0 1px 0 var(--plate-shade);
+  }
+  [data-variant="outline"][data-hovered] {
+    background-image: linear-gradient(to bottom, var(--neutral-5), var(--neutral-3));
+  }
+  :is([data-variant="default"], [data-variant="outline"])[data-pressed] {
+    background-image: linear-gradient(to top, oklch(100% 0 0 / 0.08), oklch(0% 0 0 / 0.12));
+    box-shadow: inset 0 2px 3px oklch(0% 0 0 / 0.35);
+  }
+
+  /* Code and text files read as the console: faint scanlines behind the console face. */
+  pre.font-mono {
+    background-image: repeating-linear-gradient(to bottom, oklch(0% 0 0 / 0) 0 2px, oklch(0% 0 0 / 0.06) 2px 3px);
+  }
+}
+
+/* A screen's top bar: a heavier plate with hazard stripes along its bottom edge. Opt-in, on the one
+   header that names the screen. */
+@utility hud-bar {
+  background-color: var(--card);
+  background-image:
+    repeating-linear-gradient(-45deg, var(--hazard-a) 0 8px, var(--hazard-b) 8px 16px),
+    linear-gradient(to bottom, var(--plate-top), var(--plate-bottom)),
+    var(--grime);
+  background-size: 100% 3px, 100% 100%, auto;
+  background-position: bottom, top, top left;
+  background-repeat: no-repeat, no-repeat, repeat;
+  box-shadow: inset 0 1px 0 var(--plate-highlight);
+
+  & :is(h1, h2) {
+    font-family: var(--font-display);
+    font-size: 1.375rem;
+    line-height: 1;
+    padding-top: 0.15em;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--hud-ink);
+  }
+}
+
+/* A HUD panel: a bevelled plate with a lit top edge and corner bolts. Opt-in, for a block that should
+   read as part of the machine (a readout, a card of facts). */
+@utility hud-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-surface);
+  background-color: var(--card);
+  background-image:
+    radial-gradient(circle at 6px 6px, var(--neutral-8) 1.5px, transparent 2px),
+    radial-gradient(circle at calc(100% - 6px) 6px, var(--neutral-8) 1.5px, transparent 2px),
+    radial-gradient(circle at 6px calc(100% - 6px), var(--neutral-8) 1.5px, transparent 2px),
+    radial-gradient(circle at calc(100% - 6px) calc(100% - 6px), var(--neutral-8) 1.5px, transparent 2px),
+    linear-gradient(to bottom, var(--plate-top), var(--plate-bottom)),
+    var(--grime);
+  box-shadow: inset 0 1px 0 var(--plate-highlight), inset 0 -1px 0 var(--plate-shade), 0 1px 0 var(--plate-shade);
+}

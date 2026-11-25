@@ -57,7 +57,7 @@ export function ExplorerScreen() {
   return (
     <div className="h-dvh">
       <Workspace label="Quake 2 explorer" state={workspace} narrowBelow={720}>
-        <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
+        <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
           <h1 className="type-label">Quake 2 explorer</h1>
           <p className="type-body-sm text-muted-foreground" aria-live="polite" data-version={version}>
             {summary}

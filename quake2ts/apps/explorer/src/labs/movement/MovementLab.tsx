@@ -62,7 +62,7 @@ export function MovementLab() {
   return (
     <div className="h-dvh">
       <Workspace label="Movement lab" state={workspace} narrowBelow={720}>
-        <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
+        <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
           <h1 className="type-label">Movement lab</h1>
           <p className="type-body-sm text-muted-foreground" aria-live="polite">
             {lab.changed.length
