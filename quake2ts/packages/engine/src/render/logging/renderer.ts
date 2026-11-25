@@ -1,4 +1,5 @@
 import type { PreparedWorld } from '../prepareWorld.js';
+import type { PreparedModels } from '../prepareModels.js';
 import type { IRenderer, Pic } from '../interface.js';
 import type { FrameRenderOptions, WorldRenderState } from '../frame.js';
 import type { RenderableEntity } from '../scene.js';
@@ -62,6 +63,8 @@ export class LoggingRenderer implements IRenderer {
   uploadWorld(world: PreparedWorld): WorldRenderState {
     return { map: world.map, surfaces: [], lightStyles: world.lightStyles };
   }
+
+  uploadModels(_world: WorldRenderState, _models: PreparedModels): void {}
 
   renderFrame(
     options: FrameRenderOptions,

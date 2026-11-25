@@ -7,12 +7,13 @@ import type { Page } from 'playwright';
 import { createWebGLPlaywrightSetup } from '@quake2ts/test-utils';
 import {
   DEMO1_SHOTS, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, DEMO_PAK, type Demo1Shot,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, DEMO_PAK, type Demo1Shot,
 } from '../demo1/shots.js';
 import fs from 'node:fs';
 import { PakArchive } from '../../src/assets/pak.js';
 import { parseBsp, type BspMap } from '../../src/assets/bsp.js';
 import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
+import type { SceneEntitySource } from '../../src/render/sceneEntities.js';
 
 interface PageResult {
   readonly pixels: string; // base64 RGBA, top row first
@@ -20,8 +21,13 @@ interface PageResult {
   readonly missingTextures: string[];
 }
 
-async function renderShotInPage(page: Page, shot: Demo1Shot, brushModels: BrushModelInstance[]): Promise<PageResult> {
-  return page.evaluate(async ({ shot, width, height, clearColor, brushModels }) => {
+async function renderShotInPage(
+  page: Page,
+  shot: Demo1Shot,
+  brushModels: BrushModelInstance[],
+  scene: { names: string[]; entities: SceneEntitySource[] },
+): Promise<PageResult> {
+  return page.evaluate(async ({ shot, width, height, clearColor, brushModels, scene }) => {
     const w = window as any;
     const E = w.Quake2Engine;
     const canvas: HTMLCanvasElement = w.testCanvas;
@@ -35,6 +41,7 @@ async function renderShotInPage(page: Page, shot: Demo1Shot, brushModels: BrushM
       if (!response.ok) throw new Error(`pak0.pak: HTTP ${response.status}`);
       const pak = E.PakArchive.fromArrayBuffer('pak0.pak', await response.arrayBuffer());
       const files = { readFile: async (p: string) => pak.readFile(p) };
+      w.demo1Files = files;
       const bsp = await files.readFile('maps/demo1.bsp');
       const map = E.parseBsp(bsp.buffer.slice(bsp.byteOffset, bsp.byteOffset + bsp.byteLength));
       const prepared = await E.prepareWorld(map, files);
@@ -48,7 +55,16 @@ async function renderShotInPage(page: Page, shot: Demo1Shot, brushModels: BrushM
     camera.setPosition(...shot.origin);
     camera.setRotation(...shot.angles);
     gl.viewport(0, 0, width, height);
-    w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0, brushModels }, []);
+    const models = await E.prepareModels(w.demo1Files, [...scene.names, ...(shot.viewWeapon ? [shot.viewWeapon.model] : [])]);
+    w.testRenderer.uploadModels(w.demo1World, models);
+    const entities = E.modelEntitiesFromEntities(scene.entities, (i: number) => scene.names[i], { models: models.models });
+    const weapon = E.viewWeaponEntity({
+      origin: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
+      angles: { x: shot.angles[0], y: shot.angles[1], z: shot.angles[2] },
+      model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, models: models.models,
+    });
+    if (weapon) entities.push(weapon);
+    w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0, brushModels }, entities);
 
     const glErrors: number[] = [];
     for (let e = gl.getError(); e !== gl.NO_ERROR; e = gl.getError()) glErrors.push(e);
@@ -62,7 +78,7 @@ async function renderShotInPage(page: Page, shot: Demo1Shot, brushModels: BrushM
     let binary = '';
     for (let i = 0; i < flipped.length; i += 0x8000) binary += String.fromCharCode(...flipped.subarray(i, i + 0x8000));
     return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing };
-  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels });
+  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene });
 }
 
 describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
@@ -81,7 +97,7 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
 
   for (const shot of DEMO1_SHOTS) {
     it(`renders ${shot.name} textured and lit`, async () => {
-      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot));
+      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot));
       expect(result.missingTextures).toEqual([]);
       expect(result.glErrors).toEqual([]);
 

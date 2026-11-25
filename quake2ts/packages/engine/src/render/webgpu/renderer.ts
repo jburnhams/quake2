@@ -26,6 +26,7 @@ import { cullLights } from '../lightCulling.js';
 import { extractFrustumPlanes } from '../culling.js';
 import { FrameRenderOptions, WorldRenderState } from '../frame.js'; // Shared interface
 import type { PreparedWorld } from '../prepareWorld.js';
+import type { PreparedModels } from '../prepareModels.js';
 import { WebGPUProfiler, ProfilingResourceTracker } from './profiling.js';
 
 // WebGPU-specific renderer interface
@@ -46,6 +47,7 @@ export interface WebGPURenderer extends IWebGPURenderer {
 
   /** Uploads a prepared world (prepareWorld) and returns the state renderFrame draws. */
   uploadWorld(world: PreparedWorld): WorldRenderState;
+  uploadModels(world: WorldRenderState, models: PreparedModels): void;
 }
 
 export class WebGPURendererImpl implements WebGPURenderer {
@@ -197,24 +199,34 @@ export class WebGPURendererImpl implements WebGPURenderer {
     });
 
     const textures = new Map<string, Texture2D>();
-    for (const [name, prepared] of world.textures) {
-      const texture = new Texture2D(this.device, {
-        width: prepared.width,
-        height: prepared.height,
-        format: 'rgba8unorm',
-        mipLevelCount: prepared.levels.length,
-        label: `world-${name}`,
-      });
-      for (const level of prepared.levels) {
-        texture.upload(level.rgba as unknown as BufferSource, { mipLevel: level.level, width: level.width, height: level.height });
-      }
-      textures.set(name, texture);
-    }
+    for (const [name, prepared] of world.textures) textures.set(name, this.uploadPreparedTexture(name, prepared));
 
     const state: WebGPUWorldRenderState = { map: world.map, surfaces, lightmaps, textures, lightStyles: world.lightStyles };
     // IRenderer hands the world back to renderFrame as an opaque value typed with WebGL's
     // defaults; renderFrame reads it as the WebGPU state it is.
     return state as unknown as WorldRenderState;
+  }
+
+  uploadModels(world: WorldRenderState, models: PreparedModels): void {
+    const textures = world.textures as unknown as Map<string, Texture2D> | undefined;
+    if (!textures) throw new Error('uploadModels: the world has no texture map (upload it with uploadWorld)');
+    for (const [name, prepared] of models.textures) {
+      if (!textures.has(name)) textures.set(name, this.uploadPreparedTexture(name, prepared));
+    }
+  }
+
+  private uploadPreparedTexture(name: string, prepared: PreparedTexture): Texture2D {
+    const texture = new Texture2D(this.device, {
+      width: prepared.width,
+      height: prepared.height,
+      format: 'rgba8unorm',
+      mipLevelCount: prepared.levels.length,
+      label: `world-${name}`,
+    });
+    for (const level of prepared.levels) {
+      texture.upload(level.rgba as unknown as BufferSource, { mipLevel: level.level, width: level.width, height: level.height });
+    }
+    return texture;
   }
 
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void {

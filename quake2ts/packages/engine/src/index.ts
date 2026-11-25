@@ -263,7 +263,16 @@ export {
   type WorldDrawList,
   type WorldDrawListOptions,
 } from './render/worldDrawList.js';
-export { brushModelsFromEntities, type SceneEntitySource } from './render/sceneEntities.js';
+export {
+  aliasModelTransform,
+  brushModelsFromEntities,
+  modelEntitiesFromEntities,
+  viewWeaponEntity,
+  type ModelEntitiesOptions,
+  type SceneEntitySource,
+  type ViewWeaponOptions,
+} from './render/sceneEntities.js';
+export { prepareModels, type PreparedModels } from './render/prepareModels.js';
 export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
 export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
 export {

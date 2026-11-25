@@ -9,10 +9,13 @@ import { parseBsp } from '../../src/assets/bsp.js';
 import { prepareWorld, type PreparedWorld } from '../../src/render/prepareWorld.js';
 import { createWebGPURenderer, type WebGPURenderer } from '../../src/render/webgpu/renderer.js';
 import { Camera } from '../../src/render/camera.js';
+import { prepareModels } from '../../src/render/prepareModels.js';
+import { modelEntitiesFromEntities, viewWeaponEntity } from '../../src/render/sceneEntities.js';
+import type { RenderableEntity } from '../../src/render/scene.js';
 import type { WorldRenderState } from '../../src/render/frame.js';
 import {
   DEMO1_SHOTS, DEMO_PAK, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities,
 } from '../demo1/shots.js';
 
 const toArrayBuffer = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
@@ -22,11 +25,12 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
   let prepared: PreparedWorld;
   let world: WorldRenderState;
   const errors: string[] = [];
+  let files: { readFile(path: string): Promise<Uint8Array> };
 
   beforeAll(async () => {
     await setupHeadlessWebGPUEnv();
     const pak = PakArchive.fromArrayBuffer('pak0.pak', toArrayBuffer(fs.readFileSync(DEMO_PAK)));
-    const files = { readFile: async (p: string) => pak.readFile(p) };
+    files = { readFile: async (p: string) => pak.readFile(p) };
     const map = parseBsp(toArrayBuffer(await files.readFile('maps/demo1.bsp')));
     prepared = await prepareWorld(map, files);
 
@@ -55,7 +59,18 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
 
       renderer.device.pushErrorScope('validation');
       const brushModels = shotBrushModels(prepared.map, shot);
-      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, []);
+      const { names, entities: sources } = shotModelEntities(prepared.map, shot);
+      const models = await prepareModels(files, [...names, ...(shot.viewWeapon ? [shot.viewWeapon.model] : [])]);
+      expect(models.missing).toEqual([]);
+      renderer.uploadModels(world, models);
+      const entities: RenderableEntity[] = modelEntitiesFromEntities(sources, (i) => names[i], { models: models.models });
+      const weapon = viewWeaponEntity({
+        origin: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
+        angles: { x: shot.angles[0], y: shot.angles[1], z: shot.angles[2] },
+        model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, models: models.models,
+      });
+      if (weapon) entities.push(weapon);
+      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
       const validation = await renderer.device.popErrorScope();
       expect(validation?.message ?? null).toBeNull();
 

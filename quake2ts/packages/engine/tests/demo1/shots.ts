@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import type { BspMap } from '../../src/assets/bsp.js';
 import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
+import type { SceneEntitySource } from '../../src/render/sceneEntities.js';
 
 export interface Demo1Shot {
   readonly name: string;
@@ -22,6 +23,10 @@ export interface Demo1Shot {
   readonly sky?: number;
   /** Brush models moved from where the map puts them (submodel number to offset), as an open door is. */
   readonly moved?: Readonly<Record<number, readonly [number, number, number]>>;
+  /** Draw the monsters and items of the entity lump where the map places them. */
+  readonly entities?: boolean;
+  /** Draw this first-person weapon at a frame (the blaster's idle frames are 9 to 52; 0 to 4 raise it from below the view). */
+  readonly viewWeapon?: { readonly model: string; readonly frame: number };
 }
 
 const EYE = 22; // viewheight above a spawn point's origin
@@ -38,7 +43,50 @@ export const DEMO1_SHOTS: readonly Demo1Shot[] = [
   { name: 'brush-wall', origin: [28, 24, 64], angles: [0, 90, 0] },
   { name: 'door-shut', origin: [-1000, 1632, 0], angles: [0, 180, 0] },
   { name: 'door-raised', origin: [-1000, 1632, 0], angles: [0, 180, 0], moved: { 19: [0, 0, 120] } },
+  // MD2s: soldiers and the jacket armour in the courtyard, and the blaster in first person.
+  { name: 'models-courtyard', origin: [480, 272, -40 + EYE], angles: [0, 200, 0], entities: true },
+  { name: 'view-blaster', origin: [128, -320, 32 + EYE], angles: [0, 135, 0], viewWeapon: { model: 'models/weapons/v_blast/tris.md2', frame: 10 } },
 ];
+
+/** The model each spawned class shows, for the classes demo1's lump has near the shots (the game sets these in SP_*). */
+const CLASS_MODELS: Readonly<Record<string, { readonly model: string; readonly skin?: number }>> = {
+  monster_soldier_light: { model: 'models/monsters/soldier/tris.md2', skin: 0 },
+  monster_soldier: { model: 'models/monsters/soldier/tris.md2', skin: 2 },
+  monster_soldier_ss: { model: 'models/monsters/soldier/tris.md2', skin: 4 },
+  item_armor_jacket: { model: 'models/items/armor/jacket/tris.md2' },
+  item_armor_shard: { model: 'models/items/armor/shard/tris.md2' },
+  item_health: { model: 'models/items/healing/medium/tris.md2' },
+  item_health_small: { model: 'models/items/healing/stimpack/tris.md2' },
+  weapon_supershotgun: { model: 'models/weapons/g_shotg2/tris.md2' },
+};
+
+/**
+ * The lump's monsters and items as the entity sources the renderer reads, with `names[i]` the
+ * model at index i, as the server's model configstrings would give them.
+ */
+export function shotModelEntities(map: BspMap, shot: Demo1Shot): { names: string[]; entities: SceneEntitySource[] } {
+  const names = ['', 'maps/demo1.bsp'];
+  const entities: SceneEntitySource[] = [];
+  if (!shot.entities) return { names, entities };
+  for (const entity of map.entities.entities) {
+    const spawn = entity.classname ? CLASS_MODELS[entity.classname] : undefined;
+    if (!spawn) continue;
+    let modelindex = names.indexOf(spawn.model);
+    if (modelindex < 0) modelindex = names.push(spawn.model) - 1;
+    const [x, y, z] = (entity.properties.origin ?? '0 0 0').split(/\s+/).map(Number);
+    const yaw = Number(entity.properties.angle ?? 0);
+    const item = !entity.classname!.startsWith('monster_');
+    entities.push({
+      modelindex,
+      origin: { x, y, z },
+      angles: { x: 0, y: yaw, z: 0 },
+      skin: spawn.skin ?? 0,
+      frame: 0,
+      effects: item ? 1 : 0, // items spin (EF_ROTATE)
+    });
+  }
+  return { names, entities };
+}
 
 /**
  * The brush models the game would draw at the map's start: every entity with a submodel except
