@@ -116,6 +116,12 @@ vi.mock('../../../src/render/gpuProfiler', () => ({
 // Mock bsp traversal
 vi.mock('../../../src/render/bspTraversal', () => ({
     findLeafForPoint: vi.fn(() => 0),
+    findViewPoint: vi.fn((map: any) => {
+        const leaf = 0 >= 0 ? map?.leafs?.[0] : undefined;
+        return { leaf: 0, cluster: leaf?.cluster ?? -1, cluster2: leaf?.cluster ?? -1, area: leaf?.area ?? -1 };
+    }),
+    isClusterInView: vi.fn(() => true),
+    reachableAreasFrom: vi.fn(() => null),
     isClusterVisible: vi.fn(() => true),
     gatherVisibleFaces: vi.fn(() => [{ faceIndex: 0, sortKey: 0 }]),
     calculateReachableAreas: vi.fn(() => null)
