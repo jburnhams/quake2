@@ -25,7 +25,7 @@ jobs:
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Fetch the demo archive from public mirrors
         run: |
           scripts/fetch-paks.sh --unpinned 2> fetch.log || { cat fetch.log; exit 1; }
@@ -52,7 +52,7 @@ jobs:
     needs: mirror
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - id: paks
         uses: ./.github/actions/demo-paks
       - run: test -s "${{ steps.paks.outputs.pak }}" && ls -l "${{ steps.paks.outputs.pak }}"
