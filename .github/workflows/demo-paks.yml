@@ -1,0 +1,58 @@
+name: Demo paks (mirror)
+
+# Puts id's original, unmodified Quake 2 demo archive on this repo's `demo-paks`
+# release, so scripts/fetch-paks.sh has a source we control. Runs when this file
+# changes or by hand; does nothing if the release already has the archive.
+# The job summary prints the SHA-256 lines to pin in scripts/demo-paks.sha256.
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/demo-paks.yml
+      - .github/actions/demo-paks/**
+      - quake2ts/scripts/fetch-paks.sh
+      - quake2ts/scripts/demo-paks.sha256
+
+permissions:
+  contents: write
+
+jobs:
+  mirror:
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: quake2ts
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch the demo archive from public mirrors
+        run: |
+          scripts/fetch-paks.sh --unpinned 2> fetch.log || { cat fetch.log; exit 1; }
+          cat fetch.log
+          {
+            echo '### Pin these in quake2ts/scripts/demo-paks.sha256'
+            echo '```'
+            grep -E '  (archive|pak)$' fetch.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload to the demo-paks release
+        run: |
+          if gh release view demo-paks --json assets --jq '.assets[].name' 2>/dev/null | grep -qx q2-314-demo-x86.exe; then
+            echo "demo-paks release already has the archive"
+            exit 0
+          fi
+          gh release view demo-paks >/dev/null 2>&1 || gh release create demo-paks \
+            --target main --prerelease --title "Quake 2 demo data" \
+            --notes "id Software's original, unmodified Quake 2 demo (q2-314-demo-x86.exe), redistributed under its licence for this repo's tests. Fetched with quake2ts/scripts/fetch-paks.sh."
+          gh release upload demo-paks .paks/q2-314-demo-x86.exe
+
+  verify:
+    # Fetches through the cached action with the pinned hashes, as test jobs will.
+    needs: mirror
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - id: paks
+        uses: ./.github/actions/demo-paks
+      - run: test -s "${{ steps.paks.outputs.pak }}" && ls -l "${{ steps.paks.outputs.pak }}"

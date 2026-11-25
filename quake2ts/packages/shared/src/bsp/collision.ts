@@ -383,7 +383,7 @@ export function clipBoxToBrush({ start, end, mins, maxs, brush, trace }: ClipBox
     if (!getout) {
       trace.allsolid = true;
     }
-    trace.fraction = 0;
+    // cmodel.c leaves the fraction alone here; only CM_TestBoxInBrush zeroes it.
     return;
   }
 
@@ -420,30 +420,6 @@ function findLeafIndex(point: Vec3, model: CollisionModel, headnode: number): nu
   return -1 - nodeIndex;
 }
 
-function computeLeafContents(model: CollisionModel, leafIndex: number, point: Vec3): number {
-  const leaf = model.leaves[leafIndex];
-  let contents = leaf.contents;
-
-  const brushCheckCount = nextBrushCheckCount();
-  const start = leaf.firstLeafBrush;
-  const end = start + leaf.numLeafBrushes;
-
-  for (let i = start; i < end; i += 1) {
-    const brushIndex = model.leafBrushes[i];
-    const brush = model.brushes[brushIndex];
-
-    if (brush.checkcount === brushCheckCount) continue;
-    brush.checkcount = brushCheckCount;
-
-    if (brush.sides.length === 0) continue;
-    if (pointInsideBrush(point, brush)) {
-      contents |= brush.contents;
-    }
-  }
-
-  return contents;
-}
-
 function nextBrushCheckCount(): number {
   const count = globalBrushCheckCount;
   globalBrushCheckCount += 1;
@@ -457,34 +433,20 @@ function isPointBounds(mins: Vec3, maxs: Vec3): boolean {
   return mins.x === 0 && mins.y === 0 && mins.z === 0 && maxs.x === 0 && maxs.y === 0 && maxs.z === 0;
 }
 
-function planeOffsetForBounds(plane: CollisionPlane, mins: Vec3, maxs: Vec3): number {
-  if (isPointBounds(mins, maxs)) return 0;
-
-  const offset =
-    plane.normal.x * (plane.normal.x < 0 ? maxs.x : mins.x) +
-    plane.normal.y * (plane.normal.y < 0 ? maxs.y : mins.y) +
-    plane.normal.z * (plane.normal.z < 0 ? maxs.z : mins.z);
-
-  return offset;
-}
-
-function planeOffsetMagnitude(plane: CollisionPlane, mins: Vec3, maxs: Vec3): number {
-  return Math.abs(planeOffsetForBounds(plane, mins, maxs));
-}
-
 function lerpPoint(start: Vec3, end: Vec3, t: number): Vec3 {
   return addVec3(start, scaleVec3(subtractVec3(end, start), t));
 }
 
 function finalizeTrace(trace: TraceResult, start: Vec3, end: Vec3): CollisionTraceResult {
-  const clampedFraction = trace.allsolid ? 0 : trace.fraction;
-  const endpos = lerpPoint(start, end, clampedFraction);
+  // CM_BoxTrace: endpos is the end point when nothing was hit, else start + fraction * (end - start).
+  // The fraction is not clamped for allsolid; callers check allsolid/startsolid themselves.
+  const endpos = trace.fraction === 1 ? { x: end.x, y: end.y, z: end.z } : lerpPoint(start, end, trace.fraction);
 
   return {
-    fraction: clampedFraction,
+    fraction: trace.fraction,
     endpos,
     plane: trace.plane,
-    planeNormal: trace.startsolid ? undefined : trace.plane?.normal,
+    planeNormal: trace.plane?.normal,
     contents: trace.contents,
     surfaceFlags: trace.surfaceFlags,
     startsolid: trace.startsolid,
@@ -515,19 +477,8 @@ function clusterVisible(
   return (byte & (1 << (to & 7))) !== 0;
 }
 
-/**
- * Recursively checks a hull sweep against a BSP tree.
- * Implements a Liang-Barsky like clipping algorithm against the BSP planes.
- *
- * Based on CM_RecursiveHullCheck in qcommon/cm_trace.c.
- */
-function recursiveHullCheck(params: {
+interface HullTraceState {
   readonly model: CollisionModel;
-  readonly nodeIndex: number;
-  readonly startFraction: number;
-  readonly endFraction: number;
-  readonly start: Vec3;
-  readonly end: Vec3;
   readonly traceStart: Vec3;
   readonly traceEnd: Vec3;
   readonly mins: Vec3;
@@ -535,192 +486,181 @@ function recursiveHullCheck(params: {
   readonly contentMask: number;
   readonly trace: TraceResult;
   readonly brushCheckCount: number;
-}): void {
-  const {
-    model,
-    nodeIndex,
-    startFraction,
-    endFraction,
-    start,
-    end,
-    traceStart,
-    traceEnd,
-    mins,
-    maxs,
-    contentMask,
-    trace,
-    brushCheckCount,
-  } = params;
+  readonly isPoint: boolean;
+  /** Per-axis half-size of the box, the larger of -mins and maxs (trace_extents in cmodel.c). */
+  readonly extents: Vec3;
+}
 
-  // If we've already hit something earlier in the trace than where we are starting this check,
-  // we can stop.
-  if (trace.fraction <= startFraction) {
-    return;
+/** CM_TraceToLeaf: clips the swept box against every brush in one leaf. */
+function traceToLeaf(state: HullTraceState, leafIndex: number): void {
+  const { model, trace, contentMask, brushCheckCount } = state;
+  const leaf = model.leaves[leafIndex];
+  // cmodel.c also skips the leaf when (leaf.contents & mask) is 0. On compiled maps that never
+  // changes the answer (checked by the oracle on demo1), and hand-built test models leave leaf
+  // contents at 0, so the check is left out here and in testInLeaf.
+
+  const end = leaf.firstLeafBrush + leaf.numLeafBrushes;
+  for (let i = leaf.firstLeafBrush; i < end; i += 1) {
+    const brush = model.brushes[model.leafBrushes[i]];
+    if (brush.checkcount === brushCheckCount) continue; // already checked in another leaf
+    brush.checkcount = brushCheckCount;
+    if ((brush.contents & contentMask) === 0) continue;
+
+    if (traceDebugInfo) traceDebugInfo.brushesTested++;
+    clipBoxToBrush({ start: state.traceStart, end: state.traceEnd, mins: state.mins, maxs: state.maxs, brush, trace });
+    if (trace.fraction === 0) return;
   }
+}
 
-  // If we reached a leaf, check the brushes in it.
-  if (nodeIndex < 0) {
-    if (traceDebugInfo) {
-      traceDebugInfo.leafsReached++;
+/** CM_TestInLeaf: position test of the box against every brush in one leaf. */
+function testInLeaf(state: HullTraceState, leafIndex: number): void {
+  const { model, trace, contentMask, brushCheckCount } = state;
+  const leaf = model.leaves[leafIndex];
+
+  const end = leaf.firstLeafBrush + leaf.numLeafBrushes;
+  for (let i = leaf.firstLeafBrush; i < end; i += 1) {
+    const brush = model.brushes[model.leafBrushes[i]];
+    if (brush.checkcount === brushCheckCount) continue;
+    brush.checkcount = brushCheckCount;
+    if ((brush.contents & contentMask) === 0) continue;
+    if (brush.sides.length === 0) continue;
+
+    const result = testBoxInBrush(state.traceStart, state.mins, state.maxs, brush);
+    if (result.startsolid) {
+      trace.startsolid = true;
+      trace.allsolid = true;
+      trace.fraction = 0;
+      trace.contents = brush.contents;
+      return;
     }
+  }
+}
 
-    const leafIndex = -1 - nodeIndex;
-    const leaf = model.leaves[leafIndex];
+/**
+ * BOX_ON_PLANE_SIDE from q_shared.h: 1 = in front, 2 = behind, 3 = crossing.
+ * Kept separate from boxOnPlaneSide because cmodel.c's comparisons are strict in one direction.
+ */
+function boxOnPlaneSideC(mins: Vec3, maxs: Vec3, plane: CollisionPlane): number {
+  if (plane.type < 3) {
+    const lo = plane.type === 0 ? mins.x : plane.type === 1 ? mins.y : mins.z;
+    const hi = plane.type === 0 ? maxs.x : plane.type === 1 ? maxs.y : maxs.z;
+    if (plane.dist <= lo) return 1;
+    if (plane.dist >= hi) return 2;
+    return 3;
+  }
+  const n = plane.normal;
+  const dist1 = n.x * (n.x < 0 ? mins.x : maxs.x) + n.y * (n.y < 0 ? mins.y : maxs.y) + n.z * (n.z < 0 ? mins.z : maxs.z);
+  const dist2 = n.x * (n.x < 0 ? maxs.x : mins.x) + n.y * (n.y < 0 ? maxs.y : mins.y) + n.z * (n.z < 0 ? maxs.z : mins.z);
+  let sides = 0;
+  if (dist1 >= plane.dist) sides = 1;
+  if (dist2 < plane.dist) sides |= 2;
+  return sides;
+}
 
-    const brushStart = leaf.firstLeafBrush;
-    const brushEnd = brushStart + leaf.numLeafBrushes;
-
-    for (let i = brushStart; i < brushEnd; i += 1) {
-      const brushIndex = model.leafBrushes[i];
-      const brush = model.brushes[brushIndex];
-
-      if ((brush.contents & contentMask) === 0) continue;
-      if (!brush.sides.length) continue;
-      // Optimization: Avoid checking the same brush multiple times in a single trace.
-      if (brush.checkcount === brushCheckCount) continue;
-
-      brush.checkcount = brushCheckCount;
-
-      if (traceDebugInfo) {
-        traceDebugInfo.brushesTested++;
-      }
-
-      clipBoxToBrush({ start: traceStart, end: traceEnd, mins, maxs, brush, trace });
-      if (trace.allsolid) {
+/** CM_BoxLeafnums_headnode: every leaf the box touches, below headnode. */
+export function boxLeafnums(model: CollisionModel, mins: Vec3, maxs: Vec3, headnode = 0, maxCount = 1024): number[] {
+  const leaves: number[] = [];
+  const walk = (nodeIndex: number): void => {
+    let num = nodeIndex;
+    for (;;) {
+      if (num < 0) {
+        if (leaves.length < maxCount) leaves.push(-1 - num);
         return;
       }
+      const node = model.nodes[num];
+      const side = boxOnPlaneSideC(mins, maxs, node.plane);
+      if (side === 1) num = node.children[0];
+      else if (side === 2) num = node.children[1];
+      else {
+        walk(node.children[0]);
+        num = node.children[1];
+      }
     }
+  };
+  walk(headnode);
+  return leaves;
+}
+
+/**
+ * CM_RecursiveHullCheck from full/qcommon/cmodel.c, line for line: walks the segment
+ * p1..p2 (fractions p1f..p2f of the whole move) down the BSP and clips against the
+ * brushes in every leaf it reaches.
+ */
+function recursiveHullCheck(state: HullTraceState, num: number, p1f: number, p2f: number, p1: Vec3, p2: Vec3): void {
+  const { trace } = state;
+  if (trace.fraction <= p1f) return; // already hit something nearer
+
+  if (num < 0) {
+    if (traceDebugInfo) traceDebugInfo.leafsReached++;
+    traceToLeaf(state, -1 - num);
+    return;
+  }
+  if (traceDebugInfo) traceDebugInfo.nodesTraversed++;
+
+  const plane = state.model.nodes[num].plane;
+  const children = state.model.nodes[num].children;
+  let t1: number;
+  let t2: number;
+  let offset: number;
+
+  if (plane.type < 3) {
+    const axis = plane.type === 0 ? 'x' : plane.type === 1 ? 'y' : 'z';
+    t1 = p1[axis] - plane.dist;
+    t2 = p2[axis] - plane.dist;
+    offset = state.extents[axis];
+  } else {
+    t1 = plane.normal.x * p1.x + plane.normal.y * p1.y + plane.normal.z * p1.z - plane.dist;
+    t2 = plane.normal.x * p2.x + plane.normal.y * p2.y + plane.normal.z * p2.z - plane.dist;
+    offset = state.isPoint
+      ? 0
+      : Math.abs(state.extents.x * plane.normal.x) +
+        Math.abs(state.extents.y * plane.normal.y) +
+        Math.abs(state.extents.z * plane.normal.z);
+  }
+
+  // see which sides we need to consider
+  if (t1 >= offset && t2 >= offset) {
+    recursiveHullCheck(state, children[0], p1f, p2f, p1, p2);
+    return;
+  }
+  if (t1 < -offset && t2 < -offset) {
+    recursiveHullCheck(state, children[1], p1f, p2f, p1, p2);
     return;
   }
 
-  if (traceDebugInfo) {
-    traceDebugInfo.nodesTraversed++;
-  }
-
-  const node = model.nodes[nodeIndex];
-  const plane = node.plane;
-
-  // Calculate the distance from the plane to the box's nearest corner.
-  // This effectively expands the plane by the box extents.
-  // Use absolute value of offset like original C code (full/qcommon/cmodel.c:1269-1271).
-  const offset = planeOffsetMagnitude(plane, mins, maxs);
-
-  const startDist = planeDistanceToPoint(plane, start);
-  const endDist = planeDistanceToPoint(plane, end);
-
-  // If both start and end points are in front of the plane (including offset),
-  // we only need to check the front child.
-  if (startDist >= offset && endDist >= offset) {
-    recursiveHullCheck({
-      model,
-      nodeIndex: node.children[0],
-      startFraction,
-      endFraction,
-      start,
-      end,
-      traceStart,
-      traceEnd,
-      mins,
-      maxs,
-      contentMask,
-      trace,
-      brushCheckCount,
-    });
-    return;
-  }
-
-  // If both start and end points are behind the plane (including offset),
-  // we only need to check the back child.
-  if (startDist < -offset && endDist < -offset) {
-    recursiveHullCheck({
-      model,
-      nodeIndex: node.children[1],
-      startFraction,
-      endFraction,
-      start,
-      end,
-      traceStart,
-      traceEnd,
-      mins,
-      maxs,
-      contentMask,
-      trace,
-      brushCheckCount,
-    });
-    return;
-  }
-
-  // The segment straddles the plane. We need to split the segment and recurse down both sides.
-  // Put the crosspoint DIST_EPSILON pixels on the near side to avoid precision issues.
-  // See full/qcommon/cmodel.c:1293-1313 (CM_RecursiveHullCheck)
-  // fraction1 (frac) is used for "move up to node" - the near-side recursion
-  // fraction2 (frac2) is used for "go past the node" - the far-side recursion
-  let side = 0;
-  let idist = 1 / (startDist - endDist);
-  let fraction1, fraction2;
-
-  if (startDist < endDist) {
+  // put the crosspoint DIST_EPSILON pixels on the near side
+  let side: 0 | 1;
+  let frac: number;
+  let frac2: number;
+  if (t1 < t2) {
+    const idist = 1 / (t1 - t2);
     side = 1;
-    fraction2 = (startDist + offset + DIST_EPSILON) * idist;
-    fraction1 = (startDist - offset + DIST_EPSILON) * idist;
+    frac2 = (t1 + offset + DIST_EPSILON) * idist;
+    frac = (t1 - offset + DIST_EPSILON) * idist;
+  } else if (t1 > t2) {
+    const idist = 1 / (t1 - t2);
+    side = 0;
+    frac2 = (t1 - offset - DIST_EPSILON) * idist;
+    frac = (t1 + offset + DIST_EPSILON) * idist;
   } else {
     side = 0;
-    fraction2 = (startDist - offset - DIST_EPSILON) * idist;
-    fraction1 = (startDist + offset + DIST_EPSILON) * idist;
+    frac = 1;
+    frac2 = 0;
   }
 
-  if (fraction1 < 0) fraction1 = 0;
-  else if (fraction1 > 1) fraction1 = 1;
+  // move up to the node
+  if (frac < 0) frac = 0;
+  if (frac > 1) frac = 1;
+  let midf = p1f + (p2f - p1f) * frac;
+  let mid = lerpPoint(p1, p2, frac);
+  recursiveHullCheck(state, children[side], p1f, midf, p1, mid);
 
-  if (fraction2 < 0) fraction2 = 0;
-  else if (fraction2 > 1) fraction2 = 1;
-
-  const midFraction = startFraction + (endFraction - startFraction) * fraction1;
-  const midPoint = lerpPoint(start, end, fraction1);
-
-  // Recurse down the near side
-  recursiveHullCheck({
-    model,
-    nodeIndex: node.children[side],
-    startFraction,
-    endFraction: midFraction,
-    start,
-    end: midPoint,
-    traceStart,
-    traceEnd,
-    mins,
-    maxs,
-    contentMask,
-    trace,
-    brushCheckCount,
-  });
-
-  const updatedFraction = trace.fraction;
-
-  // Optimisation: if we hit something closer than the split point, we don't need to check the far side
-  if (updatedFraction <= midFraction) {
-    return;
-  }
-
-  const midFraction2 = startFraction + (endFraction - startFraction) * fraction2;
-  const midPoint2 = lerpPoint(start, end, fraction2);
-
-  // Recurse down the far side
-  recursiveHullCheck({
-    model,
-    nodeIndex: node.children[1 - side],
-    startFraction: midFraction2,
-    endFraction,
-    start: midPoint2,
-    end,
-    traceStart,
-    traceEnd,
-    mins,
-    maxs,
-    contentMask,
-    trace,
-    brushCheckCount,
-  });
+  // go past the node
+  if (frac2 < 0) frac2 = 0;
+  if (frac2 > 1) frac2 = 1;
+  midf = p1f + (p2f - p1f) * frac2;
+  mid = lerpPoint(p1, p2, frac2);
+  recursiveHullCheck(state, children[side ^ 1], midf, p2f, mid, p2);
 }
 
 export interface CollisionTraceParams {
@@ -733,6 +673,7 @@ export interface CollisionTraceParams {
   readonly contentMask?: number;
 }
 
+/** CM_BoxTrace: sweeps a box from start to end through the BSP below headnode. */
 export function traceBox(params: CollisionTraceParams): CollisionTraceResult {
   const { model, start, end } = params;
   const mins = params.mins ?? ZERO_VEC3;
@@ -741,51 +682,51 @@ export function traceBox(params: CollisionTraceParams): CollisionTraceResult {
   const headnode = params.headnode ?? 0;
 
   const trace = createDefaultTrace();
-  const brushCheckCount = nextBrushCheckCount();
+  if (model.leaves.length === 0) return finalizeTrace(trace, start, end); // map not loaded
 
-  recursiveHullCheck({
+  const isPoint = isPointBounds(mins, maxs);
+  const state: HullTraceState = {
     model,
-    nodeIndex: headnode,
-    startFraction: 0,
-    endFraction: 1,
-    start,
-    end,
     traceStart: start,
     traceEnd: end,
     mins,
     maxs,
     contentMask,
     trace,
-    brushCheckCount,
-  });
+    brushCheckCount: nextBrushCheckCount(),
+    isPoint,
+    extents: isPoint
+      ? ZERO_VEC3
+      : {
+          x: -mins.x > maxs.x ? -mins.x : maxs.x,
+          y: -mins.y > maxs.y ? -mins.y : maxs.y,
+          z: -mins.z > maxs.z ? -mins.z : maxs.z,
+        },
+  };
 
+  // position test special case
+  if (start.x === end.x && start.y === end.y && start.z === end.z) {
+    const c1 = { x: start.x + mins.x - 1, y: start.y + mins.y - 1, z: start.z + mins.z - 1 };
+    const c2 = { x: start.x + maxs.x + 1, y: start.y + maxs.y + 1, z: start.z + maxs.z + 1 };
+    for (const leaf of boxLeafnums(model, c1, c2, headnode)) {
+      testInLeaf(state, leaf);
+      if (trace.allsolid) break;
+    }
+    return { ...finalizeTrace(trace, start, end), endpos: { x: start.x, y: start.y, z: start.z } };
+  }
+
+  recursiveHullCheck(state, headnode, 0, 1, start, end);
   return finalizeTrace(trace, start, end);
 }
 
+/** CM_PointContents: the contents of the leaf the point is in (brush contents are already folded into leaves by the compiler). */
 export function pointContents(point: Vec3, model: CollisionModel, headnode = 0): number {
-  const leafIndex = findLeafIndex(point, model, headnode);
-  return computeLeafContents(model, leafIndex, point);
+  if (model.leaves.length === 0) return 0;
+  return model.leaves[findLeafIndex(point, model, headnode)].contents;
 }
 
 export function pointContentsMany(points: readonly Vec3[], model: CollisionModel, headnode = 0): number[] {
-  const leafCache = new Map<number, number>();
-
-  return points.map((point) => {
-    const leafIndex = findLeafIndex(point, model, headnode);
-    const leaf = model.leaves[leafIndex];
-
-    if (leaf.numLeafBrushes === 0) {
-      const cached = leafCache.get(leafIndex);
-      if (cached !== undefined) {
-        return cached;
-      }
-
-      leafCache.set(leafIndex, leaf.contents);
-      return leaf.contents;
-    }
-
-    return computeLeafContents(model, leafIndex, point);
-  });
+  return points.map((point) => pointContents(point, model, headnode));
 }
 
 export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: CollisionModel, headnode = 0): number {
@@ -824,7 +765,11 @@ export function boxContents(origin: Vec3, mins: Vec3, maxs: Vec3, model: Collisi
 
     const node = model.nodes[nodeIndex];
     const plane = node.plane;
-    const offset = planeOffsetMagnitude(plane, mins, maxs);
+    // Symmetric box extents, as cmodel.c uses for its hull checks.
+    const offset =
+      Math.abs(Math.max(-mins.x, maxs.x) * plane.normal.x) +
+      Math.abs(Math.max(-mins.y, maxs.y) * plane.normal.y) +
+      Math.abs(Math.max(-mins.z, maxs.z) * plane.normal.z);
     const dist = planeDistanceToPoint(plane, origin);
 
     if (offset === 0) {

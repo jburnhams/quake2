@@ -13,3 +13,9 @@ node_modules/
 dist/
 stats/
 **/stats/
+
+# C reference oracle build output
+oracle/build/
+
+# Demo pak fetched by scripts/fetch-paks.sh (never committed)
+.paks/

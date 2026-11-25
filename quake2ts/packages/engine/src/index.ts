@@ -75,6 +75,7 @@ export {
   type PakSource,
 } from './assets/ingestion.js';
 export { LruCache } from './assets/cache.js';
+export { collisionModelFromBsp } from './assets/bspCollision.js';
 export { filesToPakSources, ingestPakFiles, wireDropTarget, wireFileInput } from './assets/browserIngestion.js';
 export {
   BspLoader,
