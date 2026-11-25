@@ -47,6 +47,12 @@ export interface MultiplayerConnectionOptions {
     netchan?: NetChan;
 }
 
+/** Where a connection's configstrings go: each one as it arrives, and a clear for a new server. */
+export interface ConfigStringListener {
+  set(index: number, value: string): void;
+  clear(): void;
+}
+
 export class MultiplayerConnection implements NetworkMessageHandler {
   private driver: NetDriver;
   private state: ConnectionState = ConnectionState.Disconnected;
@@ -76,6 +82,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   // Demo Recording
   private demoRecorder: DemoRecorder | null = null;
+  private configStringListener: ConfigStringListener | null = null;
 
   // Events
   public onConnectionStateChange?: (state: ConnectionState) => void;
@@ -112,6 +119,16 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   public setDemoRecorder(recorder: DemoRecorder) {
       this.demoRecorder = recorder;
+  }
+
+  /**
+   * Told of every configstring the server sends, after it is stored: the client parses it as
+   * CL_ParseConfigString does (models, sounds, images, light styles, skins, the CD track). Told
+   * to clear them on new server data and on disconnect, as CL_ClearState does, since a server
+   * sends only the configstrings it has set.
+   */
+  public setConfigStringListener(listener: ConfigStringListener | null) {
+    this.configStringListener = listener;
   }
 
   public setEffectSystem(system: ClientEffectSystem) {
@@ -160,6 +177,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   private cleanup(): void {
     this.configStrings.clear();
+    this.configStringListener?.clear();
     this.baselines.clear();
     this.entities.clear();
     this.commandHistory = [];
@@ -299,6 +317,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
       console.log(`Server Data: Protocol ${protocol}, Level ${levelName}`);
+      // CL_ClearState: a new server (or level) starts from no configstrings.
+      this.configStrings.clear();
+      this.configStringListener?.clear();
       this.serverProtocol = protocol;
       this.serverCount = serverCount;
       this.gameDir = gameDir;
@@ -320,6 +341,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onConfigString(index: number, str: string): void {
       this.configStrings.set(index, str);
+      this.configStringListener?.set(index, str);
   }
 
   onSpawnBaseline(entity: EntityState): void {

@@ -43,6 +43,20 @@ describe('MultiplayerConnection', () => {
         vi.restoreAllMocks();
     });
 
+    it('stores a configstring and tells the listener, as CL_ParseConfigString is called', () => {
+        const heard: [number, string][] = [];
+        let cleared = 0;
+        connection.setConfigStringListener({ set: (index, value) => heard.push([index, value]), clear: () => cleared++ });
+        connection.onConfigString(33, 'models/items/armor/tris.md2');
+        expect(connection.configStrings.get(33)).toBe('models/items/armor/tris.md2');
+        expect(heard).toEqual([[33, 'models/items/armor/tris.md2']]);
+
+        // CL_ClearState: new server data starts from none, so a slot the next server leaves empty is empty.
+        connection.onServerData(34, 1, 0, 'baseq2', 0, 'demo2');
+        expect(connection.configStrings.size).toBe(0);
+        expect(cleared).toBe(1);
+    });
+
     it('should initialize in disconnected state', () => {
         expect(connection.isConnected()).toBe(false);
         expect(connection.getPing()).toBe(0);
