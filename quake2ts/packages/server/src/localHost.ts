@@ -179,6 +179,11 @@ export class LocalHost {
     return i;
   }
 
+  /** The model name at an index ("maps/demo1.bsp", "*3", "models/monsters/soldier/tris.md2"), as CS_MODELS holds it. */
+  modelName(index: number): string | undefined {
+    return this.models[index] || undefined;
+  }
+
   soundIndex(name: string): number {
     let i = this.sounds.indexOf(name);
     if (i < 0) {

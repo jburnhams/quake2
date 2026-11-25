@@ -58,13 +58,13 @@ export function LabScreen<K extends string>(props: LabScreenProps<K>) {
   return (
     <div className="h-dvh">
       <Workspace label={title} state={workspace} narrowBelow={720}>
-        <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
+        <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
           <h1 className="type-label">{title}</h1>
           <p className="type-body-sm text-muted-foreground" aria-live="polite">
             {changed.length ? `${format.count(changed.length, noun)} changed: ${changed.join(', ')}` : unchanged}
           </p>
           <div className="ms-auto flex items-center gap-2">
-            <TextLink to="/">Explorer</TextLink>
+            <TextLink to="/explore">Explorer</TextLink>
             <ColorSchemeChoice compact />
           </div>
         </header>
@@ -100,7 +100,7 @@ export function LabScreen<K extends string>(props: LabScreenProps<K>) {
               isEmpty={(w) => w === null}
               empty={
                 <EmptyState title="demo1 is not open">
-                  The lab runs on {LAB_MAP}, from the demo PAK. Open a PAK that has it in the <TextLink to="/">explorer</TextLink>.
+                  The lab runs on {LAB_MAP}, from the demo PAK. Open a PAK that has it in the <TextLink to="/explore">explorer</TextLink>.
                 </EmptyState>
               }
             >

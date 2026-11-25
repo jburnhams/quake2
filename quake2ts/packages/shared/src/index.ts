@@ -15,6 +15,7 @@ export * from './protocol/contracts.js';
 export * from './pmove/types.js';
 export * from './pmove/constants.js';
 export * from './pmove/pmove.js';
+export * from './pmove/tuning.js';
 export * from './pmove/slide.js';
 export * from './pmove/stuck.js';
 export * from './pmove/currents.js';

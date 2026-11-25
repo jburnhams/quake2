@@ -82,4 +82,14 @@ describe('runPmove tuning', () => {
   it('keeps the defaults frozen', () => {
     expect(Object.isFrozen(DEFAULT_PMOVE_TUNING)).toBe(true);
   });
+
+  it('swims from rest at pm_wateraccelerate 10, as p_move.cpp PM_WaterMove does', () => {
+    // Under water everywhere, nothing to stand on: one 25 ms frame of full forward. PM_WaterMove
+    // halves the wished speed (300 -> 150), and PM_Accelerate adds 10 * 0.025 * 150 = 37.5.
+    const water = { trace: createTraceRunner(makeLeafModel([])), pointcontents: () => 32 /* CONTENTS_WATER */ };
+    const swimmer: PmoveState = { ...start, origin: { x: 0, y: 0, z: 500 }, waterlevel: 3, watertype: 32 };
+    expect(DEFAULT_PMOVE_TUNING.waterAccelerate).toBe(10);
+    const next = runPmove(swimmer, water);
+    expect(next.velocity.x).toBeCloseTo(37.5, 3);
+  });
 });

@@ -264,9 +264,15 @@ importers:
       '@quake2ts/formats':
         specifier: workspace:*
         version: link:../../packages/formats
+      '@quake2ts/server':
+        specifier: workspace:*
+        version: link:../../packages/server
       '@quake2ts/shared':
         specifier: workspace:*
         version: link:../../packages/shared
+      '@quake2ts/theme':
+        specifier: workspace:*
+        version: link:../../packages/theme
       '@tanstack/react-query':
         specifier: ^5.107.1
         version: 5.108.4(@types/react@19.3.0)(react@19.3.1)
@@ -777,6 +783,22 @@ importers:
         specifier: npm:@typescript/typescript6@^6.0.2
         version: '@typescript/typescript6@6.0.2'
 
+  packages/theme:
+    dependencies:
+      '@fontsource-variable/teko':
+        specifier: ^5.3.0
+        version: 5.3.0
+      '@fontsource/vt323':
+        specifier: ^5.3.0
+        version: 5.3.0
+      strata-react:
+        specifier: ^1.3.16
+        version: 1.3.16(@tanstack/react-query@5.108.4(@types/react@19.3.0)(react@19.3.1))(@testing-library/react@16.3.3(@testing-library/dom@10.4.2)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(@types/react@19.3.0)(msw@3.0.7(@types/node@26.6.6)(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(playwright@1.65.1)(react-dom@19.3.1(react@19.3.1))(react-router@8.5.2(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)(tailwindcss@4.3.5)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+    devDependencies:
+      vitest:
+        specifier: ^5.1.1
+        version: 5.1.1(@types/node@26.6.6)(jsdom@31.0.1(@napi-rs/canvas@1.2.0))(msw@3.0.7(@types/node@26.6.6)(typescript@6.0.3)(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15)))(vite@8.3.8(@types/node@26.6.6)(esbuild@0.28.2)(jiti@2.7.0)(tsx@4.23.15))
+
   packages/tools:
     devDependencies:
       '@quake2ts/engine':
@@ -1006,6 +1028,12 @@ packages:
 
   '@fontsource-variable/source-serif-4@5.3.1':
     resolution: {integrity: sha512-4Rtay22SC4lMvw11r/+9kxANB6P3M0X8s1NudBC2v0J1KU2y3DcMoNcT3lBoZ/CqLirzf+StlO6UlJilyrvaUg==}
+
+  '@fontsource-variable/teko@5.3.0':
+    resolution: {integrity: sha512-/Pq5z/kpf3QgAIjuGXRnSt9boC/jeIEsXtQnxfNlAov9mpwsznCZikofAuZMU8JCphWwjtZwugkvlq0iyq8Ywg==}
+
+  '@fontsource/vt323@5.3.0':
+    resolution: {integrity: sha512-3w33Rg/0+R1587HQfz4t7Q7e0GGeCqr3wmzIwqdGInUnrGEwMA5eX39GP4Z9wpTQnwfhVOhYuxuRwRUeIcicbw==}
 
   '@inquirer/ansi@2.1.1':
     resolution: {integrity: sha512-WwCc5T9554vU/M3W6mztOJvZK/5RgMwQsGlSZSZpKA/H2IfsTWIPdn1WiS8+HHjhe3H0IsmQCXUlDbvGM6vvuA==}
@@ -2903,6 +2931,10 @@ snapshots:
   '@fontsource-variable/jetbrains-mono@5.3.0': {}
 
   '@fontsource-variable/source-serif-4@5.3.1': {}
+
+  '@fontsource-variable/teko@5.3.0': {}
+
+  '@fontsource/vt323@5.3.0': {}
 
   '@inquirer/ansi@2.1.1': {}
 

@@ -31,5 +31,7 @@ jobs:
         run: pnpm --filter @quake2ts/explorer typecheck
       - name: Unit tests
         run: pnpm --filter @quake2ts/explorer test
+      - name: Theme palette (current, and every pair at its contrast)
+        run: pnpm --filter @quake2ts/theme test
       - name: Build
         run: pnpm --filter @quake2ts/explorer exec vite build

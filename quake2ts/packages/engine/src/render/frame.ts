@@ -1,7 +1,7 @@
 import type { BspMap } from '../assets/bsp.js';
 import { applySurfaceState, BspSurfacePipeline } from './bspPipeline.js';
 import { gatherVisibleFaces } from './bspTraversal.js';
-import { buildWorldDrawList, type WorldDraw, type WorldDrawSurface } from './worldDrawList.js';
+import { buildWorldDrawList, type BrushModelInstance, type WorldDraw, type WorldDrawSurface } from './worldDrawList.js';
 import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
 import { CameraState } from './types/camera.js';
@@ -89,6 +89,8 @@ interface FrameRenderOptions {
   readonly bloom?: boolean; // Enable bloom
   readonly bloomIntensity?: number; // Bloom intensity (default 0.5)
   readonly portalState?: ReadonlyArray<boolean>; // Portal visibility state
+  /** Doors, lifts and other brush-model entities, each drawn at its entity's position. */
+  readonly brushModels?: readonly BrushModelInstance[];
 
   // Injected matrices from adapter (internal use)
   readonly _viewMatrix?: mat4;
@@ -334,6 +336,7 @@ export const createFrameRenderer = (
         renderMode,
         disableLightmaps,
         hasTexture: (name) => Boolean(world.textures?.get(name)),
+        brushModels: options.brushModels,
         gatherVisibleFaces: deps.gatherVisibleFaces,
         extractFrustumPlanes: deps.extractFrustumPlanes,
       });
@@ -356,6 +359,7 @@ export const createFrameRenderer = (
             state = bspPipeline.bind({
               cameraState,
               modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
+              modelMatrix: draw.transform,
               styleIndices: draw.styleIndices,
               styleLayers: draw.styleLayers,
               styleValues: drawList.lightStyles,

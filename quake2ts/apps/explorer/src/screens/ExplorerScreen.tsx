@@ -6,6 +6,7 @@ import * as React from 'react';
 import {
   Alert,
   Button,
+  ButtonLink,
   ColorSchemeChoice,
   DataView,
   EmptyState,
@@ -23,6 +24,7 @@ import {
 } from 'strata-react';
 import { FolderOpen } from 'lucide-react';
 import { useDemoPak, useLibrary } from '../library/context';
+import { DemoProgress } from '../library/DemoProgress';
 import { FileTree } from '../files/FileTree';
 import { FileDetails } from '../files/FileDetails';
 import { NoFileChosen, Preview } from '../preview/Preview';
@@ -55,13 +57,16 @@ export function ExplorerScreen() {
   return (
     <div className="h-dvh">
       <Workspace label="Quake 2 explorer" state={workspace} narrowBelow={720}>
-        <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
+        <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
           <h1 className="type-label">Quake 2 explorer</h1>
           <p className="type-body-sm text-muted-foreground" aria-live="polite" data-version={version}>
             {summary}
           </p>
           <div className="ms-auto flex items-center gap-2">
             <TextLink to="/labs/movement">Movement lab</TextLink>
+            <ButtonLink to="/" size="sm" variant="ghost">
+              About quake2ts
+            </ButtonLink>
             <FileButton accept={['.pak']} multiple onFiles={openPaks} icon={FolderOpen} size="sm" variant="default">
               Open PAK files
             </FileButton>
@@ -114,10 +119,13 @@ export function ExplorerScreen() {
 
 function TreeSkeleton() {
   return (
-    <div className="grid gap-2 p-3" aria-hidden>
-      {Array.from({ length: 8 }, (_, i) => (
-        <Skeleton key={i} className="h-5 w-40" />
-      ))}
+    <div className="grid gap-2 p-3">
+      <DemoProgress />
+      <div className="grid gap-2" aria-hidden>
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="h-5 w-40" />
+        ))}
+      </div>
     </div>
   );
 }

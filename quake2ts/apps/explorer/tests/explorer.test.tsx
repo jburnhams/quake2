@@ -6,7 +6,7 @@ import { renderRoutes } from 'strata-react/testing';
 import { routes } from '../src/routes';
 import { demoPak, server } from './setup';
 
-const render = (route = '/') => renderRoutes(routes, { route, toasts: false });
+const render = (route = '/explore') => renderRoutes(routes, { route, toasts: false });
 
 describe('the explorer', () => {
   it('opens on the demo PAK and lists its folders', async () => {
@@ -18,7 +18,7 @@ describe('the explorer', () => {
   });
 
   it('shows a map from a link: its entities and where the file comes from', async () => {
-    const { router } = render('/?file=maps/demo1.bsp');
+    const { router } = render('/explore?file=maps/demo1.bsp');
     expect(await screen.findByText('Outer Base')).toBeInTheDocument();
     expect(screen.getByRole('grid', { name: 'Entities' })).toBeInTheDocument();
     const details = screen.getByRole('complementary', { name: 'demo1.bsp' });
@@ -32,7 +32,7 @@ describe('the explorer', () => {
   });
 
   it('opens a file chosen in the tree', async () => {
-    const { router } = render('/?open=pics%2F');
+    const { router } = render('/explore?open=pics%2F');
     const row = await screen.findByRole('row', { name: /colormap\.pcx/ });
     await userEvent.click(row);
     expect(router.state.location.search).toContain('file=pics%2Fcolormap.pcx');
@@ -55,7 +55,7 @@ describe('the explorer', () => {
   });
 
   it('mounts a second PAK above the first, which then wins its files', async () => {
-    render('/?file=default.cfg');
+    render('/explore?file=default.cfg');
     await screen.findByRole('treegrid', { name: 'Files' });
     const input = document.querySelector('input[type=file]') as HTMLInputElement;
     await userEvent.upload(input, new File([new Uint8Array(demoPak)], 'mod.pak'));

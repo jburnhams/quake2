@@ -32,9 +32,8 @@ struct SurfaceUniforms {
     lightmapOnly: u32,
     renderMode: u32, // 0: Texture, 1: Solid, 2: Faceted, 3: WorldPos Debug, 4: Distance Debug
     pad0: vec3<f32>,
-    // Workaround for worldPos offset bug: surface mins for correction
-    surfaceMins: vec3<f32>,
-    pad1: f32,
+    // Places a brush model (a door at its entity's position); identity for the world.
+    model: mat4x4<f32>,
 }
 
 @group(0) @binding(0) var<uniform> frame: FrameUniforms;
@@ -66,7 +65,7 @@ const OVERBRIGHT: f32 = 2.0;
 fn vertexMain(input: VertexInput) -> VertexOutput {
     var output: VertexOutput;
 
-    var pos = input.position;
+    var pos = (surface.model * vec4<f32>(input.position, 1.0)).xyz;
     var tex = input.texCoord;
     var lm = input.lightmapCoord;
 
@@ -99,13 +98,16 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
             base = textureSample(diffuseMap, diffuseSampler, input.texCoord);
         }
 
-        var totalLight = vec3<f32>(0.0, 0.0, 0.0);
+        // A surface without a lightmap (translucent glass, water) shows its texture at full
+        // light, as both original renderers draw it and as the WebGL backend does.
+        var totalLight = vec3<f32>(1.0, 1.0, 1.0);
 
         if (frame.fullbright != 0u) {
             totalLight = vec3<f32>(1.0, 1.0, 1.0);
         } else {
             // Apply Lightmaps
             if (surface.applyLightmap != 0u) {
+                totalLight = vec3<f32>(0.0, 0.0, 0.0);
                 var hasLight = false;
                 for (var i = 0; i < 4; i++) {
                     let layer = surface.styleLayerMapping[i];
@@ -126,24 +128,20 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
                 if (!hasLight) {
                     totalLight = vec3<f32>(1.0, 1.0, 1.0);
                 }
-            }
-            // A surface with no lightmap starts black here but full bright in WebGL; the shared
-            // draw list (docs/renderer-plan.md, phase 2) settles one rule for both.
 
-            // Apply Dynamic Lights
-            // worldPos is the vertex's world position. (An earlier "add surface mins" workaround
-            // compensated for every face sharing the last face's uniforms; that is fixed.)
-            let correctedWorldPos = input.worldPos;
-            for (var i = 0u; i < 32u; i++) {
-                if (i >= frame.numDlights) {
-                    break;
-                }
-                let dlight = frame.dlights[i];
-                let dist = distance(correctedWorldPos, dlight.position);
+                // Dynamic lights add to the lightmap, as R_AddDynamicLights does, so a surface
+                // without one (glass, water) is not lit by them, as in the WebGL backend.
+                for (var i = 0u; i < 32u; i++) {
+                    if (i >= frame.numDlights) {
+                        break;
+                    }
+                    let dlight = frame.dlights[i];
+                    let dist = distance(input.worldPos, dlight.position);
 
-                if (dist < dlight.intensity) {
-                    let contribution = (dlight.intensity - dist) * (1.0 / 255.0);
-                    totalLight += dlight.color * contribution;
+                    if (dist < dlight.intensity) {
+                        let contribution = (dlight.intensity - dist) * (1.0 / 255.0);
+                        totalLight += dlight.color * contribution;
+                    }
                 }
             }
         }

@@ -4,6 +4,7 @@ import { Camera } from '../../../src/render/camera.js';
 import { DLight } from '../../../src/render/dlight.js';
 import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
 
 // Helper to create test geometry
@@ -59,7 +60,9 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
         mins: { x: options.min[0], y: options.min[1], z: options.min[2] },
         maxs: { x: options.max[0], y: options.max[1], z: options.max[2] },
         texInfo: { texture: options.texture, flags: 0, value: 0, nextTexInfo: -1 },
-        lightmap: undefined
+        // A black lightmap, so what lights the wall is the dlights alone (dlights add to a
+        // lightmap, as R_AddDynamicLights does; a surface without one ignores them).
+        lightmap: { atlasIndex: 0 } as any
     };
 }
 
@@ -152,6 +155,12 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
     afterAll(lifecycle.cleanup);
 
+    const darkLightmap = () => {
+        const texture = new Texture2D(renderer.device, { width: 1, height: 1, format: 'rgba8unorm', label: 'dark-lightmap' });
+        texture.upload(new Uint8Array([0, 0, 0, 255]));
+        return { texture, width: 1, height: 1 };
+    };
+
     it('lighting-debug-original-coords.png', async () => {
         // Wall at X=200, Y∈[-200,200], Z∈[-100,300]
         // Center of wall is at (200, 0, 100)
@@ -175,9 +184,8 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0
@@ -221,9 +229,8 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0
@@ -262,9 +269,8 @@ describe('WebGPU Lighting Debug - Original Coordinates', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0

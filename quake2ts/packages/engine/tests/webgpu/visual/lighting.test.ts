@@ -77,7 +77,9 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
             value: 0,
             nextTexInfo: -1
         },
-        lightmap: undefined
+        // A black lightmap, so what lights the wall is the dlights alone (dlights add to a
+        // lightmap, as R_AddDynamicLights does; a surface without one ignores them).
+        lightmap: { atlasIndex: 0 } as any
     };
 }
 
@@ -175,6 +177,12 @@ describe('WebGPU Lighting', () => {
         } as unknown as BspMap;
     };
 
+    const darkLightmap = () => {
+        const texture = new Texture2D(renderer.device, { width: 1, height: 1, format: 'rgba8unorm', label: 'dark-lightmap' });
+        texture.upload(new Uint8Array([0, 0, 0, 255]));
+        return { texture, width: 1, height: 1 };
+    };
+
     it('lighting-point.png', async () => {
         // Wall at X=200. Larger size 400x400 to ensure full screen coverage.
         const wall = createTestBspGeometry({
@@ -199,9 +207,8 @@ describe('WebGPU Lighting', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0
@@ -256,9 +263,8 @@ describe('WebGPU Lighting', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0
@@ -308,9 +314,8 @@ describe('WebGPU Lighting', () => {
 
         renderer.renderFrame({
             camera: cam,
-            world: { map, surfaces: [floor] },
+            world: { map, surfaces: [floor], lightmaps: [darkLightmap()] } as any,
             dlights,
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.0,
             timeSeconds: 0

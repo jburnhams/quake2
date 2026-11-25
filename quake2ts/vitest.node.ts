@@ -30,6 +30,7 @@ export default defineConfig({
       'packages/server/tests/**/*.test.ts',
       'packages/shared/tests/**/*.test.ts',
       'packages/strata-*/tests/**/*.test.ts',
+      'packages/theme/tests/**/*.test.ts',
       'packages/formats/tests/**/*.test.ts',
       'packages/test-utils/tests/**/*.test.ts',
       'packages/cgame/tests/unit-node/**/*.test.ts',

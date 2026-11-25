@@ -3,6 +3,7 @@ import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { Camera } from '../../../src/render/camera.js';
 import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
 
 /**
@@ -60,7 +61,8 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
         mins: { x: options.min[0], y: options.min[1], z: options.min[2] },
         maxs: { x: options.max[0], y: options.max[1], z: options.max[2] },
         texInfo: { texture: options.texture, flags: 0, value: 0, nextTexInfo: -1 },
-        lightmap: undefined
+        // A black lightmap: dlights add to a lightmap (R_AddDynamicLights), so the wall needs one.
+        lightmap: { atlasIndex: 0 } as any
     };
 }
 
@@ -119,6 +121,12 @@ describe('WorldPos Debug Visualization', () => {
 
     afterAll(lifecycle.cleanup);
 
+    const darkLightmap = () => {
+        const texture = new Texture2D(renderer.device, { width: 1, height: 1, format: 'rgba8unorm', label: 'dark-lightmap' });
+        texture.upload(new Uint8Array([0, 0, 0, 255]));
+        return { texture, width: 1, height: 1 };
+    };
+
     it('worldpos-debug-faceted-mode.png', async () => {
         // Use faceted mode which shows surface normals - this helps visualize the geometry
         // even without dynamic lights
@@ -133,9 +141,8 @@ describe('WorldPos Debug Visualization', () => {
         // Render in faceted mode to visualize the geometry
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [],  // No dynamic lights
-            disableLightmaps: true,
             fullbright: true,  // Fullbright to see geometry clearly
             ambient: 1.0,
             timeSeconds: 0,
@@ -167,14 +174,13 @@ describe('WorldPos Debug Visualization', () => {
         // This helps visualize the distance falloff pattern
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [{
                 origin: { x: 180, y: 0, z: 100 },  // Should be at center
                 color: { x: 1, y: 0, z: 0 },
                 intensity: 500,  // Very large to illuminate everything
                 die: 0
             }],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.05,  // Low ambient to see light pattern clearly
             timeSeconds: 0
@@ -205,14 +211,13 @@ describe('WorldPos Debug Visualization', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [{
                 origin: { x: 0, y: 0, z: 0 },  // Light at world origin
                 color: { x: 0, y: 1, z: 0 },  // Green
                 intensity: 500,  // Higher intensity to reach distant wall
                 die: 0
             }],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.05,
             timeSeconds: 0

@@ -1,4 +1,5 @@
 import { FrameRenderOptions, WorldRenderState } from './frame.js';
+import type { PreparedModels } from './prepareModels.js';
 import type { PreparedWorld } from './prepareWorld.js';
 import { RenderableEntity } from './scene.js';
 import { CollisionVisRenderer } from './collisionVis.js';
@@ -52,6 +53,12 @@ export interface IRenderer {
    * returns the state to pass as `world` to renderFrame.
    */
   uploadWorld(world: PreparedWorld): WorldRenderState;
+
+  /**
+   * Uploads the skins of models made by prepareModels into a world's textures, where both
+   * backends look up an MD2 entity's `skin`.
+   */
+  uploadModels(world: WorldRenderState, models: PreparedModels): void;
 
   renderFrame(
     options: FrameRenderOptions,
