@@ -305,6 +305,8 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.gameDir = gameDir;
       this.playerNum = playerNum;
       this.levelName = levelName;
+      // CL_ParseServerData begins with CL_ClearState: a new server numbers its frames afresh.
+      this.prediction?.reset();
 
       this.setState(ConnectionState.Connected);
 
