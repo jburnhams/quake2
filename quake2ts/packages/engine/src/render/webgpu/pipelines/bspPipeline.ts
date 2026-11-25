@@ -62,6 +62,9 @@ export interface SurfaceRenderState {
   readonly sky: boolean;
 }
 
+/** One draw's surface uniforms; 256 is WebGPU's minUniformBufferOffsetAlignment default. */
+const SURFACE_SLOT_BYTES = 256;
+
 const DEFAULT_STYLE_INDICES: readonly number[] = [0, 255, 255, 255];
 const DEFAULT_STYLE_LAYERS: readonly number[] = [0, -1, -1, -1];
 
@@ -118,7 +121,14 @@ export class BspSurfacePipeline {
   private pipeline!: GPURenderPipeline;
   private pipelineWireframe!: GPURenderPipeline;
   private frameUniformBuffer: GPUBuffer;
+  // Per-draw surface uniforms live in one buffer, one 256-byte slot per draw, bound with a
+  // dynamic offset. queue.writeBuffer runs before the pass executes, so a single slot rewritten
+  // per draw would leave every draw with the last surface's values.
   private surfaceUniformBuffer: GPUBuffer;
+  private surfaceBindGroup!: GPUBindGroup;
+  private surfaceSlotCapacity = 1024;
+  private surfaceSlot = 0;
+  private textureBindGroups = new WeakMap<GPUTextureView, WeakMap<GPUTextureView, WeakMap<GPUSampler, GPUBindGroup>>>();
   private frameBindGroup!: GPUBindGroup;
   private frameBindGroupLayout: GPUBindGroupLayout;
   private surfaceBindGroupLayout: GPUBindGroupLayout;
@@ -129,9 +139,9 @@ export class BspSurfacePipeline {
   private defaultWhiteTexture: Texture2D;
   private defaultSampler: Sampler;
   private defaultBindGroup: GPUBindGroup;
+  private defaultWhiteView!: GPUTextureView;
 
   // Cache for texture bind groups
-  private textureBindGroupCache: Map<string, GPUBindGroup> = new Map();
 
   constructor(device: GPUDevice, format: GPUTextureFormat, depthFormat: GPUTextureFormat) {
     this.device = device;
@@ -149,7 +159,7 @@ export class BspSurfacePipeline {
     });
 
     this.surfaceUniformBuffer = device.createBuffer({
-      size: surfaceBufferSize,
+      size: surfaceBufferSize * this.surfaceSlotCapacity,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
 
@@ -159,7 +169,11 @@ export class BspSurfacePipeline {
     });
 
     this.surfaceBindGroupLayout = device.createBindGroupLayout({
-      entries: [{ binding: 0, visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT, buffer: { type: 'uniform' } }],
+      entries: [{
+        binding: 0,
+        visibility: GPUShaderStage.VERTEX | GPUShaderStage.FRAGMENT,
+        buffer: { type: 'uniform', hasDynamicOffset: true, minBindingSize: SURFACE_SLOT_BYTES },
+      }],
     });
 
     this.textureBindGroupLayout = device.createBindGroupLayout({
@@ -180,6 +194,7 @@ export class BspSurfacePipeline {
         label: 'bsp-default-white'
     });
     this.defaultWhiteTexture.upload(new Uint8Array([255, 255, 255, 255]));
+    this.defaultWhiteView = this.defaultWhiteTexture.createView();
 
     // Create default bind group
     this.defaultBindGroup = device.createBindGroup({
@@ -199,6 +214,55 @@ export class BspSurfacePipeline {
       layout: this.frameBindGroupLayout,
       entries: [{ binding: 0, resource: { buffer: this.frameUniformBuffer } }],
     });
+    this.surfaceBindGroup = this.createSurfaceBindGroup();
+  }
+
+  private createSurfaceBindGroup(): GPUBindGroup {
+    return this.device.createBindGroup({
+      layout: this.surfaceBindGroupLayout,
+      entries: [{ binding: 0, resource: { buffer: this.surfaceUniformBuffer, size: SURFACE_SLOT_BYTES } }],
+    });
+  }
+
+  /** Starts a frame: surface uniform slots are reused from the start. */
+  beginFrame(): void {
+    this.surfaceSlot = 0;
+  }
+
+  /** Takes the next per-draw uniform slot, growing the buffer when a frame needs more draws. */
+  private takeSurfaceSlot(): number {
+    if (this.surfaceSlot >= this.surfaceSlotCapacity) {
+      // Earlier draws in this frame still reference the old buffer, so it is left to be
+      // collected rather than destroyed. Slots already written there stay valid.
+      this.surfaceSlotCapacity *= 2;
+      this.surfaceUniformBuffer = this.device.createBuffer({
+        size: SURFACE_SLOT_BYTES * this.surfaceSlotCapacity,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this.surfaceBindGroup = this.createSurfaceBindGroup();
+    }
+    return this.surfaceSlot++;
+  }
+
+  private textureBindGroup(diffuse: GPUTextureView, diffuseSampler: GPUSampler, lightmap: GPUTextureView, lightmapSampler: GPUSampler): GPUBindGroup {
+    let byLightmap = this.textureBindGroups.get(diffuse);
+    if (!byLightmap) this.textureBindGroups.set(diffuse, (byLightmap = new WeakMap()));
+    let bySampler = byLightmap.get(lightmap);
+    if (!bySampler) byLightmap.set(lightmap, (bySampler = new WeakMap()));
+    let group = bySampler.get(diffuseSampler);
+    if (!group) {
+      group = this.device.createBindGroup({
+        layout: this.textureBindGroupLayout,
+        entries: [
+          { binding: 0, resource: diffuse },
+          { binding: 1, resource: diffuseSampler },
+          { binding: 2, resource: lightmap },
+          { binding: 3, resource: lightmapSampler },
+        ],
+      });
+      bySampler.set(diffuseSampler, group);
+    }
+    return group;
   }
 
   private createPipelines(format: GPUTextureFormat, depthFormat: GPUTextureFormat) {
@@ -256,7 +320,11 @@ export class BspSurfacePipeline {
       },
       primitive: {
         topology: 'triangle-list',
-        cullMode: 'back', // Quake 2 is usually back-face culled
+        // No culling, matching the WebGL backend. On demo1, frontFace 'cw' with back culling
+        // gives the identical image (BSP faces wind clockwise seen from the front), but the
+        // synthetic pipeline tests draw counter-clockwise quads; culling comes with the shared
+        // draw list, where both backends get it at once.
+        cullMode: 'none',
       },
       depthStencil: {
         format: depthFormat,
@@ -407,7 +475,7 @@ export class BspSurfacePipeline {
     surfaceData[16] = finalAlpha;
 
     const surfaceUint = new Uint32Array(surfaceData.buffer);
-    const applyLightmap = !state.sky && lightmapSampler !== undefined && !finalWarp;
+    const applyLightmap = !state.sky && lightmapTexture !== undefined && !finalWarp;
     surfaceUint[17] = applyLightmap ? 1 : 0;
     surfaceUint[18] = finalWarp ? 1 : 0;
     surfaceUint[19] = lightmapOnly ? 1 : 0;
@@ -421,28 +489,19 @@ export class BspSurfacePipeline {
     surfaceData[29] = surfaceMins.y;
     surfaceData[30] = surfaceMins.z;
 
-    this.device.queue.writeBuffer(this.surfaceUniformBuffer, 0, surfaceData);
+    const slot = this.takeSurfaceSlot();
+    this.device.queue.writeBuffer(this.surfaceUniformBuffer, slot * SURFACE_SLOT_BYTES, surfaceData);
 
-    // Create Surface Bind Group (Ephemeral)
-    const surfaceBindGroup = this.device.createBindGroup({
-      layout: this.surfaceBindGroupLayout,
-      entries: [{ binding: 0, resource: { buffer: this.surfaceUniformBuffer } }],
-    });
-
-    // Texture Bind Group
-    if (diffuseTexture && diffuseSampler && lightmapTexture && lightmapSampler) {
-        const textureBindGroup = this.device.createBindGroup({
-            layout: this.textureBindGroupLayout,
-            entries: [
-                { binding: 0, resource: diffuseTexture },
-                { binding: 1, resource: diffuseSampler },
-                { binding: 2, resource: lightmapTexture },
-                { binding: 3, resource: lightmapSampler },
-            ]
-        });
-        passEncoder.setBindGroup(2, textureBindGroup);
+    // Texture bind group: a missing diffuse or lightmap falls back to white, so a lightmapped
+    // surface whose texture failed to load still shows its light, and the reverse.
+    if (diffuseTexture || lightmapTexture) {
+        passEncoder.setBindGroup(2, this.textureBindGroup(
+            diffuseTexture ?? this.defaultWhiteView,
+            diffuseSampler ?? this.defaultSampler.sampler,
+            lightmapTexture ?? this.defaultWhiteView,
+            lightmapSampler ?? this.defaultSampler.sampler,
+        ));
     } else {
-        // Fallback to default bind group if textures are missing
         passEncoder.setBindGroup(2, this.defaultBindGroup);
     }
 
@@ -450,7 +509,7 @@ export class BspSurfacePipeline {
     const pipeline = (renderMode && renderMode.mode === 'wireframe') ? this.pipelineWireframe : this.pipeline;
     passEncoder.setPipeline(pipeline);
     passEncoder.setBindGroup(0, this.frameBindGroup);
-    passEncoder.setBindGroup(1, surfaceBindGroup);
+    passEncoder.setBindGroup(1, this.surfaceBindGroup, [slot * SURFACE_SLOT_BYTES]);
 
     return state;
   }

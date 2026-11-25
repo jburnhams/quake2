@@ -1,4 +1,5 @@
-import { Texture2D, TextureCubeMap, createLinearSampler } from './resources.js';
+import { Texture2D, TextureCubeMap, createLinearSampler, Sampler } from './resources.js';
+import type { Texture2D as GpuTexture2D } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
@@ -55,6 +56,7 @@ export interface WorldRenderState {
   readonly map: BspMap;
   readonly surfaces: readonly BspSurfaceGeometry[];
   readonly textures?: ReadonlyMap<string, Texture2D>;
+  readonly lightmaps?: ReadonlyArray<{ readonly texture: Texture2D }>;
   readonly materials?: MaterialManager;
   readonly lightStyles?: ReadonlyArray<number>;
 }
@@ -104,6 +106,16 @@ export class FrameRenderer {
   // Separate texture for headless output if no context exists
   public headlessTarget: GPUTexture | null = null;
   private sampler: GPUSampler;
+  private repeatSampler: GPUSampler;
+  private clampSampler: GPUSampler;
+  private views = new WeakMap<GpuTexture2D, GPUTextureView>();
+
+  /** One view per texture, so bind groups can be cached by view. */
+  private viewOf(texture: GpuTexture2D): GPUTextureView {
+    let view = this.views.get(texture);
+    if (!view) this.views.set(texture, (view = texture.createView()));
+    return view;
+  }
 
   private lastWidth = 0;
   private lastHeight = 0;
@@ -124,6 +136,14 @@ export class FrameRenderer {
     }
   ) {
       this.sampler = createLinearSampler(this.context.device).sampler;
+      this.repeatSampler = new Sampler(this.context.device, {
+        minFilter: 'linear', magFilter: 'linear', mipmapFilter: 'linear',
+        addressModeU: 'repeat', addressModeV: 'repeat', label: 'world-diffuse-sampler',
+      }).sampler;
+      this.clampSampler = new Sampler(this.context.device, {
+        minFilter: 'linear', magFilter: 'linear',
+        addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', label: 'world-lightmap-sampler',
+      }).sampler;
   }
 
   private ensureIntermediateTexture(width: number, height: number): GPUTextureView {
@@ -273,6 +293,7 @@ export class FrameRenderer {
     };
 
     const frameCtx = this.beginFrame();
+    this.pipelines.bsp.beginFrame();
     this.currentFrameContext = frameCtx; // Store for 2D rendering
     const { commandEncoder, renderTarget, depthTexture } = frameCtx;
     const {
@@ -385,18 +406,22 @@ export class FrameRenderer {
 
                   const faceStyles = world.map.faces[faceIndex]?.styles;
 
-                  // Resolve Textures (Simplified for WebGPU POC)
-                  // const diffuse = world.textures?.get(geometry.texture);
+                  // world.textures and world.lightmaps hold WebGPU Texture2Ds when the world came
+                  // from WebGPURenderer.uploadWorld.
+                  const diffuse = (world.materials?.getMaterial(geometry.texture)?.texture ?? world.textures?.get(geometry.texture)) as unknown as GpuTexture2D | undefined;
+                  const atlasIndex = geometry.lightmap?.atlasIndex;
+                  const lightmap = atlasIndex !== undefined ? (world.lightmaps?.[atlasIndex]?.texture as unknown as GpuTexture2D | undefined) : undefined;
 
                   const baseBindOptions = {
                       styleIndices: faceStyles,
+                      styleLayers: geometry.styleLayers,
                       styleValues: lightStyles,
                       surfaceFlags: geometry.surfaceFlags,
                       timeSeconds,
-                      // diffuseTexture: diffuse?.gpuTexture.createView(), // Need view
-                      // diffuseSampler: ...
-                      // lightmapTexture: ...
-                      // lightmapSampler: ...
+                      diffuseTexture: diffuse ? this.viewOf(diffuse) : undefined,
+                      diffuseSampler: this.repeatSampler,
+                      lightmapTexture: lightmap ? this.viewOf(lightmap) : undefined,
+                      lightmapSampler: this.clampSampler,
                       dlights,
                       renderMode,
                       lightmapOnly,

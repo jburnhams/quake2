@@ -224,6 +224,12 @@ void main() {
       // Apply ambient minimum
       totalLight = max(totalLight, vec3(u_ambient));
 
+      // Overbright: Quake 2 lightmaps store half intensity, and both original renderers
+      // double them (ref_soft's light shift, ref_gl's gl_modulate/intensity).
+      if (!u_fullbright) {
+        totalLight *= 2.0;
+      }
+
       // Apply brightness
       totalLight *= u_brightness;
 

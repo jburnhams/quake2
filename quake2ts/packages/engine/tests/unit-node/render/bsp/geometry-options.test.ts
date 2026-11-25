@@ -82,11 +82,11 @@ describe('buildBspGeometry', () => {
       hiddenClassnames: new Set(['func_hide_me'])
     });
 
-    // Expecting 3 surfaces to remain (0, 2, 3)
-    expect(result.surfaces.length).toBe(3);
-
-    expect(result.surfaces[0].texture).toBe('tex1');
-    expect(result.surfaces[1].texture).toBe('tex3');
-    expect(result.surfaces[2].texture).toBe('tex3');
+    // Surfaces stay at their BSP face numbers (the frame renderers look them up that way),
+    // so the hidden face 1 is a hole rather than shifting faces 2 and 3 down.
+    expect(result.surfaces[0]?.texture).toBe('tex1');
+    expect(result.surfaces[1]).toBeUndefined();
+    expect(result.surfaces[2]?.texture).toBe('tex3');
+    expect(result.surfaces[3]?.texture).toBe('tex3');
   });
 });

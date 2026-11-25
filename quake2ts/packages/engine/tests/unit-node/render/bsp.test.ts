@@ -19,6 +19,7 @@ describe('buildBspGeometry', () => {
         textureCoords: [0, 0, 1, 0, 1, 1, 0, 1],
         lightmapCoords: [0, 0, 1, 0, 1, 1, 0, 1],
         texture: 'stone',
+        faceIndex: 0,
         lightmap: { width: 4, height: 4, samples: makeLightmap(4, 4) },
       },
       {
@@ -26,6 +27,7 @@ describe('buildBspGeometry', () => {
         textureCoords: [0, 0, 2, 0, 2, 2, 0, 2],
         lightmapCoords: [0, 0, 1, 0, 1, 1, 0, 1],
         texture: 'metal',
+        faceIndex: 1,
         lightmap: { width: 4, height: 4, samples: makeLightmap(4, 4, 100) },
       },
     ];
@@ -62,6 +64,7 @@ describe('buildBspGeometry', () => {
       textureCoords: [0, 0, 1, 0, 0, 1],
       lightmapCoords: [0, 0, 1, 0, 0, 1],
       texture: 'lava',
+      faceIndex: 0,
       indices: [0, 1, 2],
       lightmap: { width: 2, height: 2, samples: makeLightmap(2, 2) },
     };

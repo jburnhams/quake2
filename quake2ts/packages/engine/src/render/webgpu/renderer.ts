@@ -24,7 +24,8 @@ import { parseColorString } from '../colors.js';
 import { BspSurfaceGeometry } from '../bsp.js';
 import { cullLights } from '../lightCulling.js';
 import { extractFrustumPlanes } from '../culling.js';
-import { FrameRenderOptions } from '../frame.js'; // Shared interface
+import { FrameRenderOptions, WorldRenderState } from '../frame.js'; // Shared interface
+import type { PreparedWorld } from '../prepareWorld.js';
 import { WebGPUProfiler, ProfilingResourceTracker } from './profiling.js';
 
 // WebGPU-specific renderer interface
@@ -42,6 +43,9 @@ export interface WebGPURenderer extends IWebGPURenderer {
 
   // Helper methods to upload geometry
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void;
+
+  /** Uploads a prepared world (prepareWorld) and returns the state renderFrame draws. */
+  uploadWorld(world: PreparedWorld): WorldRenderState;
 }
 
 export class WebGPURendererImpl implements WebGPURenderer {
@@ -174,6 +178,46 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
   // Geometry Management
   // =========================================================================
+
+  uploadWorld(world: PreparedWorld): WorldRenderState {
+    // The WebGPU frame renderer reads only the CPU fields of a surface plus the GPU buffers
+    // added here, so packed surfaces stand in for WebGL's BspSurfaceGeometry (which also
+    // carries a VAO). The draw-list rework replaces this shared type.
+    const surfaces: BspSurfaceGeometry[] = [];
+    world.geometry.surfaces.forEach((surface, faceIndex) => {
+      if (surface) surfaces[faceIndex] = { ...surface } as unknown as BspSurfaceGeometry;
+    });
+    this.uploadBspGeometry(surfaces.filter(Boolean));
+
+    const lightmaps = world.geometry.lightmaps.map((atlas) => {
+      const texture = new Texture2D(this.device, { width: atlas.width, height: atlas.height, format: 'rgba8unorm', label: 'lightmap-atlas' });
+      texture.upload(atlas.pixels as unknown as BufferSource);
+      return { texture, width: atlas.width, height: atlas.height, pixels: atlas.pixels };
+    });
+
+    const textures = new Map<string, Texture2D>();
+    for (const [name, prepared] of world.textures) {
+      const texture = new Texture2D(this.device, {
+        width: prepared.width,
+        height: prepared.height,
+        format: 'rgba8unorm',
+        mipLevelCount: prepared.levels.length,
+        label: `world-${name}`,
+      });
+      for (const level of prepared.levels) {
+        texture.upload(level.rgba as unknown as BufferSource, { mipLevel: level.level, width: level.width, height: level.height });
+      }
+      textures.set(name, texture);
+    }
+
+    return {
+      map: world.map,
+      surfaces,
+      lightmaps: lightmaps as unknown as WorldRenderState['lightmaps'],
+      textures: textures as unknown as WorldRenderState['textures'],
+      lightStyles: world.lightStyles,
+    };
+  }
 
   uploadBspGeometry(surfaces: readonly BspSurfaceGeometry[]): void {
       for (const surface of surfaces) {

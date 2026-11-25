@@ -1,4 +1,5 @@
 import { FrameRenderOptions, WorldRenderState } from './frame.js';
+import type { PreparedWorld } from './prepareWorld.js';
 import { RenderableEntity } from './scene.js';
 import { CollisionVisRenderer } from './collisionVis.js';
 import { DebugRenderer } from './debug.js';
@@ -45,6 +46,12 @@ export interface IRenderer {
 
   getPerformanceReport(): RenderStatistics;
   getMemoryUsage(): MemoryUsage;
+
+  /**
+   * Uploads a world made by prepareWorld (GPU-free, so the same data feeds every backend) and
+   * returns the state to pass as `world` to renderFrame.
+   */
+  uploadWorld(world: PreparedWorld): WorldRenderState;
 
   renderFrame(
     options: FrameRenderOptions,
