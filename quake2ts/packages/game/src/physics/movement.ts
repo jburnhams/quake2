@@ -25,83 +25,6 @@ const OVERBOUNCE_BOUNCE = 1.6;
 const OVERBOUNCE_WALLBOUNCE = 2.0;
 
 /**
- * Runs gravity for an entity.
- * Handles normal gravity and water movement physics.
- * @see G_RunObject in g_phys.c
- */
-export function runGravity(ent: Entity, gravity: Vec3, frametime: number): void {
-  if (ent.movetype === MoveType.Toss || ent.movetype === MoveType.Bounce || ent.movetype === MoveType.WallBounce) {
-    if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
-    if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
-
-    if (ent.waterlevel > 1) {
-      // Water physics: apply friction and reduced gravity
-      const speed = Math.sqrt(ent.velocity.x * ent.velocity.x + ent.velocity.y * ent.velocity.y + ent.velocity.z * ent.velocity.z);
-      if (speed > 1) {
-        const newspeed = speed - frametime * speed * WATER_FRICTION;
-        if (newspeed < 0) {
-            ent.velocity = { x: 0, y: 0, z: 0 };
-        } else {
-            const scale = newspeed / speed;
-            ent.velocity = scaleVec3(ent.velocity, scale);
-        }
-      }
-
-      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime * WATER_GRAVITY_SCALE));
-      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
-    } else {
-      ent.velocity = addVec3(ent.velocity, scaleVec3(gravity, ent.gravity * frametime));
-      ent.origin = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
-    }
-  }
-}
-
-/**
- * Handles movement for bouncing entities (grenades, gibs).
- * @see SV_Physics_Toss in sv_phys.c
- */
-export function runBouncing(ent: Entity, system: EntitySystem, imports: GameImports, frametime: number): void {
-  if (ent.movetype !== MoveType.Bounce && ent.movetype !== MoveType.WallBounce) {
-    return;
-  }
-
-  if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
-  if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
-
-  const end = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
-  const traceResult = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);
-
-  if (traceResult.fraction < 1.0) {
-    ent.origin = traceResult.endpos;
-    if (traceResult.ent) {
-      resolveImpact(ent, traceResult, system);
-    } else {
-      // Hit world
-      if (ent.touch) {
-        const surf = traceResult.surfaceFlags ? { name: '', flags: traceResult.surfaceFlags, value: 0 } : null;
-        ent.touch(ent, system.world, traceResult.plane, surf);
-      }
-    }
-  }
-
-  if (traceResult.fraction > 0 && traceResult.fraction < 1 && traceResult.plane) {
-    // Determine overbounce factor based on movement type
-    let overbounce = OVERBOUNCE_BOUNCE;
-    if (ent.movetype === MoveType.WallBounce) {
-      overbounce = OVERBOUNCE_WALLBOUNCE;
-    }
-
-    const clipped = clipVelocityVec3(ent.velocity, traceResult.plane.normal, overbounce);
-    ent.velocity = clipped;
-
-    // WallBounce also updates angles to face the new direction
-    if (ent.movetype === MoveType.WallBounce) {
-      ent.angles = vectorToAngles(ent.velocity);
-    }
-  }
-}
-
-/**
  * Handles step movement for monsters.
  * Moves with collision sliding.
  * @see SV_Physics_Step in sv_phys.c
@@ -196,24 +119,6 @@ export function runStep(
 
   checkTriggers(ent, system);
   CheckGround(ent, system);
-}
-
-/**
- * Runs projectile movement.
- * @see SV_Physics_Toss in sv_phys.c (for projectiles)
- */
-export function runProjectileMovement(ent: Entity, imports: GameImports, frametime: number): void {
-  if (ent.movetype !== MoveType.FlyMissile) {
-    return;
-  }
-
-  if (!ent.velocity) ent.velocity = { x: 0, y: 0, z: 0 };
-  if (!ent.origin) ent.origin = { x: 0, y: 0, z: 0 };
-
-  const end = addVec3(ent.origin, scaleVec3(ent.velocity, frametime));
-  const traceResult = imports.trace(ent.origin, ent.mins, ent.maxs, end, ent, ent.clipmask);
-
-  ent.origin = traceResult.endpos;
 }
 
 function testEntityPosition(ent: Entity, imports: GameImports): boolean {

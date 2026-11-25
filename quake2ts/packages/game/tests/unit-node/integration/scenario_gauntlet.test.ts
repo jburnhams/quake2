@@ -72,7 +72,7 @@ describe('Scenario 2: Combat Gauntlet', () => {
           contents: result.contents || 0,
           allsolid: result.allsolid,
           startsolid: result.startsolid,
-          ent: result.entityId ? game.entities.get(result.entityId) : null
+          ent: result.entityId ? game.entities.getByIndex(result.entityId) ?? null : null
         };
       },
       pointcontents: (point) => {

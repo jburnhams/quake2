@@ -17,7 +17,8 @@ import {
   spawnEntity,
   createEntityFactory
 } from '@quake2ts/test-utils';
-import { runProjectileMovement, runPush, runGravity } from '../../../src/physics/movement.js';
+import { runPush } from '../../../src/physics/movement.js';
+import { SV_Physics_Toss } from '../../../src/physics/toss.js';
 import { Entity, MoveType, Solid } from '../../../src/entities/entity.js';
 import { GameImports, GameTraceResult } from '../../../src/imports.js';
 import { EntitySystem } from '../../../src/entities/system.js';
@@ -103,7 +104,8 @@ describe('Physics Integration Tests', () => {
     const model = makeLeafModel([wall]);
 
     // Wire up trace
-    imports.trace = createTraceDelegate(model);
+    // Through the entity system's trace, as the physics uses it.
+    (imports.trace as any).mockImplementation(createTraceDelegate(model));
 
     // Create projectile
     const proj = spawnEntity(system, createEntityFactory({
@@ -115,27 +117,22 @@ describe('Physics Integration Tests', () => {
       clipmask: MASK_SHOT, // Ensure it hits solid
     }));
 
-    // Time to impact: distance 100 / speed 200 = 0.5s.
-    // Run for 0.6s
-    const frametime = 0.1;
+    // Time to impact: distance 100 / speed 200 = 0.5s, at 25 ms a frame.
+    system.beginFrame(0.025);
+    const frametime = system.frameTimeSeconds;
+    expect(frametime).toBeCloseTo(0.025, 5);
     let hit = false;
 
-    for (let i = 0; i < 6; i++) {
+    for (let i = 0; i < 30; i++) {
         const oldX = proj.origin.x;
-        runProjectileMovement(proj, imports, frametime);
-
-        // If we hit the wall, runProjectileMovement sets origin to impact point.
-        // It does NOT stop velocity automatically (that's handled by touch function usually),
-        // but it should clamp position.
-
-        // If we moved less than expected (velocity * frametime), we hit something
-        const expectedMove = proj.velocity.x * frametime;
+        SV_Physics_Toss(proj, system, 0);
+        const expectedMove = 200 * frametime;
         const actualMove = proj.origin.x - oldX;
 
         if (actualMove < expectedMove - 0.01) {
             hit = true;
-            // Should be at x=100 (minus epsilon)
-            expect(proj.origin.x).toBeCloseTo(100, 0); // Precision might vary due to epsilon
+            // SV_PushEntity leaves it half a unit off the wall face.
+            expect(proj.origin.x).toBeCloseTo(99.5, 1);
             break;
         }
     }

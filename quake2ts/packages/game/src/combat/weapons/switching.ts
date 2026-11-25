@@ -103,18 +103,43 @@ export function ChangeWeapon(ent: Entity, weaponId?: WeaponId) {
     }
 }
 
-/**
- * Auto-Switch on Empty Ammo
- * Source: p_weapon.cpp: NoAmmoWeaponChange
- */
-export function NoAmmoWeaponChange(ent: Entity) {
-    if (!ent.client) return;
+/** The rerelease's no_ammo_order: the first owned weapon with a shot's ammo is switched to. */
+const NO_AMMO_ORDER: readonly [WeaponId, AmmoType | null, number][] = [
+    [WeaponId.Disruptor, AmmoType.Rounds, 1],
+    [WeaponId.Railgun, AmmoType.Slugs, 1],
+    [WeaponId.PlasmaBeam, AmmoType.Cells, 1],
+    [WeaponId.IonRipper, AmmoType.Cells, 1],
+    [WeaponId.HyperBlaster, AmmoType.Cells, 1],
+    [WeaponId.EtfRifle, AmmoType.Flechettes, 1],
+    [WeaponId.Chaingun, AmmoType.Bullets, 1],
+    [WeaponId.Machinegun, AmmoType.Bullets, 1],
+    [WeaponId.SuperShotgun, AmmoType.Shells, 2],
+    [WeaponId.Shotgun, AmmoType.Shells, 1],
+    [WeaponId.Phalanx, AmmoType.MagSlugs, 1],
+    [WeaponId.RocketLauncher, AmmoType.Rockets, 1],
+    [WeaponId.GrenadeLauncher, AmmoType.Grenades, 1],
+    [WeaponId.ProxLauncher, AmmoType.Prox, 1],
+    [WeaponId.ChainFist, null, 0],
+    [WeaponId.Blaster, null, 0],
+];
 
-    // Find best weapon
-    const bestWeapon = getBestWeapon(ent);
-    if (bestWeapon && bestWeapon !== ent.client.inventory.currentWeapon) {
-        // Initiate switch
-        ChangeWeapon(ent, bestWeapon);
+/**
+ * NoAmmoWeaponChange (rerelease p_weapon.cpp): out of ammo, pick the weapon to change to.
+ * It only sets newWeapon; Weapon_Generic puts the old one down and raises it.
+ */
+export function NoAmmoWeaponChange(ent: Entity, sys?: { timeSeconds: number; sound(e: Entity, ch: number, s: string, v: number, a: number, t: number): void }) {
+    if (!ent.client) return;
+    const client = ent.client;
+    if (sys && sys.timeSeconds >= (client.empty_click_sound ?? 0)) {
+        sys.sound(ent, 1, 'weapons/noammo.wav', 1, 1, 0);
+        client.empty_click_sound = sys.timeSeconds + 1;
+    }
+    const inventory = client.inventory;
+    for (const [weapon, ammo, quantity] of NO_AMMO_ORDER) {
+        if (!inventory.ownedWeapons.has(weapon)) continue;
+        if (ammo !== null && (inventory.ammo.counts[ammo] ?? 0) < quantity) continue;
+        client.newWeapon = weapon;
+        return;
     }
 }
 

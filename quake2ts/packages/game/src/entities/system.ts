@@ -1,6 +1,6 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
+import { SV_Physics_Toss } from '../physics/toss.js';
 import { physicsStep } from '../physics/step.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
@@ -713,6 +713,9 @@ export class EntitySystem {
    * in index order runs its physics, and its think from inside that physics, as the
    * original does. Clients move by their usercmds (ClientThink), not here.
    */
+  /** Set by the game: ClientBeginServerFrame's per-frame client work. */
+  beginClientFrame?: (ent: Entity) => void;
+
   runFrame(): void {
     const capacity = this.pool.capacity;
     for (let i = 0; i < capacity; i++) {
@@ -721,7 +724,9 @@ export class EntitySystem {
       this.currentEntity = ent;
       this.checkGroundMoved(ent);
       if (ent.client) {
-        // ClientBeginServerFrame; the port still gives clients their think here.
+        // ClientBeginServerFrame: the weapon steps every frame; the rest of the port's client
+        // work is still the player's 10 Hz think.
+        this.beginClientFrame?.(ent);
         this.runThink(ent);
         continue;
       }
@@ -798,10 +803,7 @@ export class EntitySystem {
         // SV_Physics_Toss: think, then move.
         this.runThink(ent);
         if (!ent.inUse || ent.freePending) break;
-        if (ent.movetype === MoveType.Toss) runGravity(ent, this.gravity, frametime);
-        if (ent.movetype === MoveType.FlyMissile) runProjectileMovement(ent, this.imports, frametime);
-        else if (ent.movetype !== MoveType.Fly) runBouncing(ent, this, this.imports, frametime);
-        ent.timestamp = this.currentTimeSeconds;
+        SV_Physics_Toss(ent, this, -this.gravity.z);
         break;
       default:
         this.runThink(ent);

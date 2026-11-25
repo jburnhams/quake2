@@ -103,6 +103,9 @@ export interface PlayerClient {
     weaponStates: PlayerWeaponStates;
     pers: PlayerPersistentState; // [Paril-KEX] Persistent state including fog
     buttons: number;
+    /** The previous usercmd's buttons, and buttons pressed since the last server frame (ClientThink). */
+    oldbuttons?: number;
+    latched_buttons?: number;
     // Movement
     pm_type: number;
     pm_time: number;
@@ -129,6 +132,11 @@ export interface PlayerClient {
     weaponstate?: WeaponStateEnum;
     weapon_think_time?: number;
     weapon_fire_finished?: number;
+    /** Attack pressed while the weapon was not yet ready to fire again: fire when it is. */
+    weapon_fire_buffered?: boolean;
+    /** The weapon already thought this frame, from ClientThink. */
+    weapon_thunk?: boolean;
+    empty_click_sound?: number;
     weapon_sound?: number;
     // Grenade specific
     grenade_time?: number | null;

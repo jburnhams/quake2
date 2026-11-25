@@ -109,9 +109,16 @@ describe('Weapon State Machine Edge Cases', () => {
             mockSys as any
         );
 
-        // NOW it should switch
-        expect(ChangeWeapon).toHaveBeenCalledWith(player, WeaponId.Shotgun);
+        // The last fire frame steps to idle and the weapon is ready again...
+        expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
+        expect(player.client!.gun_frame).toBe(16);
+
+        // ...and the next weapon frame starts putting it down (Weapon_HandleNewWeapon).
+        mockSys.timeSeconds = 12;
+        Weapon_Generic(player, 5, 15, 20, 25, null, null, mockFire, mockSys as any);
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_DROPPING);
+        expect(player.client!.gun_frame).toBe(21);
+        expect(ChangeWeapon).not.toHaveBeenCalled();
     });
 
     it('should handle grenade explosion in hand', () => {
@@ -142,60 +149,20 @@ describe('Weapon State Machine Edge Cases', () => {
         expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
     });
 
-    it('should trigger switch after animation if ammo is depleted (Empty Click)', () => {
-         // Setup shotgun with 0 ammo
+    it('pressing attack with no ammo picks another weapon instead of firing', () => {
         player.client!.inventory.ammo.counts[AmmoType.Shells] = 0;
         player.client!.inventory.currentWeapon = WeaponId.Shotgun;
-        player.client!.weaponstate = WeaponStateEnum.WEAPON_FIRING;
-        player.client!.gun_frame = 6; // Fire frame
+        player.client!.weaponstate = WeaponStateEnum.WEAPON_READY;
+        player.client!.gun_frame = 16;
+        player.client!.buttons = 1;
         mockSys.timeSeconds = 10;
+        const fireShotgun = vi.fn();
 
-        // Mock fire function that mimics the new checkAmmo behavior
-        const fireShotgun = vi.fn((ent) => {
-             // Mimic checkAmmo: if no ammo, call NoAmmoWeaponChange
-             if (ent.client.inventory.ammo.counts[AmmoType.Shells] < 1) {
-                 NoAmmoWeaponChange(ent);
-                 return;
-             }
-        });
+        Weapon_Generic(player, 5, 15, 20, 25, null, [6], fireShotgun, mockSys as any);
 
-        // Run Generic Think
-        Weapon_Generic(
-            player,
-            5, // ACTIVATE_LAST
-            15, // FIRE_LAST
-            20, // IDLE_LAST
-            25, // DEACTIVATE_LAST
-            null,
-            [6], // Fire frames
-            fireShotgun,
-            mockSys as any
-        );
-
-        expect(fireShotgun).toHaveBeenCalled();
+        expect(fireShotgun).not.toHaveBeenCalled();
         expect(NoAmmoWeaponChange).toHaveBeenCalled();
-        // Should still be in firing state (playing "click" animation)
-        expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_FIRING);
-        // expect(player.client!.newWeapon).toBe('Blaster'); // Mock sets it
-
-        // Advance to end of firing
-        player.client!.gun_frame = 15; // FIRE_LAST
-        mockSys.timeSeconds = 11; // Advance time
-
-        Weapon_Generic(
-            player,
-            5, // ACTIVATE_LAST
-            15, // FIRE_LAST
-            20, // IDLE_LAST
-            25, // DEACTIVATE_LAST
-            null,
-            [6], // Fire frames
-            fireShotgun,
-            mockSys as any
-        );
-
-        // Should switch now
-        expect(ChangeWeapon).toHaveBeenCalled();
+        expect(player.client!.weaponstate).toBe(WeaponStateEnum.WEAPON_READY);
+        expect(player.client!.newWeapon).toBe('Blaster');
     });
-
 });
