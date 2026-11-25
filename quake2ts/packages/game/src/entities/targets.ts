@@ -374,9 +374,11 @@ function target_laser_start(self: Entity, context: any) {
             } else {
                 context.warn(`${self.classname} at ${self.origin}: ${self.target} is a bad target`);
                  self.movedir = setMovedir(self.angles);
+                 self.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
             }
         } else {
             self.movedir = setMovedir(self.angles);
+            self.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
         }
     }
 
@@ -623,6 +625,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     entity.count = context.keyValues.count ? parseInt(context.keyValues.count) : 0;
     entity.sounds = context.keyValues.sounds ? parseInt(context.keyValues.sounds) : 0;
     entity.movedir = setMovedir(entity.angles);
+    entity.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
     entity.use = (self) => useTargetSplash(self, context);
     entity.svflags |= ServerFlags.NoClient;
   });
@@ -661,6 +664,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
       entity.svflags |= ServerFlags.NoClient;
       if (entity.speed) {
           entity.movedir = setMovedir(entity.angles);
+          entity.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
           entity.movedir = scaleVec3(entity.movedir, entity.speed);
       }
   });
@@ -668,6 +672,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
   registry.register('target_blaster', (entity, context) => {
       entity.use = (self, other, activator) => useTargetBlaster(self, other, activator ?? null, context);
       entity.movedir = setMovedir(entity.angles);
+      entity.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
 
       if (!entity.dmg) entity.dmg = 15;
       if (!entity.speed) entity.speed = 1000;

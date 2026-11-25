@@ -3,6 +3,7 @@ import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entity.js';
 import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
+import { SP_func_button, SP_func_door } from './doors.js';
 import { T_RadiusDamage, Damageable } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
@@ -242,128 +243,6 @@ function door_go_up(door: Entity, context: EntitySystem) {
       move_calc(door, door.pos2, context, door_hit_top);
   }
 }
-
-const func_door: SpawnFunction = (entity, context) => {
-  // Use context.entities instead of context because context is SpawnContext and we need EntitySystem
-  const sys = context.entities;
-
-  entity.movedir = setMovedir(entity.angles);
-  if (!entity.speed) entity.speed = 100;
-  if (!entity.wait) entity.wait = 3;
-  if (!entity.lip) entity.lip = 8;
-  if (!entity.dmg) entity.dmg = 2;
-  if (!entity.health) entity.health = 0;
-  entity.solid = Solid.Bsp;
-  entity.movetype = MoveType.Push;
-
-  // Capture context for blocked callback
-  entity.blocked = (self, other) => {
-      if (other && other.takedamage) {
-        const damage = self.dmg || 2;
-        if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) {
-            other.health -= damage;
-        } else {
-            other.health -= damage;
-        }
-      }
-
-      if (self.spawnflags & SPAWNFLAG_DOOR_CRUSHER) {
-          return;
-      }
-
-      if (self.state === DoorState.Opening) {
-        self.state = DoorState.Closing;
-        door_go_down(self, sys);
-      } else if (self.state === DoorState.Closing) {
-        self.state = DoorState.Opening;
-        door_go_up(self, sys);
-      }
-  };
-
-  entity.state = DoorState.Closed;
-  entity.pos1 = { ...entity.origin };
-  const move = entity.movedir.x * (Math.abs(entity.maxs.x - entity.mins.x) - entity.lip) +
-               entity.movedir.y * (Math.abs(entity.maxs.y - entity.mins.y) - entity.lip) +
-               entity.movedir.z * (Math.abs(entity.maxs.z - entity.mins.z) - entity.lip);
-  entity.pos2 = addVec3(entity.pos1, scaleVec3(entity.movedir, move));
-
-  // Handle sounds
-  const moveinfo: MoveInfo = {
-      sound_start: null,
-      sound_middle: null,
-      sound_end: null
-  };
-  if (entity.sounds !== 1) {
-      // Default set 1
-      moveinfo.sound_start = 'doors/dr1_strt.wav';
-      moveinfo.sound_middle = 'doors/dr1_mid.wav';
-      moveinfo.sound_end = 'doors/dr1_end.wav';
-  }
-  (entity as any).moveinfo = moveinfo;
-
-
-  if (entity.spawnflags & SPAWNFLAG_DOOR_START_OPEN) { // START_OPEN
-      entity.origin = { ...entity.pos2 };
-      entity.state = DoorState.Open;
-  }
-
-  if (entity.spawnflags & SPAWNFLAG_DOOR_ANIMATED) {
-      entity.effects |= EF_ANIM_ALL;
-  }
-  if (entity.spawnflags & SPAWNFLAG_DOOR_ANIMATED_FAST) {
-      entity.effects |= EF_ANIM_ALLFAST;
-  }
-
-  // Handle shootable doors
-  if (entity.health > 0) {
-      entity.takedamage = true;
-      entity.max_health = entity.health;
-      entity.die = (self, inflictor, attacker, damage) => {
-          self.health = self.max_health;
-          self.takedamage = false;
-          self.use?.(self, attacker, attacker);
-      };
-  }
-
-  entity.use = (self, other, activator) => {
-    if (entity.spawnflags & SPAWNFLAG_DOOR_TOGGLE) { // TOGGLE
-         if (self.state === DoorState.Closed) {
-             self.state = DoorState.Opening;
-             door_go_up(self, sys);
-         } else if (self.state === DoorState.Open) {
-             self.state = DoorState.Closing;
-             door_go_down(self, sys);
-         }
-         return;
-    }
-
-    if (self.state !== DoorState.Closed) return;
-    self.state = DoorState.Opening;
-    door_go_up(self, sys);
-  };
-
-  if (entity.health <= 0 && !entity.targetname) {
-      entity.touch = (self, other) => {
-          if (!other) return;
-          // NOMONSTER check
-          if (self.spawnflags & SPAWNFLAG_DOOR_NOMONSTER) {
-              if (other.svflags & ServerFlags.Monster) return;
-          }
-          if (other.classname !== 'player' && !(other.svflags & ServerFlags.Monster)) return;
-
-          self.use?.(self, other, other);
-      }
-  }
-};
-
-const func_button: SpawnFunction = (entity, context) => {
-  entity.solid = Solid.Bsp;
-  entity.movetype = MoveType.Push;
-  entity.use = (self) => {
-    context.entities.useTargets(self, self);
-    context.entities.sound(self, 0, 'switches/butn2.wav', 1, 1, 0); // Default sound
-  };
-};
 
 // ============================================================================
 // FUNC DOOR SECRET
@@ -648,6 +527,7 @@ function plat_wait_top(ent: Entity, context: EntitySystem) {
 
 const func_plat: SpawnFunction = (entity, context) => {
     entity.movedir = setMovedir(entity.angles);
+    entity.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
     if (!entity.speed) entity.speed = 200;
     if (!entity.accel) entity.accel = 500;
     if (!entity.decel) entity.decel = 500;
@@ -1286,6 +1166,7 @@ export const func_door_rotating: SpawnFunction = (entity, context) => {
         // G_SetMovedir logic is slightly different, but let's assume standard angular logic
         // for determining "forward" from angles.
         entity.movedir = setMovedir(entity.angles);
+        entity.angles = { x: 0, y: 0, z: 0 }; // G_SetMovedir clears the angles
         // Store this direction for safe_open check?
         // In C it sets ent.moveinfo.dir = forward vector of angles.
         // We can store it on moveinfo.
@@ -1786,9 +1667,9 @@ export const func_wall: SpawnFunction = (entity, context) => {
 
 export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_wall', func_wall);
-  registry.register('func_door', func_door);
+  registry.register('func_door', SP_func_door);
   registry.register('func_door_secret', func_door_secret);
-  registry.register('func_button', func_button);
+  registry.register('func_button', SP_func_button);
   registry.register('func_train', func_train);
   registry.register('func_plat', func_plat);
   registry.register('func_plat2', func_plat2);

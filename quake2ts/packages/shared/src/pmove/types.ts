@@ -54,6 +54,8 @@ export interface PmoveTraceResult {
   readonly startsolid: boolean;
   readonly contents?: ContentsFlag;
   readonly surfaceFlags?: number;
+  /** What was hit, passed through untouched for the touch list (pm.touch). */
+  readonly ent?: unknown;
 }
 
 export type PmoveTraceFn = (start: Vec3, end: Vec3, mins?: Vec3, maxs?: Vec3) => PmoveTraceResult;
@@ -76,6 +78,11 @@ export interface PmoveState {
   gravity: number;
   mins: Vec3;
   maxs: Vec3;
+  /**
+   * pm.touch: the traces that hit something during the move, one per thing hit (by `ent`),
+   * for the game to call touch functions on. Filled in by runPmove.
+   */
+  touch?: readonly PmoveTraceResult[];
 }
 
 export interface PmoveImports {

@@ -10,6 +10,7 @@ import {
   SPAWNFLAG_NOT_HARD,
   SPAWNFLAG_NOT_DEATHMATCH,
   SPAWNFLAG_NOT_COOP,
+  EntityFlags,
 } from './entity.js';
 import { registerMiscSpawns } from './misc.js';
 import { registerTargetSpawns } from './targets.js';
@@ -331,7 +332,38 @@ export function spawnEntitiesFromText(text: string, options: SpawnOptions): Enti
     }
   }
 
+  findTeams(options.entities);
   return spawned;
+}
+
+/**
+ * G_FindTeams (g_spawn.cpp): entities with the same "team" key become one team, chained
+ * in index order through teamchain, with the first as teammaster and the rest flagged
+ * TeamSlave. Doors and other movers act on their whole team.
+ */
+export function findTeams(entities: EntitySystem): void {
+  const members: Entity[] = [];
+  entities.forEachEntity((e) => {
+    if (e.index > 0 && e.team) members.push(e);
+  });
+  members.sort((a, b) => a.index - b.index);
+  for (let i = 0; i < members.length; i++) {
+    const e = members[i];
+    if (e.flags & EntityFlags.TeamSlave) continue;
+    let chain = e;
+    e.teammaster = e;
+    e.flags |= EntityFlags.TeamMaster;
+    for (let j = i + 1; j < members.length; j++) {
+      const e2 = members[j];
+      if (e2.flags & EntityFlags.TeamSlave) continue;
+      if (e.team === e2.team) {
+        chain.teamchain = e2;
+        e2.teammaster = e;
+        chain = e2;
+        e2.flags |= EntityFlags.TeamSlave;
+      }
+    }
+  }
 }
 
 export function SelectDeathmatchSpawnPoint(entities: EntitySystem): Entity | undefined {

@@ -316,23 +316,19 @@ it('activates trigger_multiple when walked into', () => {
         "angle" "90"
         "speed" "100"
         "wait" "2"
-        "model" "*1"
+        "mins" "0 0 0"
+        "maxs" "10 100 100"
         }
         `;
-        // Note: func_door needs a model to determine size/origin usually.
-        // We might need to manually set size after spawn since we don't load BSP models here.
-
+        // Without a BSP the size comes from mins/maxs, which SP_func_door reads at spawn.
         const spawned = spawnEntitiesFromText(lump, { registry: spawnRegistry, entities: game.entities });
         const door = spawned[0];
-        // Simulate BSP model bounds
-        door.mins = { x: 0, y: 0, z: 0 };
-        door.maxs = { x: 10, y: 100, z: 100 };
-        door.size = { x: 10, y: 100, z: 100 };
 
-        // Trigger the door
+        // Trigger the door: Move_Calc starts the move on the door's next frame.
         door.use?.(door, null, null);
+        game.entities.beginFrame(game.entities.timeSeconds + 0.025);
+        game.entities.runFrame();
 
-        // Door should be moving
         expect(door.movetype).toBe(MoveType.Push);
         expect(door.velocity).not.toEqual({ x: 0, y: 0, z: 0 });
     });
@@ -345,13 +341,12 @@ it('activates trigger_multiple when walked into', () => {
         "speed" "100"
         "wait" "1"
         "target" "t_btn"
-        "model" "*1"
+        "mins" "0 0 0"
+        "maxs" "10 10 10"
         }
         `;
         const spawned = spawnEntitiesFromText(lump, { registry: spawnRegistry, entities: game.entities });
         const button = spawned[0];
-        button.mins = { x: 0, y: 0, z: 0 };
-        button.maxs = { x: 10, y: 10, z: 10 };
 
         let targeted = false;
         const target = game.entities.spawn();
@@ -364,8 +359,13 @@ it('activates trigger_multiple when walked into', () => {
         // Let's call use directly which is what touch calls.
         button.use?.(button, null, null);
 
-        // Button should move and fire targets
-        expect(button.movetype).toBe(MoveType.Push);
+        // The button moves in (MOVETYPE_STOP) and fires its targets once it is all the way in.
+        expect(button.movetype).toBe(MoveType.Stop);
+        expect(targeted).toBe(false);
+        for (let i = 0; i < 20 && !targeted; i++) {
+          game.entities.beginFrame(game.entities.timeSeconds + 0.025);
+          game.entities.runFrame();
+        }
         expect(targeted).toBe(true);
     });
 

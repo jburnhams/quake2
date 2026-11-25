@@ -180,6 +180,20 @@ export interface MoveInfo {
   next_speed?: number;
   remaining_distance?: number;
   decel_distance?: number;
+  /** Move_Calc: where the move ends, and what runs when it does. */
+  dest?: Vec3;
+  endfunc?: ((ent: Entity) => void) | null;
+  /** MOVEINFO_BLOCKED: called by the pusher physics when something stops the move. */
+  blocked?: ((self: Entity, other: Entity) => void) | null;
+  reversing?: boolean;
+  end_angles_reversed?: Vec3;
+  /** Think_AccelMove_New: the 10 Hz curve of distances, and where in it the move is. */
+  curve_ref?: Vec3;
+  curve_positions?: number[];
+  curve_frame?: number;
+  subframe?: number;
+  num_subframes?: number;
+  num_frames_done?: number;
 }
 
 // TODO: Define stricter types if needed
@@ -387,6 +401,10 @@ export class Entity {
   light_level = 0;
 
   owner: Entity | null = null;
+  /** G_FindTeams: the next member of this entity's team, and the team's first member. */
+  teamchain: Entity | null = null;
+  teammaster: Entity | null = null;
+  touch_debounce_time = 0;
   beam: Entity | null = null;
   beam2: Entity | null = null;
   chain: Entity | null = null;
@@ -563,6 +581,9 @@ export class Entity {
     this.light_level = 0;
 
     this.owner = null;
+    this.teamchain = null;
+    this.teammaster = null;
+    this.touch_debounce_time = 0;
     this.beam = null;
     this.beam2 = null;
     this.chain = null;
@@ -668,6 +689,9 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'last_move_time', type: 'float', save: true },
   { name: 'damage_debounce_time', type: 'float', save: true },
   { name: 'enemy', type: 'entity', save: true },
+  { name: 'teamchain', type: 'entity', save: true },
+  { name: 'teammaster', type: 'entity', save: true },
+  { name: 'touch_debounce_time', type: 'float', save: true },
   { name: 'movetarget', type: 'entity', save: true },
   { name: 'target_ent', type: 'entity', save: true },
   { name: 'goalentity', type: 'entity', save: true },

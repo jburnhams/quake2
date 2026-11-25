@@ -15,12 +15,20 @@ export const TRIGGER_SPAWNFLAGS = {
 
 export const FRAME_TIME_SECONDS = 1 / 40;
 
-export function initTrigger(entity: Entity): void {
+/**
+ * InitTrigger (g_trigger.cpp). A trigger only gets a facing (movedir) when it was given an
+ * angle: one with none fires whichever way the player faces. The angle key itself is not
+ * passed here, so an explicit "angle" "0" is treated as no angle.
+ */
+export function initTrigger(entity: Entity, keyValues?: Record<string, string>): void {
+  const a = entity.angles;
+  if (keyValues?.angle !== undefined || keyValues?.angles !== undefined || a.x || a.y || a.z) {
+    entity.movedir = setMovedir(entity.angles);
+    entity.angles = { x: 0, y: 0, z: 0 };
+  }
   entity.movetype = MoveType.None;
   entity.solid = Solid.Trigger;
   entity.svflags |= ServerFlags.NoClient;
-  entity.movedir = setMovedir(entity.angles);
-  entity.angles = { x: 0, y: 0, z: 0 };
 }
 
 export function canActivate(trigger: Entity, other: Entity): boolean {

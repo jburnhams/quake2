@@ -72,7 +72,8 @@ describe('Entity System Edge Cases', () => {
         return true;
     };
 
-    game.entities.scheduleThink(ent, game.entities.timeSeconds);
+    // A nextthink of 0 means "no think" (SV_RunThink), so think at the coming frame's time.
+    game.entities.scheduleThink(ent, game.entities.timeSeconds + 0.1);
     game.frame({ frame: 1, deltaSeconds: 0.1, time: 100, pause: false });
 
     expect(thought).toBe(true);
@@ -86,7 +87,8 @@ describe('Entity System Edge Cases', () => {
         return true;
     };
 
-    game.entities.scheduleThink(ent, game.entities.timeSeconds - 1.0);
+    // Earlier than the coming frame's time, but above 0 (0 or less means "no think").
+    game.entities.scheduleThink(ent, game.entities.timeSeconds + 0.05);
     game.frame({ frame: 1, deltaSeconds: 0.1, time: 100, pause: false });
 
     expect(thought).toBe(true);

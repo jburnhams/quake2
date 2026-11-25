@@ -53,7 +53,7 @@ export function registerTriggerMonsterJump(registry: SpawnRegistry): void {
       entity.speed = 200;
     }
 
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
     entity.movedir = { ...entity.movedir, z: height };
     const touchHandler: TouchCallback = (self, other) => monsterJumpTouch(self, other);
     entity.touch = touchHandler;

@@ -71,7 +71,7 @@ function triggerPushActive(self: Entity, entities: EntitySystem, touchHandler: T
 
 export function registerTriggerPush(registry: SpawnRegistry): void {
   registry.register('trigger_push', (entity, context) => {
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
 
     const touchHandler: TouchCallback = (self, other) => triggerPushTouch(self, other, context.entities);
     entity.touch = touchHandler;

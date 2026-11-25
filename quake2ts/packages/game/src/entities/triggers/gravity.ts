@@ -35,7 +35,7 @@ export function registerTriggerGravity(registry: SpawnRegistry): void {
       return;
     }
 
-    initTrigger(entity);
+    initTrigger(entity, context.keyValues);
     entity.gravity = Number.parseFloat(gravityText) || 0;
 
     const touchHandler: TouchCallback = (self, other) => gravityTouch(self, other);
