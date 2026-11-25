@@ -68,7 +68,7 @@ function monster_ai_charge(self: Entity, dist: number, context: EntitySystem): v
 }
 
 function monster_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Sound constants

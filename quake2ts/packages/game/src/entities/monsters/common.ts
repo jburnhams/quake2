@@ -115,8 +115,10 @@ export function createMonsterSpawn(config: MonsterConfig) {
   };
 }
 
+/** M_SetAnimation with instant = true: the move starts on the next 10 Hz frame. */
 export function M_SetAnimation(self: Entity, move: MonsterMove, context: any): void {
   self.monsterinfo.current_move = move;
+  self.monsterinfo.next_move = undefined;
 }
 
 export function M_ShouldReactToPain(self: Entity, context: EntitySystem): boolean {

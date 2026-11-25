@@ -1,3 +1,4 @@
+import { M_walkmove } from '../../ai/m_move.js';
 import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
@@ -99,7 +100,7 @@ function monster_ai_charge(self: Entity, dist: number, context: EntitySystem): v
 }
 
 function monster_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -183,7 +184,7 @@ function guncmdr_run(self: Entity, context: EntitySystem): void {
 function guncmdr_fire_chain(self: Entity, context: EntitySystem): void {
   if (!(self.monsterinfo.aiflags & AIFlags.StandGround) && self.enemy) {
     const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
-    if (dist > 400 && ai_move(self, 8.0)) { // RANGE_CHAINGUN_RUN = 400
+    if (dist > 400 && M_walkmove(self, self.angles.y, 8, context)) { // RANGE_CHAINGUN_RUN = 400
        M_SetAnimation(self, fire_chain_run_move, context);
        return;
     }
@@ -200,7 +201,7 @@ function guncmdr_refire_chain(self: Entity, context: EntitySystem): void {
             if (context.game.random.frandom() <= 0.5) {
                  if (!(self.monsterinfo.aiflags & AIFlags.StandGround) && self.enemy) {
                     const dist = lengthVec3(subtractVec3(self.enemy.origin, self.origin));
-                    if (dist > 400 && ai_move(self, 8.0)) {
+                    if (dist > 400 && M_walkmove(self, self.angles.y, 8, context)) {
                          M_SetAnimation(self, fire_chain_run_move, context);
                          return;
                     }

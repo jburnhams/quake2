@@ -49,6 +49,8 @@ export interface GameImports {
   setmodel?(ent: Entity, name: string): void;
 
   areaEdicts(mins: Vec3, maxs: Vec3): number[] | null;
+  /** gi.inPHS: whether p2 is in the potentially hearable set of p1. Without it, everything is. */
+  inPHS?(p1: Vec3, p2: Vec3): boolean;
 
   multicast(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
   unicast(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;

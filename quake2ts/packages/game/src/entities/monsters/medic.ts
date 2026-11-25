@@ -70,7 +70,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations

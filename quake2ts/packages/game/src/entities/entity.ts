@@ -213,6 +213,33 @@ export interface MonsterInfo {
   physics_change?: MonsterAction;
   /** The frame a spawned-dead monster rests on, when not the death move's last. */
   start_frame?: number;
+  // g_ai.cpp / m_move.cpp state (rerelease monsterinfo_t)
+  had_visibility?: boolean;
+  checkattack_time?: number;
+  strafe_check_time?: number;
+  close_sight_tripped?: boolean;
+  saved_goal?: Vec3;
+  search_time?: number;
+  idle_time?: number;
+  last_player_enemy?: Entity | null;
+  move_block_change_time?: number;
+  move_block_counter?: number;
+  path_blocked_counter?: number;
+  path_wait_time?: number;
+  random_change_time?: number;
+  bad_move_time?: number;
+  bump_time?: number;
+  next_move_time?: number;
+  next_move?: MonsterMove;
+  /** The linkcount monster_think last checked the ground at. */
+  linkcount?: number;
+  fly_position_time?: number;
+  last_hint_time?: number;
+  /** AI_FORGET_ENEMY and AI_REACHED_HOLD_COMBAT, which do not fit in the 32-bit aiflags. */
+  forget_enemy?: boolean;
+  reached_hold_combat?: boolean;
+  /** AI_HIGH_TICK_RATE: not limited to 10 Hz frames. */
+  high_tick_rate?: boolean;
   sight?: MonsterSightCallback;
   idle?: MonsterAction;
   search?: MonsterAction;
@@ -362,6 +389,10 @@ export class Entity {
   damage_debounce_time = 0;
 
   enemy: Entity | null = null;
+  /** The enemy before this one, gone back to when this one dies. */
+  oldenemy: Entity | null = null;
+  /** When a player_noise was last placed (PlayerNoise), so stale sounds are forgotten. */
+  teleport_time = 0;
   movetarget: Entity | null = null;
   target_ent: Entity | null = null;
   goalentity: Entity | null = null;
@@ -548,6 +579,8 @@ export class Entity {
     this.damage_debounce_time = 0;
 
     this.enemy = null;
+    this.oldenemy = null;
+    this.teleport_time = 0;
     this.movetarget = null;
     this.target_ent = null;
     this.goalentity = null;
@@ -697,6 +730,8 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'last_move_time', type: 'float', save: true },
   { name: 'damage_debounce_time', type: 'float', save: true },
   { name: 'enemy', type: 'entity', save: true },
+  { name: 'oldenemy', type: 'entity', save: true },
+  { name: 'teleport_time', type: 'float', save: true },
   { name: 'teamchain', type: 'entity', save: true },
   { name: 'teammaster', type: 'entity', save: true },
   { name: 'touch_debounce_time', type: 'float', save: true },

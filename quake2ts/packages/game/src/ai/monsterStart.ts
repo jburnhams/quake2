@@ -84,27 +84,28 @@ export function M_CheckGround(ent: Entity, mask: number, sys: EntitySystem): voi
 }
 
 /** M_CatagorizePosition: the waterlevel and watertype at a point, for an entity's size. */
-export function M_CatagorizePosition(self: Entity, inPoint: Vec3, sys: EntitySystem): void {
+export function categorizePosition(self: Entity, inPoint: Vec3, sys: EntitySystem): { waterlevel: number; watertype: number } {
   const point = {
     x: inPoint.x,
     y: inPoint.y,
     z: self.gravityVector.z > 0 ? inPoint.z + self.maxs.z - 1 : inPoint.z + self.mins.z + 1,
   };
   let cont = sys.pointcontents(point);
-  if (!(cont & MASK_WATER)) {
-    self.waterlevel = WATER_NONE;
-    self.watertype = 0;
-    return;
-  }
-  self.watertype = cont;
-  self.waterlevel = WATER_FEET;
+  if (!(cont & MASK_WATER)) return { waterlevel: WATER_NONE, watertype: 0 };
+  const watertype = cont;
   point.z += 26;
   cont = sys.pointcontents(point);
-  if (!(cont & MASK_WATER)) return;
-  self.waterlevel = WATER_WAIST;
+  if (!(cont & MASK_WATER)) return { waterlevel: WATER_FEET, watertype };
   point.z += 22;
   cont = sys.pointcontents(point);
-  if (cont & MASK_WATER) self.waterlevel = WATER_UNDER;
+  return { waterlevel: cont & MASK_WATER ? WATER_UNDER : WATER_WAIST, watertype };
+}
+
+/** M_CatagorizePosition into the entity's own waterlevel and watertype. */
+export function M_CatagorizePosition(self: Entity, inPoint: Vec3, sys: EntitySystem): void {
+  const { waterlevel, watertype } = categorizePosition(self, inPoint, sys);
+  self.waterlevel = waterlevel;
+  self.watertype = watertype;
 }
 
 function worldDamage(ent: Entity, damage: number, dflags: number, mod: DamageMod, sys: EntitySystem): void {

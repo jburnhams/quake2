@@ -63,18 +63,22 @@ describe('Monster AI - Soldier', () => {
     const move = soldier.monsterinfo.current_move!;
     expect(move).toBeDefined();
 
-    // Set frame to last frame
+    // Set frame to last frame, and keep it standing (ai_stand walks off once pausetime passes)
     soldier.frame = move.lastframe;
+    soldier.monsterinfo.pausetime = Number.MAX_SAFE_INTEGER;
 
+    // M_MoveFrame: the frame after the last wraps to the first, and frames step at 10 Hz
+    // however often the monster thinks.
     system.beginFrame(1.0);
-    // The spawn's own think is walkmonster_start_go; monster_think animates once it has run.
     monster_think(soldier, system);
+    expect(soldier.frame).toBe(move.firstframe);
 
-    expect(soldier.frame).toBe(move.lastframe + 1);
-
-    // The spawn's own think is walkmonster_start_go; monster_think animates once it has run.
+    system.beginFrame(1.025);
     monster_think(soldier, system);
+    expect(soldier.frame).toBe(move.firstframe);
 
+    system.beginFrame(1.1);
+    monster_think(soldier, system);
     expect(soldier.frame).toBe(move.firstframe + 1);
   });
 });

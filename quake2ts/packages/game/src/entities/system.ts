@@ -229,6 +229,11 @@ export class EntitySystem {
     return this.imports.pointcontents;
   }
 
+  /** gi.inPHS, or true when the engine gives none. */
+  inPHS(p1: Vec3, p2: Vec3): boolean {
+    return this.imports.inPHS ? this.imports.inPHS(p1, p2) : true;
+  }
+
   get areaEdicts() {
       return this.imports.areaEdicts;
   }

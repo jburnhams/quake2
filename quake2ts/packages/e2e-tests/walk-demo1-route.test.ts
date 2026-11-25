@@ -4,8 +4,9 @@
  * frame at a time through real pmove, doors, buttons and lifts. It passes when the exit
  * trigger asks the server to change level to demo2.
  *
- * God mode for now: monsters stand on the floor, but their AI does not notice the player yet
- * (FindTarget and AI_GetSightClient are not ported), so this gate is still about the route.
+ * God mode and notarget for now: monsters notice and fight the player (the second test), but
+ * the player's weapons do not fire yet (Think_Weapon is not ported), so the walker cannot clear
+ * the soldiers that stand in its way. This gate is still about the route.
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
@@ -32,13 +33,19 @@ const objectives: Objective[] = [
   },
 ];
 
+function loadDemo1(): LocalHost {
+  const buf = readFileSync(pakPath);
+  const pak = PakArchive.fromArrayBuffer('pak.pak', buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
+  const host = new LocalHost({ readFile: (p) => (pak.getEntry(p) ? pak.readFile(p) : undefined) });
+  host.command('map demo1');
+  return host;
+}
+
 describe('demo1 walkthrough', () => {
   it('walks from the start to the exit and changes level to demo2', () => {
-    const buf = readFileSync(pakPath);
-    const pak = PakArchive.fromArrayBuffer('pak.pak', buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength));
-    const host = new LocalHost({ readFile: (p) => (pak.getEntry(p) ? pak.readFile(p) : undefined) });
-    host.command('map demo1');
+    const host = loadDemo1();
     host.map.game.setGodMode(true);
+    host.map.game.setNotarget(true);
     host.run(0.5);
 
     // Every monster in the level is standing on something, not falling out of the world.
@@ -55,5 +62,19 @@ describe('demo1 walkthrough', () => {
     }
     host.run(1);
     expect(host.serverCommands.some((c) => /^changelevel\s+demo2/.test(c))).toBe(true);
+  }, 120_000);
+
+  it('the soldiers on the way to the lift button notice the player and come for him', () => {
+    const host = loadDemo1();
+    host.map.game.setGodMode(true);
+    host.run(0.5);
+    const player = host.player!;
+    const leg = walkObjective(host, objectives[0]);
+    // Whether or not they block the way, someone has seen him and is fighting.
+    const hunters: string[] = [];
+    host.map.game.entities.forEachEntity((e) => {
+      if (e.classname?.startsWith('monster_') && e.enemy === player) hunters.push(e.classname);
+    });
+    expect(hunters.length, `${leg.objective}: ${leg.failure ?? 'reached'}`).toBeGreaterThan(0);
   }, 120_000);
 });

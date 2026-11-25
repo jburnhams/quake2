@@ -9,6 +9,7 @@
  */
 import { collisionModelFromBsp, parseBsp, type BspMap } from '@quake2ts/engine';
 import type { CollisionModel, UserCommand, Vec3 } from '@quake2ts/shared';
+import { inPHS } from '@quake2ts/shared';
 import {
   createGame,
   spawnEntitiesFromText,
@@ -120,6 +121,7 @@ export class LocalHost {
         return { ...t, surfaceFlags: t.surfaceFlags ?? 0, contents: t.contents ?? 0 };
       },
       pointcontents: (p) => world.pointContents(p),
+      inPHS: (p1, p2) => inPHS(p1, p2, model),
       linkentity: (ent) => world.link(ent),
       unlinkentity: (ent) => world.unlink(ent),
       setmodel: (ent, modelName) => {

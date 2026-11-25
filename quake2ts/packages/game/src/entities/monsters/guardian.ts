@@ -123,7 +123,7 @@ function guardian_ai_charge(self: Entity, dist: number, context: EntitySystem): 
 }
 
 function guardian_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 

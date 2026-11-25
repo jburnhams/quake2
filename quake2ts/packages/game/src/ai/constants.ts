@@ -28,9 +28,20 @@ export enum AIFlags {
   AlternateFly = 1 << 18,
   Dodging = 1 << 19,
   ThirdEye = 1 << 20,
+  /** AI_DO_NOT_COUNT: not counted in the level's monster total. */
+  DoNotCount = 1 << 21,
+  /** AI_CHARGING: runs straight at its enemy. */
+  Charging = 1 << 22,
   SpawnedMedicC = 1 << 23,
   HintPath = 1 << 24, // Added based on m_move.cpp
   Blocked = 1 << 25, // Added AI_BLOCKED
+  /** [Paril-KEX] for spawning dead */
+  SpawnedAlive = 1 << 26,
+  SpawnedDead = 1 << 27,
+  /** AI_TARGET_ANGER: angry at a target_anger's target. */
+  TargetAnger = 1 << 28,
+  /** AI_TEMP_MELEE_COMBAT: temporarily switch to the melee combat style. */
+  TempMeleeCombat = 1 << 29,
   Pathing = 1 << 30, // Custom?
 }
 

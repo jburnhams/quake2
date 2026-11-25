@@ -16,7 +16,7 @@ export function ai_run_melee(self: Entity, context: EntitySystem): void {
 
   // ROGUE: check manual steering
   if (!(self.monsterinfo.aiflags & AIFlags.ManualSteering)) {
-    M_ChangeYaw(self, MONSTER_TICK);
+    M_ChangeYaw(self, context);
   }
 
   if (facingIdeal(self)) {
@@ -34,7 +34,7 @@ export function ai_run_missile(self: Entity, context: EntitySystem): void {
 
   // ROGUE: check manual steering
   if (!(self.monsterinfo.aiflags & AIFlags.ManualSteering)) {
-    M_ChangeYaw(self, MONSTER_TICK);
+    M_ChangeYaw(self, context);
   }
 
   if (facingIdeal(self)) {
@@ -66,7 +66,7 @@ export function ai_run_slide_rogue(self: Entity, distance: number, context: Enti
     }
 
     if (!(self.monsterinfo.aiflags & AIFlags.ManualSteering)) {
-        M_ChangeYaw(self, MONSTER_TICK);
+        M_ChangeYaw(self, context);
     }
 
     let dist = distance;
