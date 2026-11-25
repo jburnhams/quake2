@@ -1,6 +1,6 @@
 import { Entity, MoveType, Solid } from './entity.js';
 import { SpawnContext, SpawnRegistry } from './spawn.js';
-import { ConfigStringIndex } from '@quake2ts/shared';
+import { ConfigStringIndex, DEFAULT_LIGHT_STYLES } from '@quake2ts/shared';
 
 export function SP_worldspawn(self: Entity, context: SpawnContext): void {
   self.classname = 'worldspawn';
@@ -38,6 +38,14 @@ export function SP_worldspawn(self: Entity, context: SpawnContext): void {
       // Logic to display message on client connect is usually handled by the client
       // reading the entity string or configstrings.
       // In Q2, it's printed in ClientBegin.
+  }
+
+  //
+  // Setup light animation tables. 'a' is total darkness, 'z' is doublebright.
+  // (g_spawn.cpp; styles 32-62 are assigned by the light program for switchable lights)
+  //
+  for (const [style, { pattern }] of DEFAULT_LIGHT_STYLES) {
+    context.entities.imports.configstring(ConfigStringIndex.Lights + style, pattern);
   }
 }
 

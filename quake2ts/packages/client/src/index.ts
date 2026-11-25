@@ -10,7 +10,7 @@ import {
   EngineHost,
   RenderableEntity,
 } from '@quake2ts/engine';
-import { NetChan, UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS, CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '@quake2ts/shared';
+import { NetChan, UserCommand, Vec3, PlayerState, hasPmFlag, PmFlag, ConfigStringIndex, MAX_MODELS, MAX_SOUNDS, MAX_IMAGES, CvarFlags, EntityState, mat4FromBasis, PlayerStat, RenderFx, MAX_CLIENTS, MAX_LIGHTSTYLES, CONTENTS_WATER, CONTENTS_LAVA, CONTENTS_SLIME } from '@quake2ts/shared';
 import { vec3, mat4 } from 'gl-matrix';
 // Updated imports to use @quake2ts/cgame
 import { ClientPrediction, interpolatePredictionState, PredictionState, GetCGameAPI, CGameExport } from '@quake2ts/cgame';
@@ -395,6 +395,18 @@ export function createClient(imports: ClientImports): ClientExports {
       }
   };
 
+  // CL_SetLightstyle: a CS_LIGHTS configstring is the pattern the renderer plays for that style
+  // (CL_RunLightStyles turns it into a brightness each tenth of a second).
+  const applyLightStyle = (index: number, value: string) => {
+    if (index < ConfigStringIndex.Lights || index >= ConfigStringIndex.Lights + MAX_LIGHTSTYLES) return;
+    imports.engine.renderer?.setLightStyle?.(index - ConfigStringIndex.Lights, value);
+  };
+
+  // CL_ClearLightStyles, from CL_ClearState on a new server: every style back to full.
+  const clearLightStyles = () => {
+    for (let i = 0; i < MAX_LIGHTSTYLES; i++) imports.engine.renderer?.setLightStyle?.(i, null);
+  };
+
   // Hook up message system to demo handler via CG
   demoHandler.setCallbacks({
     onCenterPrint: (msg: string) => cg.ParseCenterPrint(msg, 0, false),
@@ -405,6 +417,7 @@ export function createClient(imports: ClientImports): ClientExports {
     onConfigString: (index: number, str: string) => {
       configStrings.set(index, str);
       cg.ParseConfigString(index, str);
+      applyLightStyle(index, str);
 
       // Trigger scoreboard update if player skin changes
       if (index >= ConfigStringIndex.PlayerSkins && index < ConfigStringIndex.PlayerSkins + MAX_CLIENTS) {
@@ -418,6 +431,7 @@ export function createClient(imports: ClientImports): ClientExports {
       }
     },
     onServerData: (protocol: number, tickRate?: number) => {
+        clearLightStyles();
         if (tickRate && tickRate > 0) {
             demoPlayback.setFrameDuration(1000 / tickRate);
         } else {
@@ -1450,6 +1464,7 @@ export function createClient(imports: ClientImports): ClientExports {
     ParseConfigString(index: number, value: string) {
       configStrings.set(index, value);
       cg.ParseConfigString(index, value);
+      applyLightStyle(index, value);
 
       // Handle CD Track
       if (index === ConfigStringIndex.CdTrack) {

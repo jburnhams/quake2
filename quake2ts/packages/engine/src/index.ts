@@ -420,3 +420,5 @@ export { CoordinateSystem } from './render/types/coordinates.js';
 export { ClientConnection, ConnectionState, type ConnectionEvents, type ClientConnectionOptions } from './network/clientConnection.js';
 
 export { mat4, vec3, vec2, quat } from 'gl-matrix';
+export { DebugMode } from './render/debugMode.js';
+export { evaluateLightStyle, prepareLightStyles } from './render/utils/lighting.js';
