@@ -28,7 +28,8 @@ describe('Misc Entities', () => {
     it('misc_explobox should be created with correct properties', () => {
         const entity = spawnEntityFromDictionary(entities, { classname: 'misc_explobox' });
         expect(entity).toBeDefined();
-        expect(entity.solid).toBe(Solid.Bsp);
+        expect(entity.solid).toBe(Solid.BoundingBox); // a barrel model, not a brush (g_misc.c)
+        expect(entity.maxs).toEqual({ x: 16, y: 16, z: 40 });
         expect(entity.movetype).toBe(MoveType.None);
     });
 
@@ -42,7 +43,7 @@ describe('Misc Entities', () => {
     it('misc_deadsoldier should be created with correct properties', () => {
         const entity = spawnEntityFromDictionary(entities, { classname: 'misc_deadsoldier' });
         expect(entity).toBeDefined();
-        expect(entity.solid).toBe(Solid.Bsp);
+        expect(entity.solid).toBe(Solid.BoundingBox); // a corpse model, not a brush (g_misc.c)
         expect(entity.movetype).toBe(MoveType.None);
     });
 

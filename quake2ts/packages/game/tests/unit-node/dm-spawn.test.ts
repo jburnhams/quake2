@@ -67,7 +67,7 @@ describe('GameExports Respawn', () => {
         expect(player.deadflag).toBe(0);
         expect(player.origin.x).toBe(500);
         expect(player.origin.y).toBe(500);
-        expect(player.origin.z).toBe(500);
+        expect(player.origin.z).toBe(509); // SelectSpawnPoint lifts the player 9 units off the spot
         expect(player.classname).toBe('player');
     });
 });

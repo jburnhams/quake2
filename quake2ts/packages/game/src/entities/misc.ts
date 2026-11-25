@@ -1,5 +1,5 @@
 import type { SpawnRegistry, SpawnFunction } from './spawn.js';
-import { MoveType, Solid, ServerFlags, Entity, EntityFlags, CollisionSurface } from './entity.js';
+import { MoveType, Solid, ServerFlags, Entity, EntityFlags, CollisionSurface, DeadFlag } from './entity.js';
 import { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
 import { closestPointToBox, createRandomGenerator, CollisionPlane, Vec3 } from '@quake2ts/shared';
@@ -147,10 +147,19 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
     // Simplified, just a destination marker
   });
 
-  registry.register('misc_explobox', (entity) => {
-    entity.solid = Solid.Bsp;
+  // g_misc.c SP_misc_explobox: a barrel. It blocks as a box; exploding when shot is still to port.
+  registry.register('misc_explobox', (entity, context) => {
+    entity.solid = Solid.BoundingBox;
     entity.movetype = MoveType.None;
-    // Full implementation in g_misc.c
+    entity.model = 'models/objects/barrels/tris.md2';
+    entity.modelindex = context.entities.modelIndex(entity.model);
+    entity.mins = { x: -16, y: -16, z: 0 };
+    entity.maxs = { x: 16, y: 16, z: 40 };
+    if (!entity.mass) entity.mass = 400;
+    if (!entity.health) entity.health = 10;
+    if (!entity.dmg) entity.dmg = 150;
+    entity.takedamage = true;
+    context.entities.linkentity(entity);
   });
 
   registry.register('misc_banner', (entity) => {
@@ -159,10 +168,17 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
     // Banners are decorative
   });
 
-  registry.register('misc_deadsoldier', (entity) => {
+  // g_misc.c SP_misc_deadsoldier: a corpse; shots and dead-monster masks hit it, players walk over it.
+  registry.register('misc_deadsoldier', (entity, context) => {
     entity.movetype = MoveType.None;
-    entity.solid = Solid.Bsp;
-    // Decorative
+    entity.solid = Solid.BoundingBox;
+    entity.model = 'models/deadbods/dude/tris.md2';
+    entity.modelindex = context.entities.modelIndex(entity.model);
+    entity.mins = { x: -16, y: -16, z: 0 };
+    entity.maxs = { x: 16, y: 16, z: 16 };
+    entity.deadflag = DeadFlag.Dead;
+    entity.svflags |= ServerFlags.Monster | ServerFlags.DeadMonster;
+    context.entities.linkentity(entity);
   });
 
   registry.register('misc_gib_arm', (entity, context) => {

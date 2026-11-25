@@ -25,9 +25,10 @@ export class EntityPool implements Iterable<Entity> {
 
     for (let i = 0; i < maxEntities; i += 1) {
       this.entities[i] = new Entity(i);
-      if (i !== WORLD_INDEX) {
-        this.freeList.push(i);
-      }
+    }
+    // Kept highest first so pop() hands out the lowest free slot, as G_Spawn does.
+    for (let i = maxEntities - 1; i > WORLD_INDEX; i -= 1) {
+      this.freeList.push(i);
     }
 
     const world = this.entities[WORLD_INDEX];
@@ -70,6 +71,47 @@ export class EntityPool implements Iterable<Entity> {
     };
   }
 
+  /** Number of slots after the world kept for clients (edicts 1..maxclients in the original). */
+  private reservedSlots = 0;
+
+  /**
+   * Keeps slots 1..count for clients, so map entities start after them as in the original
+   * and the player is edict 1. Slots already in use are left as they are.
+   */
+  reserveClientSlots(count: number): void {
+    this.reservedSlots = Math.min(count, this.entities.length - 1);
+    for (let i = this.freeList.length - 1; i >= 0; i -= 1) {
+      if (this.freeList[i] <= this.reservedSlots) this.freeList.splice(i, 1);
+    }
+  }
+
+  /** The lowest free client slot, or undefined if none is reserved or all are taken. */
+  spawnClient(): Entity | undefined {
+    for (let i = 1; i <= this.reservedSlots; i += 1) {
+      const entity = this.entities[i];
+      if (!entity.inUse && !entity.freePending) {
+        entity.reset();
+        entity.inUse = true;
+        this.link(entity);
+        return entity;
+      }
+    }
+    return undefined;
+  }
+
+  private release(index: number): void {
+    if (index <= this.reservedSlots) return; // client slots are never handed to spawn()
+    // Insert keeping highest-first order.
+    let lo = 0;
+    let hi = this.freeList.length;
+    while (lo < hi) {
+      const mid = (lo + hi) >> 1;
+      if (this.freeList[mid] > index) lo = mid + 1;
+      else hi = mid;
+    }
+    this.freeList.splice(lo, 0, index);
+  }
+
   spawn(): Entity {
     const index = this.freeList.pop();
     if (index === undefined) {
@@ -109,7 +151,7 @@ export class EntityPool implements Iterable<Entity> {
 
     this.unlink(entity);
     entity.reset();
-    this.freeList.push(entity.index);
+    this.release(entity.index);
   }
 
   flushFreeList(): void {
@@ -120,7 +162,7 @@ export class EntityPool implements Iterable<Entity> {
     for (const index of this.pendingFree) {
       const entity = this.entities[index];
       entity.reset();
-      this.freeList.push(index);
+      this.release(index);
     }
 
     this.pendingFree.length = 0;

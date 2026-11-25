@@ -80,8 +80,8 @@ import { findPlayerStart, SelectSpawnPoint } from './entities/spawn.js';
 import { player_die, player_think, player_pain } from './entities/player.js';
 import { populatePlayerStats } from './entities/playerStats.js';
 
-import { UserCommand, applyPmove, PmoveTraceResult, PmType } from '@quake2ts/shared';
-import { Entity, MoveType, Solid, EntityFlags } from './entities/entity.js';
+import { UserCommand, runPmove, PmType, MASK_PLAYERSOLID, type PmoveState } from '@quake2ts/shared';
+import { Entity, MoveType, Solid, EntityFlags, ServerFlags } from './entities/entity.js';
 
 import { GameTraceResult } from './imports.js';
 import { throwGibs } from './entities/gibs.js';
@@ -433,67 +433,67 @@ export function createGame(
   // Initialize ScriptHookRegistry
   const hookRegistry = new ScriptHookRegistry();
 
+  /**
+   * ClientThink's Pmove: the full player move (gravity, jump, duck, step, slide, water)
+   * from runPmove, traced through the server world as the player's box.
+   */
   const runPlayerMove = (player: Entity, command: UserCommand) => {
-    const pcmd = {
-      forwardmove: command.forwardmove,
-      sidemove: command.sidemove,
-      upmove: command.upmove,
-      buttons: command.buttons,
-      msec: command.msec,
-      angles: command.angles,
+    const client = player.client;
+    const pmType: PmType = player.deadflag ? PmType.Dead : (client?.pm_type ?? PmType.Normal);
+    const state: PmoveState = {
+      pmType,
+      pmFlags: client?.pm_flags ?? 0,
+      origin: player.origin,
+      velocity: player.velocity,
+      angles: player.angles,
+      viewAngles: command.angles,
+      viewHeight: player.viewheight,
+      waterlevel: player.waterlevel,
+      watertype: player.watertype,
+      cmd: {
+        forwardmove: command.forwardmove,
+        sidemove: command.sidemove,
+        upmove: command.upmove,
+        buttons: command.buttons,
+        angles: command.angles,
+      },
+      delta_angles: ZERO_VEC3,
+      gravity: -gravity.z,
+      mins: player.mins,
+      maxs: player.maxs,
     };
 
-    const playerState = {
-        origin: player.origin,
-        velocity: player.velocity,
-        onGround: false, // This will be calculated by pmove
-        waterLevel: player.waterlevel, // Pass waterlevel
-        watertype: player.watertype, // Pass watertype
-        mins: player.mins,
-        maxs: player.maxs,
-        damageAlpha: 0,
-        damageIndicators: [],
-        viewAngles: player.angles,
-        blend: [0,0,0,0] as [number, number, number, number],
-        // Stubs
-        stats: populatePlayerStats(player, levelClock.current.timeSeconds),
-        kick_angles: ZERO_VEC3,
-        kick_origin: ZERO_VEC3,
-        gunoffset: ZERO_VEC3,
-        gunangles: ZERO_VEC3,
-        gunindex: 0,
-        pm_type: 0,
-        pm_time: 0,
-        pm_flags: 0,
-        gun_frame: 0,
-        rdflags: 0,
-        fov: 90,
-        renderfx: player.renderfx
-    };
+    const next = runPmove(state, {
+      trace: (start, end, mins, maxs) => {
+        const result = trace(start, mins ?? player.mins, maxs ?? player.maxs, end, player, MASK_PLAYERSOLID);
+        return {
+          fraction: result.fraction,
+          endpos: result.endpos,
+          allsolid: result.allsolid,
+          startsolid: result.startsolid,
+          planeNormal: result.plane?.normal,
+          contents: result.contents,
+          surfaceFlags: result.surfaceFlags,
+        };
+      },
+      pointcontents: (point) => pointcontents(point),
+    });
 
-    const traceAdapter = (start: Vec3, end: Vec3) => {
-      // Use passed-in entity for trace, not just 'player'
-      const result = trace(start, player.mins, player.maxs, end, player, 0x10000001);
-      return {
-        fraction: result.fraction,
-        endpos: result.endpos,
-        allsolid: result.allsolid,
-        startsolid: result.startsolid,
-        planeNormal: result.plane?.normal,
-      };
-    };
-    const pointContentsAdapter = (point: Vec3) => pointcontents(point);
+    player.origin = next.origin;
+    player.velocity = next.velocity;
+    player.mins = next.mins;
+    player.maxs = next.maxs;
+    player.viewheight = next.viewHeight;
+    player.waterlevel = next.waterlevel;
+    player.watertype = next.watertype;
+    // The body turns with the view's yaw only, as ClientThink does.
+    player.angles = { x: 0, y: command.angles.y, z: 0 };
 
-    const newState = applyPmove(playerState, pcmd, traceAdapter, pointContentsAdapter);
-    player.origin = newState.origin;
-    player.velocity = newState.velocity;
-    player.angles = newState.viewAngles;
-
-    if (player.client) {
-        player.client.pm_flags = newState.pm_flags;
-        player.client.pm_type = newState.pm_type;
-        player.client.pm_time = newState.pm_time;
+    if (client) {
+      client.pm_flags = next.pmFlags;
+      client.pm_type = next.pmType;
     }
+    systemImports.linkentity?.(player);
   };
 
   const gameExports: GameExports = {
@@ -544,10 +544,7 @@ export function createGame(
       // Or check if we are in deathmatch/server mode.
       // For now, preserving existing behavior for SP.
       if (!deathmatch) {
-           // SP logic
-           const player = entities.spawn();
-           player.classname = 'player';
-           // ... (SP init)
+           // SP logic: clientBegin makes the player entity.
            this.clientBegin({
              inventory: createPlayerInventory(),
              weaponStates: createPlayerWeaponStates(),
@@ -574,7 +571,7 @@ export function createGame(
         return true;
     },
     clientBegin(client: PlayerClient): Entity {
-       const player = entities.spawn();
+       const player = entities.spawnClient();
        player.client = client;
        // Initial spawn logic delegated to respawn (reusing code)
        this.respawn(player);
@@ -602,11 +599,15 @@ export function createGame(
 
        const spawnPoint = SelectSpawnPoint(entities);
        ent.classname = 'player';
-       ent.origin = spawnPoint ? { ...spawnPoint.origin } : { x: 0, y: 0, z: 0 };
+       // PutClientInServer: 9 units above the spot (SelectSpawnPoint), moved by pmove, not physics.
+       ent.origin = spawnPoint ? { ...spawnPoint.origin, z: spawnPoint.origin.z + 9 } : { x: 0, y: 0, z: 0 };
        ent.angles = spawnPoint ? { ...spawnPoint.angles } : { x: 0, y: 0, z: 0 };
        ent.health = 100;
        ent.takedamage = true;
-       ent.movetype = MoveType.Toss;
+       ent.movetype = MoveType.Walk;
+       ent.viewheight = 22;
+       ent.clipmask = MASK_PLAYERSOLID;
+       ent.svflags = (ent.svflags & ~ServerFlags.DeadMonster) | ServerFlags.Player;
        ent.mins = { x: -16, y: -16, z: -24 };
        ent.maxs = { x: 16, y: 16, z: 32 };
        ent.solid = Solid.BoundingBox;

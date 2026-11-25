@@ -168,6 +168,7 @@ export class EntitySystem {
   private spawnCount = 0;
 
   private spatialGrid: SpatialGrid;
+  private spatialGridInUse = false;
 
   // We will lazily access this.scriptHooks from _game or via a property if passed.
   // Actually, EntitySystem doesn't own the registry, GameExports does.
@@ -323,8 +324,9 @@ export class EntitySystem {
                 z: ent.origin.z + ent.maxs.z,
               };
         }
-        // Always update spatial grid
-        this.spatialGrid.update(ent);
+        // The local grid only serves findInBox when the host has no area query of its own,
+        // so it is kept up to date only once findInBox has needed it.
+        if (this.spatialGridInUse) this.spatialGrid.update(ent);
     };
 
     this.gravity = gravity || { x: 0, y: 0, z: 0 };
@@ -395,6 +397,22 @@ export class EntitySystem {
     return this.pool.getByIndex(index);
   }
 
+  /** See EntityPool.reserveClientSlots. */
+  reserveClientSlots(count: number): void {
+    this.pool.reserveClientSlots(count);
+  }
+
+  /** An entity in the lowest free client slot, or an ordinary one if no slots are reserved. */
+  spawnClient(): Entity {
+    const ent = this.pool.spawnClient();
+    if (!ent) return this.spawn();
+    this.spawnCount++;
+    ent.spawn_count = this.spawnCount;
+    ent.timestamp = this.currentTimeSeconds;
+    this.scriptHooks?.onEntitySpawn?.(ent);
+    return ent;
+  }
+
   spawn(): Entity {
     const ent = this.pool.spawn();
     this.spawnCount++;
@@ -409,6 +427,7 @@ export class EntitySystem {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
+    this.imports.unlinkentity?.(entity);
     this.pool.deferFree(entity);
   }
 
@@ -416,6 +435,7 @@ export class EntitySystem {
     this.unregisterTarget(entity);
     this.thinkScheduler.cancel(entity);
     this.spatialGrid.remove(entity);
+    this.imports.unlinkentity?.(entity);
     this.pool.freeImmediate(entity);
   }
 
@@ -444,33 +464,24 @@ export class EntitySystem {
     this.imports.linkentity(ent);
   }
 
+  /** gi.setmodel: the host fills in a submodel's bounds; without one, only modelindex is set. */
+  setModel(ent: Entity, name: string): void {
+    ent.model = name;
+    if (this.imports.setmodel) {
+      this.imports.setmodel(ent, name);
+    } else {
+      ent.modelindex = this.modelIndex(name);
+    }
+  }
+
   link(ent: Entity): void {
     this.linkentity(ent);
   }
 
+  /** gi.unlinkentity: out of the local spatial grid and the server's collision world. */
   unlink(ent: Entity): void {
-      // In Quake 2, unlinkentity sets active link to false or similar.
-      // Here we might just remove from spatial grid or set to non-solid if engine supported it.
-      // The engine's linkentity is what "links" it.
-      // If we don't have an explicit unlink in engine imports, we might just need to rely on the fact
-      // that linkentity overrides the previous state.
-      // However, to truly "unlink" (remove from physics world), we often just set solid to NOT
-      // and call linkentity again, or remove it from spatial hashes.
-      // Since we wrap linkentity with spatialGrid.update, we can assume spatialGrid.remove is what we want
-      // but 'linkentity' is usually what puts it back.
-      //
-      // In standard Q2 g_phys.c / g_func.c usage for teleport, we unlink, move, link.
-      // Engine unlink usually removes it from the area nodes.
-      // We don't have `unlinkentity` exposed in imports.
-      //
-      // But we have `spatialGrid.remove(ent)` which we call in free().
-      // Let's expose an unlink method that calls spatialGrid.remove
-      // AND maybe tells the engine if it supports it.
-      // Since engine interface doesn't show unlink, we'll assume spatialGrid.remove is our local equivalent
-      // effectively making it invisible to our spatial queries.
-      this.spatialGrid.remove(ent);
-      // We should also clear absmin/absmax?
-      // ent.absmin = ent.origin... ?
+    this.spatialGrid.remove(ent);
+    this.imports.unlinkentity?.(ent);
   }
 
   multicast(origin: Vec3, type: MulticastType, ServerCommand: ServerCommand, ...args: any[]): void {
@@ -532,7 +543,13 @@ export class EntitySystem {
   findInBox(mins: Vec3, maxs: Vec3): Entity[] {
     const indices = this.imports.areaEdicts(mins, maxs);
     if (indices === null) {
-      // Use our spatial grid optimization
+      // No area query from the host: use the local grid, filling it the first time.
+      if (!this.spatialGridInUse) {
+        this.spatialGridInUse = true;
+        for (const entity of this.pool) {
+          if (entity.inUse && !entity.freePending) this.spatialGrid.update(entity);
+        }
+      }
       const candidates = this.spatialGrid.query(mins, maxs);
       const results: Entity[] = [];
       const bounds = { min: mins, max: maxs };
