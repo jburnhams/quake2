@@ -9,7 +9,7 @@ on:
 jobs:
   browser:
     name: Browser Tests (Node 25)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Playwright 1.57 has no build for ubuntu-latest (26.04)
     defaults:
       run:
         working-directory: quake2ts

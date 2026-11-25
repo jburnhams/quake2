@@ -1,0 +1,16 @@
+name: Demo paks
+description: Restores or fetches the Quake 2 demo pak0.pak into quake2ts/.paks (see quake2ts/scripts/fetch-paks.sh).
+outputs:
+  pak:
+    description: Absolute path of pak0.pak
+    value: ${{ steps.fetch.outputs.pak }}
+runs:
+  using: composite
+  steps:
+    - uses: actions/cache@v4
+      with:
+        path: quake2ts/.paks
+        key: demo-paks-${{ hashFiles('quake2ts/scripts/demo-paks.sha256') }}
+    - id: fetch
+      shell: sh
+      run: echo "pak=$(quake2ts/scripts/fetch-paks.sh)" >> "$GITHUB_OUTPUT"
