@@ -14,6 +14,7 @@ import {
   Pane,
   Split,
   Skeleton,
+  TextLink,
   Workspace,
   format,
   toast,
@@ -60,6 +61,7 @@ export function ExplorerScreen() {
             {summary}
           </p>
           <div className="ms-auto flex items-center gap-2">
+            <TextLink to="/labs/movement">Movement lab</TextLink>
             <FileButton accept={['.pak']} multiple onFiles={openPaks} icon={FolderOpen} size="sm" variant="default">
               Open PAK files
             </FileButton>

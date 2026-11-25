@@ -261,6 +261,9 @@ importers:
       '@quake2ts/formats':
         specifier: workspace:*
         version: link:../../packages/formats
+      '@quake2ts/shared':
+        specifier: workspace:*
+        version: link:../../packages/shared
       '@tanstack/react-query':
         specifier: ^5.107.1
         version: 5.108.4(@types/react@19.3.0)(react@19.3.1)

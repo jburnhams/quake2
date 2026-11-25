@@ -45,5 +45,6 @@ paths keep working through re-exports while code moves.
 
 ## Consumers
 
-- [`apps/explorer`](apps/explorer): the PAK browser, on `strata-vfs` and `@quake2ts/formats`.
+- [`apps/explorer`](apps/explorer): the PAK browser, on `strata-vfs` and `@quake2ts/formats`, and the
+  movement lab, on `@quake2ts/shared`'s pmove and BSP collision (through its source subpaths).
 - The game packages (`engine`, `client`, `server`, `game`), through the old paths for now.

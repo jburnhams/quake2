@@ -7,6 +7,7 @@ export * from './math/random.js';
 export * from './math/mat4.js';
 export * from './bsp/contents.js';
 export * from './bsp/collision.js';
+export * from './bsp/fromBsp.js';
 export * from './protocol/cvar.js';
 export * from './protocol/configstrings.js';
 export * as Replay from './replay/index.js';
