@@ -19,6 +19,9 @@
     },
     "./testing": "./src/testing.ts",
     "./bsp/collision": "./src/bsp/collision.ts",
+    "./bsp/contents": "./src/bsp/contents.ts",
+    "./bsp/fromBsp": "./src/bsp/fromBsp.ts",
+    "./pmove": "./src/pmove/index.ts",
     "./math/vec3": "./src/math/vec3.ts"
   },
   "unpkg": "./dist/browser/index.js",
