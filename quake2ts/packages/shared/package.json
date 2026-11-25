@@ -22,7 +22,8 @@
     "./bsp/contents": "./src/bsp/contents.ts",
     "./bsp/fromBsp": "./src/bsp/fromBsp.ts",
     "./pmove": "./src/pmove/index.ts",
-    "./math/vec3": "./src/math/vec3.ts"
+    "./math/vec3": "./src/math/vec3.ts",
+    "./net/netchan": "./src/net/netchan.ts"
   },
   "unpkg": "./dist/browser/index.js",
   "jsdelivr": "./dist/browser/index.js",

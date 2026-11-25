@@ -86,7 +86,10 @@ export interface WalkMoveParams extends BaseMoveParams {
   readonly pmWaterSpeed: number;
 }
 
-const DEFAULT_AIR_ACCELERATE = 1;
+/** sv_airaccelerate as the game ships (g_main.cpp:312). */
+const DEFAULT_AIR_ACCELERATE = 0;
+/** The acceleration PM_AirMove uses when sv_airaccelerate is 0: PM_Accelerate(wishdir, wishspeed, 1). */
+const AIR_ACCELERATE_WITHOUT_AIRACCEL = 1;
 const WATER_DRIFT_SPEED = 60;
 const DEFAULT_STEP_OVERBOUNCE = 1.01;
 
@@ -227,7 +230,7 @@ export function applyPmoveAirMove(params: AirMoveParams): StepSlideMoveOutcome {
       frametime,
     });
   } else {
-    velocity = applyPmoveAccelerate({ velocity, wishdir, wishspeed, accel: DEFAULT_AIR_ACCELERATE, frametime });
+    velocity = applyPmoveAccelerate({ velocity, wishdir, wishspeed, accel: AIR_ACCELERATE_WITHOUT_AIRACCEL, frametime });
   }
 
   if (pmType !== PmType.Grapple) {

@@ -1,6 +1,9 @@
 import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState, NetChan } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 
+/** SV_GiveMsec's allowance: 1600 ms of movement per 16 frames, plus slop. */
+export const COMMAND_MSEC = 1800;
+
 export enum ClientState {
     Free = 0,
     Zombie = 1,      // client has been disconnected, but don't reuse connection for a couple seconds
@@ -97,7 +100,7 @@ export function createClient(index: number, net: NetDriver): Client {
         lastFrame: 0,
         lastCmd: createEmptyUserCommand(),
 
-        commandMsec: 0,
+        commandMsec: COMMAND_MSEC,
         frameLatency: [],
         ping: 0,
         messageSize: [],

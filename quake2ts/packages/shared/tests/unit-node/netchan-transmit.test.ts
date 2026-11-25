@@ -83,6 +83,7 @@ describe('NetChan Transmit', () => {
     // Simulate ACK so we can flip sequence
     // We hack the state directly for this unit test
     netchan.reliableLength = 0;
+    netchan.reliableInFlight = 0;
     netchan.reliableMessage.reset();
     netchan.outgoingReliableSequence = 1;
 

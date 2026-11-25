@@ -7,9 +7,23 @@ export interface NetAddress {
 
 /**
  * NetChan handles reliable message delivery over an unreliable channel (UDP/WebSocket).
- * Fragmentation support is planned but not fully implemented.
  *
- * Ported from qcommon/net_chan.c
+ * Ported from qcommon/net_chan.c. As there, a reliable message goes out once and is sent again
+ * only when it was lost: when the other side has acknowledged a packet sent after it
+ * (incoming_acknowledged > last_reliable_sequence) without toggling its reliable bit
+ * (Netchan_Transmit). Until 2026-11-25 the port copied the pending message into every packet
+ * until it was acknowledged.
+ *
+ * Reliable bytes written while a message is in flight wait behind it and go out as the next
+ * message, as id's `chan->message` waits for `reliable_buf` to empty; until 2026-11-25 they were
+ * appended to the message in flight and lost if it was acknowledged first.
+ *
+ * Two extensions to id's header, kept deliberately:
+ * - bit 30 of the sequence carries the reliable message's sequence bit, so a receiver can drop a
+ *   reliable message it already has (id's receiver toggles on every reliable packet and relies
+ *   on the sender never sending one twice);
+ * - a reliable message longer than FRAGMENT_SIZE goes in fragments, marked by bit 15 of the
+ *   length (id caps a reliable message at MAX_MSGLEN).
  */
 export class NetChan {
   // Constants from net_chan.c
@@ -36,7 +50,14 @@ export class NetChan {
   incomingReliableSequence = 0; // last reliable message sequence received
   outgoingReliableSequence = 0; // reliable message sequence number to send
   reliableMessage: BinaryWriter;
+  /** Reliable bytes queued: the message in flight (the first `reliableInFlight`) and those behind it. */
   reliableLength = 0;
+  /** How many of the queued bytes make up the message in flight; 0 when none is. */
+  reliableInFlight = 0;
+  /** chan->last_reliable_sequence: the outgoing sequence of the last packet that carried reliable data. */
+  lastReliableSequence = 0;
+  /** chan->dropped: how many packets were lost before the last one that arrived. */
+  dropped = 0;
 
   // Fragmentation State (Sending)
   fragmentSendOffset = 0;
@@ -86,6 +107,9 @@ export class NetChan {
     this.incomingReliableSequence = 0;
     this.outgoingReliableSequence = 0;
     this.reliableLength = 0;
+    this.reliableInFlight = 0;
+    this.lastReliableSequence = 0;
+    this.dropped = 0;
     this.reliableMessage.reset();
 
     this.fragmentSendOffset = 0;
@@ -104,38 +128,40 @@ export class NetChan {
     this.outgoingSequence++;
     this.lastSent = Date.now();
 
-    // Determine how much reliable data to send in this packet
+    // Netchan_Transmit: the message in flight goes again only if the other side has had a
+    // later packet and still not toggled its bit, so it was lost. With nothing in flight, the
+    // queued bytes become the next message and go now.
+    let sendReliable = false;
+    if (this.reliableInFlight > 0) {
+      const unsentFragments = this.reliableInFlight > NetChan.FRAGMENT_SIZE && this.fragmentSendOffset < this.reliableInFlight;
+      const lost = this.incomingAcknowledged > this.lastReliableSequence;
+      if (unsentFragments) {
+        sendReliable = true;
+      } else if (lost) {
+        sendReliable = true;
+        this.fragmentSendOffset = 0;
+      }
+    } else if (this.reliableLength > 0) {
+      this.reliableInFlight = this.reliableLength;
+      this.fragmentSendOffset = 0;
+      sendReliable = true;
+    }
+
     let sendReliableLength = 0;
     let isFragment = false;
     let fragmentStart = 0;
 
-    if (this.reliableLength > 0) {
-      // Check if we need to fragment
-      if (this.reliableLength > NetChan.FRAGMENT_SIZE) {
-        // We are in fragment mode
+    if (sendReliable) {
+      if (this.reliableInFlight > NetChan.FRAGMENT_SIZE) {
         isFragment = true;
-
-        // If we have finished sending all fragments but still haven't received ACK,
-        // we must loop back to the beginning to retransmit.
-        if (this.fragmentSendOffset >= this.reliableLength) {
-          this.fragmentSendOffset = 0;
-        }
-
-        // Calculate chunk size
-        const remaining = this.reliableLength - this.fragmentSendOffset;
-        sendReliableLength = remaining;
-        if (sendReliableLength > NetChan.FRAGMENT_SIZE) {
-          sendReliableLength = NetChan.FRAGMENT_SIZE;
-        }
-
         fragmentStart = this.fragmentSendOffset;
-
-        // Advance offset for the next packet
+        sendReliableLength = Math.min(this.reliableInFlight - fragmentStart, NetChan.FRAGMENT_SIZE);
         this.fragmentSendOffset += sendReliableLength;
       } else {
-        // Fits in one packet
-        sendReliableLength = this.reliableLength;
+        sendReliableLength = this.reliableInFlight;
       }
+      // As id stores it: the outgoing sequence after this packet (net_chan.c:246,260).
+      this.lastReliableSequence = this.outgoingSequence + 1;
     }
 
     // Calculate total size
@@ -198,7 +224,7 @@ export class NetChan {
         // Write fragment info: 4 bytes start offset, 4 bytes total length
         view.setUint32(offset, fragmentStart, true);
         offset += 4;
-        view.setUint32(offset, this.reliableLength, true);
+        view.setUint32(offset, this.reliableInFlight, true);
         offset += 4;
       }
 
@@ -256,6 +282,9 @@ export class NetChan {
       return null;
     }
 
+    // chan->dropped: the packets between the last one that arrived and this one.
+    this.dropped = ((seqNumberClean - (this.incomingSequence + 1)) | 0);
+
     // Update incoming sequence
     this.incomingSequence = seqNumberClean;
 
@@ -269,16 +298,15 @@ export class NetChan {
 
     // Check if our reliable message was acknowledged
     // If the receiver has toggled their reliable bit, it means they got the WHOLE message
-    if (this.reliableLength > 0) {
+    if (this.reliableInFlight > 0) {
        const receivedAckBit = ackReliable ? 1 : 0;
        const currentReliableBit = this.outgoingReliableSequence & 1;
 
        if (receivedAckBit !== currentReliableBit) {
-         // Acked!
-         this.reliableLength = 0;
-         this.reliableMessage.reset();
+         // Acked: drop the message in flight and keep what was queued behind it.
+         this.dropAcknowledged();
          this.outgoingReliableSequence ^= 1;
-         this.fragmentSendOffset = 0; // Reset fragment offset
+         this.fragmentSendOffset = 0;
        }
     }
 
@@ -380,6 +408,19 @@ export class NetChan {
     }
 
     return new Uint8Array(0);
+  }
+
+  /** Removes the acknowledged message from the front of the queue. */
+  private dropAcknowledged(): void {
+    const rest = this.reliableLength - this.reliableInFlight;
+    const queued = rest > 0 ? this.reliableMessage.getBuffer().slice(this.reliableInFlight, this.reliableLength) : null;
+    this.reliableMessage.reset();
+    this.reliableLength = 0;
+    this.reliableInFlight = 0;
+    if (queued) {
+      for (const b of queued) this.reliableMessage.writeByte(b);
+      this.reliableLength = queued.length;
+    }
   }
 
   /**
