@@ -15,9 +15,12 @@ import {
   type PmFlags,
   type UserCommand,
   PlayerState,
-  applyPmove,
-  PmoveCmd,
-  PmoveTraceFn
+  runPmove,
+  DEFAULT_PMOVE_TUNING,
+  type PmoveCmd,
+  type PmoveState,
+  type PmoveTraceFn,
+  type PmoveTuning,
 } from '@quake2ts/shared';
 import type { GameFrameResult } from '@quake2ts/engine';
 import type { PlayerClient } from '@quake2ts/game';
@@ -31,6 +34,8 @@ export interface PredictionState extends PlayerState {
     pmType: PmType;
     gravity?: number;
     waterLevel: WaterLevel;
+    /** The eye's height above the origin; runPmove sets it as the player ducks and stands. */
+    viewHeight?: number;
 
     // Client-side fields for HUD/rendering, added to satisfy client package usage
     client?: PlayerClient;
@@ -54,22 +59,42 @@ export interface PredictionSettings {
   readonly errorSnapThreshold: number;
 }
 
+// The movement constants are the server's (DEFAULT_PMOVE_TUNING), as CL_PredictMovement runs the
+// same Pmove the server does. Until 2026-11-25 these were the port's own copies, with
+// airaccelerate 1 and wateraccelerate 4 where the game has 0 and 10.
 const DEFAULTS: PredictionSettings = {
-  pmFriction: 6,
-  pmStopSpeed: 100,
-  pmAccelerate: 10,
-  pmAirAccelerate: 1,
-  pmWaterAccelerate: 4,
-  pmWaterFriction: 1,
-  pmMaxSpeed: 300,
-  pmDuckSpeed: 100,
-  pmWaterSpeed: 400,
+  pmFriction: DEFAULT_PMOVE_TUNING.friction,
+  pmStopSpeed: DEFAULT_PMOVE_TUNING.stopSpeed,
+  pmAccelerate: DEFAULT_PMOVE_TUNING.accelerate,
+  pmAirAccelerate: DEFAULT_PMOVE_TUNING.airAccelerate,
+  pmWaterAccelerate: DEFAULT_PMOVE_TUNING.waterAccelerate,
+  pmWaterFriction: DEFAULT_PMOVE_TUNING.waterFriction,
+  pmMaxSpeed: DEFAULT_PMOVE_TUNING.maxSpeed,
+  pmDuckSpeed: DEFAULT_PMOVE_TUNING.duckSpeed,
+  pmWaterSpeed: DEFAULT_PMOVE_TUNING.waterSpeed,
   groundIsSlick: false,
   errorTolerance: 0.1,
   errorSnapThreshold: 10,
 };
 
+/** The settings' movement constants as runPmove takes them. */
+export function predictionTuning(settings: PredictionSettings): PmoveTuning {
+  return {
+    ...DEFAULT_PMOVE_TUNING,
+    accelerate: settings.pmAccelerate,
+    airAccelerate: settings.pmAirAccelerate,
+    waterAccelerate: settings.pmWaterAccelerate,
+    friction: settings.pmFriction,
+    waterFriction: settings.pmWaterFriction,
+    stopSpeed: settings.pmStopSpeed,
+    maxSpeed: settings.pmMaxSpeed,
+    duckSpeed: settings.pmDuckSpeed,
+    waterSpeed: settings.pmWaterSpeed,
+  };
+}
+
 const DEFAULT_GRAVITY = 800;
+const DEFAULT_VIEWHEIGHT = 22;
 const ZERO_VEC3: Vec3 = { x: 0, y: 0, z: 0 };
 const MSEC_MAX = 250;
 const CMD_BACKUP = 64;
@@ -190,41 +215,44 @@ export function interpolatePredictionState(
   } satisfies PredictionState;
 }
 
-function simulateCommand(
+/**
+ * One command of client prediction: the server's player move (runPmove), as CL_PredictMovement
+ * (client/cl_pred.c) calls the same Pmove as SV_ClientThink. The state is built the way the
+ * game's ClientThink builds it (game/src/index.ts runPlayerMove), so that with nothing lost the
+ * prediction lands where the server does.
+ */
+export function predictMove(
   state: PredictionState,
   cmd: UserCommand,
-  settings: PredictionSettings,
-  trace: PmoveTraceFn,
-  pointContents: (p: Vec3) => number
+  physics: PredictionPhysics,
+  tuning: Partial<PmoveTuning> = DEFAULT_PMOVE_TUNING,
 ): PredictionState {
-  // Convert UserCommand to PmoveCmd
   const pmoveCmd: PmoveCmd = {
-      forwardmove: cmd.forwardmove,
-      sidemove: cmd.sidemove,
-      upmove: cmd.upmove,
-      buttons: cmd.buttons,
-      angles: cmd.angles // Added missing property
+    forwardmove: cmd.forwardmove,
+    sidemove: cmd.sidemove,
+    upmove: cmd.upmove,
+    buttons: cmd.buttons,
+    angles: cmd.angles,
+    msec: cmd.msec,
   };
+  const pm: PmoveState = {
+    pmType: state.pmType,
+    pmFlags: state.pmFlags,
+    origin: state.origin,
+    velocity: state.velocity,
+    angles: state.viewAngles,
+    viewAngles: cmd.angles,
+    viewHeight: state.viewHeight ?? DEFAULT_VIEWHEIGHT,
+    waterlevel: state.waterLevel,
+    watertype: state.watertype,
+    cmd: pmoveCmd,
+    delta_angles: state.deltaAngles ?? ZERO_VEC3,
+    gravity: state.gravity ?? DEFAULT_GRAVITY,
+    mins: state.mins,
+    maxs: state.maxs,
+  };
+  const next = runPmove(pm, { trace: physics.trace, pointcontents: physics.pointContents }, tuning);
 
-  // Delegate physics to shared applyPmove
-  // Note: applyPmove returns a NEW PlayerState, it does not mutate.
-  // We must ensure that PredictionState specific fields are preserved if they are not part of PlayerState
-  // But since PredictionState extends PlayerState and applyPmove spreads ...state, we should get them back.
-
-  const newState = applyPmove(state, pmoveCmd, trace, pointContents);
-
-  // applyPmove calculates physics.
-  // However, applyPmove also handles view angle clamping?
-  // shared/pmove/apply.ts imports categorizePosition, checkWater etc.
-
-  // One detail: applyPmove uses the cmd to update viewAngles?
-  // Looking at applyPmove in shared: it returns `...newState` which comes from `...state`
-  // But `applyPmove` doesn't seem to modify viewAngles directly unless it's implicit?
-  // Wait, applyPmove handles origin and velocity.
-  // View angle changes (like from mouse input) are usually pre-applied to the command angles.
-  // But physics might affect view angles? (Not usually, except maybe knockback?)
-
-  // The original simulateCommand implementation clamped view angles.
   const { viewangles } = clampViewAngles({
     pmFlags: state.pmFlags,
     cmdAngles: cmd.angles,
@@ -232,9 +260,20 @@ function simulateCommand(
   });
 
   return {
-    ...newState,
-    viewAngles: viewangles
-  } as PredictionState;
+    ...state,
+    origin: next.origin,
+    velocity: next.velocity,
+    mins: next.mins,
+    maxs: next.maxs,
+    viewHeight: next.viewHeight,
+    waterLevel: next.waterlevel,
+    watertype: next.watertype,
+    pmFlags: next.pmFlags,
+    pm_flags: next.pmFlags,
+    pmType: next.pmType,
+    onGround: hasPmFlag(next.pmFlags, PmFlag.OnGround),
+    viewAngles: viewangles,
+  };
 }
 
 export interface PredictionPhysics {
@@ -244,6 +283,7 @@ export interface PredictionPhysics {
 
 export class ClientPrediction {
   private readonly settings: PredictionSettings;
+  private readonly tuning: PmoveTuning;
   private readonly physics: PredictionPhysics;
   private enabled = true;
   private baseFrame: GameFrameResult<PredictionState> = {
@@ -257,6 +297,7 @@ export class ClientPrediction {
 
   constructor(physics: PredictionPhysics, settings: Partial<PredictionSettings> = {}) {
     this.settings = { ...DEFAULTS, ...settings } satisfies PredictionSettings;
+    this.tuning = predictionTuning(this.settings);
     this.physics = physics;
     this.predicted = this.baseFrame.state ?? defaultPredictionState();
   }
@@ -288,7 +329,7 @@ export class ClientPrediction {
       if (relevantCommands.length > 0 || this.baseFrame.frame === frame.frame) {
           let tempState = normalizeState(this.baseFrame.state);
           for (const cmd of relevantCommands) {
-              tempState = simulateCommand(tempState, cmd, this.settings, this.physics.trace, this.physics.pointContents);
+              tempState = predictMove(tempState, cmd, this.physics, this.tuning);
           }
           predictedAtFrame = tempState;
       }
@@ -363,7 +404,7 @@ export class ClientPrediction {
 
     if (this.enabled) {
       for (const cmd of this.commands) {
-        state = simulateCommand(state, cmd, this.settings, this.physics.trace, this.physics.pointContents);
+        state = predictMove(state, cmd, this.physics, this.tuning);
       }
     }
 

@@ -53,9 +53,9 @@ const C_VIEW = excerpt(clEnts, 'if ((cl_predict->value) && !(cl.frame.playerstat
 });
 const C_MOVE = excerpt(svUser, 'case clc_move:', { comment: false, upTo: 'cl->lastcmd = newcmd;' });
 const C_TRANSMIT = excerpt(netChanC, 'void Netchan_Transmit (netchan_t *chan, int length, byte *data)');
-const TS_RECOMPUTE = excerpt(cgamePrediction, '  private recompute(): PredictionState {');
+const TS_PREDICT = excerpt(cgamePrediction, 'export function predictMove(');
 const TS_AUTHORITATIVE = excerpt(cgamePrediction, '  setAuthoritative(frame: GameFrameResult<PredictionState>): PredictionState {');
-const TS_MOVE = excerpt(serverTs, '    private handleMove(client: Client, cmd: UserCommand');
+const TS_MOVE = excerpt(serverTs, '    private handleMove(client: Client, commands: MoveCommands');
 const TS_TRANSMIT = excerpt(netChanTs, '  transmit(unreliableData?: Uint8Array): Uint8Array {');
 
 export function NetLab() {
@@ -188,10 +188,10 @@ function NetView({ map, world, setup, predict }: { map: BspMap; world: LabWorld;
 
       <SourcePair
         heading="Predicting: CL_PredictMovement"
-        note="Every client frame, id's client copies the last snapshot's player into pmove and runs every command the server has not acknowledged through the same Pmove the server runs. The lab does the same with the port's runPmove. The port's own client (cgame) replays through applyPmove, a simpler move than the server's runPmove, so it would miss on jumps, steps and slopes; that is for the port to fix."
+        note="Every client frame, id's client copies the last snapshot's player into pmove and runs every command the server has not acknowledged through the same Pmove the server runs. The lab does the same with the port's runPmove, and so does the port's own client (cgame), with the server's constants. Until this lab found it, cgame replayed through a simpler move that missed on jumps, steps and slopes."
       >
         <SourceCode title="id's C" file={ORIGINAL('client/cl_pred.c')} excerpt={C_PREDICT} />
-        <SourceCode title="The port (cgame)" file={PORT('packages/cgame/src/prediction/index.ts')} excerpt={TS_RECOMPUTE} />
+        <SourceCode title="The port (cgame)" file={PORT('packages/cgame/src/prediction/index.ts')} excerpt={TS_PREDICT} />
       </SourcePair>
       <SourcePair
         heading="Checking the guess: CL_CheckPredictionError"
@@ -205,14 +205,14 @@ function NetView({ map, world, setup, predict }: { map: BspMap; world: LabWorld;
       </SourcePair>
       <SourcePair
         heading="Running the commands: SV_ExecuteClientMessage"
-        note="Each packet carries the newest command and the two before it. When packets were lost (net_drop), id's server runs the older ones first, and repeats the last good command for anything further back, so the player keeps moving through short losses. The port's server keeps only the newest command and runs it once per server frame."
+        note="Each packet carries the newest command and the two before it. When packets were lost (net_drop), id's server runs the older ones first, and repeats the last good command for anything further back, so the player keeps moving through short losses. The port's server does the same; until this lab found it, it kept only the newest command and ran it once per server frame."
       >
         <SourceCode title="id's C" file={ORIGINAL('server/sv_user.c')} excerpt={C_MOVE} />
         <SourceCode title="The port (server)" file={PORT('packages/server/src/dedicated.ts')} excerpt={TS_MOVE} />
       </SourcePair>
       <SourcePair
         heading="The packet header: Netchan_Transmit"
-        note="Each packet starts with its sequence number and the last sequence received from the other side: the ack the client predicts from. The lab runs the port's NetChan at both ends. One difference: id's sends a reliable message once and again only when an ack shows it was lost; the port's puts it in every packet until it is acknowledged."
+        note="Each packet starts with its sequence number and the last sequence received from the other side: the ack the client predicts from. The lab runs the port's NetChan at both ends. Both send a reliable message once and again only when an ack shows it was lost (until this lab found it, the port's put it in every packet until it was acknowledged). The port adds two things to id's header: a bit for the reliable message's sequence, and fragments for messages too long for one packet."
       >
         <SourceCode title="id's C" file={ORIGINAL('qcommon/net_chan.c')} excerpt={C_TRANSMIT} />
         <SourceCode title="The port" file={PORT('packages/shared/src/net/netchan.ts')} excerpt={TS_TRANSMIT} />

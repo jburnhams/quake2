@@ -5,7 +5,7 @@ import {
   UserCommand,
   BinaryStream,
   NetworkMessageBuilder,
-  writeUserCommand,
+  writeMoveCommands,
   BinaryWriter,
   CMD_BACKUP,
   NetChan,
@@ -211,7 +211,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
       writer.writeLong(this.latestServerFrame); // lastframe (ack)
 
-      writeUserCommand(writer, commandWithFrame);
+      writeMoveCommands(writer, this.commandHistory);
 
       // Use NetChan to wrap the command
       const packet = this.netchan.transmit(writer.getData());

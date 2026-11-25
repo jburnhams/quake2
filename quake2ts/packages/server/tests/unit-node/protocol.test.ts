@@ -67,16 +67,19 @@ describe('ClientMessageParser', () => {
     writer.writeByte(ClientCommand.move);
     writer.writeByte(123); // Checksum
     writer.writeLong(100); // LastFrame
-    writer.writeByte(50); // msec
-    writer.writeByte(1); // buttons
-    writer.writeShort(0); // angles x
-    writer.writeShort(0); // angles y
-    writer.writeShort(0); // angles z
-    writer.writeShort(200); // forward
-    writer.writeShort(100); // side
-    writer.writeShort(50); // up
-    writer.writeByte(0); // impulse
-    writer.writeByte(0); // lightlevel
+    // Three commands, oldest first, as CL_SendCmd sends them.
+    for (const msec of [30, 40, 50]) {
+      writer.writeByte(msec); // msec
+      writer.writeByte(1); // buttons
+      writer.writeShort(0); // angles x
+      writer.writeShort(0); // angles y
+      writer.writeShort(0); // angles z
+      writer.writeShort(200); // forward
+      writer.writeShort(100); // side
+      writer.writeShort(50); // up
+      writer.writeByte(0); // impulse
+      writer.writeByte(0); // lightlevel
+    }
 
     const stream = new BinaryStream(writer.getData().buffer);
     const handler = {
@@ -91,9 +94,12 @@ describe('ClientMessageParser', () => {
     parser.parseMessage();
 
     expect(handler.onMove).toHaveBeenCalled();
-    const [checksum, lastFrame, cmd] = (handler.onMove as unknown as any).mock.calls[0];
+    const [checksum, lastFrame, commands] = (handler.onMove as unknown as any).mock.calls[0];
     expect(checksum).toBe(123);
     expect(lastFrame).toBe(100);
+    expect(commands.oldest.msec).toBe(30);
+    expect(commands.old.msec).toBe(40);
+    const cmd = commands.current;
     expect(cmd.msec).toBe(50);
     expect(cmd.forwardmove).toBe(200);
     expect(cmd.sidemove).toBe(100);
