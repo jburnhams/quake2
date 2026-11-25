@@ -50,11 +50,11 @@
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/game": "workspace:*",
     "@quake2ts/shared": "workspace:*",
-    "@types/node": "^25.0.3",
+    "@types/node": "^26.6.6",
     "gl-matrix": "^3.4.4",
-    "jsdom": "27.4.0",
-    "tsup": "^8.5.1",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "jsdom": "31.0.1",
+    "tsup": "^9.0.0",
+    "typescript7": "npm:typescript@^7.0.2",
+    "vitest": "^5.1.1"
   }
 }

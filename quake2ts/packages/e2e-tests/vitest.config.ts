@@ -6,12 +6,12 @@ const isUnit = process.env.TEST_TYPE === 'unit';
 export default defineConfig({
   resolve: {
     alias: {
-      '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
-      '@quake2ts/engine': path.resolve(__dirname, '../engine/src/index.ts'),
-      '@quake2ts/game': path.resolve(__dirname, '../game/src/index.ts'),
-      '@quake2ts/cgame': path.resolve(__dirname, '../cgame/src/index.ts'),
-      '@quake2ts/server': path.resolve(__dirname, '../server/src/index.ts'),
-      '@quake2ts/client': path.resolve(__dirname, '../client/src/index.ts'),
+      '@quake2ts/shared': path.resolve(import.meta.dirname, '../shared/src/index.ts'),
+      '@quake2ts/engine': path.resolve(import.meta.dirname, '../engine/src/index.ts'),
+      '@quake2ts/game': path.resolve(import.meta.dirname, '../game/src/index.ts'),
+      '@quake2ts/cgame': path.resolve(import.meta.dirname, '../cgame/src/index.ts'),
+      '@quake2ts/server': path.resolve(import.meta.dirname, '../server/src/index.ts'),
+      '@quake2ts/client': path.resolve(import.meta.dirname, '../client/src/index.ts'),
     },
   },
   test: {
@@ -22,12 +22,7 @@ export default defineConfig({
     testTimeout: 120000,
     hookTimeout: 120000,
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        maxForks: 1,
-        minForks: 1,
-      },
-    },
+    maxWorkers: 1,
     reporters: ['default', 'junit'],
     outputFile: {
       junit: 'test-results/junit.xml',

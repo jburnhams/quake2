@@ -4,7 +4,7 @@ import { DemoPlaybackController, PlaybackState } from '../../../../src/demo/play
 import { NetworkMessageHandler, PROTOCOL_VERSION_RERELEASE } from '../../../../src/demo/parser.js';
 import { ServerCommand } from '@quake2ts/shared';
 import { BinaryStream } from '@quake2ts/shared';
-import pako from 'pako';
+import * as pako from 'pako';
 
 // Helper to write a basic Rerelease demo stream
 function createRereleaseDemoData(): ArrayBuffer {

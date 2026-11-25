@@ -52,6 +52,6 @@
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
     "gl-matrix": "^3.4.4",
-    "tsup": "^8.5.1"
+    "tsup": "^9.0.0"
   }
 }

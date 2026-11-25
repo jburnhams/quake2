@@ -91,7 +91,7 @@ const Gallery: React.FC<GalleryProps> = ({
         <h2 className="text-2xl font-bold text-white uppercase tracking-wider">{title}</h2>
         <button
           onClick={toggleAll}
-          className="bg-q2-panel hover:bg-zinc-700 text-white px-4 py-2 rounded border border-q2-border transition-colors"
+          className="bg-q2-panel hover:bg-zinc-700 text-white px-4 py-2 rounded-sm border border-q2-border transition-colors"
         >
           {allExpanded ? 'Collapse All' : 'Expand All'}
         </button>
@@ -106,7 +106,7 @@ const Gallery: React.FC<GalleryProps> = ({
           const fileName = file.split('/').pop();
 
           return (
-            <div key={file} className="border border-q2-border rounded overflow-hidden">
+            <div key={file} className="border border-q2-border rounded-sm overflow-hidden">
               <div
                 onClick={() => toggleFile(file)}
                 className="bg-q2-panel p-4 cursor-pointer flex justify-between items-center hover:bg-zinc-800 transition-colors select-none"
@@ -140,7 +140,7 @@ const Gallery: React.FC<GalleryProps> = ({
       <div className="mt-10 text-center">
         <button
             onClick={toggleAll}
-            className="bg-q2-panel hover:bg-zinc-700 text-white px-4 py-2 rounded border border-q2-border transition-colors"
+            className="bg-q2-panel hover:bg-zinc-700 text-white px-4 py-2 rounded-sm border border-q2-border transition-colors"
           >
             {allExpanded ? 'Collapse All' : 'Expand All'}
         </button>
@@ -168,14 +168,14 @@ const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({
             </span>
             <span className="text-white">{test.testName}</span>
             {isAnimated && (
-                <span className="flex items-center gap-1 bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded ml-2 border border-blue-800">
+                <span className="flex items-center gap-1 bg-blue-900 text-blue-200 text-xs px-2 py-1 rounded-sm ml-2 border border-blue-800">
                     <Film size={12} />
                     Animated ({test.stats?.frameCount} frames)
                 </span>
             )}
             {test.stats && (
               <span
-                className="bg-zinc-700 text-white text-xs px-2 py-1 rounded ml-2 cursor-help"
+                className="bg-zinc-700 text-white text-xs px-2 py-1 rounded-sm ml-2 cursor-help"
                 title={`Pixels Different: ${test.stats.pixelsDifferent} / ${test.stats.totalPixels}\nError: ${test.stats.percentDifferent.toFixed(4)}%\nMax Allowed: ${test.stats.maxDifferencePercent}%\nThreshold: ${test.stats.threshold}`}
               >
                 Match: {percentMatch}%
@@ -190,7 +190,7 @@ const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({
         <div className="flex items-center gap-2 text-sm">
            <button
              onClick={() => navigator.clipboard.writeText(copyText)}
-             className="flex items-center gap-1 bg-transparent border border-q2-border hover:bg-zinc-700 hover:text-white text-gray-400 px-2 py-1 rounded transition-colors"
+             className="flex items-center gap-1 bg-transparent border border-q2-border hover:bg-zinc-700 hover:text-white text-gray-400 px-2 py-1 rounded-sm transition-colors"
              title="Copy to clipboard"
            >
              <Copy size={14} /> Copy Name
@@ -216,7 +216,7 @@ const TestCase: React.FC<{ test: VisualTestInfo, snapshotBaseUrl: string }> = ({
 };
 
 const ImageColumn: React.FC<{ label: string; src: string; isAnimated?: boolean }> = ({ label, src, isAnimated }) => (
-  <div className="bg-black p-3 rounded border border-zinc-800">
+  <div className="bg-black p-3 rounded-sm border border-zinc-800">
     <div className="text-xs uppercase text-gray-500 mb-2 font-bold flex justify-center items-center gap-2">
         {label}
         {isAnimated && <Film size={12} className="text-blue-500" />}

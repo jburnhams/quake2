@@ -15,8 +15,8 @@ export default defineConfig({
       isolate: false, // Safe for stateless file processing tools
     } : {}),
     alias: {
-      '@quake2ts/engine': path.resolve(__dirname, '../engine/src/index.ts'),
-      '@quake2ts/shared': path.resolve(__dirname, '../shared/src/index.ts'),
+      '@quake2ts/engine': path.resolve(import.meta.dirname, '../engine/src/index.ts'),
+      '@quake2ts/shared': path.resolve(import.meta.dirname, '../shared/src/index.ts'),
     },
   },
 });

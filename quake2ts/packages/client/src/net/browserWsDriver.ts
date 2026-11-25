@@ -56,7 +56,8 @@ export class BrowserWebSocketNetDriver implements NetDriver {
 
   send(data: Uint8Array): void {
     if (this.socket && this.socket.readyState === WebSocket.OPEN) {
-      this.socket.send(data);
+      // Our buffers are never SharedArrayBuffer-backed, which is all the DOM type rules out.
+      this.socket.send(data as Uint8Array<ArrayBuffer>);
     } else {
       console.warn('Attempted to send data on closed or connecting socket');
     }

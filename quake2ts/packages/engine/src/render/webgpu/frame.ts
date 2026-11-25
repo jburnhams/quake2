@@ -311,7 +311,7 @@ export class FrameRenderer {
     const opaquePassDescriptor: GPURenderPassDescriptor = {
       colorAttachments: [{
         view: renderPassTarget,
-        clearValue: clearColor,
+        clearValue: [...clearColor],
         loadOp: 'clear',
         storeOp: 'store'
       }],

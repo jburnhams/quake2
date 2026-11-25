@@ -8,26 +8,26 @@ on:
 
 jobs:
   visual-tests:
-    name: WebGL Visual Tests (Node 25)
-    runs-on: ubuntu-24.04  # Playwright 1.57 has no build for ubuntu-latest (26.04)
+    name: WebGL Visual Tests (Node 26)
+    runs-on: ubuntu-latest
     defaults:
       run:
         working-directory: quake2ts
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
         with:
           lfs: true
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v4
+        uses: pnpm/action-setup@v6
         with:
-          version: 9
+          package_json_file: quake2ts/package.json
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
-          node-version: 25
+          node-version: 26
           cache: 'pnpm'
           cache-dependency-path: quake2ts/pnpm-lock.yaml
 
@@ -50,7 +50,7 @@ jobs:
 
       - name: Upload Visual Test Results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: webgl-visual-test-results
           path: |

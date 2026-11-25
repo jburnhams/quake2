@@ -1,6 +1,6 @@
 import React from 'react';
 import Layout from '../components/Layout';
-import { Link } from 'react-router-dom';
+import { Link } from 'react-router';
 
 const FeatureCard: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <div className="bg-black/30 p-4 border border-q2-border">
@@ -86,12 +86,12 @@ const Home: React.FC = () => {
         <p className="mb-4 text-[1.1rem]">quake2ts is distributed as a set of NPM packages in a monorepo.</p>
 
         <h3 className="text-q2-green mt-6 mb-2 font-bold text-lg">Installation</h3>
-        <pre className="bg-black text-q2-green p-3 rounded text-sm overflow-x-auto border border-q2-border">
+        <pre className="bg-black text-q2-green p-3 rounded-sm text-sm overflow-x-auto border border-q2-border">
           <code>npm install @quake2ts/engine @quake2ts/game @quake2ts/client</code>
         </pre>
 
         <h3 className="text-q2-green mt-6 mb-2 font-bold text-lg">Basic Example</h3>
-        <pre className="bg-black text-q2-green p-3 rounded text-sm overflow-x-auto border border-q2-border">
+        <pre className="bg-black text-q2-green p-3 rounded-sm text-sm overflow-x-auto border border-q2-border">
           <code>{`import { createGame, createClient } from '@quake2ts/game';
 
 // Initialize the system

@@ -14,15 +14,15 @@
     "@quake2ts/shared": "workspace:^",
     "@quake2ts/test-utils": "workspace:^",
     "@quake2ts/test-utils-browser": "workspace:*",
-    "playwright": "^1.57.0",
-    "serve-handler": "^6.1.6",
-    "vite": "^5.2.11",
-    "vitest": "^1.6.0"
+    "playwright": "^1.65.1",
+    "serve-handler": "^6.1.8",
+    "vite": "^8.3.8",
+    "vitest": "^5.1.1"
   },
   "devDependencies": {
-    "@types/node": "^20.12.12",
+    "@types/node": "^26.6.6",
     "@types/serve-handler": "^6.1.4",
-    "tsup": "^8.0.2",
-    "typescript": "^5.4.5"
+    "tsup": "^9.0.0",
+    "typescript7": "npm:typescript@^7.0.2"
   }
 }
