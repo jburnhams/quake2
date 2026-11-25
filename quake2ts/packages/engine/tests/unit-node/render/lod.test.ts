@@ -110,6 +110,12 @@ vi.mock('../../../src/render/collisionVis.js', () => ({
 
 vi.mock('../../../src/render/bspTraversal.js', () => ({
     findLeafForPoint: vi.fn(() => -1),
+    findViewPoint: vi.fn((map: any) => {
+        const leaf = -1 >= 0 ? map?.leafs?.[-1] : undefined;
+        return { leaf: -1, cluster: leaf?.cluster ?? -1, cluster2: leaf?.cluster ?? -1, area: leaf?.area ?? -1 };
+    }),
+    isClusterInView: vi.fn(() => true),
+    reachableAreasFrom: vi.fn(() => null),
     isClusterVisible: vi.fn(() => true),
     gatherVisibleFaces: vi.fn(() => []),
 }));
