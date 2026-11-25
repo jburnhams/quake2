@@ -55,7 +55,10 @@ const C_FLOOD = excerpt(cmodel, 'void FloodArea_r (carea_t *area, int floodnum)'
 const C_AREABITS = excerpt(cmodel, 'int CM_WriteAreaBits (byte *buffer, int area)');
 const TS_POINT = excerpt(traversalTs, 'export function findLeafForPoint(');
 const TS_DECOMPRESS = excerpt(formatsBsp, 'function decompressVis(');
+const TS_VIEW = excerpt(traversalTs, 'export function findViewPoint(');
 const TS_VISIBLE = excerpt(traversalTs, 'export function isClusterVisible(');
+const TS_IN_VIEW = excerpt(traversalTs, 'export function isClusterInView(');
+const TS_AREAS_FROM = excerpt(traversalTs, 'export function reachableAreasFrom(');
 const TS_TRAVERSE = excerpt(traversalTs, 'function traverse(');
 const TS_AREAS = excerpt(traversalTs, 'export function calculateReachableAreas(');
 
@@ -197,21 +200,24 @@ function VisibilityView({
       </SourcePair>
       <SourcePair
         heading="Marking what to draw: R_SetupFrame and R_MarkLeaves"
-        note="id's renderer marks every leaf whose cluster bit is set, and the nodes above it, then walks only the marked part of the tree. An eye in no cluster (inside a wall or outside the level) marks everything. id's also reads a second cluster 16 units below the eye (above it in water), so an eye at a water surface draws both sides; the port reads only the eye's own cluster."
+        note="id's renderer marks every leaf whose cluster bit is set, and the nodes above it, then walks only the marked part of the tree. An eye in no cluster (inside a wall or outside the level) marks everything. Both also read a second cluster 16 units below the eye (above it in water), so an eye at a water surface draws both sides."
       >
         <SourceCode title="id's C: the eye's clusters" file={ORIGINAL('ref_gl/gl_rmain.c')} excerpt={C_SETUP} />
         <SourceCode title="id's C: marking" file={ORIGINAL('ref_gl/gl_rsurf.c')} excerpt={C_MARK} />
+        <SourceCode title="The port: the eye's clusters" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_VIEW} />
         <SourceCode title="The port: one bit" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_VISIBLE} />
+        <SourceCode title="The port: either cluster" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_IN_VIEW} />
         <SourceCode title="The port: the walk" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_TRAVERSE} />
       </SourcePair>
       <SourcePair
         heading="Doors: FloodArea_r and CM_WriteAreaBits"
-        note="The PVS cannot know a door is shut, so qbsp also splits the level into areas at each func_areaportal. The server floods from area to area through open portals and sends the client the areas joined to the eye's; the renderer skips a leaf in any other. The port floods the same way in the renderer. id's gives an eye in area 0 (outside the level) every area; the port gives it only area 0."
+        note="The PVS cannot know a door is shut, so qbsp also splits the level into areas at each func_areaportal. The server floods from area to area through open portals and sends the client the areas joined to the eye's; the renderer skips a leaf in any other. The port floods the same way in the renderer, and, as id's does, culls nothing by area for an eye in area 0 (outside the level)."
       >
         <SourceCode title="id's C: the flood" file={ORIGINAL('qcommon/cmodel.c')} excerpt={C_FLOOD} />
         <SourceCode title="id's C: the areas sent" file={ORIGINAL('qcommon/cmodel.c')} excerpt={C_AREABITS} />
         <SourceCode title="id's C: the renderer's check" file={ORIGINAL('ref_gl/gl_rsurf.c')} excerpt={C_AREACHECK} />
-        <SourceCode title="The port (engine)" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_AREAS} />
+        <SourceCode title="The port: area 0" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_AREAS_FROM} />
+        <SourceCode title="The port: the flood" file={PORT('packages/engine/src/render/bspTraversal.ts')} excerpt={TS_AREAS} />
       </SourcePair>
 
       <FurtherReading
@@ -246,6 +252,7 @@ function facts(v: PvsView, contents: number | null): Property[] {
     { term: 'Eye', value: `${round(v.eye.x)}  ${round(v.eye.y)}  ${round(v.eye.z)}` },
     { term: 'Leaf', value: v.leaf < 0 ? null : format.integer.format(v.leaf) },
     { term: 'Leaf contents', value: contents === null ? null : contents === 0 ? 'Empty' : contents & 1 ? 'Solid' : `Flags ${contents}` },
+    { term: 'Second cluster', value: v.cluster2 === v.cluster ? 'None' : v.cluster2 < 0 ? null : format.integer.format(v.cluster2) },
     { term: 'Area', value: v.area < 0 ? null : format.integer.format(v.area) },
     { term: 'Areas joined to it', value: v.areas ? [...v.areas].sort((a, b) => a - b).join(', ') : 'All' },
   ];

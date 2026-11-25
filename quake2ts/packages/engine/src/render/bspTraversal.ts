@@ -77,6 +77,51 @@ export function findLeafForPoint(map: BspMap, point: Vec3): number {
   return -1;
 }
 
+const CONTENTS_SOLID = 1;
+
+/** Where the eye is in the BSP, as R_SetupFrame finds it: its leaf, its cluster or two, and its area. */
+export interface ViewPoint {
+  readonly leaf: number;
+  readonly cluster: number;
+  /**
+   * r_viewcluster2: the cluster 16 units below the eye (above it, when the eye is in water or
+   * another non-empty leaf), if that point is not solid and is in another cluster; else `cluster`.
+   * "check above and below so crossing solid water doesn't draw wrong": an eye just above a water
+   * surface also draws what the cluster under the surface sees, and the other way round.
+   */
+  readonly cluster2: number;
+  readonly area: number;
+}
+
+/** R_SetupFrame's view cluster and second view cluster, and the eye leaf's area. */
+export function findViewPoint(map: BspMap, eye: Vec3): ViewPoint {
+  const leafIndex = findLeafForPoint(map, eye);
+  const leaf = leafIndex >= 0 ? map.leafs[leafIndex] : undefined;
+  if (!leaf) return { leaf: -1, cluster: -1, cluster2: -1, area: -1 };
+  const cluster = leaf.cluster;
+  let cluster2 = cluster;
+  const probe = { x: eye.x, y: eye.y, z: eye.z + (leaf.contents === 0 ? -16 : 16) };
+  const otherIndex = findLeafForPoint(map, probe);
+  const other = otherIndex >= 0 ? map.leafs[otherIndex] : undefined;
+  if (other && !(other.contents & CONTENTS_SOLID) && other.cluster !== cluster2) cluster2 = other.cluster;
+  return { leaf: leafIndex, cluster, cluster2, area: leaf.area };
+}
+
+/** Whether `testCluster` is in the PVS of either view cluster (R_MarkLeaves ORs the two rows). */
+export function isClusterInView(visibility: BspVisibility | undefined, view: ViewPoint, testCluster: number): boolean {
+  if (isClusterVisible(visibility, view.cluster, testCluster)) return true;
+  return view.cluster2 !== view.cluster && isClusterVisible(visibility, view.cluster2, testCluster);
+}
+
+/**
+ * The areas the eye's area can see through open area portals, or null for no area culling.
+ * CM_WriteAreaBits sets every area's bit for area 0 (outside the map's areas), so it culls nothing.
+ */
+export function reachableAreasFrom(map: BspMap, area: number, portalState: ReadonlyArray<boolean> | undefined): Set<number> | null {
+  if (!portalState || area <= 0 || !map.areas || map.areas.length === 0) return null;
+  return calculateReachableAreas(map, area, portalState);
+}
+
 function collectFacesFromLeaf(map: BspMap, leafIndex: number): number[] {
   const leaf = map.leafs[leafIndex];
   const faces: number[] = [];
@@ -91,7 +136,7 @@ function traverse(
   nodeIndex: number,
   camera: Vec3,
   frustum: readonly FrustumPlane[],
-  viewCluster: number,
+  view: ViewPoint,
   visibleFaces: VisibleFace[],
   visitedFaces: Set<number>,
   reachableAreas: ReadonlySet<number> | null
@@ -105,7 +150,7 @@ function traverse(
       return;
     }
 
-    if (!isClusterVisible(map.visibility, viewCluster, leaf.cluster)) {
+    if (!isClusterInView(map.visibility, view, leaf.cluster)) {
       return;
     }
     if (!leafIntersectsFrustum(leaf, frustum)) {
@@ -141,8 +186,8 @@ function traverse(
     { x: node.maxs[0], y: node.maxs[1], z: node.maxs[2] },
     frustum,
   )) {
-    traverse(map, nearChild, camera, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
-    traverse(map, farChild, camera, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
+    traverse(map, nearChild, camera, frustum, view, visibleFaces, visitedFaces, reachableAreas);
+    traverse(map, farChild, camera, frustum, view, visibleFaces, visitedFaces, reachableAreas);
   }
 }
 
@@ -201,22 +246,15 @@ export function gatherVisibleFaces(
   frustum: readonly FrustumPlane[],
   portalState?: ReadonlyArray<boolean>
 ): VisibleFace[] {
-  const viewLeaf = findLeafForPoint(map, cameraPosition);
-  const viewLeafData = viewLeaf >= 0 ? map.leafs[viewLeaf] : null;
-  const viewCluster = viewLeafData ? viewLeafData.cluster : -1;
-  const viewArea = viewLeafData ? viewLeafData.area : -1;
-
-  let reachableAreas: Set<number> | null = null;
-  if (portalState && viewArea >= 0 && map.areas && map.areas.length > 0) {
-    reachableAreas = calculateReachableAreas(map, viewArea, portalState);
-  }
+  const view = findViewPoint(map, cameraPosition);
+  const reachableAreas = reachableAreasFrom(map, view.area, portalState);
 
   const visibleFaces: VisibleFace[] = [];
   const visitedFaces = new Set<number>();
 
   if (map.models.length > 0) {
       const headNode = map.models[0].headNode;
-      traverse(map, headNode, cameraPosition, frustum, viewCluster, visibleFaces, visitedFaces, reachableAreas);
+      traverse(map, headNode, cameraPosition, frustum, view, visibleFaces, visitedFaces, reachableAreas);
   }
 
   return visibleFaces;
