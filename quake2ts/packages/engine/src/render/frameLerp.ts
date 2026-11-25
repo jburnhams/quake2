@@ -25,6 +25,8 @@ interface Entry {
   frame: number;
   oldFrame: number;
   changedMs: number;
+  /** Time between the last two frame changes, so a faster animation blends over its own step. */
+  intervalMs: number;
 }
 
 export class FrameLerpTracker {
@@ -35,20 +37,26 @@ export class FrameLerpTracker {
    * The blend for an entity this frame. `key` names the entity (its number), `model` its model
    * index: a new model (a weapon change, a slot reused by another entity) starts without a blend,
    * as CL_AddViewWeapon sets `gun.oldframe = 0` "just changed weapons, don't lerp from old".
-   * `stepMs` is how long the animation step lasts (1000 / ps.gunrate for the weapon).
+   * `stepMs` is how long the animation step lasts (1000 / ps.gunrate for the weapon); an
+   * entity seen changing frames faster blends over the interval it is changing at.
    */
   sample(key: number, model: number, frame: number, nowMs: number, stepMs = ANIMATION_STEP_MS): FrameBlendSample {
     this.seen.add(key);
     let entry = this.entries.get(key);
     if (!entry || entry.model !== model || nowMs < entry.changedMs) {
-      entry = { model, frame, oldFrame: frame, changedMs: Number.NEGATIVE_INFINITY };
+      entry = { model, frame, oldFrame: frame, changedMs: Number.NEGATIVE_INFINITY, intervalMs: Number.POSITIVE_INFINITY };
       this.entries.set(key, entry);
     } else if (entry.frame !== frame) {
+      entry.intervalMs = nowMs - entry.changedMs;
       entry.oldFrame = entry.frame;
       entry.frame = frame;
       entry.changedMs = nowMs;
     }
-    const t = stepMs > 0 ? (nowMs - entry.changedMs) / stepMs : 1;
+    // A weapon under Haste or Quad Fire steps every 50 or 25 ms (Weapon_AnimationTime): blend
+    // over the interval it is actually stepping at when that is shorter, so each blend finishes
+    // before the next step instead of snapping.
+    const step = Math.min(stepMs, entry.intervalMs);
+    const t = step > 0 ? (nowMs - entry.changedMs) / step : 1;
     if (!(t < 1)) return { oldFrame: frame, frameLerp: 1 };
     return { oldFrame: entry.oldFrame, frameLerp: Math.max(0, t) };
   }

@@ -25,6 +25,15 @@ describe('FrameLerpTracker', () => {
     expect(lerp.sample(0, 7, 4, 50, 50)).toEqual({ oldFrame: 3, frameLerp: 0.5 });
   });
 
+  it('blends over a shorter interval when the frames change faster than the step, as a hasted weapon does', () => {
+    const lerp = new FrameLerpTracker();
+    lerp.sample(0, 7, 0, 0);
+    lerp.sample(0, 7, 1, 50);
+    expect(lerp.sample(0, 7, 2, 100)).toEqual({ oldFrame: 1, frameLerp: 0 });
+    expect(lerp.sample(0, 7, 2, 125)).toEqual({ oldFrame: 1, frameLerp: 0.5 });
+    expect(lerp.sample(0, 7, 2, 150)).toEqual({ oldFrame: 2, frameLerp: 1 });
+  });
+
   it('does not blend across a model change, a freed slot or time going back', () => {
     const lerp = new FrameLerpTracker();
     lerp.sample(1, 5, 4, 0);
