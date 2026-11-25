@@ -6,6 +6,7 @@ import * as React from 'react';
 import {
   Alert,
   Button,
+  ButtonLink,
   ColorSchemeChoice,
   DataView,
   EmptyState,
@@ -23,6 +24,7 @@ import {
 } from 'strata-react';
 import { FolderOpen } from 'lucide-react';
 import { useDemoPak, useLibrary } from '../library/context';
+import { DemoProgress } from '../library/DemoProgress';
 import { FileTree } from '../files/FileTree';
 import { FileDetails } from '../files/FileDetails';
 import { NoFileChosen, Preview } from '../preview/Preview';
@@ -62,6 +64,9 @@ export function ExplorerScreen() {
           </p>
           <div className="ms-auto flex items-center gap-2">
             <TextLink to="/labs/movement">Movement lab</TextLink>
+            <ButtonLink to="/" size="sm" variant="ghost">
+              About quake2ts
+            </ButtonLink>
             <FileButton accept={['.pak']} multiple onFiles={openPaks} icon={FolderOpen} size="sm" variant="default">
               Open PAK files
             </FileButton>
@@ -114,10 +119,13 @@ export function ExplorerScreen() {
 
 function TreeSkeleton() {
   return (
-    <div className="grid gap-2 p-3" aria-hidden>
-      {Array.from({ length: 8 }, (_, i) => (
-        <Skeleton key={i} className="h-5 w-40" />
-      ))}
+    <div className="grid gap-2 p-3">
+      <DemoProgress />
+      <div className="grid gap-2" aria-hidden>
+        {Array.from({ length: 8 }, (_, i) => (
+          <Skeleton key={i} className="h-5 w-40" />
+        ))}
+      </div>
     </div>
   );
 }

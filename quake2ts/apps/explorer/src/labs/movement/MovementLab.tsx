@@ -70,7 +70,7 @@ export function MovementLab() {
               : "Every constant at the game's value"}
           </p>
           <div className="ms-auto flex items-center gap-2">
-            <TextLink to="/">Explorer</TextLink>
+            <TextLink to="/explore">Explorer</TextLink>
             <ColorSchemeChoice compact />
           </div>
         </header>
@@ -116,7 +116,7 @@ export function MovementLab() {
               isEmpty={(w) => w === null}
               empty={
                 <EmptyState title="demo1 is not open">
-                  The lab runs on {LAB_MAP}, from the demo PAK. Open a PAK that has it in the <TextLink to="/">explorer</TextLink>.
+                  The lab runs on {LAB_MAP}, from the demo PAK. Open a PAK that has it in the <TextLink to="/explore">explorer</TextLink>.
                 </EmptyState>
               }
             >
