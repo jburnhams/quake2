@@ -106,5 +106,13 @@ describe('the intro', () => {
     const goTo = screen.getByRole('list', { name: 'Go to' });
     expect(within(goTo).getByRole('link', { name: /Explorer/ })).toHaveAttribute('href', '/explore');
     expect(screen.getByRole('link', { name: /Explore the demo's files/ })).toHaveAttribute('href', '/explore');
+    expect(screen.getByRole('link', { name: /Play demo1/ })).toHaveAttribute('href', '/play');
+  });
+});
+
+describe('play', () => {
+  it('says why the game cannot start where there is no WebGL 2', async () => {
+    renderRoutes(routes, { route: '/play', toasts: false });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/This browser has no WebGL 2/);
   });
 });

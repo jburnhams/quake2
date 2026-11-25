@@ -2,7 +2,7 @@
 // Read surface rather than an Operate screen: what the project is, where it stands today in plain
 // words (no feature grid of promises), the places to go next as LinkCards, and how the demo's data
 // reaches the browser, since a visitor downloads 39 MB the first time.
-import { FolderTree } from 'lucide-react';
+import { FolderTree, Gamepad2 } from 'lucide-react';
 import { ButtonLink, ColorSchemeChoice, LinkCard, LinkCardList, TextLink } from 'strata-react';
 
 const REPO = 'https://github.com/jburnhams/quake2';
@@ -29,7 +29,10 @@ export function IntroScreen() {
             Everything here runs on the free Quake 2 demo's first level, <span className="font-mono">demo1</span>.
           </p>
           <div className="flex flex-wrap gap-2 pt-1">
-            <ButtonLink to="/explore" variant="default" icon={FolderTree}>
+            <ButtonLink to="/play" variant="default" icon={Gamepad2}>
+              Play demo1
+            </ButtonLink>
+            <ButtonLink to="/explore" icon={FolderTree}>
               Explore the demo's files
             </ButtonLink>
           </div>
@@ -44,11 +47,17 @@ export function IntroScreen() {
             </li>
             <li>Collision is ported line for line and checked against the original C code's own traces.</li>
             <li>The renderer draws demo1 textured and lit in both WebGL and WebGPU, and the two agree to within a fraction of a percent.</li>
-            <li>Not there yet: playing it on this site with the game drawn as you move, sound, the status bar, sky, models drawn in the world, and every level after the first.</li>
+            <li>Not there yet: drawing doors, lifts, monsters, items and your weapon as you play, sound, the status bar, sky, and the levels after the first.</li>
           </ul>
         </section>
 
         <LinkCardList label="Go to">
+          <LinkCard
+            as="h2"
+            to="/play"
+            title="Play"
+            description="Walk demo1 with the keyboard and mouse: the real game, drawn by the new renderer."
+          />
           <LinkCard
             as="h2"
             to="/explore"

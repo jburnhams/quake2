@@ -14,7 +14,9 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
+    "@quake2ts/engine": "workspace:*",
     "@quake2ts/formats": "workspace:*",
+    "@quake2ts/server": "workspace:*",
     "@tanstack/react-query": "^5.107.1",
     "lucide-react": "^1.72.0",
     "react": "^19.3.1",

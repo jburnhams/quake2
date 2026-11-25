@@ -12,7 +12,11 @@ pnpm --filter @quake2ts/explorer build    # typecheck, then dist/
 apps/explorer/scripts/build-site.sh .paks/q2-314-demo-x86.exe   # the Pages site (from quake2ts/)
 ```
 
-The site is this app: the intro at `/` (`src/screens/IntroScreen.tsx`) and the explorer at `/explore`.
+The site is this app: the intro at `/` (`src/screens/IntroScreen.tsx`), the explorer at `/explore`,
+and the game at `/play` (`src/screens/PlayScreen.tsx`, `src/play/session.ts`): `LocalHost` runs
+`map demo1` at 40 Hz and the engine's WebGL renderer draws the world from the player's eyes. It
+imports `@quake2ts/engine` and `@quake2ts/server` from their `dist/`, so run `pnpm run build` in
+`quake2ts/` before the typecheck or a build.
 `.github/workflows/pages.yml` builds and deploys it on every push to main that touches `quake2ts/`.
 `scripts/fetch-paks.sh --unpinned` keeps the archive in `.paks/` for a local site build.
 

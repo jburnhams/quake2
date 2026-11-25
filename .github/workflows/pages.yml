@@ -43,6 +43,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build the packages the game page imports
+        run: pnpm run build
+
       - name: Typecheck and test the explorer
         run: |
           pnpm --filter @quake2ts/explorer typecheck

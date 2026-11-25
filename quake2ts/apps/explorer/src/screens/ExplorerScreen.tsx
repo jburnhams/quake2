@@ -12,7 +12,6 @@ import {
   EmptyState,
   FileButton,
   LoadError,
-  Meter,
   Pane,
   Split,
   Skeleton,
@@ -23,7 +22,8 @@ import {
   useWorkspaceState,
 } from 'strata-react';
 import { FolderOpen } from 'lucide-react';
-import { useDemoPak, useDemoProgress, useLibrary } from '../library/context';
+import { useDemoPak, useLibrary } from '../library/context';
+import { DemoProgress } from '../library/DemoProgress';
 import { FileTree } from '../files/FileTree';
 import { FileDetails } from '../files/FileDetails';
 import { NoFileChosen, Preview } from '../preview/Preview';
@@ -116,24 +116,9 @@ export function ExplorerScreen() {
 }
 
 function TreeSkeleton() {
-  const progress = useDemoProgress();
   return (
     <div className="grid gap-2 p-3">
-      {progress ? (
-        <Meter
-          label="Downloading the Quake 2 demo"
-          value={progress.received}
-          max={progress.total ?? progress.received}
-          valueText={
-            progress.total === progress.received
-              ? 'Unpacking'
-              : progress.total
-                ? format.share(progress.received / progress.total)
-                : format.bytes(progress.received)
-          }
-          detail={progress.total ? `${format.bytes(progress.received)} of ${format.bytes(progress.total)}, once; later visits read it from this browser` : undefined}
-        />
-      ) : null}
+      <DemoProgress />
       <div className="grid gap-2" aria-hidden>
         {Array.from({ length: 8 }, (_, i) => (
           <Skeleton key={i} className="h-5 w-40" />
