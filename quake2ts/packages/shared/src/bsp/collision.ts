@@ -1,5 +1,4 @@
 import { CONTENTS_MONSTER, CONTENTS_TRIGGER } from './contents.js';
-import { angleVectors } from '../math/angles.js';
 import type { Vec3 } from '../math/vec3.js';
 import { ZERO_VEC3, addVec3, scaleVec3, subtractVec3 } from '../math/vec3.js';
 import { createSpatialTree, linkEntityToSpatialTree, querySpatialTree, SpatialNode } from './spatial.js';
@@ -897,13 +896,45 @@ function isRotated(angles: Vec3 | undefined): angles is Vec3 {
   return !!angles && (angles.x !== 0 || angles.y !== 0 || angles.z !== 0);
 }
 
+const F = Math.fround;
+const DEG2RAD_D = (Math.PI * 2) / 360;
+
+/**
+ * q_shared.c's AngleVectors in 32-bit floats: the angle is a float made from a double product,
+ * sin and cos run in double and are stored as floats, and the products are float.
+ */
+function angleVectorsF(angles: Vec3): { forward: Vec3; right: Vec3; up: Vec3 } {
+  let a = F(angles.y * DEG2RAD_D);
+  const sy = F(Math.sin(a));
+  const cy = F(Math.cos(a));
+  a = F(angles.x * DEG2RAD_D);
+  const sp = F(Math.sin(a));
+  const cp = F(Math.cos(a));
+  a = F(angles.z * DEG2RAD_D);
+  const sr = F(Math.sin(a));
+  const cr = F(Math.cos(a));
+  return {
+    forward: { x: F(cp * cy), y: F(cp * sy), z: -sp },
+    right: {
+      x: F(F(F(-sr * sp) * cy) + F(-cr * -sy)),
+      y: F(F(F(-sr * sp) * sy) + F(-cr * cy)),
+      z: F(-sr * cp),
+    },
+    up: {
+      x: F(F(F(cr * sp) * cy) + F(-sr * -sy)),
+      y: F(F(F(cr * sp) * sy) + F(-sr * cy)),
+      z: F(cr * cp),
+    },
+  };
+}
+
+/** DotProduct in floats, summed left to right as the macro is. */
+const dotF = (a: Vec3, b: Vec3) => F(F(F(a.x * b.x) + F(a.y * b.y)) + F(a.z * b.z));
+const subF = (a: Vec3, b: Vec3): Vec3 => ({ x: F(a.x - b.x), y: F(a.y - b.y), z: F(a.z - b.z) });
+
 /** Into a model's frame: dot with forward, minus dot with right, dot with up (cmodel.c's convention). */
 function rotateInto(v: Vec3, forward: Vec3, right: Vec3, up: Vec3): Vec3 {
-  return {
-    x: v.x * forward.x + v.y * forward.y + v.z * forward.z,
-    y: -(v.x * right.x + v.y * right.y + v.z * right.z),
-    z: v.x * up.x + v.y * up.y + v.z * up.z,
-  };
+  return { x: dotF(v, forward), y: -dotF(v, right), z: dotF(v, up) };
 }
 
 export interface TransformedTraceParams extends CollisionTraceParams {
@@ -915,12 +946,12 @@ export interface TransformedTraceParams extends CollisionTraceParams {
 /** CM_TransformedBoxTrace: traces against a moved and rotated submodel (a door, a plat) or a box hull. */
 export function transformedBoxTrace(params: TransformedTraceParams): CollisionTraceResult {
   const { model, start, end, headnode, origin, angles } = params;
-  let startL = subtractVec3(start, origin);
-  let endL = subtractVec3(end, origin);
+  let startL = subF(start, origin);
+  let endL = subF(end, origin);
 
   const rotated = !isBoxHeadnode(model, headnode) && isRotated(angles);
   if (rotated) {
-    const { forward, right, up } = angleVectors(angles);
+    const { forward, right, up } = angleVectorsF(angles);
     startL = rotateInto(startL, forward, right, up);
     endL = rotateInto(endL, forward, right, up);
   }
@@ -929,7 +960,7 @@ export function transformedBoxTrace(params: TransformedTraceParams): CollisionTr
 
   let plane = trace.plane;
   if (rotated && trace.fraction !== 1 && plane) {
-    const back = angleVectors({ x: -angles.x, y: -angles.y, z: -angles.z });
+    const back = angleVectorsF({ x: -angles.x, y: -angles.y, z: -angles.z });
     plane = { ...plane, normal: rotateInto(plane.normal, back.forward, back.right, back.up) };
   }
 
@@ -938,18 +969,18 @@ export function transformedBoxTrace(params: TransformedTraceParams): CollisionTr
     plane,
     planeNormal: plane?.normal,
     endpos: {
-      x: start.x + trace.fraction * (end.x - start.x),
-      y: start.y + trace.fraction * (end.y - start.y),
-      z: start.z + trace.fraction * (end.z - start.z),
+      x: F(start.x + F(trace.fraction * F(end.x - start.x))),
+      y: F(start.y + F(trace.fraction * F(end.y - start.y))),
+      z: F(start.z + F(trace.fraction * F(end.z - start.z))),
     },
   };
 }
 
 /** CM_TransformedPointContents. */
 export function transformedPointContents(point: Vec3, model: CollisionModel, headnode: number, origin: Vec3, angles?: Vec3): number {
-  let p = subtractVec3(point, origin);
+  let p = subF(point, origin);
   if (!isBoxHeadnode(model, headnode) && isRotated(angles)) {
-    const { forward, right, up } = angleVectors(angles);
+    const { forward, right, up } = angleVectorsF(angles);
     p = rotateInto(p, forward, right, up);
   }
   return model.leaves[findLeafIndex(p, model, headnode)].contents;

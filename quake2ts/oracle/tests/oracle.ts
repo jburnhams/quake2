@@ -110,3 +110,10 @@ export function msgOracleBin(): string {
   buildOracle();
   return join(BUILD_DIR, 'q2msg');
 }
+
+/** Path of the model-loader oracle (ref_gl's gl_model.c), built alongside q2oracle. */
+export function modelOracleBin(): string {
+  if (process.env.Q2MODEL_BIN) return process.env.Q2MODEL_BIN;
+  buildOracle();
+  return join(BUILD_DIR, 'q2model');
+}

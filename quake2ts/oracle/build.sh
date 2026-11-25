@@ -3,6 +3,7 @@
 #   build/q2oracle  collision (full/qcommon/cmodel.c)
 #   build/q2pmove   player movement (rerelease/p_move.cpp, traced through cmodel.c)
 #   build/q2msg     message encoding and checksums (qcommon/common.c, crc.c, client/cl_ents.c)
+#   build/q2model   map, alias model and sprite loading (ref_gl/gl_model.c)
 set -e
 here=$(cd "$(dirname "$0")" && pwd)
 out="$here/build"
@@ -23,6 +24,9 @@ cc $GCFLAGS -c -o "$out/crc.o" "$full/qcommon/crc.c"
 cc $GCFLAGS -c -o "$out/q_shared_gc.o" "$full/game/q_shared.c"
 cc $GCFLAGS -c -o "$out/cl_ents.o" "$full/client/cl_ents.c"
 cc $GCFLAGS -o "$out/q2msg" "$here/msg_harness.c" "$out/common.o" "$out/cl_ents.o" "$out/crc.o" "$out/q_shared_gc.o" -Wl,--gc-sections -lm
+# ref_gl's model loader; gl/ holds just enough of OpenGL's types for its headers.
+cc $CFLAGS -I"$here/gl" -c -o "$out/gl_model.o" "$full/ref_gl/gl_model.c"
+cc $CFLAGS -I"$here/gl" -o "$out/q2model" "$here/model_harness.c" "$out/gl_model.o" "$out/q_shared.o" -lm
 if command -v c++ >/dev/null 2>&1; then
   # The rerelease needs C++20; USE_CPP20_FORMAT picks <format> over the fmt library.
   c++ -std=c++20 -DUSE_CPP20_FORMAT=1 -O2 -w -fno-strict-aliasing -ffp-contract=off -o "$out/q2pmove" \

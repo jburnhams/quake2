@@ -8,7 +8,7 @@
  * order, batches) without a GPU.
  */
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP, type SurfaceFlag } from '@quake2ts/shared';
-import type { BspMap } from '../assets/bsp.js';
+import { textureAnimationFrames, type BspMap } from '../assets/bsp.js';
 import { gatherVisibleFaces, type VisibleFace } from './bspTraversal.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { mat4 } from 'gl-matrix';
@@ -143,9 +143,9 @@ export function isTransparentSurface(flags: SurfaceFlag): boolean {
 export function animatedTextureName(map: BspMap, faceIndex: number, timeSeconds: number): string | undefined {
   const first = map.faces?.[faceIndex]?.texInfo ?? -1;
   const start = map.texInfo?.[first];
-  if (!start || start.nextTexInfo < 0) return undefined;
-  let frames = 1;
-  for (let i = start.nextTexInfo; i !== first && i >= 0 && frames < 64; i = map.texInfo[i]?.nextTexInfo ?? -1) frames++;
+  // Mod_LoadTexinfo keeps a next only when nexttexinfo > 0.
+  if (!start || start.nextTexInfo <= 0) return undefined;
+  const frames = textureAnimationFrames(map.texInfo, first);
   let index = first;
   for (let step = Math.floor(timeSeconds * 2) % frames; step > 0; step--) index = map.texInfo[index].nextTexInfo;
   return map.texInfo[index]?.texture;

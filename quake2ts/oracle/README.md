@@ -26,6 +26,15 @@ Differential tests that run the TypeScript port and id Software's original C cod
   byte for byte against MSG_WriteDeltaEntity on random protocol 34 states (laser-colour skins,
   high effect bits, beams, unchanged and forced entities), and the demo parser's entity reader
   against CL_ParseDelta on the C's bytes.
+- `model_harness.c` links ref_gl's `full/ref_gl/gl_model.c` unchanged into `build/q2model` (`gl/`
+  holds just enough of OpenGL's types for its headers; nothing calls GL): Mod_LoadBrushModel,
+  Mod_LoadAliasModel, Mod_LoadSpriteModel, Mod_PointInLeaf and Mod_ClusterPVS.
+- `tests/model.oracle.test.ts` loads every map, alias model and sprite in the demo `pak0.pak`
+  (`scripts/fetch-paks.sh`; the repo's small pak otherwise) through both: planes and signbits,
+  texinfo and animation frame counts, faces with CalcSurfaceExtents' lightmap placement
+  (`surfaceExtents`), leafs, leaf face lists, nodes, submodels, every PVS row, Mod_PointInLeaf on
+  random points (`pointInLeaf`), MD2 headers, skins, st, triangles, frames and glcmds, sprite
+  frames, and that the TS refuses the MD2 header damage gl_model.c refuses.
 - `tests/pmove.oracle.test.ts` runs seeded random trajectories on demo1 (starts on floors, in the
   air and in water; walking, strafing, jumping, crouching and turning at 8 to 50 ms frames) through
   both, starting each TS frame from the C's previous result so a difference is that frame's own.
@@ -33,7 +42,7 @@ Differential tests that run the TypeScript port and id Software's original C cod
   jump sound, step clip, impact delta and the touch count.
 
 Run it with `pnpm test:oracle`. `ORACLE_QUERIES=200000` runs a bigger collision sample and
-`ORACLE_PMOVE_RUNS=5000` a bigger movement one (40 frames each), `ORACLE_MSG_QUERIES` the message one; `Q2ORACLE_BIN`, `Q2PMOVE_BIN` and `Q2MSG_BIN`
+`ORACLE_PMOVE_RUNS=5000` a bigger movement one (40 frames each), `ORACLE_MSG_QUERIES` the message one; `ORACLE_LEAF_QUERIES` the point-in-leaf one; `Q2ORACLE_BIN`, `Q2PMOVE_BIN`, `Q2MSG_BIN` and `Q2MODEL_BIN`
 point at prebuilt binaries (`tests/build.global.ts` builds them once per run otherwise). To chase a movement difference, `ORACLE_DUMP=file.json` writes every
 differing frame, and `Q2PMOVE_LOG=1` makes q2pmove print each trace it makes to stderr.
 
@@ -43,8 +52,8 @@ landing that reaches the same spot by the step-up and the plain slide picks one 
 So the port does those computations in floats too: `clipBoxToBrush`, `recursiveHullCheck` and the
 trace end point in `packages/shared/src/bsp/collision.ts`, and all of `packages/shared/src/pmove/frame.ts`,
 round with `Math.fround` after each operation as SSE does. Since 2026-11-25: 0 of 200,000 world
-traces and 0 of 180,000 movement frames differ; about 1 in 50,000 submodel traces still does
-(the transform is in doubles). Inputs are rounded to float32 before both sides see them.
+traces, 0 of 100,000 submodel traces (the transform is in floats too, since the same day)
+and 0 of 180,000 movement frames differ. Inputs are rounded to float32 before both sides see them.
 The oracles build with `-ffp-contract=off`: a compiler targeting FMA (as the CI runner's does) fuses
 `a*b+c` into one rounding, which the original builds never did, and that moved two landing frames.
 
@@ -65,3 +74,11 @@ far outside 0..360 one step off (doubles, not floats). Fixed; reading was alread
 fixed, for the netcode work: the client's clc_move checksum is `crc8`, not COM_BlockSequenceCRCByte
 (now in `shared/protocol/crc.ts` as `blockSequenceCrcByte`), and usercmds go out whole
 (`writeUserCommand`), not as MSG_WriteDeltaUsercmd deltas (the oracle's `cmd` op is ready for it).
+
+What the loader oracle found (2026-11-25): the renderer sized lightmaps from s and t computed in
+doubles, where CalcSurfaceExtents uses floats, so 22 faces on demo1 to demo3 got a lightmap one luxel
+too wide or tall (now `surfaceExtents` in `@quake2ts/formats`, used by `createBspSurfaces`). The view
+leaf sent a point on a plane to the front child where Mod_PointInLeaf sends it to the back (2% of
+whole-unit points landed in another leaf; now `pointInLeaf`, used by `findLeaf` and the renderer).
+Texture animation treated a nexttexinfo of 0 as a link where the C ends the chain. The MD2 parser
+loaded models with a skin taller than 480, no triangles or no frames, which gl_model.c refuses.

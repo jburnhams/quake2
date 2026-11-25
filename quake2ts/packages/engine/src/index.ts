@@ -104,6 +104,10 @@ export {
   type BspArea,
   type BspAreaPortal,
   BspLump,
+  surfaceExtents,
+  pointInLeaf,
+  textureAnimationFrames,
+  type SurfaceExtents,
 } from './assets/bsp.js';
 export {
   Md2Loader,

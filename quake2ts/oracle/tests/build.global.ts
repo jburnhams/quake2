@@ -13,4 +13,5 @@ export default function setup() {
   }
   process.env.Q2PMOVE_BIN ??= join(dir, 'build', 'q2pmove');
   process.env.Q2MSG_BIN ??= join(dir, 'build', 'q2msg');
+  process.env.Q2MODEL_BIN ??= join(dir, 'build', 'q2model');
 }
