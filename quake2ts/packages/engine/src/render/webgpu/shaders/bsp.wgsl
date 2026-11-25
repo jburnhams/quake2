@@ -113,7 +113,9 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
 
                     if (layer >= -0.5) {
                         let offset = vec2<f32>(0.0, layer * input.lightmapStep);
-                        totalLight += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor;
+                        // Overbright: Quake 2 lightmaps store half intensity, and both original
+                        // renderers double them (ref_soft's light shift, ref_gl's gl_modulate).
+                        totalLight += textureSample(lightmapAtlas, lightmapSampler, input.lightmapCoord + offset).rgb * factor * OVERBRIGHT;
                         hasLight = true;
                     }
                 }
@@ -122,10 +124,11 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
                 // Quake 2 logic usually implies at least one style is active if surfaced has SURF_LIGHT
                 // But if we have no lightmap data, we start black.
                 if (!hasLight) {
-                    // Fallback to avoid pitch black if lightmap intended but missing?
-                    // totalLight = vec3<f32>(1.0, 1.0, 1.0);
+                    totalLight = vec3<f32>(1.0, 1.0, 1.0);
                 }
             }
+            // A surface with no lightmap starts black here but full bright in WebGL; the shared
+            // draw list (docs/renderer-plan.md, phase 2) settles one rule for both.
 
             // Apply Dynamic Lights
             // worldPos is the vertex's world position. (An earlier "add surface mins" workaround
@@ -146,11 +149,6 @@ fn fragmentMain(input: VertexOutput) -> @location(0) vec4<f32> {
         }
 
         totalLight = max(totalLight, vec3<f32>(frame.ambient));
-        // Overbright: Quake 2 lightmaps store half intensity, and both original renderers
-        // double them (ref_soft's light shift, ref_gl's gl_modulate/intensity).
-        if (frame.fullbright == 0u) {
-            totalLight *= OVERBRIGHT;
-        }
         totalLight *= frame.brightness;
         base = vec4<f32>(base.rgb * totalLight, base.a);
 

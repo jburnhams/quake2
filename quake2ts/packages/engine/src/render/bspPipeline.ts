@@ -201,9 +201,12 @@ void main() {
              }
         }
 
-        if (!hasLight) light = vec3(1.0);
+        // Overbright: Quake 2 lightmaps store half intensity, and both original renderers
+        // double them (ref_soft's light shift, ref_gl's gl_modulate/intensity). Surfaces
+        // without a lightmap keep full-bright 1.0.
+        if (!hasLight) light = vec3(0.5);
 
-        totalLight = light;
+        totalLight = light * 2.0;
 
         // Add dynamic lights
         for (int i = 0; i < MAX_DLIGHTS; i++) {
@@ -223,12 +226,6 @@ void main() {
 
       // Apply ambient minimum
       totalLight = max(totalLight, vec3(u_ambient));
-
-      // Overbright: Quake 2 lightmaps store half intensity, and both original renderers
-      // double them (ref_soft's light shift, ref_gl's gl_modulate/intensity).
-      if (!u_fullbright) {
-        totalLight *= 2.0;
-      }
 
       // Apply brightness
       totalLight *= u_brightness;
