@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated';
 import { ClientState } from '../../src/client';
 import { NetworkTransport } from '../../src/transport';
-import { NetDriver, NetChan, ClientCommand, BinaryWriter } from '@quake2ts/shared';
+import { NetDriver, NetChan, ClientCommand, BinaryWriter, writeMoveCommands } from '@quake2ts/shared';
 import { MockNetDriver } from '@quake2ts/test-utils';
 
 // Mock Transport (Server Side)
@@ -48,18 +48,8 @@ describe('Full Stack Rate Limiting', () => {
         writer.writeByte(0); // Checksum
         writer.writeLong(0); // LastFrame
         // Three UserCommands (oldest, old, new), as CL_SendCmd sends them
-        for (let c = 0; c < 3; c++) {
-            writer.writeByte(16); // msec
-            writer.writeByte(0); // buttons
-            writer.writeAngle16(0); // angles
-            writer.writeAngle16(0);
-            writer.writeAngle16(0);
-            writer.writeShort(0); // forward
-            writer.writeShort(0); // side
-            writer.writeShort(0); // up
-            writer.writeByte(0); // impulse
-            writer.writeByte(0); // lightlevel
-        }
+        const cmd = { msec: 16, buttons: 0, angles: { x: 0, y: 0, z: 0 }, forwardmove: 0, sidemove: 0, upmove: 0, impulse: 0, lightlevel: 0, sequence: 0 };
+        writeMoveCommands(writer, [cmd, cmd, cmd]);
 
         const packetData = writer.getData();
 
