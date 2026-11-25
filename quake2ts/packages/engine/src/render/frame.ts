@@ -2,12 +2,12 @@ import type { ParticleSystem } from './particleSystem.js';
 import type { BspMap } from '../assets/bsp.js';
 import { applySurfaceState, BspSurfacePipeline } from './bspPipeline.js';
 import { gatherVisibleFaces } from './bspTraversal.js';
-import { buildWorldDrawList, type BrushModelInstance, type WorldDraw, type WorldDrawSurface } from './worldDrawList.js';
+import { buildWorldDrawList, type BrushModelInstance, type WorldBatch, type WorldDraw, type WorldDrawSurface } from './worldDrawList.js';
 import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
 import { CameraState } from './types/camera.js';
 import type { BspSurfaceGeometry, LightmapAtlas } from './bsp.js';
-import { Texture2D } from './resources.js';
+import { IndexBuffer, Texture2D } from './resources.js';
 import type { MaterialManager } from './materials.js';
 import {
   computeSkyScroll,
@@ -258,6 +258,9 @@ export const createFrameRenderer = (
   const bloomPipeline = new BloomPipeline(gl);
   let lastFrameTime = 0;
 
+  /** The frame's world indices (both passes), refilled each frame from the draw list. */
+  let worldIndexBuffer: IndexBuffer | undefined;
+
   // Texture State for copies (Refraction and PostProcess)
   let copyTexture: Texture2D | undefined;
   let copyTextureWidth = 0;
@@ -348,54 +351,70 @@ export const createFrameRenderer = (
         extractFrustumPlanes: deps.extractFrustumPlanes,
       });
 
-      const runPass = (draws: readonly WorldDraw<BspSurfaceGeometry>[], refraction: Texture2D | undefined) => {
+      // One upload of the frame's indices; each batch is then one draw from the world's buffer.
+      const batched = drawList.indices && renderMode?.mode !== 'wireframe';
+      if (batched) {
+        worldIndexBuffer ??= new IndexBuffer(gl, gl.DYNAMIC_DRAW);
+        worldIndexBuffer.upload(drawList.indices as unknown as BufferSource, gl.DYNAMIC_DRAW);
+      }
+
+      const runPass = (
+        draws: readonly WorldDraw<BspSurfaceGeometry>[],
+        batches: readonly WorldBatch[],
+        refraction: Texture2D | undefined
+      ) => {
         const cache: TextureBindingCache = {};
-        let state: ReturnType<BspSurfacePipeline['bind']> | undefined;
-        for (const draw of draws) {
+        for (const batch of batches) {
+          // Every draw in a batch shares the values bound here (the front end's batch key).
+          const draw = draws[batch.first];
           const geometry = draw.surface;
           const textures: ResolvedSurfaceTextures = {
             diffuse: (world.materials?.getMaterial(geometry.texture)?.texture as Texture2D | null | undefined) ?? world.textures?.get(draw.texture),
             lightmap: draw.lightmapAtlas !== undefined ? world.lightmaps?.[draw.lightmapAtlas]?.texture : undefined,
             refraction,
           };
-          if (draw.startsBatch) {
-            cache.diffuse = undefined;
-            cache.lightmap = undefined;
-            cache.refraction = undefined;
-            const units = bindSurfaceTextures(geometry, world, cache, textures);
-            state = bspPipeline.bind({
-              cameraState,
-              modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
-              modelMatrix: draw.transform,
-              styleIndices: draw.styleIndices,
-              styleLayers: draw.styleLayers,
-              styleValues: drawList.lightStyles,
-              surfaceFlags: geometry.surfaceFlags,
-              timeSeconds,
-              diffuseSampler: units.diffuse ?? 0,
-              lightmapSampler: units.lightmap,
-              refractionSampler: units.refraction,
-              texScroll: draw.texScroll,
-              warp: draw.warp,
-              dlights,
-              renderMode: draw.renderMode,
-              lightmapOnly,
-              brightness,
-              gamma,
-              fullbright,
-              ambient,
-            });
+          cache.diffuse = undefined;
+          cache.lightmap = undefined;
+          cache.refraction = undefined;
+          const units = bindSurfaceTextures(geometry, world, cache, textures);
+          const state = bspPipeline.bind({
+            cameraState,
+            modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
+            modelMatrix: draw.transform,
+            styleIndices: draw.styleIndices,
+            styleLayers: draw.styleLayers,
+            styleValues: drawList.lightStyles,
+            surfaceFlags: geometry.surfaceFlags,
+            timeSeconds,
+            diffuseSampler: units.diffuse ?? 0,
+            lightmapSampler: units.lightmap,
+            refractionSampler: units.refraction,
+            texScroll: draw.texScroll,
+            warp: draw.warp,
+            dlights,
+            renderMode: draw.renderMode,
+            lightmapOnly,
+            brightness,
+            gamma,
+            fullbright,
+            ambient,
+          });
+          applySurfaceState(gl, state);
+          stats.facesDrawn += batch.count;
+          if (batched && worldIndexBuffer && geometry.worldVao) {
+            bspPipeline.drawRange(geometry.worldVao, worldIndexBuffer, batch.firstIndex, batch.indexCount);
+            stats.drawCalls += 1;
           } else {
-            bindSurfaceTextures(geometry, world, cache, textures);
+            // Faces built by hand (no world buffer), or wireframe: one draw a face.
+            for (let i = batch.first; i < batch.first + batch.count; i++) {
+              bspPipeline.draw(draws[i].surface, draws[i].renderMode);
+              stats.drawCalls += 1;
+            }
           }
-          if (state) applySurfaceState(gl, state);
-          bspPipeline.draw(geometry, draw.renderMode);
-          stats.facesDrawn += 1;
-          stats.drawCalls += 1;
         }
       };
 
-      runPass(drawList.opaque, undefined);
+      runPass(drawList.opaque, drawList.opaqueBatches, undefined);
 
       // Water refracts what is behind it: copy the opaque result for the transparent pass.
       if (drawList.transparent.length > 0) {
@@ -405,7 +424,7 @@ export const createFrameRenderer = (
         rt.bind(2);
         gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
       }
-      runPass(drawList.transparent, copyTexture);
+      runPass(drawList.transparent, drawList.transparentBatches, copyTexture);
 
       stats.batches = drawList.batches;
       stats.vertexCount = drawList.vertexCount;

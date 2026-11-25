@@ -192,9 +192,21 @@ export class WebGPURendererImpl implements WebGPURenderer {
   // =========================================================================
 
   uploadWorld(world: PreparedWorld): WorldRenderState {
+    let worldVertexBuffer: GPUBuffer | undefined;
+    const vertices = world.geometry.vertices;
+    if (vertices && vertices.byteLength > 0) {
+      const vb = new VertexBuffer(this.device, { size: vertices.byteLength, label: 'world-vertices' });
+      vb.write(vertices as unknown as BufferSource);
+      worldVertexBuffer = vb.buffer;
+    }
     const surfaces: WebGPUWorldSurface[] = [];
     world.geometry.surfaces.forEach((surface, faceIndex) => {
       if (!surface) return;
+      // A face in the world buffer is drawn from it; only a face outside it needs buffers of its own.
+      if (worldVertexBuffer && surface.firstVertex !== undefined) {
+        surfaces[faceIndex] = { ...surface, worldVertexBuffer };
+        return;
+      }
       const vb = new VertexBuffer(this.device, { size: surface.vertexData.byteLength, label: `world-vb-${faceIndex}` });
       vb.write(surface.vertexData as unknown as BufferSource);
       const ib = new IndexBuffer(this.device, { size: surface.indexData.byteLength, label: `world-ib-${faceIndex}` });

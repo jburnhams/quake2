@@ -13,7 +13,7 @@ import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
 import { RenderModeConfig } from './frame.js';
 import { BspSurfaceGeometry } from './bsp.js';
-import { IndexBuffer } from './resources.js';
+import { IndexBuffer, VertexArray } from './resources.js';
 import { generateWireframeIndices } from './geometry.js';
 import { CameraState } from './types/camera.js';
 import { WebGLMatrixBuilder } from './matrix/webgl.js';
@@ -471,6 +471,16 @@ export class BspSurfacePipeline {
           geometry.indexBuffer.bind();
           this.gl.drawElements(this.gl.TRIANGLES, geometry.indexCount, this.gl.UNSIGNED_SHORT, 0);
       }
+  }
+
+  /**
+   * Draws a batch: `count` indices from `firstIndex` of the frame's world index buffer (32-bit
+   * indices into the world vertex array).
+   */
+  drawRange(worldVao: VertexArray, indices: IndexBuffer, firstIndex: number, count: number): void {
+    worldVao.bind();
+    indices.bind();
+    this.gl.drawElements(this.gl.TRIANGLES, count, this.gl.UNSIGNED_INT, firstIndex * 4);
   }
 
   dispose(): void {

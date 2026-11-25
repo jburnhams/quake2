@@ -20,6 +20,8 @@ interface PageResult {
   readonly pixels: string; // base64 RGBA, top row first
   readonly glErrors: number[];
   readonly missingTextures: string[];
+  readonly drawCalls: number;
+  readonly batches: number;
 }
 
 async function renderShotInPage(
@@ -81,7 +83,8 @@ async function renderShotInPage(
     for (let y = 0; y < height; y++) flipped.set(raw.subarray((height - 1 - y) * row, (height - y) * row), y * row);
     let binary = '';
     for (let i = 0; i < flipped.length; i += 0x8000) binary += String.fromCharCode(...flipped.subarray(i, i + 0x8000));
-    return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing };
+    const report = w.testRenderer.getPerformanceReport();
+    return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing, drawCalls: report.drawCalls, batches: report.textureBinds };
   }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene, particles });
 }
 
@@ -104,6 +107,8 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
       const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot), shotParticles(shot));
       expect(result.missingTextures).toEqual([]);
       expect(result.glErrors).toEqual([]);
+      // The world is drawn a batch at a time from one buffer: one draw call per batch.
+      if (!shot.entities && !shot.viewWeapon) expect(result.drawCalls).toBe(result.batches);
 
       const pixels = new Uint8ClampedArray(Buffer.from(result.pixels, 'base64'));
       const stats = analyseShot(pixels, SHOT_WIDTH, SHOT_HEIGHT);

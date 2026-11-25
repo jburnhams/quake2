@@ -72,7 +72,9 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
       if (weapon) entities.push(weapon);
       renderer.particleSystem.killAll();
       for (const particle of shotParticles(shot)) renderer.particleSystem.spawn(particle);
-      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
+      const frameStats = renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
+      // The world is drawn a batch at a time from one buffer: one draw call per batch.
+      if (!shot.entities && !shot.viewWeapon) expect(frameStats.drawCalls).toBe(frameStats.batches);
       const validation = await renderer.device.popErrorScope();
       expect(validation?.message ?? null).toBeNull();
 

@@ -16,7 +16,7 @@ import { DLight } from '../dlight.js';
 import type { PackedBspSurface } from '../bsp.js';
 import type { WorldRenderState as SharedWorldRenderState } from '../frame.js';
 import { calculateEntityLight, MODEL_LIGHT_DIRECTION } from '../light.js';
-import { buildWorldDrawList, type BrushModelInstance, type WorldDraw } from '../worldDrawList.js';
+import { buildWorldDrawList, type BrushModelInstance, type WorldBatch, type WorldDraw } from '../worldDrawList.js';
 import { CameraState } from '../types/camera.js';
 
 export type { FrameRenderStats } from '../frame.js';
@@ -34,6 +34,8 @@ export interface SkyRenderState {
 export type WebGPUWorldSurface = PackedBspSurface & {
   gpuVertexBuffer?: GPUBuffer;
   gpuIndexBuffer?: GPUBuffer;
+  /** The world's one vertex buffer (PackedBspGeometry.vertices), shared by every face of an uploaded world. */
+  worldVertexBuffer?: GPUBuffer;
 };
 
 export type WorldRenderState = SharedWorldRenderState<Texture2D, WebGPUWorldSurface>;
@@ -125,6 +127,23 @@ export class FrameRenderer {
         minFilter: 'linear', magFilter: 'linear',
         addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', label: 'world-lightmap-sampler',
       }).sampler;
+  }
+
+  /** The frame's world indices (both passes), in a buffer grown as needed and refilled each frame. */
+  private worldIndexBuffer: GPUBuffer | null = null;
+
+  private writeWorldIndices(indices: Uint32Array): GPUBuffer {
+    const device = this.context.device;
+    if (!this.worldIndexBuffer || this.worldIndexBuffer.size < indices.byteLength) {
+      this.worldIndexBuffer?.destroy();
+      this.worldIndexBuffer = device.createBuffer({
+        label: 'world-indices',
+        size: Math.max(indices.byteLength, 64 * 1024),
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+    if (indices.byteLength > 0) device.queue.writeBuffer(this.worldIndexBuffer, 0, indices as unknown as BufferSource);
+    return this.worldIndexBuffer;
   }
 
   private ensureIntermediateTexture(width: number, height: number): GPUTextureView {
@@ -356,8 +375,13 @@ export class FrameRenderer {
         stats.vertexCount = drawList.vertexCount;
         const cameraState = options.cameraState ?? options.camera.toState();
 
-        const runPass = (draws: readonly WorldDraw<WebGPUWorldSurface>[], pass: GPURenderPassEncoder) => {
-            for (const draw of draws) {
+        // One write of the frame's indices; each batch is then one draw from the world's buffer.
+        const worldIndices = drawList.indices && renderMode?.mode !== 'wireframe' ? this.writeWorldIndices(drawList.indices) : undefined;
+
+        const runPass = (draws: readonly WorldDraw<WebGPUWorldSurface>[], batches: readonly WorldBatch[], pass: GPURenderPassEncoder) => {
+            for (const batch of batches) {
+                // Every draw in a batch shares the values bound here (the front end's batch key).
+                const draw = draws[batch.first];
                 const geometry = draw.surface;
                 const diffuse = (world.materials?.getMaterial(geometry.texture)?.texture as unknown as GpuTexture2D | null | undefined)
                     ?? world.textures?.get(draw.texture);
@@ -385,13 +409,21 @@ export class FrameRenderer {
                     cameraPosition: options.camera.position as Float32Array,
                     modelMatrix: draw.transform,
                 });
-                this.pipelines.bsp.draw(pass, geometry, draw.renderMode);
-                stats.facesDrawn++;
-                stats.drawCalls++;
+                stats.facesDrawn += batch.count;
+                if (worldIndices && geometry.worldVertexBuffer) {
+                    this.pipelines.bsp.drawRange(pass, geometry.worldVertexBuffer, worldIndices, batch.firstIndex, batch.indexCount);
+                    stats.drawCalls++;
+                } else {
+                    // Faces built by hand (no world buffer), or wireframe: one draw a face.
+                    for (let i = batch.first; i < batch.first + batch.count; i++) {
+                        this.pipelines.bsp.draw(pass, draws[i].surface, draws[i].renderMode);
+                        stats.drawCalls++;
+                    }
+                }
             }
         };
 
-        runPass(drawList.opaque, opaquePass);
+        runPass(drawList.opaque, drawList.opaqueBatches, opaquePass);
 
         // Render Entities (MD2)
         this.pipelines.md2.beginFrame();
@@ -479,7 +511,7 @@ export class FrameRenderer {
 
         const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
 
-        runPass(drawList.transparent, transparentPass);
+        runPass(drawList.transparent, drawList.transparentBatches, transparentPass);
 
         transparentPass.end();
     } else {
