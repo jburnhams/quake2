@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   normalizeVec3,
@@ -57,7 +58,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -480,7 +481,7 @@ export function SP_monster_chick(self: Entity, context: SpawnContext): void {
   };
   self.monsterinfo.blocked = chick_blocked;
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   context.entities.linkentity(self);
 

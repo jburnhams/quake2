@@ -1,6 +1,7 @@
 import type { Vec3 } from '@quake2ts/shared';
 import { createRandomGenerator, scaleVec3, RandomGenerator } from '@quake2ts/shared';
-import { runGravity, runBouncing, runProjectileMovement, runStep } from '../physics/movement.js';
+import { runGravity, runBouncing, runProjectileMovement } from '../physics/movement.js';
+import { physicsStep } from '../physics/step.js';
 import { checkWater } from '../physics/fluid.js';
 import { GameImports, GameEngine, TraceFunction, PointContentsFunction, MulticastType } from '../imports.js';
 import {
@@ -9,13 +10,15 @@ import {
   Entity,
   MoveType,
   ServerFlags,
+  EntityFlags,
   type EntityFieldDescriptor,
   Solid,
   FL_NOTARGET
 } from './entity.js';
 import { EntityPool, type EntityPoolSnapshot } from './pool.js';
 import type { ThinkScheduleEntry } from './thinkScheduler.js';
-import { physicsPusher } from '../physics/pusher.js';
+import { getClipMask, physicsPusher } from '../physics/pusher.js';
+import { M_CheckGround } from '../ai/monsterStart.js';
 import { lengthVec3, subtractVec3, ServerCommand } from '@quake2ts/shared';
 import type { AnyCallback, CallbackRegistry } from './callbacks.js';
 import type { TargetAwarenessState } from '../ai/targeting.js';
@@ -224,6 +227,11 @@ export class EntitySystem {
 
   get pointcontents(): PointContentsFunction {
     return this.imports.pointcontents;
+  }
+
+  /** gi.inPHS, or true when the engine gives none. */
+  inPHS(p1: Vec3, p2: Vec3): boolean {
+    return this.imports.inPHS ? this.imports.inPHS(p1, p2) : true;
   }
 
   get areaEdicts() {
@@ -711,6 +719,7 @@ export class EntitySystem {
       const ent = this.pool.getByIndex(i);
       if (!ent || !ent.inUse || ent.freePending) continue;
       this.currentEntity = ent;
+      this.checkGroundMoved(ent);
       if (ent.client) {
         // ClientBeginServerFrame; the port still gives clients their think here.
         this.runThink(ent);
@@ -722,11 +731,40 @@ export class EntitySystem {
     this.pool.flushFreeList();
   }
 
+  /** G_RunFrame: if the ground entity moved, make sure the entity is still on it. */
+  private checkGroundMoved(ent: Entity): void {
+    const ground = ent.groundentity;
+    if (!ground || ground.linkcount === ent.groundentity_linkcount) return;
+    const mask = getClipMask(ent);
+    if (!(ent.flags & (EntityFlags.Swim | EntityFlags.Fly)) && ent.svflags & ServerFlags.Monster) {
+      ent.groundentity = null;
+      M_CheckGround(ent, mask, this);
+      return;
+    }
+    // If it's still 1 point below us, we're good.
+    const below = {
+      x: ent.origin.x + ent.gravityVector.x,
+      y: ent.origin.y + ent.gravityVector.y,
+      z: ent.origin.z + ent.gravityVector.z,
+    };
+    const tr = this.trace(ent.origin, ent.mins, ent.maxs, below, ent, mask);
+    if (tr.startsolid || tr.allsolid || tr.ent !== ground) ent.groundentity = null;
+    else ent.groundentity_linkcount = ground.linkcount;
+  }
+
   /** G_RunEntity: one entity's physics for this frame, by its movetype. */
   private runEntity(ent: Entity): void {
 
     const frametime = this.currentDeltaSeconds;
-    if (ent.movetype !== MoveType.None && ent.movetype !== MoveType.Push && ent.movetype !== MoveType.Stop && ent.movetype !== MoveType.Noclip) {
+    // MOVETYPE_STEP finds its own water level (M_CatagorizePosition in SV_Physics_Step), and
+    // must not get this check's FL_SWIM changes: a land monster would never drown.
+    if (
+      ent.movetype !== MoveType.None &&
+      ent.movetype !== MoveType.Push &&
+      ent.movetype !== MoveType.Stop &&
+      ent.movetype !== MoveType.Noclip &&
+      ent.movetype !== MoveType.Step
+    ) {
       checkWater(ent, this, this.imports);
     }
 
@@ -748,10 +786,9 @@ export class EntitySystem {
         break;
       case MoveType.Step:
       case MoveType.Walk:
-        // SV_Physics_Step: move, then think.
-        runStep(ent, this, this.imports, this.gravity, frametime);
+        // SV_Physics_Step: moves, then thinks.
         ent.timestamp = this.currentTimeSeconds;
-        this.runThink(ent);
+        physicsStep(ent, this, -this.gravity.z);
         break;
       case MoveType.Toss:
       case MoveType.Bounce:

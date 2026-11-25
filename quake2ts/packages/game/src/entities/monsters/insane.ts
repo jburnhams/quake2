@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { Entity, MonsterFrame, MonsterMove, MoveType, Solid, DeadFlag, EntityFlags } from '../entity.js';
 import { monster_think, ai_stand, ai_walk, ai_run, ai_move, AIFlags } from '../../ai/index.js';
 import { throwGibs } from '../gibs.js';
@@ -541,8 +542,7 @@ export function SP_misc_insane(self: Entity, context: SpawnContext) {
     self.monsterinfo.current_move = insane_move_stand_normal;
     self.monsterinfo.scale = 1.0;
 
-    self.think = monster_think;
-    self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
+    walkmonster_start(self, context.entities);
 
     if (self.spawnflags & SPAWNFLAG_INSANE_CRUCIFIED) {
         self.mass = 100000;

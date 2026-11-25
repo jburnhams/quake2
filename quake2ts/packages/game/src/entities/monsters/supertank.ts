@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, lengthVec3, scaleVec3, addVec3, angleVectors } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -52,7 +53,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -367,10 +368,9 @@ export function SP_monster_supertank(self: Entity, context: SpawnContext): void 
       context.entities.sound?.(self, 0, 'boss1/sight1.wav', 1, 1, 0);
   };
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   supertank_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerSupertankSpawns(registry: SpawnRegistry): void {

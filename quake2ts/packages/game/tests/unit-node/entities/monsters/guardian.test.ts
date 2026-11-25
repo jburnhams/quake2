@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { SP_monster_guardian } from '../../../../src/entities/monsters/guardian.js';
 import { createTestContext } from '@quake2ts/test-utils';
-import { Entity, MoveType, Solid } from '../../../../src/entities/entity.js';
+import { Entity, MoveType, ServerFlags, Solid } from '../../../../src/entities/entity.js';
 import { EntitySystem } from '../../../../src/entities/system.js';
 import { monster_think } from '../../../../src/ai/monster.js';
 import { registerGuardianSpawns } from '../../../../src/entities/monsters/guardian.js';
@@ -43,7 +43,9 @@ describe('monster_guardian', () => {
     expect(entity.monsterinfo.walk).toBeDefined();
     expect(entity.monsterinfo.run).toBeDefined();
     expect(entity.monsterinfo.attack).toBeDefined();
-    expect(entity.think).toBe(monster_think);
+    // walkmonster_start: monster_start_go runs on the next frame and starts monster_think.
+    expect(entity.think).toBeDefined();
+    expect(entity.svflags & ServerFlags.Monster).toBeTruthy();
   });
 
   it('should register in spawn registry', () => {

@@ -31,9 +31,10 @@ describe('ai_checkattack', () => {
     self.enemy = enemy;
   });
 
-  it('should return false if no enemy', () => {
+  it('with no enemy, stands the monster and reports that it acted', () => {
+    // g_ai.cpp: hesDeadJim with no movetarget holds the stand and returns true.
     self.enemy = null;
-    expect(ai_checkattack(self, 0, context)).toBe(false);
+    expect(ai_checkattack(self, 0, context)).toBe(true);
   });
 
   it('should call monsterinfo.checkattack if present', () => {

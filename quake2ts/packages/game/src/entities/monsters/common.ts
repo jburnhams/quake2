@@ -115,8 +115,10 @@ export function createMonsterSpawn(config: MonsterConfig) {
   };
 }
 
+/** M_SetAnimation with instant = true: the move starts on the next 10 Hz frame. */
 export function M_SetAnimation(self: Entity, move: MonsterMove, context: any): void {
   self.monsterinfo.current_move = move;
+  self.monsterinfo.next_move = undefined;
 }
 
 export function M_ShouldReactToPain(self: Entity, context: EntitySystem): boolean {
@@ -138,21 +140,7 @@ export function M_AllowSpawn(self: Entity, context: any): boolean {
   return true; // deathmatch checks etc.
 }
 
-export function walkmonster_start(self: Entity, context: any): void {
-  self.think = monster_think;
-  self.nextthink = context.timeSeconds + MONSTER_TICK;
-}
-
-export function flymonster_start(self: Entity, context: any): void {
-    if (self.health <= 0) return;
-
-    self.movetype = MoveType.Step;
-    self.takedamage = true;
-    self.solid = Solid.BoundingBox;
-
-    // walkmonster_start sets think and nextthink
-    walkmonster_start(self, context);
-}
+export { walkmonster_start, flymonster_start, swimmonster_start } from '../../ai/monsterStart.js';
 
 export function M_ProjectFlashSource(self: Entity, offset: Vec3, forward: Vec3, right: Vec3): Vec3 {
   const start = addVec3(self.origin, scaleVec3(forward, offset.x));

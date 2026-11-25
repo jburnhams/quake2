@@ -275,6 +275,9 @@ export function createTestContext(options?: {
     }),
     timeSeconds: 10,
     deltaSeconds: 0.1,
+    frameTimeSeconds: 0.025,
+    touchTriggers: vi.fn(),
+    inPHS: vi.fn(() => true),
     modelIndex: vi.fn(() => 0),
     scheduleThink: vi.fn((entity: Entity, time: number) => {
       entity.nextthink = time;

@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   normalizeVec3,
@@ -67,7 +68,7 @@ function monster_ai_charge(self: Entity, dist: number, context: EntitySystem): v
 }
 
 function monster_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Sound constants
@@ -650,7 +651,7 @@ export function SP_monster_berserk(self: Entity, context: SpawnContext): void {
   };
   self.monsterinfo.search = berserk_search;
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   context.entities.linkentity(self);
 

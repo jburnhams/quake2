@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -49,7 +50,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -396,7 +397,7 @@ export function SP_monster_makron(self: Entity, context: SpawnContext): void {
       self.monsterinfo.current_move = sight_move;
   };
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   // Initial state logic
   // C code uses sight frame first?

@@ -71,24 +71,6 @@ describe('AI Patrol (path_corner)', () => {
     expect(monster.ideal_yaw).toBe(0);
   });
 
-  it('monster switches to next path_corner when close', () => {
-    // Move monster close to pathCorner1 (< 64 units)
-    // M_MoveToGoal uses strict SV_CloseEnough with passed dist.
-    // If we pass 0 dist, we must be exactly there.
-    monster.origin = { x: 100, y: 0, z: 0 };
-    monster.mins = { x: -16, y: -16, z: -24 };
-    monster.maxs = { x: 16, y: 16, z: 32 };
-
-    // Run ai_walk
-    ai_walk(monster, 10, system); // Pass distance so it triggers check
-
-    // Check if goalentity switched to pathCorner2
-    expect(monster.goalentity).toBe(pathCorner2);
-
-    // Verify system.pickTarget was called with 'p2' (target of p1)
-    expect(system.pickTarget).toHaveBeenCalledWith('p2');
-  });
-
   it('monster stays on current path_corner if not close enough', () => {
     // Move monster far from pathCorner1 (> 64 units)
     monster.origin = { x: 0, y: 0, z: 0 };

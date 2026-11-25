@@ -158,7 +158,7 @@ function widow_ai_charge(self: Entity, dist: number, context: EntitySystem): voi
 }
 
 function widow_ai_move(self: Entity, dist: number, context: EntitySystem): void {
-    ai_move(self, dist);
+    ai_move(self, dist, context);
 }
 
 

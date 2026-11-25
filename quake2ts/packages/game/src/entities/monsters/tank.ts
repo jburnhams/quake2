@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { normalizeVec3, subtractVec3, Vec3, ZERO_VEC3, lengthVec3, MASK_SHOT, angleVectors, scaleVec3, addVec3, vectorToYaw } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -58,7 +59,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -104,7 +105,7 @@ function tank_checkattack(self: Entity, context: any): boolean {
       self.monsterinfo.blind_fire_delay = 0;
   } else {
       if (self.monsterinfo.blindfire && (self.monsterinfo.blind_fire_delay || 0) <= 20.0) {
-           if (self.attack_finished_time > context.timeSeconds) return false;
+           if ((self.monsterinfo.attack_finished ?? 0) > context.timeSeconds) return false;
 
            if (context.timeSeconds < (self.monsterinfo.trail_time + (self.monsterinfo.blind_fire_delay || 0))) {
                return false;
@@ -125,7 +126,7 @@ function tank_checkattack(self: Entity, context: any): boolean {
   // Normal attack checks
   const dist = rangeTo(self, self.enemy);
 
-  if (self.attack_finished_time > context.timeSeconds) return false;
+  if ((self.monsterinfo.attack_finished ?? 0) > context.timeSeconds) return false;
 
   let chance = 0.0;
   if (dist <= 150) chance = 0.4; // Melee
@@ -135,7 +136,7 @@ function tank_checkattack(self: Entity, context: any): boolean {
 
   if (context.rng.frandom() < chance) {
       self.monsterinfo.attack_state = AttackState.Missile;
-      self.attack_finished_time = context.timeSeconds;
+      self.monsterinfo.attack_finished = context.timeSeconds;
       return true;
   }
 
@@ -479,10 +480,9 @@ export function SP_monster_tank(self: Entity, context: SpawnContext): void {
   self.monsterinfo.blindfire = true;
   self.monsterinfo.idle = (self) => tank_idle(self, context.entities);
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   tank_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerTankSpawns(registry: SpawnRegistry): void {

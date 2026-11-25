@@ -1,3 +1,4 @@
+import { flymonster_start } from '../../ai/monsterStart.js';
 import {
   ai_charge,
   ai_move,
@@ -42,7 +43,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -231,10 +232,9 @@ export function SP_monster_floater(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = floater_run;
   self.monsterinfo.attack = floater_attack;
 
-  self.think = monster_think;
+  flymonster_start(self, context.entities);
 
   floater_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerFloaterSpawns(registry: SpawnRegistry): void {

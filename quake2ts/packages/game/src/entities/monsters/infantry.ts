@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { angleVectors, normalizeVec3, subtractVec3, lengthVec3, Vec3 } from '@quake2ts/shared';
 import {
     ai_charge,
@@ -54,7 +55,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-    ai_move(self, dist);
+    ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -303,10 +304,9 @@ export function SP_monster_infantry(self: Entity, context: SpawnContext): void {
     self.monsterinfo.checkattack = infantry_checkattack;
     self.monsterinfo.idle = (self) => infantry_idle(self, context.entities);
 
-    self.think = monster_think;
+    walkmonster_start(self, context.entities);
 
     infantry_stand(self);
-    self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function registerInfantrySpawns(registry: SpawnRegistry): void {

@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import {
   angleVectors,
   addVec3,
@@ -59,7 +60,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 
@@ -777,8 +778,7 @@ export function SP_monster_gekk(self: Entity, context: SpawnContext): void {
 
     M_SetAnimation(self, gekk_move_stand);
 
-    self.think = monster_think;
-    self.nextthink = context.entities.timeSeconds + MONSTER_TICK;
+    walkmonster_start(self, context.entities);
 
     if (self.spawnflags & SPAWNFLAG_GEKK_CHANT) {
         M_SetAnimation(self, gekk_move_chant);

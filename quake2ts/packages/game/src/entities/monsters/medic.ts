@@ -1,3 +1,4 @@
+import { walkmonster_start } from '../../ai/monsterStart.js';
 import { normalizeVec3, subtractVec3, Vec3, TempEntity, ServerCommand, angleVectors, addVec3, scaleVec3, lengthVec3 } from '@quake2ts/shared';
 import {
   ai_charge,
@@ -69,7 +70,7 @@ function monster_ai_charge(self: Entity, dist: number, context: any): void {
 }
 
 function monster_ai_move(self: Entity, dist: number, context: any): void {
-  ai_move(self, dist);
+  ai_move(self, dist, context);
 }
 
 // Forward declarations
@@ -757,10 +758,9 @@ export function SP_monster_medic(self: Entity, context: SpawnContext): void {
   self.monsterinfo.run = medic_run;
   self.monsterinfo.attack = (ent) => medic_attack(ent, context.entities);
 
-  self.think = monster_think;
+  walkmonster_start(self, context.entities);
 
   medic_stand(self);
-  self.nextthink = self.timestamp + MONSTER_TICK;
 }
 
 export function SP_monster_medic_commander(self: Entity, context: SpawnContext): void {

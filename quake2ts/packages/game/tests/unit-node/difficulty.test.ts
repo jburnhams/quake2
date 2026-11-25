@@ -50,7 +50,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
         }) as any, context);
 
         // Expected: baseTime + 0.6 (grace) + 0.4 (easy) = baseTime + 1.0
-        expect(monster.attack_finished_time).toBeCloseTo(baseTime + 1.0, 1);
+        expect(monster.monsterinfo.attack_finished).toBeCloseTo(baseTime + 1.0, 1);
     });
 
     it('adds extra reaction time on Medium skill (1)', () => {
@@ -64,7 +64,7 @@ describe('Difficulty Scaling - Reaction Time', () => {
         }) as any, context);
 
         // Expected: baseTime + 0.6 (grace) + 0.2 (medium) = baseTime + 0.8
-        expect(monster.attack_finished_time).toBeCloseTo(baseTime + 0.8, 1);
+        expect(monster.monsterinfo.attack_finished).toBeCloseTo(baseTime + 0.8, 1);
     });
 
     it('adds no extra reaction time on Hard/Nightmare skill (2+)', () => {
@@ -78,6 +78,6 @@ describe('Difficulty Scaling - Reaction Time', () => {
         }) as any, context);
 
         // Expected: baseTime + 0.6 (grace) = baseTime + 0.6
-        expect(monster.attack_finished_time).toBeCloseTo(baseTime + 0.6, 1);
+        expect(monster.monsterinfo.attack_finished).toBeCloseTo(baseTime + 0.6, 1);
     });
 });
