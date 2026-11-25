@@ -1,6 +1,6 @@
 import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
-import { Client, createClient, ClientState } from './client.js';
+import { Client, createClient, ClientState, COMMAND_MSEC } from './client.js';
 import { ClientMessageParser, type MoveCommands } from './protocol.js';
 import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
 import { parseBsp, PakArchive } from '@quake2ts/engine';
@@ -54,6 +54,12 @@ export interface ServerOptions {
     port?: number;
     transport?: NetworkTransport;
     floodLimit?: number;
+    /**
+     * sv_enforcetime: refuse movement beyond the time the server has given the client
+     * (SV_GiveMsec gives 1800 ms every 16 frames). id ships it off; the port has it on, so a
+     * client cannot run more movement than real time allows.
+     */
+    enforceTime?: boolean;
 }
 
 export class DedicatedServer implements GameEngine {
@@ -599,10 +605,15 @@ export class DedicatedServer implements GameEngine {
         client.lastMessage = this.sv.frame;
         client.commandCount++;
 
+        // Over the flood limit the frame drops the client; run none of its commands meanwhile.
+        if (client.commandCount > (this.options.floodLimit ?? 200)) return;
+
+        // SV_ClientThink: each command spends its msec from the time SV_GiveMsec gave.
         const think = (cmd: UserCommand) => {
-            if (this.game && client.state === ClientState.Active && client.edict) {
-                this.game.clientThink(client.edict, cmd);
-            }
+            if (!this.game || client.state !== ClientState.Active || !client.edict) return;
+            client.commandMsec -= cmd.msec;
+            if (client.commandMsec < 0 && (this.options.enforceTime ?? true)) return;
+            this.game.clientThink(client.edict, cmd);
         };
 
         let netDrop = client.netchan.dropped;
@@ -872,6 +883,13 @@ export class DedicatedServer implements GameEngine {
 
         this.sv.frame++;
         this.sv.time += 100; // 100ms per frame
+
+        // SV_GiveMsec: every 16 frames, 1.6 s of movement (plus slop) for each client.
+        if ((this.sv.frame & 15) === 0) {
+            for (const client of this.svs.clients) {
+                if (client && client.state !== ClientState.Free) client.commandMsec = COMMAND_MSEC;
+            }
+        }
 
         // 1. Read network packets
         this.SV_ReadPackets();

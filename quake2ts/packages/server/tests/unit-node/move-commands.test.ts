@@ -22,8 +22,8 @@ const command = (n: number): UserCommand => ({
   sequence: n, lightlevel: 0, impulse: 0,
 });
 
-function setup() {
-  const server = new DedicatedServer({ transport: new Transport(), maxPlayers: 1 }) as any;
+function setup(options: { floodLimit?: number } = {}) {
+  const server = new DedicatedServer({ transport: new Transport(), maxPlayers: 1, ...options }) as any;
   server.svs.initialized = true;
   const driver = new MockNetDriver();
   server.handleConnection(driver);
@@ -48,7 +48,7 @@ function setup() {
     if (!lost) driver.receiveMessage(packet);
   };
   const read = () => server.SV_ReadPackets();
-  return { send, read, ran };
+  return { send, read, ran, client };
 }
 
 describe('clc_move on the server', () => {
@@ -82,5 +82,26 @@ describe('clc_move on the server', () => {
     read();
     // Two repeats of command 1 stand in for 2 and 3; 4 and 5 come from the packet.
     expect(ran).toEqual([1, 1, 1, 4, 5, 6]);
+  });
+
+  it('refuses movement beyond the time the server gave (SV_ClientThink, sv_enforcetime)', () => {
+    const { send, read, ran, client } = setup();
+    client.commandMsec = 50;
+    send(20);
+    send(20);
+    send(20);
+    read();
+    // 50 ms buys the first two 20 ms commands; the third would overdraw it.
+    expect(ran).toEqual([20, 20]);
+  });
+
+  it('runs no commands from a client over the flood limit', () => {
+    const { send, read, ran } = setup({ floodLimit: 2 });
+    send(1);
+    send(2);
+    send(3);
+    send(4);
+    read();
+    expect(ran).toEqual([1, 2]);
   });
 });
