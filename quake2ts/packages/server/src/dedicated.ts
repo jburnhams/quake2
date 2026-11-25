@@ -456,6 +456,19 @@ export class DedicatedServer implements GameEngine {
                 };
             },
             pointcontents: (p) => 0,
+            // PF_setmodel (sv_game.c): the model's index, and for a submodel ("*3", a door or a
+            // trigger) its bounds from the map, then the entity is linked at them. Without it a
+            // door spawned from the map had zero bounds and so no travel and no volume.
+            setmodel: (ent, name) => {
+                ent.modelindex = this.modelIndex(name);
+                if (name.startsWith('*')) {
+                    const sub = this.sv.collisionModel?.bmodels[Number(name.slice(1))];
+                    if (!sub) throw new Error(`setmodel: no submodel ${name}`);
+                    ent.mins = { ...sub.mins };
+                    ent.maxs = { ...sub.maxs };
+                    imports.linkentity(ent);
+                }
+            },
             linkentity: (ent) => {
                 if (!this.entityIndex) return;
                 this.entityIndex.link({
@@ -1083,7 +1096,6 @@ export class DedicatedServer implements GameEngine {
     }
 
     modelIndex(name: string): number {
-        console.log(`modelIndex(${name}) called`);
         // Find existing
         const start = ConfigStringIndex.Models;
         const end = ConfigStringIndex.Sounds;
