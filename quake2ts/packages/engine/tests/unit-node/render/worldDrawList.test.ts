@@ -46,7 +46,7 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
   };
   const shotIndex = (name: string) => DEMO1_SHOTS.findIndex((s) => s.name === name);
 
-  it('draws a visible subset of the map, without sky, opaque front to back', () => {
+  it('draws a visible subset of the map, without sky, opaque apart from translucent', () => {
     const list = listFor(0);
     expect(list.opaque.length).toBeGreaterThan(50);
     expect(list.opaque.length).toBeLessThan(map.faces.length / 2);
@@ -64,6 +64,36 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
     expect(list.batches).toBe(draws.filter((d) => d.startsBatch).length);
     expect(list.batches).toBeLessThanOrEqual(draws.length);
     expect(list.opaque[0]?.startsBatch).toBe(true);
+  });
+
+  it('groups opaque faces that share everything into batches, with one index array for both passes', () => {
+    const list = listFor(0);
+    const keyOf = (d: (typeof list.opaque)[number]) =>
+      [d.texture, d.lightmapAtlas, d.surface.surfaceFlags, d.styleIndices.join(), d.transform].join('|');
+    // No two opaque batches share a key: each texture chain is drawn once.
+    const keys = list.opaque.filter((d) => d.startsBatch).map(keyOf);
+    expect(new Set(keys).size).toBe(keys.length);
+    expect(list.opaqueBatches.length + list.transparentBatches.length).toBe(list.batches);
+    expect(list.batches).toBeLessThan(list.opaque.length / 2);
+
+    // Each batch's indices are its faces' own triangles, moved to where they sit in the world buffer.
+    const vertices = prepared.geometry.vertices!;
+    expect(list.indices).toBeDefined();
+    for (const [draws, batches] of [[list.opaque, list.opaqueBatches], [list.transparent, list.transparentBatches]] as const) {
+      for (const batch of batches) {
+        let at = batch.firstIndex;
+        for (const draw of draws.slice(batch.first, batch.first + batch.count)) {
+          expect(keyOf(draw)).toBe(keyOf(draws[batch.first]));
+          const { indexData, vertexData, firstVertex } = draw.surface as WorldDrawSurface & { vertexData: Float32Array };
+          for (const index of indexData!) {
+            const worldIndex = list.indices![at++];
+            expect(worldIndex).toBe(index + firstVertex!);
+            expect(vertices[worldIndex * 8]).toBe(vertexData[index * 8]);
+          }
+        }
+        expect(at).toBe(batch.firstIndex + batch.indexCount);
+      }
+    }
   });
 
   it('is the same list every time for the same view', () => {

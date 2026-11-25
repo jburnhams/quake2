@@ -7,18 +7,21 @@ import type { Page } from 'playwright';
 import { createWebGLPlaywrightSetup } from '@quake2ts/test-utils';
 import {
   DEMO1_SHOTS, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, DEMO_PAK, type Demo1Shot,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, shotParticles, DEMO_PAK, type Demo1Shot,
 } from '../demo1/shots.js';
 import fs from 'node:fs';
 import { PakArchive } from '../../src/assets/pak.js';
 import { parseBsp, type BspMap } from '../../src/assets/bsp.js';
 import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
 import type { SceneEntitySource } from '../../src/render/sceneEntities.js';
+import type { ParticleSpawnOptions } from '../../src/render/particleSystem.js';
 
 interface PageResult {
   readonly pixels: string; // base64 RGBA, top row first
   readonly glErrors: number[];
   readonly missingTextures: string[];
+  readonly drawCalls: number;
+  readonly batches: number;
 }
 
 async function renderShotInPage(
@@ -26,8 +29,9 @@ async function renderShotInPage(
   shot: Demo1Shot,
   brushModels: BrushModelInstance[],
   scene: { names: string[]; entities: SceneEntitySource[] },
+  particles: ParticleSpawnOptions[],
 ): Promise<PageResult> {
-  return page.evaluate(async ({ shot, width, height, clearColor, brushModels, scene }) => {
+  return page.evaluate(async ({ shot, width, height, clearColor, brushModels, scene, particles }) => {
     const w = window as any;
     const E = w.Quake2Engine;
     const canvas: HTMLCanvasElement = w.testCanvas;
@@ -61,9 +65,11 @@ async function renderShotInPage(
     const weapon = E.viewWeaponEntity({
       origin: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
       angles: { x: shot.angles[0], y: shot.angles[1], z: shot.angles[2] },
-      model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, models: models.models,
+      model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, oldFrame: shot.viewWeapon?.oldFrame, frameLerp: shot.viewWeapon?.frameLerp, models: models.models,
     });
     if (weapon) entities.push(weapon);
+    w.testRenderer.particleSystem.killAll();
+    for (const particle of particles) w.testRenderer.particleSystem.spawn(particle);
     w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0, brushModels }, entities);
 
     const glErrors: number[] = [];
@@ -77,8 +83,9 @@ async function renderShotInPage(
     for (let y = 0; y < height; y++) flipped.set(raw.subarray((height - 1 - y) * row, (height - y) * row), y * row);
     let binary = '';
     for (let i = 0; i < flipped.length; i += 0x8000) binary += String.fromCharCode(...flipped.subarray(i, i + 0x8000));
-    return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing };
-  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene });
+    const report = w.testRenderer.getPerformanceReport();
+    return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing, drawCalls: report.drawCalls, batches: report.textureBinds };
+  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels, scene, particles });
 }
 
 describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
@@ -97,9 +104,11 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
 
   for (const shot of DEMO1_SHOTS) {
     it(`renders ${shot.name} textured and lit`, async () => {
-      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot));
+      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot), shotModelEntities(map, shot), shotParticles(shot));
       expect(result.missingTextures).toEqual([]);
       expect(result.glErrors).toEqual([]);
+      // The world is drawn a batch at a time from one buffer: one draw call per batch.
+      if (!shot.entities && !shot.viewWeapon) expect(result.drawCalls).toBe(result.batches);
 
       const pixels = new Uint8ClampedArray(Buffer.from(result.pixels, 'base64'));
       const stats = analyseShot(pixels, SHOT_WIDTH, SHOT_HEIGHT);

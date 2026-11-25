@@ -26,6 +26,14 @@ export interface WorldDrawSurface {
   readonly styleIndices?: readonly number[];
   readonly styleLayers?: readonly number[];
   readonly vertexCount: number;
+  /** The face's triangles, as indices into its own vertices. */
+  readonly indexData?: Uint16Array;
+  /**
+   * Where the face's vertices start in the backend's one world vertex buffer. Set by the
+   * backend's upload; with it on every face drawn, the list carries one index array and draws
+   * whole batches at a time.
+   */
+  readonly firstVertex?: number;
 }
 
 /** The world as the front end needs it: the map for visibility and surfaces by BSP face number. */
@@ -56,8 +64,24 @@ export interface WorldDraw<TSurface extends WorldDrawSurface = WorldDrawSurface>
   readonly startsBatch: boolean;
 }
 
+/**
+ * A run of draws in a pass that share every per-draw value (textures, flags, styles, transform),
+ * so a backend binds once and draws them together.
+ */
+export interface WorldBatch {
+  /** The batch's first draw in its pass, and how many draws it covers. */
+  readonly first: number;
+  readonly count: number;
+  /** The batch's triangles in `indices`: start and count, in indices. */
+  readonly firstIndex: number;
+  readonly indexCount: number;
+}
+
 export interface WorldDrawList<TSurface extends WorldDrawSurface = WorldDrawSurface> {
-  /** Front to back, so early depth rejects hidden pixels. */
+  /**
+   * Grouped into batches (draws that share textures, flags, styles and transform), the groups
+   * and the faces in each roughly front to back, so early depth still rejects hidden pixels.
+   */
   readonly opaque: readonly WorldDraw<TSurface>[];
   /** Translucent and warping surfaces, back to front for blending. */
   readonly transparent: readonly WorldDraw<TSurface>[];
@@ -66,6 +90,14 @@ export interface WorldDrawList<TSurface extends WorldDrawSurface = WorldDrawSurf
   /** Number of draws that start a batch, over both passes. */
   readonly batches: number;
   readonly vertexCount: number;
+  readonly opaqueBatches: readonly WorldBatch[];
+  readonly transparentBatches: readonly WorldBatch[];
+  /**
+   * Both passes' triangles in draw order, as indices into the world vertex buffer (each face's
+   * indices plus its `firstVertex`). Undefined when a face drawn has no `firstVertex`, as in a
+   * scene built by hand; the backend then draws face by face.
+   */
+  readonly indices?: Uint32Array;
 }
 
 /**
@@ -234,54 +266,117 @@ export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
   let batches = 0;
   let vertexCount = 0;
 
-  const toDraws = (faces: readonly PlacedFace[]): WorldDraw<TSurface>[] => {
-    const draws: WorldDraw<TSurface>[] = [];
-    let previous: WorldDraw<TSurface> | undefined;
-    for (const { faceIndex, transform } of faces) {
-      const surface = world.surfaces[faceIndex]!;
-      const material = world.materials?.getMaterial(surface.texture);
-      const texture = animatedTextureName(world.map, faceIndex, timeSeconds) ?? surface.texture;
-
-      let renderMode = options.renderMode;
-      if (renderMode && !renderMode.applyToAll && (options.hasTexture?.(texture) ?? true)) {
-        renderMode = undefined;
-      }
-
-      const styleIndices = surface.styleIndices ?? DEFAULT_STYLE_INDICES;
-      // Translucent and warping surfaces are drawn unlit, at their texture's colour, as
-      // R_DrawAlphaSurfaces does, even where qbsp stored a lightmap for them.
-      const lightmapAtlas =
-        options.disableLightmaps || isTransparentSurface(surface.surfaceFlags) ? undefined : surface.lightmap?.atlasIndex;
-      const startsBatch =
-        !previous ||
-        previous.texture !== texture ||
-        previous.lightmapAtlas !== lightmapAtlas ||
-        previous.surface.surfaceFlags !== surface.surfaceFlags ||
-        previous.transform !== transform ||
-        previous.styleIndices.join() !== styleIndices.join();
-      if (startsBatch) batches++;
-      vertexCount += surface.vertexCount;
-
-      const draw: WorldDraw<TSurface> = {
-        faceIndex,
-        surface,
-        texture,
-        lightmapAtlas,
-        styleIndices,
-        styleLayers: surface.styleLayers ?? DEFAULT_STYLE_LAYERS,
-        texScroll: material?.scrollOffset,
-        warp: material?.warp,
-        renderMode,
-        transform,
-        startsBatch,
-      };
-      draws.push(draw);
-      previous = draw;
-    }
-    return draws;
+  // A brush model instance's transform stands for it in batch keys; the world has none.
+  const transformIds = new Map<Float32Array, number>();
+  const transformId = (t: Float32Array | undefined) => {
+    if (!t) return 0;
+    let id = transformIds.get(t);
+    if (id === undefined) transformIds.set(t, (id = transformIds.size + 1));
+    return id;
   };
 
-  const opaque = toDraws(sortFrontToBack(opaqueFaces));
-  const transparent = toDraws(sortBackToFront(transparentFaces));
-  return { opaque, transparent, lightStyles, batches, vertexCount };
+  const toDraw = ({ faceIndex, transform }: PlacedFace): WorldDraw<TSurface> & { readonly key: string } => {
+    const surface = world.surfaces[faceIndex]!;
+    const material = world.materials?.getMaterial(surface.texture);
+    const texture = animatedTextureName(world.map, faceIndex, timeSeconds) ?? surface.texture;
+
+    let renderMode = options.renderMode;
+    if (renderMode && !renderMode.applyToAll && (options.hasTexture?.(texture) ?? true)) {
+      renderMode = undefined;
+    }
+
+    const styleIndices = surface.styleIndices ?? DEFAULT_STYLE_INDICES;
+    const styleLayers = surface.styleLayers ?? DEFAULT_STYLE_LAYERS;
+    // Translucent and warping surfaces are drawn unlit, at their texture's colour, as
+    // R_DrawAlphaSurfaces does, even where qbsp stored a lightmap for them.
+    const lightmapAtlas =
+      options.disableLightmaps || isTransparentSurface(surface.surfaceFlags) ? undefined : surface.lightmap?.atlasIndex;
+    // Everything a backend sets per draw: faces with the same key draw as one batch. The base
+    // texture is in it too, as its material (scroll, warp) is looked up by that name.
+    const key = [
+      transformId(transform),
+      surface.texture,
+      texture,
+      lightmapAtlas ?? -1,
+      surface.surfaceFlags,
+      styleIndices.join(','),
+      styleLayers.join(','),
+      renderMode ? 1 : 0,
+    ].join('|');
+    return {
+      faceIndex,
+      surface,
+      texture,
+      lightmapAtlas,
+      styleIndices,
+      styleLayers,
+      texScroll: material?.scrollOffset,
+      warp: material?.warp,
+      renderMode,
+      transform,
+      startsBatch: false,
+      key,
+    };
+  };
+
+  // Opaque faces draw in any order under the depth test, so faces with the same key are drawn
+  // together, as the original's texture chains are; groups keep the order of their nearest face.
+  const groupByKey = (draws: (WorldDraw<TSurface> & { key: string })[]) => {
+    const groups = new Map<string, (WorldDraw<TSurface> & { key: string })[]>();
+    for (const draw of draws) {
+      const group = groups.get(draw.key);
+      if (group) group.push(draw);
+      else groups.set(draw.key, [draw]);
+    }
+    return [...groups.values()].flat();
+  };
+
+  let indexTotal = 0;
+  let indexed = true;
+  const finish = (keyed: (WorldDraw<TSurface> & { key: string })[]) => {
+    const draws: WorldDraw<TSurface>[] = [];
+    const runs: { first: number; count: number; indexCount: number }[] = [];
+    let previousKey: string | undefined;
+    for (const { key, ...draw } of keyed) {
+      const startsBatch = key !== previousKey;
+      previousKey = key;
+      if (startsBatch) {
+        batches++;
+        runs.push({ first: draws.length, count: 0, indexCount: 0 });
+      }
+      const run = runs[runs.length - 1];
+      run.count++;
+      const surface = draw.surface;
+      if (surface.firstVertex === undefined || !surface.indexData) indexed = false;
+      else run.indexCount += surface.indexData.length;
+      vertexCount += surface.vertexCount;
+      draws.push({ ...draw, startsBatch });
+    }
+    return { draws, runs };
+  };
+
+  const opaqueResult = finish(groupByKey(sortFrontToBack(opaqueFaces).map(toDraw)));
+  const transparentResult = finish(sortBackToFront(transparentFaces).map(toDraw));
+  const opaque = opaqueResult.draws;
+  const transparent = transparentResult.draws;
+
+  let indices: Uint32Array | undefined;
+  const toBatches = (runs: { first: number; count: number; indexCount: number }[]): WorldBatch[] =>
+    runs.map((run) => {
+      const batch = { ...run, firstIndex: indexTotal };
+      indexTotal += run.indexCount;
+      return batch;
+    });
+  const opaqueBatches = toBatches(opaqueResult.runs);
+  const transparentBatches = toBatches(transparentResult.runs);
+  if (indexed) {
+    indices = new Uint32Array(indexTotal);
+    let at = 0;
+    for (const draw of [...opaque, ...transparent]) {
+      const { indexData, firstVertex } = draw.surface;
+      for (let i = 0; i < indexData!.length; i++) indices[at++] = indexData![i] + firstVertex!;
+    }
+  }
+
+  return { opaque, transparent, lightStyles, batches, vertexCount, opaqueBatches, transparentBatches, indices };
 }

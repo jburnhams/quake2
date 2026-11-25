@@ -15,7 +15,7 @@ import type { RenderableEntity } from '../../src/render/scene.js';
 import type { WorldRenderState } from '../../src/render/frame.js';
 import {
   DEMO1_SHOTS, DEMO_PAK, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, shotModelEntities, shotParticles,
 } from '../demo1/shots.js';
 
 const toArrayBuffer = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
@@ -67,10 +67,14 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
       const weapon = viewWeaponEntity({
         origin: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
         angles: { x: shot.angles[0], y: shot.angles[1], z: shot.angles[2] },
-        model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, models: models.models,
+        model: shot.viewWeapon?.model, frame: shot.viewWeapon?.frame ?? 0, oldFrame: shot.viewWeapon?.oldFrame, frameLerp: shot.viewWeapon?.frameLerp, models: models.models,
       });
       if (weapon) entities.push(weapon);
-      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
+      renderer.particleSystem.killAll();
+      for (const particle of shotParticles(shot)) renderer.particleSystem.spawn(particle);
+      const frameStats = renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, entities);
+      // The world is drawn a batch at a time from one buffer: one draw call per batch.
+      if (!shot.entities && !shot.viewWeapon) expect(frameStats.drawCalls).toBe(frameStats.batches);
       const validation = await renderer.device.popErrorScope();
       expect(validation?.message ?? null).toBeNull();
 

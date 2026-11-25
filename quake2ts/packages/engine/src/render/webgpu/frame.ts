@@ -5,6 +5,8 @@ import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
 import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
+import { ParticleRenderer } from './pipelines/particleSystem.js';
+import type { ParticleSystem } from '../particleSystem.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { RenderableEntity } from '../scene.js';
@@ -14,7 +16,7 @@ import { DLight } from '../dlight.js';
 import type { PackedBspSurface } from '../bsp.js';
 import type { WorldRenderState as SharedWorldRenderState } from '../frame.js';
 import { calculateEntityLight, MODEL_LIGHT_DIRECTION } from '../light.js';
-import { buildWorldDrawList, type BrushModelInstance, type WorldDraw } from '../worldDrawList.js';
+import { buildWorldDrawList, type BrushModelInstance, type WorldBatch, type WorldDraw } from '../worldDrawList.js';
 import { CameraState } from '../types/camera.js';
 
 export type { FrameRenderStats } from '../frame.js';
@@ -32,6 +34,8 @@ export interface SkyRenderState {
 export type WebGPUWorldSurface = PackedBspSurface & {
   gpuVertexBuffer?: GPUBuffer;
   gpuIndexBuffer?: GPUBuffer;
+  /** The world's one vertex buffer (PackedBspGeometry.vertices), shared by every face of an uploaded world. */
+  worldVertexBuffer?: GPUBuffer;
 };
 
 export type WorldRenderState = SharedWorldRenderState<Texture2D, WebGPUWorldSurface>;
@@ -43,6 +47,8 @@ export interface FrameRenderOptions {
   readonly sky?: SkyRenderState;
   readonly timeSeconds?: number;
   readonly deltaTime?: number;
+  /** Live particles to draw after the world and models (the renderer passes its own system). */
+  readonly particles?: ParticleSystem;
   readonly clearColor?: readonly [number, number, number, number];
   readonly renderMode?: RenderModeConfig;
   readonly underwaterWarp?: boolean; // Enable underwater distortion
@@ -108,7 +114,8 @@ export class FrameRenderer {
       bsp: BspSurfacePipeline;
       md2: Md2Pipeline;
       postProcess: PostProcessPipeline;
-      // TODO: Add MD3 and Particles pipelines
+      particles: ParticleRenderer;
+      // TODO: Add the MD3 pipeline
     }
   ) {
       this.sampler = createLinearSampler(this.context.device).sampler;
@@ -120,6 +127,23 @@ export class FrameRenderer {
         minFilter: 'linear', magFilter: 'linear',
         addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', label: 'world-lightmap-sampler',
       }).sampler;
+  }
+
+  /** The frame's world indices (both passes), in a buffer grown as needed and refilled each frame. */
+  private worldIndexBuffer: GPUBuffer | null = null;
+
+  private writeWorldIndices(indices: Uint32Array): GPUBuffer {
+    const device = this.context.device;
+    if (!this.worldIndexBuffer || this.worldIndexBuffer.size < indices.byteLength) {
+      this.worldIndexBuffer?.destroy();
+      this.worldIndexBuffer = device.createBuffer({
+        label: 'world-indices',
+        size: Math.max(indices.byteLength, 64 * 1024),
+        usage: GPUBufferUsage.INDEX | GPUBufferUsage.COPY_DST,
+      });
+    }
+    if (indices.byteLength > 0) device.queue.writeBuffer(this.worldIndexBuffer, 0, indices as unknown as BufferSource);
+    return this.worldIndexBuffer;
   }
 
   private ensureIntermediateTexture(width: number, height: number): GPUTextureView {
@@ -351,8 +375,13 @@ export class FrameRenderer {
         stats.vertexCount = drawList.vertexCount;
         const cameraState = options.cameraState ?? options.camera.toState();
 
-        const runPass = (draws: readonly WorldDraw<WebGPUWorldSurface>[], pass: GPURenderPassEncoder) => {
-            for (const draw of draws) {
+        // One write of the frame's indices; each batch is then one draw from the world's buffer.
+        const worldIndices = drawList.indices && renderMode?.mode !== 'wireframe' ? this.writeWorldIndices(drawList.indices) : undefined;
+
+        const runPass = (draws: readonly WorldDraw<WebGPUWorldSurface>[], batches: readonly WorldBatch[], pass: GPURenderPassEncoder) => {
+            for (const batch of batches) {
+                // Every draw in a batch shares the values bound here (the front end's batch key).
+                const draw = draws[batch.first];
                 const geometry = draw.surface;
                 const diffuse = (world.materials?.getMaterial(geometry.texture)?.texture as unknown as GpuTexture2D | null | undefined)
                     ?? world.textures?.get(draw.texture);
@@ -380,13 +409,21 @@ export class FrameRenderer {
                     cameraPosition: options.camera.position as Float32Array,
                     modelMatrix: draw.transform,
                 });
-                this.pipelines.bsp.draw(pass, geometry, draw.renderMode);
-                stats.facesDrawn++;
-                stats.drawCalls++;
+                stats.facesDrawn += batch.count;
+                if (worldIndices && geometry.worldVertexBuffer) {
+                    this.pipelines.bsp.drawRange(pass, geometry.worldVertexBuffer, worldIndices, batch.firstIndex, batch.indexCount);
+                    stats.drawCalls++;
+                } else {
+                    // Faces built by hand (no world buffer), or wireframe: one draw a face.
+                    for (let i = batch.first; i < batch.first + batch.count; i++) {
+                        this.pipelines.bsp.draw(pass, draws[i].surface, draws[i].renderMode);
+                        stats.drawCalls++;
+                    }
+                }
             }
         };
 
-        runPass(drawList.opaque, opaquePass);
+        runPass(drawList.opaque, drawList.opaqueBatches, opaquePass);
 
         // Render Entities (MD2)
         this.pipelines.md2.beginFrame();
@@ -452,7 +489,7 @@ export class FrameRenderer {
                 this.pipelines.md2.draw(opaquePass, mesh);
                 stats.drawCalls++;
             }
-            // TODO: Handle MD3 and Particles rendering
+            // TODO: Handle MD3 rendering
         }
 
         opaquePass.end();
@@ -474,11 +511,23 @@ export class FrameRenderer {
 
         const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
 
-        runPass(drawList.transparent, transparentPass);
+        runPass(drawList.transparent, drawList.transparentBatches, transparentPass);
 
         transparentPass.end();
     } else {
         opaquePass.end();
+    }
+
+    // --- Particles: after the world and models, depth tested, writing no depth ---
+    if (options.particles && options.particles.aliveCount() > 0) {
+        const particlePass = commandEncoder.beginRenderPass({
+            colorAttachments: [{ view: renderPassTarget, loadOp: 'load', storeOp: 'store' }],
+            depthStencilAttachment: { view: depthTexture, depthLoadOp: 'load', depthStoreOp: 'store' },
+            label: 'particle-render-pass'
+        });
+        const cameraState = options.cameraState ?? options.camera.toState();
+        this.pipelines.particles.render(particlePass, viewProjection, { x: 0, y: 0, z: 0 }, { x: 0, y: 0, z: 0 }, options.particles, undefined, cameraState);
+        particlePass.end();
     }
 
     // --- Pass 3: Post Processing (Bloom, Warp) ---

@@ -138,8 +138,8 @@ describe('ParticleSystem rendering data', () => {
       viewUp: { x: 0, y: 1, z: 0 },
     });
 
-    expect(gl.calls).toContain('blendFuncSeparate:770:771:1:771');
-    expect(gl.calls).toContain('blendFunc:770:1');
+    expect(gl.calls).toContain('blendFuncSeparate:770:771:0:1'); // framebuffer alpha kept at 1
+    expect(gl.calls).toContain('blendFuncSeparate:770:1:0:1');
     expect(gl.calls).toContain('drawElements:4:6:5123:0');
     expect(gl.calls).toContain('drawElements:4:6:5123:12');
 

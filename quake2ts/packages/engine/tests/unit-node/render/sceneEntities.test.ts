@@ -38,6 +38,23 @@ describe('modelEntitiesFromEntities', () => {
     expect(drawn[1].skin).toBe('models/x/skin.pcx');
   });
 
+  it('blends from the old frame when the source gives one, clamping both', () => {
+    const drawn = modelEntitiesFromEntities(
+      [
+        { modelindex: 3, origin: none, angles: none, oldFrame: 0, frame: 1, frameLerp: 0.25 },
+        { modelindex: 3, origin: none, angles: none, oldFrame: 99, frame: 1, frameLerp: 0.5 },
+        { modelindex: 3, origin: none, angles: none, oldFrame: 0, frame: 1, frameLerp: 1 },
+      ],
+      (i) => names[i],
+      { models }
+    );
+    expect(drawn.map((d) => d.blend)).toEqual([
+      { frame0: 0, frame1: 1, lerp: 0.25 },
+      { frame0: 2, frame1: 1, lerp: 0.5 },
+      { frame0: 1, frame1: 1, lerp: 0 },
+    ]);
+  });
+
   it('spins items with EF_ROTATE at 100 degrees a second', () => {
     const [item] = modelEntitiesFromEntities(
       [{ modelindex: 3, origin: none, angles: { x: 0, y: 45, z: 0 }, effects: 1 }],
@@ -65,5 +82,10 @@ describe('viewWeaponEntity', () => {
     expect(Array.from(weapon!.transform.slice(12, 15))).toEqual([1, 2, 3]);
     expect(weapon!.transform[1]).toBeCloseTo(1); // yaw 90: forward is +y
     expect(viewWeaponEntity({ origin: none, angles: none, model: undefined, frame: 0, models })).toBeUndefined();
+  });
+
+  it('blends the weapon between frames', () => {
+    const weapon = viewWeaponEntity({ origin: none, angles: none, model: 'models/x/tris.md2', oldFrame: 1, frame: 2, frameLerp: 0.5, models });
+    expect(weapon?.blend).toEqual({ frame0: 1, frame1: 2, lerp: 0.5 });
   });
 });

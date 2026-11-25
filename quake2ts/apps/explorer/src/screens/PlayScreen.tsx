@@ -31,7 +31,7 @@ export function PlayScreen() {
       <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
         <h1 className="type-label">Play demo1</h1>
         <p className="type-body-sm text-muted-foreground">
-          The world, doors, lifts, monsters and items are drawn. Not yet: the weapon in your hands, effects and sound.
+          The world, doors, lifts, monsters, items, muzzle flashes and impacts are drawn. Not yet: the weapon in your hands and sound.
         </p>
         <div className="ms-auto flex items-center gap-2">
           <ButtonLink to="/explore" size="sm" variant="ghost">
