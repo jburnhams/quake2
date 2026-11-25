@@ -12,7 +12,8 @@ rr="$here/../../rerelease"
 mkdir -p "$out"
 # -ffp-contract=off: a compiler that targets FMA (newer runners) would fuse a*b+c and round once,
 # which the original x87/SSE builds never did, and which moves exact float ties.
-CFLAGS="-std=gnu99 -O2 -w -fno-strict-aliasing -ffp-contract=off"
+# GCC 14 made these old-C warnings errors; the original source needs them as warnings.
+CFLAGS="-std=gnu99 -O2 -w -fno-strict-aliasing -ffp-contract=off -Wno-error=incompatible-pointer-types -Wno-error=int-conversion -Wno-error=implicit-function-declaration -Wno-error=implicit-int"
 cc $CFLAGS -c -o "$out/cmodel.o" "$full/qcommon/cmodel.c"
 cc $CFLAGS -c -o "$out/q_shared.o" "$full/game/q_shared.c"
 cc $CFLAGS -c -o "$out/cm_stubs.o" "$here/cm_stubs.c"
