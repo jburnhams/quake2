@@ -7,7 +7,7 @@ outputs:
 runs:
   using: composite
   steps:
-    - uses: actions/cache@v4
+    - uses: actions/cache@v6
       with:
         path: quake2ts/.paks
         key: demo-paks-${{ hashFiles('quake2ts/scripts/demo-paks.sha256') }}

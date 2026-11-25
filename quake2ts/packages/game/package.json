@@ -47,8 +47,8 @@
     "@quake2ts/engine": "workspace:*",
     "@quake2ts/shared": "workspace:*",
     "@quake2ts/test-utils": "workspace:^",
-    "fake-indexeddb": "^6.2.5",
+    "fake-indexeddb": "^6.2.8",
     "gl-matrix": "^3.4.4",
-    "tsup": "^8.5.1"
+    "tsup": "^9.0.0"
   }
 }

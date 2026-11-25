@@ -8,6 +8,6 @@
     "./tsup.factory": "./tsup.factory.ts"
   },
   "peerDependencies": {
-    "tsup": "^8.1.0"
+    "tsup": "^9.0.0"
   }
 }

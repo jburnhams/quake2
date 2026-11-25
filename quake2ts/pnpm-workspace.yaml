@@ -2,3 +2,11 @@ packages:
   - 'packages/*'
   - 'apps/*'
   - 'build-config'
+allowBuilds:
+  esbuild: true
+  webgpu: true
+# engine <-> game and bsp-tools <-> test-utils depend on each other through devDependencies
+# (tests). pnpm 9 warned and ran them in any order; pnpm 12 refuses unless told it's deliberate.
+# Order does not matter here: `build:types` builds every project reference first and tsup
+# keeps @quake2ts/* external.
+ignoreWorkspaceCycles: true

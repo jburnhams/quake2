@@ -18,21 +18,21 @@ jobs:
         working-directory: quake2ts
     steps:
       - name: 'Checkout source code'
-        uses: 'actions/checkout@v4'
+        uses: 'actions/checkout@v7'
         with:
           ref: main
 
       - name: 'Setup Node.js'
-        uses: 'actions/setup-node@v4'
+        uses: 'actions/setup-node@v7'
         with:
-          node-version: '20'
+          node-version: 26
 
       - name: 'cat package.json'
         run: cat ./package.json
 
       - name: 'Automated Version Bump'
         id: version-bump
-        uses: 'phips28/gh-action-bump-version@v11.0.7'
+        uses: 'phips28/gh-action-bump-version@v12.0.2'
         with:
           tag-prefix: 'v'
           major-wording: 'major,Major,breaking,Breaking'
@@ -63,7 +63,7 @@ jobs:
         run: cat ./package.json
       - name: 'Create GitHub Release'
         if: ${{ steps.version-bump.outputs.newTag }}
-        uses: 'softprops/action-gh-release@v2'
+        uses: 'softprops/action-gh-release@v3'
         with:
           tag_name: ${{ steps.version-bump.outputs.newTag }}
           name: Release ${{ steps.version-bump.outputs.newTag }}

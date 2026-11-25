@@ -42,10 +42,22 @@ pnpm test:integration tests/render/webgpu
 ### Package Dependencies
 
 Already configured in `package.json`:
-- `webgpu@^0.3.8` - Includes Dawn native bindings for Node.js
-- `@webgpu/types@^0.1.68` - TypeScript definitions
+- `webgpu@^0.6.2` - Includes Dawn native bindings for Node.js
+- `@webgpu/types@^0.1.74` - TypeScript definitions
 
-The `webgpu` package automatically downloads platform-specific Dawn binaries during postinstall.
+The `webgpu` package downloads platform-specific Dawn binaries during postinstall. pnpm 12 runs a
+dependency's install script only when `allowBuilds` in `quake2ts/pnpm-workspace.yaml` lists it
+(`esbuild` and `webgpu` are there); add a package there if it needs its postinstall.
+
+## Toolchain
+
+- Node 26 and pnpm 12 (`packageManager` in `quake2ts/package.json`; CI reads it from there).
+- TypeScript 7 compiles (`tsc -b`, the `typescript7` alias in `devDependencies`). TypeScript 7 ships no
+  compiler API, so the `typescript` name points at `@typescript/typescript6`, the TypeScript team's
+  API package: tsup's `--dts` needs it, and `packages/tools`' report generators import it directly.
+  Its binary is `tsc6`, so `tsc` is always TypeScript 7.
+- `tsconfig.base.json` sets `"types": ["node"]` because TypeScript 6+ no longer includes every
+  `@types` package by default, and has no `baseUrl` (removed in TypeScript 7).
 
 ### Troubleshooting
 

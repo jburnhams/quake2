@@ -4,6 +4,7 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "lib": ["ES2023"],
+    "types": ["node"],
     "strict": true,
     "declaration": true,
     "composite": true,
@@ -13,9 +14,8 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "baseUrl": ".",
     "paths": {
-      "@quake2ts/test-utils/mocks/*": ["packages/test-utils/src/game/mocks/*"]
+      "@quake2ts/test-utils/mocks/*": ["./packages/test-utils/src/game/mocks/*"]
     }
   }
 }

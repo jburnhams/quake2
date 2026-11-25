@@ -4,9 +4,9 @@
   "description": "Quake II re-release port to TypeScript with WebGL renderer - A complete game engine with physics, networking, and BSP rendering",
   "type": "module",
   "engines": {
-    "node": ">=25"
+    "node": ">=26"
   },
-  "packageManager": "pnpm@9.0.0",
+  "packageManager": "pnpm@12.23.0",
   "keywords": [
     "quake",
     "quake2",
@@ -56,22 +56,22 @@
     "@quake2ts/test-utils": "workspace:*",
     "@wasm-audio-decoders/ogg-vorbis": "^0.1.20",
     "gl-matrix": "^3.4.4",
-    "pako": "^2.1.0"
+    "pako": "^3.0.3"
   },
   "devDependencies": {
-    "@napi-rs/canvas": "^0.1.88",
-    "@playwright/test": "^1.57.0",
+    "@napi-rs/canvas": "^1.2.0",
+    "@playwright/test": "^1.65.1",
     "@quake2ts/test-utils": "workspace:^",
-    "@types/node": "^25.0.3",
-    "@types/pako": "^2.0.4",
+    "@types/node": "^26.6.6",
     "@types/serve-handler": "^6.1.4",
-    "@webgpu/types": "^0.1.68",
+    "@webgpu/types": "^0.1.74",
     "cross-env": "^10.1.0",
-    "fake-indexeddb": "^6.2.5",
-    "jsdom": "^27.4.0",
-    "playwright": "^1.57.0",
-    "tsx": "^4.21.0",
-    "typescript": "^5.9.3",
-    "vitest": "^4.0.16"
+    "fake-indexeddb": "^6.2.8",
+    "jsdom": "^31.0.1",
+    "playwright": "^1.65.1",
+    "tsx": "^4.23.15",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "typescript7": "npm:typescript@^7.0.2",
+    "vitest": "^5.1.1"
   }
 }

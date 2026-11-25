@@ -8,7 +8,7 @@ import {
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME, U_MOREBITS4,
     U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH
 } from '@quake2ts/shared';
-import pako from 'pako';
+import * as pako from 'pako';
 import { StreamingBuffer } from '../stream/streamingBuffer.js';
 import { ProtocolHandler } from './protocol/types.js';
 import { createProtocolHandler, BootstrapProtocolHandler } from './protocol/factory.js';
