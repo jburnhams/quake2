@@ -37,6 +37,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
+      # demo1 render gate (packages/engine/tests/demo1) needs the demo pak0.pak
+      - name: Demo paks
+        uses: ./.github/actions/demo-paks
+
       - name: Build workspace
         run: pnpm run build
 
@@ -56,3 +60,4 @@ jobs:
           path: |
             quake2ts/webgl-visual-tests.json
             quake2ts/packages/engine/tests/webgl/__snapshots__
+            quake2ts/packages/engine/tests/demo1/__snapshots__

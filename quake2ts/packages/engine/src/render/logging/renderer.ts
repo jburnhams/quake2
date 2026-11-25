@@ -1,5 +1,6 @@
+import type { PreparedWorld } from '../prepareWorld.js';
 import type { IRenderer, Pic } from '../interface.js';
-import type { FrameRenderOptions } from '../frame.js';
+import type { FrameRenderOptions, WorldRenderState } from '../frame.js';
 import type { RenderableEntity } from '../scene.js';
 import { WebGLMatrixBuilder } from '../matrix/webgl.js';
 import { WebGPUMatrixBuilder } from '../matrix/webgpu.js';
@@ -56,6 +57,10 @@ export class LoggingRenderer implements IRenderer {
     }
 
     this.log(`LoggingRenderer initialized (target=${this.options.targetSystem})`);
+  }
+
+  uploadWorld(world: PreparedWorld): WorldRenderState {
+    return { map: world.map, surfaces: [], lightStyles: world.lightStyles };
   }
 
   renderFrame(

@@ -2,7 +2,7 @@ import { Mat4, multiplyMat4, Vec3, RandomGenerator } from '@quake2ts/shared';
 import { mat4, quat, vec3 } from 'gl-matrix';
 import { BspSurfacePipeline } from './bspPipeline.js';
 import { Camera } from './camera.js';
-import { createFrameRenderer, FrameRenderOptions, RenderModeConfig } from './frame.js';
+import { createFrameRenderer, FrameRenderOptions, RenderModeConfig, type WorldRenderState } from './frame.js';
 import { Md2MeshBuffers, Md2Pipeline } from './md2Pipeline.js';
 import { Md3ModelMesh, Md3Pipeline } from './md3Pipeline.js';
 import { RenderableEntity } from './scene.js';
@@ -29,6 +29,8 @@ import { RenderableMd2, RenderableMd3 } from './scene.js';
 import { IRenderer, Pic } from './interface.js';
 import { BspMap } from '../assets/bsp.js';
 import { BspGeometryBuildResult, buildBspGeometry, createBspSurfaces } from './bsp.js';
+import type { PreparedWorld } from './prepareWorld.js';
+import { uploadWorldWebGL } from './uploadWorld.js';
 
 // Re-export Pic for backward compatibility
 export type { Pic };
@@ -1001,6 +1003,8 @@ export const createRenderer = (
         }
     };
 
+    const uploadWorld = (world: PreparedWorld): WorldRenderState => uploadWorldWebGL(gl, world);
+
     const uploadBspGeometry = (map: BspMap): BspGeometryBuildResult => {
         const surfaces = createBspSurfaces(map);
         return buildBspGeometry(gl, surfaces, map);
@@ -1042,6 +1046,7 @@ export const createRenderer = (
         setAreaPortalState,
         renderInstanced,
         uploadBspGeometry,
+        uploadWorld,
         dispose: () => {
             // Cleanup logic if needed, typically resource disposal
             gpuProfiler.dispose();

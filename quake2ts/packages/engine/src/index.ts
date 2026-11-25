@@ -234,6 +234,11 @@ export {
   BSP_VERTEX_LAYOUT,
   createBspSurfaces,
   buildBspGeometry,
+  packBspGeometry,
+  uploadBspGeometry,
+  type PackedBspGeometry,
+  type PackedBspSurface,
+  type PackedLightmapAtlas,
   type BspGeometryBuildResult,
   type BspLightmapData,
   type BspSurfaceGeometry,
@@ -241,6 +246,15 @@ export {
   type LightmapAtlas,
   type LightmapPlacement,
 } from './render/bsp.js';
+export {
+  prepareWorld,
+  loadPalette,
+  mapTextureNames,
+  type FileSource,
+  type PreparedWorld,
+  type PrepareWorldOptions,
+} from './render/prepareWorld.js';
+export { uploadWorldWebGL, uploadWorldTexture } from './render/uploadWorld.js';
 export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
 export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
 export {

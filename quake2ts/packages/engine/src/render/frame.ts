@@ -1,6 +1,7 @@
 import type { BspMap } from '../assets/bsp.js';
 import { applySurfaceState, BspSurfacePipeline } from './bspPipeline.js';
-import { gatherVisibleFaces, type VisibleFace } from './bspTraversal.js';
+import { gatherVisibleFaces } from './bspTraversal.js';
+import { buildWorldDrawList, type WorldDraw, type WorldDrawSurface } from './worldDrawList.js';
 import { extractFrustumPlanes } from './culling.js';
 import { Camera } from './camera.js';
 import { CameraState } from './types/camera.js';
@@ -14,17 +15,10 @@ import {
   type SkyboxBindOptions,
 } from './skybox.js';
 import { mat4 } from 'gl-matrix';
-import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
+import { SURF_WARP } from '@quake2ts/shared';
 import { DLight } from './dlight.js';
 import { PostProcessPipeline } from './postprocessing/pipeline.js';
 import { BloomPipeline } from './bloom.js';
-import {
-  sortFrontToBack,
-  sortBackToFront,
-  evaluateLightStyle,
-  prepareLightStyles,
-  resolveSurfaceTextures as resolveSurfaceTexturesGeneric
-} from './utils/index.js';
 
 export type { FrameRenderStats, FrameRenderOptions };
 
@@ -49,16 +43,21 @@ interface FrameRenderStats {
   vertexCount: number;
 }
 
-export interface WorldRenderState {
+/**
+ * An uploaded world, as `uploadWorld` returns it. Generic over the backend's texture and surface
+ * types; the defaults are WebGL's. `surfaces` is indexed by BSP face number.
+ */
+export interface WorldRenderState<TTexture = Texture2D, TSurface extends WorldDrawSurface = BspSurfaceGeometry> {
   readonly map: BspMap;
-  readonly surfaces: readonly BspSurfaceGeometry[];
-  readonly lightmaps?: readonly LightmapAtlas[];
-  readonly textures?: ReadonlyMap<string, Texture2D>;
+  readonly surfaces: readonly TSurface[];
+  readonly lightmaps?: readonly (Omit<LightmapAtlas, 'texture'> & { readonly texture: TTexture })[];
+  readonly textures?: ReadonlyMap<string, TTexture>;
   readonly materials?: MaterialManager;
   readonly lightStyles?: ReadonlyArray<number>;
 }
 
-export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted';
+/** `worldpos-debug` and `distance-debug` are drawn by the WebGPU backend only. */
+export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted' | 'worldpos-debug' | 'distance-debug';
 
 export interface RenderModeConfig {
   readonly mode: RenderMode;
@@ -136,8 +135,6 @@ function renderSky(
   skyboxPipeline.gl.depthMask(true);
 }
 
-// Sorting functions moved to utils/geometry.ts for shared use
-
 interface TextureBindingCache {
   diffuse?: Texture2D;
   lightmap?: Texture2D;
@@ -148,28 +145,6 @@ interface ResolvedSurfaceTextures {
   diffuse?: Texture2D;
   lightmap?: Texture2D;
   refraction?: Texture2D;
-}
-
-interface BatchKey {
-  diffuse?: Texture2D;
-  lightmap?: Texture2D;
-  surfaceFlags: number;
-  styleKey: string;
-}
-
-// Wrapper for the generic resolveSurfaceTextures utility
-function resolveSurfaceTextures(
-    geometry: BspSurfaceGeometry,
-    world: WorldRenderState | undefined,
-    refractionTexture?: Texture2D
-): ResolvedSurfaceTextures {
-  return resolveSurfaceTexturesGeneric(
-    geometry,
-    world?.materials,
-    world?.textures,
-    world?.lightmaps,
-    refractionTexture
-  );
 }
 
 function bindSurfaceTextures(
@@ -262,7 +237,6 @@ function renderViewModel(
   return true;
 }
 
-// Light style evaluation moved to utils/lighting.ts for shared use
 
 
 export const createFrameRenderer = (
@@ -351,167 +325,79 @@ export const createFrameRenderer = (
     stats.skyDrawn = Boolean(sky);
 
     if (world) {
-      // Update material animations
-      world.materials?.update(timeSeconds);
+      const drawList = buildWorldDrawList(world, {
+        cameraPosition: { x: camera.position[0] ?? 0, y: camera.position[1] ?? 0, z: camera.position[2] ?? 0 },
+        viewProjection,
+        timeSeconds,
+        portalState,
+        lightStyleOverrides,
+        renderMode,
+        disableLightmaps,
+        hasTexture: (name) => Boolean(world.textures?.get(name)),
+        gatherVisibleFaces: deps.gatherVisibleFaces,
+        extractFrustumPlanes: deps.extractFrustumPlanes,
+      });
 
-      const frustum = deps.extractFrustumPlanes(Array.from(viewProjection));
-      const cameraPosition = {
-        x: camera.position[0] ?? 0,
-        y: camera.position[1] ?? 0,
-        z: camera.position[2] ?? 0,
-      };
-
-      const visibleFaces = world.map ? deps.gatherVisibleFaces(world.map, cameraPosition, frustum, portalState) : [];
-
-      // Split faces into Opaque and Transparent/Warping
-      const opaqueFaces: VisibleFace[] = [];
-      const transparentFaces: VisibleFace[] = [];
-
-      for (const face of visibleFaces) {
-          const geometry = world.surfaces[face.faceIndex];
-          if (!geometry) continue;
-
-          // Check if surface is transparent or warping (water, slime, lava)
-          const isTransparent = (geometry.surfaceFlags & (SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)) !== 0;
-
-          if (isTransparent) {
-              transparentFaces.push(face);
+      const runPass = (draws: readonly WorldDraw<BspSurfaceGeometry>[], refraction: Texture2D | undefined) => {
+        const cache: TextureBindingCache = {};
+        let state: ReturnType<BspSurfacePipeline['bind']> | undefined;
+        for (const draw of draws) {
+          const geometry = draw.surface;
+          const textures: ResolvedSurfaceTextures = {
+            diffuse: (world.materials?.getMaterial(geometry.texture)?.texture as Texture2D | null | undefined) ?? world.textures?.get(draw.texture),
+            lightmap: draw.lightmapAtlas !== undefined ? world.lightmaps?.[draw.lightmapAtlas]?.texture : undefined,
+            refraction,
+          };
+          if (draw.startsBatch) {
+            cache.diffuse = undefined;
+            cache.lightmap = undefined;
+            cache.refraction = undefined;
+            const units = bindSurfaceTextures(geometry, world, cache, textures);
+            state = bspPipeline.bind({
+              cameraState,
+              modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
+              styleIndices: draw.styleIndices,
+              styleLayers: draw.styleLayers,
+              styleValues: drawList.lightStyles,
+              surfaceFlags: geometry.surfaceFlags,
+              timeSeconds,
+              diffuseSampler: units.diffuse ?? 0,
+              lightmapSampler: units.lightmap,
+              refractionSampler: units.refraction,
+              texScroll: draw.texScroll,
+              warp: draw.warp,
+              dlights,
+              renderMode: draw.renderMode,
+              lightmapOnly,
+              brightness,
+              gamma,
+              fullbright,
+              ambient,
+            });
           } else {
-              opaqueFaces.push(face);
+            bindSurfaceTextures(geometry, world, cache, textures);
           }
-      }
-
-      // 1. Render Opaque Faces
-      const sortedOpaque = sortFrontToBack(opaqueFaces);
-
-      // Prepare effective light styles
-      // Ensure we have at least 64 light styles with default values
-      let baseLightStyles = world.lightStyles || [];
-      if (baseLightStyles.length < 64) {
-          const styles = [...baseLightStyles];
-          while (styles.length < 64) {
-              styles.push(1.0); // Default to full brightness
-          }
-          baseLightStyles = styles;
-      }
-
-      // Apply overrides using shared utility
-      const effectiveLightStyles = prepareLightStyles(
-          baseLightStyles,
-          lightStyleOverrides,
-          timeSeconds
-      );
-
-      const drawSurfaceBatch = (faces: VisibleFace[], useRefraction: boolean) => {
-           let lastBatchKey: BatchKey | undefined;
-           let cachedState: ReturnType<BspSurfacePipeline['bind']> | undefined;
-           const cache: TextureBindingCache = {};
-
-           // Ensure refraction texture is bound if needed
-           const currentRefractionTexture = useRefraction ? copyTexture : undefined;
-
-           for (const { faceIndex } of faces) {
-                const geometry = world.surfaces[faceIndex];
-                if (!geometry) continue;
-                if ((geometry.surfaceFlags & SURF_SKY) !== 0) continue;
-
-                const material = world.materials?.getMaterial(geometry.texture);
-                const resolvedTextures = resolveSurfaceTextures(geometry, world, currentRefractionTexture);
-
-                let activeRenderMode: RenderModeConfig | undefined = renderMode;
-                if (renderMode && !renderMode.applyToAll && resolvedTextures.diffuse) {
-                    activeRenderMode = undefined;
-                } else if (renderMode && !renderMode.applyToAll && !resolvedTextures.diffuse) {
-                   activeRenderMode = renderMode;
-                }
-
-                let effectiveLightmap = resolvedTextures.lightmap;
-                if (disableLightmaps) {
-                    effectiveLightmap = undefined;
-                }
-
-                const batchKey: BatchKey = {
-                  diffuse: resolvedTextures.diffuse,
-                  lightmap: effectiveLightmap,
-                  surfaceFlags: geometry.surfaceFlags,
-                  styleKey: (geometry.styleIndices || [255, 255, 255, 255]).join(','),
-                };
-
-                const isSameBatch =
-                  lastBatchKey &&
-                  lastBatchKey.diffuse === batchKey.diffuse &&
-                  lastBatchKey.lightmap === batchKey.lightmap &&
-                  lastBatchKey.surfaceFlags === batchKey.surfaceFlags &&
-                  lastBatchKey.styleKey === batchKey.styleKey;
-
-                if (!isSameBatch) {
-                  stats.batches += 1;
-                  cache.diffuse = undefined;
-                  cache.lightmap = undefined;
-                  cache.refraction = undefined;
-
-                  const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
-                  const textures = bindSurfaceTextures(geometry, world, cache, effectiveTextures);
-
-                  const texScroll = material ? material.scrollOffset : undefined;
-                  const warp = material ? material.warp : undefined;
-
-                  cachedState = bspPipeline.bind({
-                    cameraState,
-                    modelViewProjection: _viewProjectionMatrix ? viewProjection : undefined,
-                    styleIndices: geometry.styleIndices || [0, 255, 255, 255],
-                    styleLayers: geometry.styleLayers || [0, -1, -1, -1],
-                    styleValues: effectiveLightStyles,
-                    surfaceFlags: geometry.surfaceFlags,
-                    timeSeconds,
-                    diffuseSampler: textures.diffuse ?? 0,
-                    lightmapSampler: textures.lightmap,
-                    refractionSampler: textures.refraction,
-                    texScroll,
-                    warp,
-                    dlights,
-                    renderMode: activeRenderMode,
-                    lightmapOnly,
-                    brightness,
-                    gamma,
-                    fullbright,
-                    ambient
-                  });
-                  applySurfaceState(gl, cachedState);
-                  lastBatchKey = batchKey;
-                } else {
-                  // Rebind textures if we are in the same batch (optimization mostly for non-cached changes)
-                  // Actually resolveSurfaceTextures always returns new object, so bindSurfaceTextures check is useful
-                  const effectiveTextures = { ...resolvedTextures, lightmap: effectiveLightmap };
-                  bindSurfaceTextures(geometry, world, cache, effectiveTextures);
-                  if (cachedState) {
-                    applySurfaceState(gl, cachedState);
-                  }
-                }
-
-                bspPipeline.draw(geometry, activeRenderMode);
-
-                stats.facesDrawn += 1;
-                stats.drawCalls += 1;
-                stats.vertexCount += geometry.vertexCount;
-           }
+          if (state) applySurfaceState(gl, state);
+          bspPipeline.draw(geometry, draw.renderMode);
+          stats.facesDrawn += 1;
+          stats.drawCalls += 1;
+        }
       };
 
-      // Draw Opaque Pass
-      drawSurfaceBatch(sortedOpaque, false);
+      runPass(drawList.opaque, undefined);
 
-      // 2. Capture Framebuffer for Refraction
-      if (transparentFaces.length > 0) {
-          const width = gl.canvas.width;
-          const height = gl.canvas.height;
-          const rt = ensureCopyTexture(width, height);
-          rt.bind(2); // Bind to a unit to copy into
-          gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
+      // Water refracts what is behind it: copy the opaque result for the transparent pass.
+      if (drawList.transparent.length > 0) {
+        const width = gl.canvas.width;
+        const height = gl.canvas.height;
+        const rt = ensureCopyTexture(width, height);
+        rt.bind(2);
+        gl.copyTexImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 0, 0, width, height, 0);
       }
+      runPass(drawList.transparent, copyTexture);
 
-      // 3. Render Transparent/Warping Faces
-      const sortedTransparent = sortBackToFront(transparentFaces);
-      drawSurfaceBatch(sortedTransparent, true);
+      stats.batches = drawList.batches;
+      stats.vertexCount = drawList.vertexCount;
     }
 
     if (renderViewModel(gl, camera, viewModel, deps.removeViewTranslation, _viewMatrix, _projectionMatrix)) {

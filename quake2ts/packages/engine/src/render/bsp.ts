@@ -65,6 +65,11 @@ export interface BspBuildOptions {
   readonly atlasSize?: number;
   readonly lightmapPadding?: number;
   readonly hiddenClassnames?: Set<string>;
+  /**
+   * Texture sizes by name. BSP texture coordinates are in texels; with a size here they are
+   * divided by it (as the original renderer does), so a texture repeats once per its own size.
+   */
+  readonly textureSizes?: ReadonlyMap<string, { readonly width: number; readonly height: number }>;
 }
 
 export interface BspGeometryBuildResult {
@@ -227,8 +232,11 @@ function remapLightmapCoords(
 
 function buildVertexData(
   surface: BspSurfaceInput,
-  placement: LightmapPlacement | undefined
+  placement: LightmapPlacement | undefined,
+  textureSize?: { readonly width: number; readonly height: number }
 ): Float32Array {
+  const invWidth = textureSize ? 1 / textureSize.width : 1;
+  const invHeight = textureSize ? 1 / textureSize.height : 1;
   const vertices = ensureFloat32(surface.vertices);
   const texCoords = ensureFloat32(surface.textureCoords);
   const lightmapCoords = placement
@@ -262,8 +270,8 @@ function buildVertexData(
     interleaved[o] = vertices[v];
     interleaved[o + 1] = vertices[v + 1];
     interleaved[o + 2] = vertices[v + 2];
-    interleaved[o + 3] = texCoords[t];
-    interleaved[o + 4] = texCoords[t + 1];
+    interleaved[o + 3] = texCoords[t] * invWidth;
+    interleaved[o + 4] = texCoords[t + 1] * invHeight;
     interleaved[o + 5] = lightmapCoords[t];
     interleaved[o + 6] = lightmapCoords[t + 1];
     interleaved[o + 7] = lightmapStep; // Add lightmap step
@@ -349,68 +357,32 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
         if (t > maxT) maxT = t;
       }
 
-      // Lightmap dimensions are ceil(max/16) - floor(min/16) + 1
+      // As CalcSurfaceExtents in the original: the lightmap covers floor(min/16)..ceil(max/16)
+      // in 16-unit luxels, so it is ceil(max/16) - floor(min/16) + 1 samples on each axis.
       const floorMinS = Math.floor(minS / 16);
       const floorMinT = Math.floor(minT / 16);
       const lmWidth = Math.ceil(maxS / 16) - floorMinS + 1;
       const lmHeight = Math.ceil(maxT / 16) - floorMinT + 1;
 
-      // Extract the raw lightmap samples from the BSP lump.
-      const samples = createFaceLightmap(face, map.lightMaps, lightmapInfo);
+      // Each light style has its own lmWidth x lmHeight RGB layer, stored one after another.
+      // The lump's per-face length runs to the next face's data, so take exactly what the
+      // styles need rather than inferring sizes from it.
+      const faceStyles = face.styles || [255, 255, 255, 255];
+      const numStyles = Math.max(1, faceStyles.filter((style) => style !== 255).length);
+      const needed = lmWidth * lmHeight * 3 * numStyles;
+      const available = createFaceLightmap(face, map.lightMaps, lightmapInfo);
 
-      if (samples && samples.length > 0) {
-          // Count valid light styles for this face
-          const faceStyles = face.styles || [255, 255, 255, 255];
-          const numStyles = Math.max(1, faceStyles.filter(s => s !== 255).length);
+      if (available && available.length >= needed) {
+          // Layers are stacked vertically in the atlas, so the atlas block is lmHeight * numStyles tall.
+          lightmapData = { width: lmWidth, height: lmHeight * numStyles, samples: available.subarray(0, needed) };
 
-          // Calculate expected dimensions
-          // Multi-style lightmaps have data packed vertically (multiple RGB layers).
-          const expectedSize = lmWidth * lmHeight * 3 * numStyles;
-
-          // Try to infer dimensions from sample size if they don't match calculated dimensions
-          let actualWidth = lmWidth;
-          let actualHeight = lmHeight;
-
-          if (samples.length === expectedSize) {
-              // Perfect match - use calculated dimensions with styles
-              actualHeight = lmHeight * numStyles;
-          } else if (samples.length % 3 === 0) {
-              // Try to infer from actual data size
-              const pixelCount = samples.length / 3;
-              const layerPixelCount = pixelCount / numStyles;
-              const layerSide = Math.sqrt(layerPixelCount);
-
-              if (Math.abs(layerSide - Math.floor(layerSide)) < 0.001) {
-                  // Square lightmap
-                  actualWidth = Math.floor(layerSide);
-                  actualHeight = Math.floor(layerSide) * numStyles;
-              } else {
-                  // Use calculated dimensions anyway
-                  actualHeight = lmHeight * numStyles;
-              }
-          }
-
-          lightmapData = { width: actualWidth, height: actualHeight, samples };
-
-          // Recalculate lightmap UVs as normalized [0, 1] coordinates.
-          // The UV should map the surface's texture coord range to the full lightmap,
-          // with 0.5 texel offset to sample texel centers.
-          //
-          // For texture coords from minS to maxS:
-          //   - minS → UV = 0.5/lmWidth (center of first texel, normalized)
-          //   - maxS → UV = (lmWidth - 0.5)/lmWidth (center of last texel, normalized)
-          //
-          // This ensures remapLightmapCoords (which applies offset + coords * scale)
-          // correctly maps to the lightmap's position in the atlas.
-          const texRangeS = maxS - minS;
-          const texRangeT = maxT - minT;
-          for (let k = 0; k < lightmapCoords.length; k+=2) {
-              // Normalize texture coord to [0, 1] within the surface's range
-              const sNorm = texRangeS > 0 ? (textureCoords[k] - minS) / texRangeS : 0;
-              const tNorm = texRangeT > 0 ? (textureCoords[k+1] - minT) / texRangeT : 0;
-              // Map to texel centers, then normalize to [0, 1]
-              lightmapCoords[k] = (0.5 + sNorm * (lmWidth - 1)) / lmWidth;
-              lightmapCoords[k+1] = (0.5 + tNorm * (lmHeight - 1)) / lmHeight;
+          // Lightmap UVs in [0, 1] over the first layer, sampling luxel centres, as
+          // GL_BuildPolygonFromSurface: ((s - texturemins) / 16 + 0.5) / smax. `v` is divided by
+          // the style count because the placement scales to the whole stacked block; the vertex's
+          // lightmap step (one layer's height) selects the other layers in the shader.
+          for (let k = 0; k < lightmapCoords.length; k += 2) {
+              lightmapCoords[k] = (textureCoords[k] / 16 - floorMinS + 0.5) / lmWidth;
+              lightmapCoords[k + 1] = (textureCoords[k + 1] / 16 - floorMinT + 0.5) / lmHeight / numStyles;
           }
       }
     }
@@ -442,115 +414,104 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
       maxs
     });
 
-    // Debug logging for first surface with lightmap
-    if (faceIndex === 0 && lightmapData) {
-      console.log('[createBspSurfaces] First surface with lightmap:');
-      console.log('  Vertices:', vertices.slice(0, 12));
-      console.log('  TextureCoords:', textureCoords.slice(0, 8));
-      console.log('  LightmapCoords:', lightmapCoords.slice(0, 8));
-      console.log('  Lightmap dims:', lightmapData.width, 'x', lightmapData.height);
-    }
   }
 
   return results;
 }
 
-export function buildBspGeometry(
-  gl: WebGL2RenderingContext,
+/**
+ * One BSP face's geometry on the CPU, ready for any backend to upload.
+ * `vertexData` is interleaved (position 3, texture UV 2, lightmap UV 2, lightmap step 1).
+ */
+export interface PackedBspSurface {
+  readonly faceIndex: number;
+  readonly texture: string;
+  readonly surfaceFlags: SurfaceFlag;
+  readonly lightmap?: LightmapPlacement;
+  readonly styleIndices: readonly number[];
+  readonly styleLayers: readonly number[];
+  readonly vertexData: Float32Array;
+  readonly indexData: Uint16Array;
+  readonly vertexCount: number;
+  readonly indexCount: number;
+  readonly mins?: { readonly x: number; readonly y: number; readonly z: number };
+  readonly maxs?: { readonly x: number; readonly y: number; readonly z: number };
+}
+
+/** A lightmap atlas page as RGBA pixels. */
+export interface PackedLightmapAtlas {
+  readonly width: number;
+  readonly height: number;
+  readonly pixels: Uint8Array;
+}
+
+/**
+ * A map's world geometry with no GPU objects. `surfaces` is indexed by BSP face number
+ * (sparse: faces with no geometry or hidden by `hiddenClassnames` are holes), because the
+ * frame renderers look surfaces up by the face numbers the BSP traversal returns.
+ */
+export interface PackedBspGeometry {
+  readonly surfaces: readonly (PackedBspSurface | undefined)[];
+  readonly lightmaps: readonly PackedLightmapAtlas[];
+}
+
+function hiddenFacesFor(map: BspMap | undefined, hiddenClassnames: Set<string> | undefined): Set<number> {
+  const hiddenFaces = new Set<number>();
+  if (!map || !hiddenClassnames || hiddenClassnames.size === 0) return hiddenFaces;
+  for (const entity of map.entities.entities) {
+    if (!entity.classname || !hiddenClassnames.has(entity.classname)) continue;
+    const modelProp = entity.properties['model'];
+    if (!modelProp || !modelProp.startsWith('*')) continue;
+    const modelIndex = parseInt(modelProp.substring(1), 10);
+    if (isNaN(modelIndex) || modelIndex < 0 || modelIndex >= map.models.length) continue;
+    const model = map.models[modelIndex];
+    for (let i = 0; i < model.numFaces; i++) {
+      hiddenFaces.add(model.firstFace + i);
+    }
+  }
+  return hiddenFaces;
+}
+
+/**
+ * Packs surfaces into lightmap atlases and interleaved vertex data, with no GPU calls,
+ * so it runs in a worker or in Node and feeds the WebGL and WebGPU backends alike.
+ */
+export function packBspGeometry(
   surfaces: readonly BspSurfaceInput[],
   map?: BspMap,
   options: BspBuildOptions = {}
-): BspGeometryBuildResult {
-  // Filter surfaces based on hidden classnames
-  let filteredSurfaces = surfaces;
-  if (map && options.hiddenClassnames && options.hiddenClassnames.size > 0) {
-    const hiddenFaces = new Set<number>();
-    for (const entity of map.entities.entities) {
-      if (entity.classname && options.hiddenClassnames.has(entity.classname)) {
-        const modelProp = entity.properties['model'];
-        if (modelProp && modelProp.startsWith('*')) {
-          const modelIndex = parseInt(modelProp.substring(1), 10);
-          if (!isNaN(modelIndex) && modelIndex >= 0 && modelIndex < map.models.length) {
-            const model = map.models[modelIndex];
-            for (let i = 0; i < model.numFaces; i++) {
-              hiddenFaces.add(model.firstFace + i);
-            }
-          }
-        }
-      }
-    }
-    if (hiddenFaces.size > 0) {
-      filteredSurfaces = surfaces.filter((s) => !hiddenFaces.has(s.faceIndex));
-    }
-  }
+): PackedBspGeometry {
+  const hiddenFaces = hiddenFacesFor(map, options.hiddenClassnames);
+  const kept = hiddenFaces.size > 0 ? surfaces.filter((s) => !hiddenFaces.has(s.faceIndex)) : surfaces;
 
   const resolved: Required<BspBuildOptions> = {
     atlasSize: options.atlasSize ?? 1024,
     lightmapPadding: options.lightmapPadding ?? 1,
     hiddenClassnames: options.hiddenClassnames ?? new Set(),
+    textureSizes: options.textureSizes ?? new Map(),
   };
 
   const atlasBuilders: AtlasBuilder[] = [];
-  const placements = new Map<number, LightmapPlacement>();
+  const packed: (PackedBspSurface | undefined)[] = [];
 
-  filteredSurfaces.forEach((surface, index) => {
-    if (!surface.lightmap) {
-      return;
-    }
-    const { placement, atlas } = placeLightmap(atlasBuilders, surface.lightmap, resolved);
-    writeLightmapIntoAtlas(atlas, placement, surface.lightmap);
-    placements.set(index, {
-      atlasIndex: placement.atlasIndex,
-      offset: [
-        (placement.x + resolved.lightmapPadding) / resolved.atlasSize,
-        (placement.y + resolved.lightmapPadding) / resolved.atlasSize,
-      ],
-      scale: [placement.width / resolved.atlasSize, placement.height / resolved.atlasSize],
-    });
-  });
-
-  const lightmaps: LightmapAtlas[] = atlasBuilders.map((builder) => {
-    const texture = new Texture2D(gl);
-    texture.setParameters({
-      wrapS: gl.CLAMP_TO_EDGE,
-      wrapT: gl.CLAMP_TO_EDGE,
-      minFilter: gl.LINEAR,
-      magFilter: gl.LINEAR,
-    });
-    texture.uploadImage(0, gl.RGBA, builder.width, builder.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, builder.data);
-    return { texture, width: builder.width, height: builder.height, pixels: builder.data };
-  });
-
-  const results: BspSurfaceGeometry[] = filteredSurfaces.map((surface, index) => {
-    const placement = placements.get(index);
-
-    // Debug logging for first lightmapped surface
-    if (index === 0 && placement) {
-      console.log('[buildBspGeometry] First surface placement:');
-      console.log('  Atlas index:', placement.atlasIndex);
-      console.log('  Offset:', placement.offset);
-      console.log('  Scale:', placement.scale);
+  for (const surface of kept) {
+    let placement: LightmapPlacement | undefined;
+    if (surface.lightmap) {
+      const placed = placeLightmap(atlasBuilders, surface.lightmap, resolved);
+      writeLightmapIntoAtlas(placed.atlas, placed.placement, surface.lightmap);
+      placement = {
+        atlasIndex: placed.placement.atlasIndex,
+        offset: [
+          (placed.placement.x + resolved.lightmapPadding) / resolved.atlasSize,
+          (placed.placement.y + resolved.lightmapPadding) / resolved.atlasSize,
+        ],
+        scale: [placed.placement.width / resolved.atlasSize, placed.placement.height / resolved.atlasSize],
+      };
     }
 
-    const vertexData = buildVertexData(surface, placement);
-
-    // More debug logging
-    if (index === 0 && placement) {
-      console.log('[buildBspGeometry] Generated vertex data (first 32 floats):', Array.from(vertexData.slice(0, 32)));
-    }
-
+    const vertexData = buildVertexData(surface, placement, resolved.textureSizes.get(surface.texture));
     const indexData = ensureIndexArray(surface.indices, vertexData.length / 8);
 
-    const vertexBuffer = new VertexBuffer(gl, gl.STATIC_DRAW, gl.ARRAY_BUFFER);
-    vertexBuffer.upload(vertexData as unknown as BufferSource);
-
-    const indexBuffer = new IndexBuffer(gl, gl.STATIC_DRAW);
-    indexBuffer.upload(indexData as unknown as BufferSource);
-
-    const vao = new VertexArray(gl);
-    vao.configureAttributes(BSP_VERTEX_LAYOUT, vertexBuffer);
-
-    // Calculate styleLayers from styles
     const styles = surface.styles || [255, 255, 255, 255];
     const styleLayers = [-1, -1, -1, -1];
     let layerCounter = 0;
@@ -561,12 +522,8 @@ export function buildBspGeometry(
       }
     }
 
-    return {
-      vao,
-      vertexBuffer,
-      indexBuffer,
-      indexCount: indexData.length,
-      vertexCount: vertexData.length / 8,
+    packed[surface.faceIndex] = {
+      faceIndex: surface.faceIndex,
       texture: surface.texture,
       surfaceFlags: surface.surfaceFlags ?? SURF_NONE,
       lightmap: placement,
@@ -574,10 +531,54 @@ export function buildBspGeometry(
       styleLayers,
       vertexData,
       indexData,
+      vertexCount: vertexData.length / 8,
+      indexCount: indexData.length,
       mins: surface.mins,
-      maxs: surface.maxs
+      maxs: surface.maxs,
     };
+  }
+
+  const lightmaps = atlasBuilders.map((b) => ({ width: b.width, height: b.height, pixels: b.data }));
+  return { surfaces: packed, lightmaps };
+}
+
+/** Uploads packed geometry to WebGL. The result keeps `packBspGeometry`'s face-number indexing. */
+export function uploadBspGeometry(gl: WebGL2RenderingContext, geometry: PackedBspGeometry): BspGeometryBuildResult {
+  const lightmaps: LightmapAtlas[] = geometry.lightmaps.map((atlas) => {
+    const texture = new Texture2D(gl);
+    texture.setParameters({
+      wrapS: gl.CLAMP_TO_EDGE,
+      wrapT: gl.CLAMP_TO_EDGE,
+      minFilter: gl.LINEAR,
+      magFilter: gl.LINEAR,
+    });
+    texture.uploadImage(0, gl.RGBA, atlas.width, atlas.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, atlas.pixels);
+    return { texture, width: atlas.width, height: atlas.height, pixels: atlas.pixels };
   });
 
-  return { surfaces: results, lightmaps };
+  const surfaces: BspSurfaceGeometry[] = [];
+  geometry.surfaces.forEach((surface, faceIndex) => {
+    if (!surface) return;
+    const vertexBuffer = new VertexBuffer(gl, gl.STATIC_DRAW, gl.ARRAY_BUFFER);
+    vertexBuffer.upload(surface.vertexData as unknown as BufferSource);
+    const indexBuffer = new IndexBuffer(gl, gl.STATIC_DRAW);
+    indexBuffer.upload(surface.indexData as unknown as BufferSource);
+    const vao = new VertexArray(gl);
+    vao.configureAttributes(BSP_VERTEX_LAYOUT, vertexBuffer);
+    surfaces[faceIndex] = { ...surface, vao, vertexBuffer, indexBuffer };
+  });
+
+  return { surfaces, lightmaps };
+}
+
+/**
+ * Packs and uploads in one step. `surfaces` in the result is indexed by BSP face number.
+ */
+export function buildBspGeometry(
+  gl: WebGL2RenderingContext,
+  surfaces: readonly BspSurfaceInput[],
+  map?: BspMap,
+  options: BspBuildOptions = {}
+): BspGeometryBuildResult {
+  return uploadBspGeometry(gl, packBspGeometry(surfaces, map, options));
 }
