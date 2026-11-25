@@ -45,6 +45,8 @@ describe('demo1 walkthrough', () => {
     const host = loadDemo1();
     host.run(0.5);
     const player = host.player!;
+    // The view weapon is a model the client can draw (ChangeWeapon's gi.modelindex).
+    expect(player.client!.gunindex).toBeGreaterThan(0);
 
     // Every monster in the level is standing on something, not falling out of the world.
     const falling: string[] = [];

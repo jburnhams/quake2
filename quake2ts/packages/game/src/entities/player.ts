@@ -422,8 +422,9 @@ export function player_think(self: Entity, sys: EntitySystem) {
         const weaponItem = Object.values(WEAPON_ITEMS).find(item => item.weaponId === weaponId);
         if (weaponItem) {
             // Update gunindex for client rendering
-            if (weaponItem.viewModel && sys.configStringIndex) {
-                 const idx = sys.configStringIndex(weaponItem.viewModel);
+            // ChangeWeapon's ps.gunindex = gi.modelindex(view_model).
+            if (weaponItem.viewModel) {
+                 const idx = sys.modelIndex(weaponItem.viewModel);
                  if (idx > 0) {
                      self.client.gunindex = idx;
                  }
