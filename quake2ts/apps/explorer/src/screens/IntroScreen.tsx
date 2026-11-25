@@ -78,6 +78,12 @@ export function IntroScreen() {
           />
           <LinkCard
             as="h2"
+            to="/labs/slide"
+            title="Slide and step lab"
+            description="Run into a wall and up a staircase, and take one frame apart: every trace the player's move makes, and what each one met."
+          />
+          <LinkCard
+            as="h2"
             to="/labs/lag"
             title="Lag lab"
             description="One player through a client, a server and a network: why your keys answer at once when the server is far away."
