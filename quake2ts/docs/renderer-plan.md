@@ -74,9 +74,13 @@ Every phase lands with the demo1 gate green in both backends, plus new shots for
 | 2a | **Shared front end + draw list** (done): `render/worldDrawList.ts` does visibility, opaque/transparent split, sort, light styles, animated textures (texinfo chains, 2 Hz) and batch boundaries; both `frame.ts` files only execute it. Surface state, light-style factors, render modes, frame stats and the world state type have one copy (`utils/surface.ts`, `frame.ts`) | Same demo1 baselines; `tests/unit-node/render/worldDrawList.test.ts` on demo1 |
 | 2b | **One world VB/IB per backend, batched draws, back-face culling in both** | Draw calls per shot drop from about 1 per face to about 1 per texture/lightmap pair; same baselines |
 | 3 | **Sky, warp, flowing, transparent surfaces** from the draw list; sky from worldspawn `sky` | demo1 shots facing sky and water reach full coverage |
-| 4 | **Models**: brush models (doors, lifts) with entity transforms; MD2 and MD3 (WebGPU has no MD3 or particles yet); model-only preview for the explorer | demo1 shots with monsters and items; explorer model preview |
+| 4 | **Models**: brush models (doors, lifts) with entity transforms (done: `brushModels` in the frame options, `brushModelsFromEntities` in `render/sceneEntities.ts`, back faces culled per R_DrawInlineBModel); MD2 and MD3 (WebGPU has no MD3 or particles yet); model-only preview for the explorer | demo1 shots with monsters and items; explorer model preview |
 | 5 | **Effects and 2D**: particles, sprites, dlights, HUD and console text, post (gamma, underwater warp, bloom) | HUD shot; dlight shot |
 | 6 | **Cleanup and split**: delete the per-face path, `render/bsp/geometry.ts` (a second `buildBspGeometry`), the surface-mins field, `logging`/`null` renderers if unused; move to `@quake2ts/renderer` and `strata-gl` | Package boundary checks; explorer uses the packages |
+
+Lighting rules both backends now share: a translucent or warping surface is drawn unlit at its
+texture's colour (R_DrawAlphaSurfaces), dynamic lights add only to lightmapped surfaces
+(R_AddDynamicLights), and blending leaves the framebuffer's alpha at 1.
 
 ## API the explorer asked for (agreed with the library-split thread)
 

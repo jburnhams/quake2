@@ -51,12 +51,15 @@ export interface BspSurfaceBindOptions {
   readonly fullbright?: boolean;
   readonly ambient?: number;
   readonly cameraPosition?: Float32List;
-  // Workaround for worldPos offset bug: surface mins for correction in shader
-  readonly surfaceMins?: { readonly x: number; readonly y: number; readonly z: number };
+  /** Model matrix for a brush model (a door at its entity's position); identity for the world. */
+  readonly modelMatrix?: Float32List;
 }
 
 /** One draw's surface uniforms; 256 is WebGPU's minUniformBufferOffsetAlignment default. */
 const SURFACE_SLOT_BYTES = 256;
+/** SurfaceUniforms in bsp.wgsl: 112 bytes of fields, then the model matrix. */
+const SURFACE_FLOATS = 28 + 16;
+const IDENTITY = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
 
 export class BspSurfacePipeline {
@@ -320,7 +323,7 @@ export class BspSurfacePipeline {
       fullbright = false,
       ambient = 0.0,
       cameraPosition = [0,0,0],
-      surfaceMins = { x: 0, y: 0, z: 0 },
+      modelMatrix = IDENTITY,
     } = options;
 
     let viewProjection: Float32List;
@@ -384,7 +387,7 @@ export class BspSurfacePipeline {
     this.device.queue.writeBuffer(this.frameUniformBuffer, 0, frameData, 0, lightOffset);
 
     // Update Surface Uniforms
-    const surfaceData = new Float32Array(32);
+    const surfaceData = new Float32Array(SURFACE_FLOATS);
     surfaceData[0] = finalScrollX;
     surfaceData[1] = finalScrollY;
     surfaceData[2] = state.flowOffset[0]; // lightmap scroll
@@ -423,14 +426,8 @@ export class BspSurfacePipeline {
     surfaceUint[18] = finalWarp ? 1 : 0;
     surfaceUint[19] = lightmapOnly ? 1 : 0;
     surfaceUint[20] = modeInt;
-    // WGSL struct alignment: vec3<f32> has 16-byte alignment
-    // After renderMode at byte 80 (index 20):
-    // - pad0 (vec3): byte 96 (index 24) - aligned to 16
-    // - surfaceMins (vec3): byte 112 (index 28) - aligned to 16
-    // - pad1 (f32): byte 124 (index 31)
-    surfaceData[28] = surfaceMins.x;
-    surfaceData[29] = surfaceMins.y;
-    surfaceData[30] = surfaceMins.z;
+    // WGSL layout: renderMode at byte 80, pad0 (vec3) at 96, model (mat4x4, 16-aligned) at 112.
+    surfaceData.set(modelMatrix as ArrayLike<number>, 28);
 
     const slot = this.takeSurfaceSlot();
     this.device.queue.writeBuffer(this.surfaceUniformBuffer, slot * SURFACE_SLOT_BYTES, surfaceData);

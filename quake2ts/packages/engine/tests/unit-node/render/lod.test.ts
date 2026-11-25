@@ -38,6 +38,7 @@ const gl = {
     disable: vi.fn(),
     depthMask: vi.fn(),
     blendFunc: vi.fn(),
+    blendFuncSeparate: vi.fn(),
     clearColor: vi.fn(),
     clear: vi.fn(),
     uniformMatrix4fv: vi.fn(),

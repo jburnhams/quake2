@@ -13,7 +13,7 @@ import { mat4 } from 'gl-matrix';
 import { DLight } from '../dlight.js';
 import type { PackedBspSurface } from '../bsp.js';
 import type { WorldRenderState as SharedWorldRenderState } from '../frame.js';
-import { buildWorldDrawList, type WorldDraw } from '../worldDrawList.js';
+import { buildWorldDrawList, type BrushModelInstance, type WorldDraw } from '../worldDrawList.js';
 import { CameraState } from '../types/camera.js';
 
 export type { FrameRenderStats } from '../frame.js';
@@ -58,6 +58,8 @@ export interface FrameRenderOptions {
   readonly ambient?: number;
   readonly lightStyleOverrides?: Map<number, string>;
   readonly portalState?: ReadonlyArray<boolean>;
+  /** Doors, lifts and other brush-model entities, each drawn at its entity's position. */
+  readonly brushModels?: readonly BrushModelInstance[];
 }
 
 export type { WebGPUContextState };
@@ -342,6 +344,7 @@ export class FrameRenderer {
           renderMode,
           disableLightmaps,
           hasTexture: (name) => Boolean(world.textures?.get(name)),
+          brushModels: options.brushModels,
         });
         stats.batches = drawList.batches;
         stats.vertexCount = drawList.vertexCount;
@@ -374,6 +377,7 @@ export class FrameRenderer {
                     fullbright,
                     ambient,
                     cameraPosition: options.camera.position as Float32Array,
+                    modelMatrix: draw.transform,
                 });
                 this.pipelines.bsp.draw(pass, geometry, draw.renderMode);
                 stats.facesDrawn++;

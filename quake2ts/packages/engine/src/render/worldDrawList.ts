@@ -10,7 +10,8 @@
 import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP, type SurfaceFlag } from '@quake2ts/shared';
 import type { BspMap } from '../assets/bsp.js';
 import { gatherVisibleFaces, type VisibleFace } from './bspTraversal.js';
-import { extractFrustumPlanes } from './culling.js';
+import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
+import { mat4 } from 'gl-matrix';
 import type { RenderModeConfig } from './frame.js';
 import type { MaterialManager } from './materials.js';
 import { sortBackToFront, sortFrontToBack } from './utils/geometry.js';
@@ -49,7 +50,9 @@ export interface WorldDraw<TSurface extends WorldDrawSurface = WorldDrawSurface>
   readonly warp?: boolean;
   /** Render mode for this draw (a debug mode limited to untextured surfaces applies only where the texture is missing). */
   readonly renderMode?: RenderModeConfig;
-  /** True when this draw's textures, flags or styles differ from the previous draw in its pass. */
+  /** Model matrix for a brush model's face (a door, a lift); undefined for the world, which is drawn as the map places it. */
+  readonly transform?: Float32Array;
+  /** True when this draw's textures, flags, styles or transform differ from the previous draw in its pass. */
   readonly startsBatch: boolean;
 }
 
@@ -65,6 +68,18 @@ export interface WorldDrawList<TSurface extends WorldDrawSurface = WorldDrawSurf
   readonly vertexCount: number;
 }
 
+/**
+ * A brush model the game has placed this frame: an entity whose model is a BSP submodel ("*1"),
+ * such as a door, a lift, a button or a train, at its entity's origin and angles.
+ */
+export interface BrushModelInstance {
+  /** Submodel number: 1 for "*1". Model 0 is the world, which is always drawn. */
+  readonly model: number;
+  readonly origin: { readonly x: number; readonly y: number; readonly z: number };
+  /** Pitch, yaw and roll in degrees, as an entity's `angles`. */
+  readonly angles?: { readonly x: number; readonly y: number; readonly z: number };
+}
+
 export interface WorldDrawListOptions {
   readonly cameraPosition: { readonly x: number; readonly y: number; readonly z: number };
   readonly viewProjection: ArrayLike<number>;
@@ -75,6 +90,8 @@ export interface WorldDrawListOptions {
   readonly disableLightmaps?: boolean;
   /** Whether the backend has a texture by this name; used for render modes limited to untextured surfaces. */
   readonly hasTexture?: (name: string) => boolean;
+  /** Brush models to draw this frame, each at its entity's position. */
+  readonly brushModels?: readonly BrushModelInstance[];
   /** Replace the PVS walk and frustum extraction (tests). */
   readonly gatherVisibleFaces?: typeof gatherVisibleFaces;
   readonly extractFrustumPlanes?: typeof extractFrustumPlanes;
@@ -102,6 +119,80 @@ export function animatedTextureName(map: BspMap, faceIndex: number, timeSeconds:
   return map.texInfo[index]?.texture;
 }
 
+/**
+ * A brush model's model matrix, as R_RotateForEntity builds it: move to the origin, then turn by
+ * yaw about z, pitch about y and roll about x (pitch and roll negated, as Quake's angles are).
+ */
+export function brushModelTransform(instance: BrushModelInstance): Float32Array {
+  const m = mat4.create();
+  mat4.translate(m, m, [instance.origin.x, instance.origin.y, instance.origin.z]);
+  const a = instance.angles;
+  if (a) {
+    const rad = Math.PI / 180;
+    if (a.y) mat4.rotateZ(m, m, a.y * rad);
+    if (a.x) mat4.rotateY(m, m, -a.x * rad);
+    if (a.z) mat4.rotateX(m, m, -a.z * rad);
+  }
+  return m as Float32Array;
+}
+
+/** As gl_rsurf.c: a face this close to edge-on still counts as facing the camera. */
+const BACKFACE_EPSILON = 0.01;
+
+interface PlacedFace extends VisibleFace {
+  readonly transform?: Float32Array;
+}
+
+/**
+ * The faces of each brush model in view, with its transform. R_DrawBrushModel culls a model by
+ * its bounds and draws all its faces; it does not walk the PVS, because the server only sends
+ * entities the player can see.
+ */
+function gatherBrushModelFaces(
+  map: BspMap,
+  instances: readonly BrushModelInstance[],
+  frustum: ReturnType<typeof extractFrustumPlanes>,
+  camera: { readonly x: number; readonly y: number; readonly z: number }
+): PlacedFace[] {
+  const faces: PlacedFace[] = [];
+  for (const instance of instances) {
+    const model = map.models?.[instance.model];
+    if (!model || instance.model === 0) continue;
+    const transform = brushModelTransform(instance);
+    const bounds = transformAabb(
+      { x: model.mins[0], y: model.mins[1], z: model.mins[2] },
+      { x: model.maxs[0], y: model.maxs[1], z: model.maxs[2] },
+      transform as unknown as Parameters<typeof transformAabb>[2]
+    );
+    if (!boxIntersectsFrustum(bounds.mins, bounds.maxs, frustum)) continue;
+    const dx = (bounds.mins.x + bounds.maxs.x) * 0.5 - camera.x;
+    const dy = (bounds.mins.y + bounds.maxs.y) * 0.5 - camera.y;
+    const dz = (bounds.mins.z + bounds.maxs.z) * 0.5 - camera.z;
+    const sortKey = -(dx * dx + dy * dy + dz * dz);
+    // The camera in the model's own space, to drop faces turned away from it as
+    // R_DrawInlineBModel does (a glass pane's back faces would otherwise blend over its front).
+    const inverse = mat4.invert(mat4.create(), transform);
+    const org = inverse
+      ? [
+          inverse[0] * camera.x + inverse[4] * camera.y + inverse[8] * camera.z + inverse[12],
+          inverse[1] * camera.x + inverse[5] * camera.y + inverse[9] * camera.z + inverse[13],
+          inverse[2] * camera.x + inverse[6] * camera.y + inverse[10] * camera.z + inverse[14],
+        ]
+      : undefined;
+    for (let i = 0; i < model.numFaces; i++) {
+      const faceIndex = model.firstFace + i;
+      const face = map.faces?.[faceIndex];
+      const plane = face ? map.planes?.[face.planeIndex] : undefined;
+      if (org && face && plane) {
+        const dot = org[0] * plane.normal[0] + org[1] * plane.normal[1] + org[2] * plane.normal[2] - plane.dist;
+        if (face.side ? dot > -BACKFACE_EPSILON : dot < BACKFACE_EPSILON) continue;
+      }
+      faces.push({ faceIndex, leafIndex: -1, sortKey, transform });
+    }
+  }
+  return faces;
+}
+
 export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
   world: WorldDrawInput<TSurface>,
   options: WorldDrawListOptions
@@ -112,10 +203,13 @@ export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
   const frustum = (options.extractFrustumPlanes ?? extractFrustumPlanes)(Array.from(options.viewProjection));
   const gather = options.gatherVisibleFaces ?? gatherVisibleFaces;
   // A world with no map (model-only scenes) has nothing to walk.
-  const visible = world.map ? gather(world.map, options.cameraPosition, frustum, options.portalState) : [];
+  const visible: PlacedFace[] = world.map ? gather(world.map, options.cameraPosition, frustum, options.portalState) : [];
+  if (world.map && options.brushModels?.length) {
+    visible.push(...gatherBrushModelFaces(world.map, options.brushModels, frustum, options.cameraPosition));
+  }
 
-  const opaqueFaces: VisibleFace[] = [];
-  const transparentFaces: VisibleFace[] = [];
+  const opaqueFaces: PlacedFace[] = [];
+  const transparentFaces: PlacedFace[] = [];
   for (const face of visible) {
     const surface = world.surfaces[face.faceIndex];
     if (!surface || (surface.surfaceFlags & SURF_SKY) !== 0) continue;
@@ -129,10 +223,10 @@ export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
   let batches = 0;
   let vertexCount = 0;
 
-  const toDraws = (faces: readonly VisibleFace[]): WorldDraw<TSurface>[] => {
+  const toDraws = (faces: readonly PlacedFace[]): WorldDraw<TSurface>[] => {
     const draws: WorldDraw<TSurface>[] = [];
     let previous: WorldDraw<TSurface> | undefined;
-    for (const { faceIndex } of faces) {
+    for (const { faceIndex, transform } of faces) {
       const surface = world.surfaces[faceIndex]!;
       const material = world.materials?.getMaterial(surface.texture);
       const texture = animatedTextureName(world.map, faceIndex, timeSeconds) ?? surface.texture;
@@ -143,12 +237,16 @@ export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
       }
 
       const styleIndices = surface.styleIndices ?? DEFAULT_STYLE_INDICES;
-      const lightmapAtlas = options.disableLightmaps ? undefined : surface.lightmap?.atlasIndex;
+      // Translucent and warping surfaces are drawn unlit, at their texture's colour, as
+      // R_DrawAlphaSurfaces does, even where qbsp stored a lightmap for them.
+      const lightmapAtlas =
+        options.disableLightmaps || isTransparentSurface(surface.surfaceFlags) ? undefined : surface.lightmap?.atlasIndex;
       const startsBatch =
         !previous ||
         previous.texture !== texture ||
         previous.lightmapAtlas !== lightmapAtlas ||
         previous.surface.surfaceFlags !== surface.surfaceFlags ||
+        previous.transform !== transform ||
         previous.styleIndices.join() !== styleIndices.join();
       if (startsBatch) batches++;
       vertexCount += surface.vertexCount;
@@ -163,6 +261,7 @@ export function buildWorldDrawList<TSurface extends WorldDrawSurface>(
         texScroll: material?.scrollOffset,
         warp: material?.warp,
         renderMode,
+        transform,
         startsBatch,
       };
       draws.push(draw);

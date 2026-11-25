@@ -59,6 +59,7 @@ describe('Renderer Instancing API', () => {
       disable: vi.fn(),
       depthFunc: vi.fn(),
       blendFunc: vi.fn(),
+      blendFuncSeparate: vi.fn(),
       drawElements: vi.fn(),
       deleteBuffer: vi.fn(),
       deleteVertexArray: vi.fn(),

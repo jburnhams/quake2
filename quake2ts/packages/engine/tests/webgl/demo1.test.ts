@@ -7,8 +7,12 @@ import type { Page } from 'playwright';
 import { createWebGLPlaywrightSetup } from '@quake2ts/test-utils';
 import {
   DEMO1_SHOTS, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline, type Demo1Shot,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels, DEMO_PAK, type Demo1Shot,
 } from '../demo1/shots.js';
+import fs from 'node:fs';
+import { PakArchive } from '../../src/assets/pak.js';
+import { parseBsp, type BspMap } from '../../src/assets/bsp.js';
+import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
 
 interface PageResult {
   readonly pixels: string; // base64 RGBA, top row first
@@ -16,8 +20,8 @@ interface PageResult {
   readonly missingTextures: string[];
 }
 
-async function renderShotInPage(page: Page, shot: Demo1Shot): Promise<PageResult> {
-  return page.evaluate(async ({ shot, width, height, clearColor }) => {
+async function renderShotInPage(page: Page, shot: Demo1Shot, brushModels: BrushModelInstance[]): Promise<PageResult> {
+  return page.evaluate(async ({ shot, width, height, clearColor, brushModels }) => {
     const w = window as any;
     const E = w.Quake2Engine;
     const canvas: HTMLCanvasElement = w.testCanvas;
@@ -44,7 +48,7 @@ async function renderShotInPage(page: Page, shot: Demo1Shot): Promise<PageResult
     camera.setPosition(...shot.origin);
     camera.setRotation(...shot.angles);
     gl.viewport(0, 0, width, height);
-    w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0 }, []);
+    w.testRenderer.renderFrame({ camera, world: w.demo1World, clearColor, timeSeconds: 0, brushModels }, []);
 
     const glErrors: number[] = [];
     for (let e = gl.getError(); e !== gl.NO_ERROR; e = gl.getError()) glErrors.push(e);
@@ -58,20 +62,26 @@ async function renderShotInPage(page: Page, shot: Demo1Shot): Promise<PageResult
     let binary = '';
     for (let i = 0; i < flipped.length; i += 0x8000) binary += String.fromCharCode(...flipped.subarray(i, i + 0x8000));
     return { pixels: btoa(binary), glErrors, missingTextures: w.demo1Missing };
-  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR });
+  }, { shot, width: SHOT_WIDTH, height: SHOT_HEIGHT, clearColor: CLEAR_COLOR, brushModels });
 }
 
 describe.skipIf(!demoPakAvailable())('demo1 (WebGL)', () => {
   let page: Page;
+  let map: BspMap;
 
   beforeAll(async () => {
+    // The brush models' placement is read from the entity lump in Node and handed to the page.
+    const bytes = fs.readFileSync(DEMO_PAK);
+    const pak = PakArchive.fromArrayBuffer('pak0.pak', bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer);
+    const bsp = pak.readFile('maps/demo1.bsp');
+    map = parseBsp(bsp.buffer.slice(bsp.byteOffset, bsp.byteOffset + bsp.byteLength) as ArrayBuffer);
     const setup = await createWebGLPlaywrightSetup({ width: SHOT_WIDTH, height: SHOT_HEIGHT });
     page = setup.page;
   }, 60_000);
 
   for (const shot of DEMO1_SHOTS) {
     it(`renders ${shot.name} textured and lit`, async () => {
-      const result = await renderShotInPage(page, shot);
+      const result = await renderShotInPage(page, shot, shotBrushModels(map, shot));
       expect(result.missingTextures).toEqual([]);
       expect(result.glErrors).toEqual([]);
 

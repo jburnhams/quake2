@@ -3,6 +3,7 @@ import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { Camera } from '../../../src/render/camera.js';
 import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
 
 /**
@@ -91,7 +92,8 @@ function createTestBspGeometry(options: { min: [number, number, number], max: [n
         mins: { x: options.min[0], y: options.min[1], z: options.min[2] },
         maxs: { x: options.max[0], y: options.max[1], z: options.max[2] },
         texInfo: { texture: options.texture, flags: 0, value: 0, nextTexInfo: -1 },
-        lightmap: undefined
+        // A black lightmap: dlights add to a lightmap (R_AddDynamicLights), so the wall needs one.
+        lightmap: { atlasIndex: 0 } as any
     };
 }
 
@@ -150,6 +152,12 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
 
     afterAll(lifecycle.cleanup);
 
+    const darkLightmap = () => {
+        const texture = new Texture2D(renderer.device, { width: 1, height: 1, format: 'rgba8unorm', label: 'dark-lightmap' });
+        texture.upload(new Uint8Array([0, 0, 0, 255]));
+        return { texture, width: 1, height: 1 };
+    };
+
     it('worldpos-color-output.png', async () => {
         const wall = createTestBspGeometry({
             min: [200, -200, -100],
@@ -162,9 +170,8 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
         // Render with worldpos-debug mode
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0,
             timeSeconds: 0,
@@ -215,13 +222,12 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [{
                 origin: { x: 180, y: 0, z: 100 },
                 intensity: 300,
                 color: { x: 1, y: 1, z: 1 }
             }],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0,
             timeSeconds: 0,
@@ -280,9 +286,8 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [floor] },
+            world: { map, surfaces: [floor], lightmaps: [darkLightmap()] } as any,
             dlights: [],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0,
             timeSeconds: 0,
@@ -324,9 +329,8 @@ describe('WorldPos Color Debug - Direct Visualization', () => {
 
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0,
             timeSeconds: 0,

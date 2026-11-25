@@ -12,7 +12,7 @@ import { Camera } from '../../src/render/camera.js';
 import type { WorldRenderState } from '../../src/render/frame.js';
 import {
   DEMO1_SHOTS, DEMO_PAK, SHOT_WIDTH, SHOT_HEIGHT, CLEAR_COLOR, SHOT_EXPECTATIONS,
-  analyseShot, demoPakAvailable, expectShotBaseline,
+  analyseShot, demoPakAvailable, expectShotBaseline, shotBrushModels,
 } from '../demo1/shots.js';
 
 const toArrayBuffer = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
@@ -54,7 +54,8 @@ describe.skipIf(!demoPakAvailable())('demo1 (WebGPU)', () => {
       camera.setRotation(...shot.angles);
 
       renderer.device.pushErrorScope('validation');
-      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0 }, []);
+      const brushModels = shotBrushModels(prepared.map, shot);
+      renderer.renderFrame({ camera, world, clearColor: CLEAR_COLOR, timeSeconds: 0, brushModels }, []);
       const validation = await renderer.device.popErrorScope();
       expect(validation?.message ?? null).toBeNull();
 

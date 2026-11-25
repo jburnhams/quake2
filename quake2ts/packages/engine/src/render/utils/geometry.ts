@@ -12,7 +12,7 @@ export { gatherVisibleFaces, findLeafForPoint, isClusterVisible } from '../bspTr
  * Sort visible faces front-to-back for optimal depth testing
  * (render nearest objects first to maximize early-z rejection)
  */
-export function sortFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
+export function sortFrontToBack<T extends VisibleFace>(faces: readonly T[]): T[] {
   return [...faces].sort((a, b) => b.sortKey - a.sortKey);
 }
 
@@ -20,6 +20,6 @@ export function sortFrontToBack(faces: readonly VisibleFace[]): VisibleFace[] {
  * Sort visible faces back-to-front for correct alpha blending
  * (render farthest objects first so transparency composites correctly)
  */
-export function sortBackToFront(faces: readonly VisibleFace[]): VisibleFace[] {
+export function sortBackToFront<T extends VisibleFace>(faces: readonly T[]): T[] {
   return [...faces].sort((a, b) => a.sortKey - b.sortKey);
 }

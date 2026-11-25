@@ -7,6 +7,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import type { BspMap } from '../../src/assets/bsp.js';
+import type { BrushModelInstance } from '../../src/render/worldDrawList.js';
 
 export interface Demo1Shot {
   readonly name: string;
@@ -18,6 +20,8 @@ export interface Demo1Shot {
    * prepareWorld, so they show the clear colour and count against coverage.
    */
   readonly sky?: number;
+  /** Brush models moved from where the map puts them (submodel number to offset), as an open door is. */
+  readonly moved?: Readonly<Record<number, readonly [number, number, number]>>;
 }
 
 const EYE = 22; // viewheight above a spawn point's origin
@@ -29,7 +33,29 @@ export const DEMO1_SHOTS: readonly Demo1Shot[] = [
   { name: 'dm-lower-hall', origin: [608, -224, -168 + EYE], angles: [0, 45, 0] },
   { name: 'dm-west', origin: [-392, 840, -104 + EYE], angles: [0, 0, 0], sky: 0.15 },
   { name: 'coop-far-start', origin: [-1592, 1528, 128 + EYE], angles: [10, 0, 0], sky: 0.02 },
+  // Brush models: the func_explosive wall (*20) by the super shotgun, and the func_door (*19)
+  // shut and then raised 120 units, which only draws right if the door's transform is applied.
+  { name: 'brush-wall', origin: [28, 24, 64], angles: [0, 90, 0] },
+  { name: 'door-shut', origin: [-1000, 1632, 0], angles: [0, 180, 0] },
+  { name: 'door-raised', origin: [-1000, 1632, 0], angles: [0, 180, 0], moved: { 19: [0, 0, 120] } },
 ];
+
+/**
+ * The brush models the game would draw at the map's start: every entity with a submodel except
+ * triggers, which the game hides (SVF_NOCLIENT). A shot's `moved` offsets them.
+ */
+export function shotBrushModels(map: BspMap, shot: Demo1Shot): BrushModelInstance[] {
+  const instances: BrushModelInstance[] = [];
+  for (const entity of map.entities.entities) {
+    const model = entity.properties.model;
+    if (!model?.startsWith('*') || entity.classname?.startsWith('trigger_')) continue;
+    const index = Number(model.slice(1));
+    const [x, y, z] = (entity.properties.origin ?? '0 0 0').split(/\s+/).map(Number);
+    const [dx, dy, dz] = shot.moved?.[index] ?? [0, 0, 0];
+    instances.push({ model: index, origin: { x: x + dx, y: y + dy, z: z + dz } });
+  }
+  return instances;
+}
 
 export const SHOT_WIDTH = 320;
 export const SHOT_HEIGHT = 240;

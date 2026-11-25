@@ -22,6 +22,8 @@ import { buildMatrices } from './matrix/builders.js';
 export interface BspSurfaceBindOptions {
   readonly cameraState: CameraState;
   readonly modelViewProjection?: Float32List; // Optional Override, prefer CameraState
+  /** Model matrix for a brush model (a door at its entity's position); identity for the world. */
+  readonly modelMatrix?: Float32List;
   readonly styleIndices?: readonly number[];
   readonly styleValues?: ReadonlyArray<number>;
   readonly styleLayers?: readonly number[];
@@ -43,6 +45,8 @@ export interface BspSurfaceBindOptions {
   readonly ambient?: number;
 }
 
+const IDENTITY = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+
 export const BSP_SURFACE_VERTEX_SOURCE = `#version 300 es
 precision highp float;
 
@@ -51,7 +55,10 @@ layout(location = 1) in vec2 a_texCoord;
 layout(location = 2) in vec2 a_lightmapCoord;
 layout(location = 3) in float a_lightmapStep;
 
+// The view-projection; u_model places a brush model (identity for the world), so v_position
+// stays in world space for dlights.
 uniform mat4 u_modelViewProjection;
+uniform mat4 u_model;
 uniform vec2 u_texScroll;
 uniform vec2 u_lightmapScroll;
 uniform float u_time;
@@ -71,7 +78,7 @@ vec2 applyScroll(vec2 uv, vec2 scroll) {
 }
 
 void main() {
-  vec3 pos = a_position;
+  vec3 pos = (u_model * vec4(a_position, 1.0)).xyz;
   vec2 tex = a_texCoord;
   vec2 lm = a_lightmapCoord;
 
@@ -266,6 +273,7 @@ export class BspSurfacePipeline {
   private matrixBuilder = new WebGLMatrixBuilder();
 
   private readonly uniformMvp: WebGLUniformLocation | null;
+  private readonly uniformModel: WebGLUniformLocation | null;
   private readonly uniformTexScroll: WebGLUniformLocation | null;
   private readonly uniformLmScroll: WebGLUniformLocation | null;
   private readonly uniformLightStyles: WebGLUniformLocation | null;
@@ -301,6 +309,7 @@ export class BspSurfacePipeline {
     );
 
     this.uniformMvp = this.program.getUniformLocation('u_modelViewProjection');
+    this.uniformModel = this.program.getUniformLocation('u_model');
     this.uniformTexScroll = this.program.getUniformLocation('u_texScroll');
     this.uniformLmScroll = this.program.getUniformLocation('u_lightmapScroll');
     this.uniformLightStyles = this.program.getUniformLocation('u_lightStyleFactors');
@@ -341,6 +350,7 @@ export class BspSurfacePipeline {
     const {
       cameraState,
       modelViewProjection: overrideMvp,
+      modelMatrix = IDENTITY,
       styleIndices = DEFAULT_STYLE_INDICES,
       styleLayers = DEFAULT_STYLE_LAYERS,
       styleValues = [],
@@ -379,6 +389,7 @@ export class BspSurfacePipeline {
 
     this.program.use();
     this.gl.uniformMatrix4fv(this.uniformMvp, false, mvp);
+    this.gl.uniformMatrix4fv(this.uniformModel, false, modelMatrix);
     this.gl.uniform2f(this.uniformTexScroll, finalScrollX, finalScrollY);
     this.gl.uniform2f(this.uniformLmScroll, state.flowOffset[0], state.flowOffset[1]);
     this.gl.uniform4fv(this.uniformLightStyles, styles);
@@ -471,7 +482,9 @@ export function applySurfaceState(gl: WebGL2RenderingContext, state: SurfaceRend
   gl.depthMask(state.depthWrite);
   if (state.blend) {
     gl.enable(gl.BLEND);
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+    // Blend colour only and keep the framebuffer's alpha at 1: a canvas with an alpha channel
+    // would otherwise show the page through glass and water.
+    gl.blendFuncSeparate(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA, gl.ZERO, gl.ONE);
   } else {
     gl.disable(gl.BLEND);
   }

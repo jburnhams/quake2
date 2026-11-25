@@ -255,6 +255,15 @@ export {
   type PrepareWorldOptions,
 } from './render/prepareWorld.js';
 export { uploadWorldWebGL, uploadWorldTexture } from './render/uploadWorld.js';
+export {
+  buildWorldDrawList,
+  brushModelTransform,
+  type BrushModelInstance,
+  type WorldDraw,
+  type WorldDrawList,
+  type WorldDrawListOptions,
+} from './render/worldDrawList.js';
+export { brushModelsFromEntities, type SceneEntitySource } from './render/sceneEntities.js';
 export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
 export { findLeafForPoint, gatherVisibleFaces, type VisibleFace } from './render/bspTraversal.js';
 export {
