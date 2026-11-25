@@ -71,3 +71,20 @@ describe("the movement lab's air view", () => {
     expect(router.state.location.search).toBe('?view=air&angle=46');
   });
 });
+
+describe("the air view's diagram", () => {
+  for (const angle of [0, 90, 135, 180]) {
+    it(`keeps every line inside the drawing at ${angle}°`, async () => {
+      render(`/labs/movement?view=air&angle=${angle}&speed=1000`);
+      const svg = await screen.findByRole('img', { name: /From above/ });
+      const [, , w, h] = svg.getAttribute('viewBox')!.split(' ').map(Number);
+      for (const line of svg.querySelectorAll('line')) {
+        for (const [a, limit] of [['x1', w], ['x2', w], ['y1', h], ['y2', h]] as const) {
+          const n = Number(line.getAttribute(a));
+          expect(n).toBeGreaterThanOrEqual(0);
+          expect(n).toBeLessThanOrEqual(limit!);
+        }
+      }
+    });
+  }
+});
