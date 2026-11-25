@@ -258,12 +258,21 @@ importers:
 
   apps/explorer:
     dependencies:
+      '@quake2ts/cgame':
+        specifier: workspace:*
+        version: link:../../packages/cgame
+      '@quake2ts/client':
+        specifier: workspace:*
+        version: link:../../packages/client
       '@quake2ts/engine':
         specifier: workspace:*
         version: link:../../packages/engine
       '@quake2ts/formats':
         specifier: workspace:*
         version: link:../../packages/formats
+      '@quake2ts/game':
+        specifier: workspace:*
+        version: link:../../packages/game
       '@quake2ts/server':
         specifier: workspace:*
         version: link:../../packages/server
@@ -273,6 +282,9 @@ importers:
       '@tanstack/react-query':
         specifier: ^5.107.1
         version: 5.108.4(@types/react@19.3.0)(react@19.3.1)
+      gl-matrix:
+        specifier: ^3.4.4
+        version: 3.4.4
       lucide-react:
         specifier: ^1.72.0
         version: 1.79.0(@types/react@19.3.0)(react@19.3.1)
