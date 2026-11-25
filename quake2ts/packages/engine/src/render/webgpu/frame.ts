@@ -2,64 +2,38 @@ import { Texture2D, TextureCubeMap, createLinearSampler, Sampler } from './resou
 import type { Texture2D as GpuTexture2D } from './resources.js';
 import { SpriteRenderer } from './pipelines/sprite.js';
 import { SkyboxPipeline, SkyboxBindOptions } from './pipelines/skybox.js';
-import { BspSurfacePipeline, BspSurfaceBindOptions } from './pipelines/bspPipeline.js';
+import { BspSurfacePipeline } from './pipelines/bspPipeline.js';
 import { Md2Pipeline } from './pipelines/md2Pipeline.js';
 import { PostProcessPipeline } from './pipelines/postProcess.js';
 import { computeSkyScroll, removeViewTranslation } from '../skybox.js';
 import { Camera } from '../camera.js';
 import { RenderableEntity } from '../scene.js';
 import { WebGPUContextState } from './context.js';
-import { mat4, quat } from 'gl-matrix';
+import { mat4 } from 'gl-matrix';
 import { DLight } from '../dlight.js';
-import { BspSurfaceGeometry } from '../bsp.js';
-import { BspMap } from '../../assets/bsp.js';
-import { gatherVisibleFaces, VisibleFace } from '../bspTraversal.js';
-import { extractFrustumPlanes } from '../culling.js';
-import { SURF_SKY, SURF_TRANS33, SURF_TRANS66, SURF_WARP } from '@quake2ts/shared';
-import { MaterialManager } from '../materials.js';
-import { PreparedTexture } from '../../assets/texture.js';
+import type { PackedBspSurface } from '../bsp.js';
+import type { WorldRenderState as SharedWorldRenderState } from '../frame.js';
+import { buildWorldDrawList, type WorldDraw } from '../worldDrawList.js';
 import { CameraState } from '../types/camera.js';
-import { DEG2RAD } from '@quake2ts/shared';
-import {
-  sortFrontToBack,
-  sortBackToFront,
-  evaluateLightStyle,
-  prepareLightStyles
-} from '../utils/index.js';
 
-// Types ported from WebGL implementation but adapted for WebGPU
-export interface FrameRenderStats {
-  batches: number;
-  facesDrawn: number;
-  drawCalls: number;
-  skyDrawn: boolean;
-  viewModelDrawn: boolean;
-  fps: number;
-  vertexCount: number;
-}
+export type { FrameRenderStats } from '../frame.js';
+import type { FrameRenderStats } from '../frame.js';
 
-export type RenderMode = 'textured' | 'wireframe' | 'solid' | 'solid-faceted' | 'worldpos-debug' | 'distance-debug';
-
-export interface RenderModeConfig {
-  readonly mode: RenderMode;
-  readonly applyToAll: boolean;
-  readonly color?: readonly [number, number, number, number];
-  readonly generateRandomColor?: boolean;
-}
+export type { RenderMode, RenderModeConfig } from '../frame.js';
+import type { RenderModeConfig } from '../frame.js';
 
 export interface SkyRenderState {
   readonly scrollSpeeds?: readonly [number, number];
   readonly cubemap?: TextureCubeMap;
 }
 
-export interface WorldRenderState {
-  readonly map: BspMap;
-  readonly surfaces: readonly BspSurfaceGeometry[];
-  readonly textures?: ReadonlyMap<string, Texture2D>;
-  readonly lightmaps?: ReadonlyArray<{ readonly texture: Texture2D }>;
-  readonly materials?: MaterialManager;
-  readonly lightStyles?: ReadonlyArray<number>;
-}
+/** A world surface on WebGPU: the packed CPU data plus the GPU buffers uploadWorld made for it. */
+export type WebGPUWorldSurface = PackedBspSurface & {
+  gpuVertexBuffer?: GPUBuffer;
+  gpuIndexBuffer?: GPUBuffer;
+};
+
+export type WorldRenderState = SharedWorldRenderState<Texture2D, WebGPUWorldSurface>;
 
 export interface FrameRenderOptions {
   readonly camera: Camera;
@@ -97,7 +71,6 @@ export interface FrameContext {
   height: number;
 }
 
-// Sorting and light style functions moved to utils/ for shared use
 
 export class FrameRenderer {
   private depthTexture: GPUTexture | null = null;
@@ -293,7 +266,6 @@ export class FrameRenderer {
     };
 
     const frameCtx = this.beginFrame();
-    this.pipelines.bsp.beginFrame();
     this.currentFrameContext = frameCtx; // Store for 2D rendering
     const { commandEncoder, renderTarget, depthTexture } = frameCtx;
     const {
@@ -359,98 +331,57 @@ export class FrameRenderer {
         stats.skyDrawn = true;
     }
 
-    // Render BSP Opaque
-    const opaqueFaces: VisibleFace[] = [];
-    const transparentFaces: VisibleFace[] = [];
-
     if (world) {
-        // Update materials (if any logic needed)
-        world.materials?.update(timeSeconds);
+        this.pipelines.bsp.beginFrame();
+        const drawList = buildWorldDrawList(world, {
+          cameraPosition: { x: camera.position[0] ?? 0, y: camera.position[1] ?? 0, z: camera.position[2] ?? 0 },
+          viewProjection,
+          timeSeconds,
+          portalState,
+          lightStyleOverrides,
+          renderMode,
+          disableLightmaps,
+          hasTexture: (name) => Boolean(world.textures?.get(name)),
+        });
+        stats.batches = drawList.batches;
+        stats.vertexCount = drawList.vertexCount;
+        const cameraState = options.cameraState ?? options.camera.toState();
 
-        const frustum = extractFrustumPlanes(Array.from(viewProjection));
-        const cameraPosition = {
-          x: camera.position[0] ?? 0,
-          y: camera.position[1] ?? 0,
-          z: camera.position[2] ?? 0,
-        };
-        const visibleFaces = gatherVisibleFaces(world.map, cameraPosition, frustum, portalState);
-
-        for (const face of visibleFaces) {
-            const geometry = world.surfaces[face.faceIndex];
-            if (!geometry) continue;
-
-            const isTransparent = (geometry.surfaceFlags & (SURF_TRANS33 | SURF_TRANS66 | SURF_WARP)) !== 0;
-
-            if (isTransparent) {
-                transparentFaces.push(face);
-            } else {
-                opaqueFaces.push(face);
+        const runPass = (draws: readonly WorldDraw<WebGPUWorldSurface>[], pass: GPURenderPassEncoder) => {
+            for (const draw of draws) {
+                const geometry = draw.surface;
+                const diffuse = (world.materials?.getMaterial(geometry.texture)?.texture as unknown as GpuTexture2D | null | undefined)
+                    ?? world.textures?.get(draw.texture);
+                const lightmap = draw.lightmapAtlas !== undefined ? world.lightmaps?.[draw.lightmapAtlas]?.texture : undefined;
+                this.pipelines.bsp.bind(pass, {
+                    cameraState,
+                    styleIndices: draw.styleIndices,
+                    styleLayers: draw.styleLayers,
+                    styleValues: drawList.lightStyles,
+                    surfaceFlags: geometry.surfaceFlags,
+                    timeSeconds,
+                    texScroll: draw.texScroll,
+                    warp: draw.warp,
+                    diffuseTexture: diffuse ? this.viewOf(diffuse) : undefined,
+                    diffuseSampler: this.repeatSampler,
+                    lightmapTexture: lightmap ? this.viewOf(lightmap) : undefined,
+                    lightmapSampler: this.clampSampler,
+                    dlights,
+                    renderMode: draw.renderMode,
+                    lightmapOnly,
+                    brightness,
+                    gamma,
+                    fullbright,
+                    ambient,
+                    cameraPosition: options.camera.position as Float32Array,
+                });
+                this.pipelines.bsp.draw(pass, geometry, draw.renderMode);
+                stats.facesDrawn++;
+                stats.drawCalls++;
             }
-        }
-
-        const sortedOpaque = sortFrontToBack(opaqueFaces);
-
-        // Prepare effective light styles using shared utility
-        const effectiveLightStyles = prepareLightStyles(
-            world.lightStyles || [],
-            lightStyleOverrides,
-            timeSeconds
-        );
-
-        // Draw Opaque Batch
-        const drawSurfaceBatch = (faces: VisibleFace[], pass: GPURenderPassEncoder, lightStyles: ReadonlyArray<number>) => {
-             for (const { faceIndex } of faces) {
-                  const geometry = world.surfaces[faceIndex];
-                  if (!geometry) continue;
-                  if ((geometry.surfaceFlags & SURF_SKY) !== 0) continue;
-
-                  const faceStyles = world.map.faces[faceIndex]?.styles;
-
-                  // world.textures and world.lightmaps hold WebGPU Texture2Ds when the world came
-                  // from WebGPURenderer.uploadWorld.
-                  const diffuse = (world.materials?.getMaterial(geometry.texture)?.texture ?? world.textures?.get(geometry.texture)) as unknown as GpuTexture2D | undefined;
-                  const atlasIndex = geometry.lightmap?.atlasIndex;
-                  const lightmap = atlasIndex !== undefined ? (world.lightmaps?.[atlasIndex]?.texture as unknown as GpuTexture2D | undefined) : undefined;
-
-                  const baseBindOptions = {
-                      styleIndices: faceStyles,
-                      styleLayers: geometry.styleLayers,
-                      styleValues: lightStyles,
-                      surfaceFlags: geometry.surfaceFlags,
-                      timeSeconds,
-                      diffuseTexture: diffuse ? this.viewOf(diffuse) : undefined,
-                      diffuseSampler: this.repeatSampler,
-                      lightmapTexture: lightmap ? this.viewOf(lightmap) : undefined,
-                      lightmapSampler: this.clampSampler,
-                      dlights,
-                      renderMode,
-                      lightmapOnly,
-                      brightness,
-                      gamma,
-                      fullbright,
-                      ambient,
-                      cameraPosition: options.camera.position as Float32Array,
-                      // Workaround for worldPos offset bug: pass surface mins for shader correction
-                      surfaceMins: geometry.mins
-                  };
-
-                  const bindOptions: BspSurfaceBindOptions = {
-                      ...baseBindOptions,
-                      cameraState: options.cameraState ?? options.camera.toState(),
-                  };
-
-                  // Bind Pipeline
-                  this.pipelines.bsp.bind(pass, bindOptions);
-
-                  this.pipelines.bsp.draw(pass, geometry, renderMode);
-                  stats.facesDrawn++;
-                  stats.drawCalls++;
-                  stats.vertexCount += geometry.vertexCount;
-             }
         };
 
-        // Draw opaque
-        drawSurfaceBatch(sortedOpaque, opaquePass, effectiveLightStyles);
+        runPass(drawList.opaque, opaquePass);
 
         // Render Entities (MD2)
         // Note: In WebGPU renderer, we are using RenderableEntity which matches the engine structure.
@@ -535,10 +466,7 @@ export class FrameRenderer {
 
         const transparentPass = commandEncoder.beginRenderPass(transparentPassDescriptor);
 
-        if (transparentFaces.length > 0) {
-            const sortedTransparent = sortBackToFront(transparentFaces);
-            drawSurfaceBatch(sortedTransparent, transparentPass, effectiveLightStyles);
-        }
+        runPass(drawList.transparent, transparentPass);
 
         transparentPass.end();
     } else {

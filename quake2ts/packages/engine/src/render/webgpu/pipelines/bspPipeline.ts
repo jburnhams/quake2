@@ -7,6 +7,8 @@ import {
   SURF_WARP,
   type SurfaceFlag,
 } from '@quake2ts/shared';
+import { DEFAULT_STYLE_INDICES, DEFAULT_STYLE_LAYERS, deriveSurfaceRenderState, resolveLightStyles, type SurfaceRenderState } from '../../utils/surface.js';
+export type { SurfaceRenderState };
 import { mat4, vec3, vec4 } from 'gl-matrix';
 import { MAX_DLIGHTS, DLight } from '../../dlight.js';
 import { BspSurfaceGeometry } from '../../bsp.js';
@@ -53,68 +55,9 @@ export interface BspSurfaceBindOptions {
   readonly surfaceMins?: { readonly x: number; readonly y: number; readonly z: number };
 }
 
-export interface SurfaceRenderState {
-  readonly alpha: number;
-  readonly blend: boolean;
-  readonly depthWrite: boolean;
-  readonly warp: boolean;
-  readonly flowOffset: readonly [number, number];
-  readonly sky: boolean;
-}
-
 /** One draw's surface uniforms; 256 is WebGPU's minUniformBufferOffsetAlignment default. */
 const SURFACE_SLOT_BYTES = 256;
 
-const DEFAULT_STYLE_INDICES: readonly number[] = [0, 255, 255, 255];
-const DEFAULT_STYLE_LAYERS: readonly number[] = [0, -1, -1, -1];
-
-// Helper functions matching WebGL implementation
-function resolveLightStyles(
-  styleIndices: readonly number[] = DEFAULT_STYLE_INDICES,
-  styleValues: ReadonlyArray<number> = []
-): Float32Array {
-  const factors = new Float32Array(4);
-  for (let i = 0; i < 4; i += 1) {
-    const styleIndex = styleIndices[i] ?? 255;
-    if (styleIndex === 255) {
-      factors[i] = 0;
-      continue;
-    }
-    const value = styleValues[styleIndex];
-    factors[i] = value !== undefined ? value : 1;
-  }
-  return factors;
-}
-
-function computeFlowOffset(timeSeconds: number): readonly [number, number] {
-  const cycle = (timeSeconds * 0.25) % 1;
-  return [-cycle, 0];
-}
-
-function deriveSurfaceRenderState(
-  surfaceFlags: SurfaceFlag = SURF_NONE,
-  timeSeconds = 0
-): SurfaceRenderState {
-  const flowing = (surfaceFlags & SURF_FLOWING) !== 0;
-  const warp = (surfaceFlags & SURF_WARP) !== 0;
-  const sky = (surfaceFlags & SURF_SKY) !== 0;
-  const trans33 = (surfaceFlags & SURF_TRANS33) !== 0;
-  const trans66 = (surfaceFlags & SURF_TRANS66) !== 0;
-
-  const alpha = trans33 ? 0.33 : trans66 ? 0.66 : 1;
-  const blend = trans33 || trans66 || warp;
-  const depthWrite = !blend && !sky;
-  const flowOffset: readonly [number, number] = flowing ? computeFlowOffset(timeSeconds) : [0, 0];
-
-  return {
-    alpha,
-    blend,
-    depthWrite,
-    warp,
-    flowOffset,
-    sky,
-  };
-}
 
 export class BspSurfacePipeline {
   private device: GPUDevice;
@@ -514,7 +457,11 @@ export class BspSurfacePipeline {
     return state;
   }
 
-  draw(passEncoder: GPURenderPassEncoder, geometry: BspSurfaceGeometry, renderMode?: RenderModeConfig): void {
+  draw(
+    passEncoder: GPURenderPassEncoder,
+    geometry: { readonly gpuVertexBuffer?: GPUBuffer; readonly gpuIndexBuffer?: GPUBuffer; readonly indexCount: number },
+    renderMode?: RenderModeConfig
+  ): void {
       if (!geometry.gpuIndexBuffer) return; // Need GPU buffers
 
       if (renderMode && renderMode.mode === 'wireframe') {

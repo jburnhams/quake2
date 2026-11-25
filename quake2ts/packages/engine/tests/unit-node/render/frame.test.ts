@@ -227,7 +227,7 @@ describe('FrameRenderer', () => {
     expect(stats.batches).toBe(1);
   });
 
-  it('reuses batch state when surfaces share materials and styles', () => {
+  it('reuses batch state when surfaces share a texture, lightmap page and styles', () => {
     const { renderer, bspPipeline } = makeRenderer({
       gatherVisibleFaces: vi.fn(() => [
         { faceIndex: 0, leafIndex: 0, sortKey: -1 },
@@ -240,12 +240,10 @@ describe('FrameRenderer', () => {
 
     const world = {
       map: { faces: [{ styles: [0, 0, 0, 0] }, { styles: [0, 0, 0, 0] }] },
-      surfaces: [createStubGeometry('a'), createStubGeometry('b')],
+      // Batches are keyed by texture name (the shared draw list has no GPU objects).
+      surfaces: [createStubGeometry('a'), createStubGeometry('a')],
       lightmaps: [{ texture: lightmapTexture }],
-      textures: new Map([
-        ['a', diffuse],
-        ['b', diffuse],
-      ]),
+      textures: new Map([['a', diffuse]]),
       lightStyles: [1, 1, 1, 1],
     } as any;
 

@@ -8,3 +8,4 @@
 export * from './geometry.js';
 export * from './lighting.js';
 export * from './textures.js';
+export * from './surface.js';

@@ -7,6 +7,8 @@ import {
   SURF_WARP,
   type SurfaceFlag,
 } from '@quake2ts/shared';
+import { DEFAULT_STYLE_INDICES, DEFAULT_STYLE_LAYERS, deriveSurfaceRenderState, resolveLightStyles, type SurfaceRenderState } from './utils/surface.js';
+export { deriveSurfaceRenderState, resolveLightStyles, type SurfaceRenderState };
 import { ShaderProgram } from './shaderProgram.js';
 import { DLight, MAX_DLIGHTS } from './dlight.js';
 import { RenderModeConfig } from './frame.js';
@@ -16,15 +18,6 @@ import { generateWireframeIndices } from './geometry.js';
 import { CameraState } from './types/camera.js';
 import { WebGLMatrixBuilder } from './matrix/webgl.js';
 import { buildMatrices } from './matrix/builders.js';
-
-export interface SurfaceRenderState {
-  readonly alpha: number;
-  readonly blend: boolean;
-  readonly depthWrite: boolean;
-  readonly warp: boolean;
-  readonly flowOffset: readonly [number, number];
-  readonly sky: boolean;
-}
 
 export interface BspSurfaceBindOptions {
   readonly cameraState: CameraState;
@@ -258,55 +251,6 @@ void main() {
   o_color = finalColor;
 }`;
 
-const DEFAULT_STYLE_INDICES: readonly number[] = [0, 255, 255, 255];
-const DEFAULT_STYLE_LAYERS: readonly number[] = [0, -1, -1, -1];
-
-export function resolveLightStyles(
-  styleIndices: readonly number[] = DEFAULT_STYLE_INDICES,
-  styleValues: ReadonlyArray<number> = []
-): Float32Array {
-  const factors = new Float32Array(4);
-  for (let i = 0; i < 4; i += 1) {
-    const styleIndex = styleIndices[i] ?? 255;
-    if (styleIndex === 255) {
-      factors[i] = 0;
-      continue;
-    }
-    const value = styleValues[styleIndex];
-    factors[i] = value !== undefined ? value : 1;
-  }
-  return factors;
-}
-
-function computeFlowOffset(timeSeconds: number): readonly [number, number] {
-  const cycle = (timeSeconds * 0.25) % 1;
-  return [-cycle, 0];
-}
-
-export function deriveSurfaceRenderState(
-  surfaceFlags: SurfaceFlag = SURF_NONE,
-  timeSeconds = 0
-): SurfaceRenderState {
-  const flowing = (surfaceFlags & SURF_FLOWING) !== 0;
-  const warp = (surfaceFlags & SURF_WARP) !== 0;
-  const sky = (surfaceFlags & SURF_SKY) !== 0;
-  const trans33 = (surfaceFlags & SURF_TRANS33) !== 0;
-  const trans66 = (surfaceFlags & SURF_TRANS66) !== 0;
-
-  const alpha = trans33 ? 0.33 : trans66 ? 0.66 : 1;
-  const blend = trans33 || trans66 || warp; // Enable blend for warp (water)
-  const depthWrite = !blend && !sky;
-  const flowOffset: readonly [number, number] = flowing ? computeFlowOffset(timeSeconds) : [0, 0];
-
-  return {
-    alpha,
-    blend,
-    depthWrite,
-    warp,
-    flowOffset,
-    sky,
-  };
-}
 
 // Extend BspSurfaceGeometry to include wireframe index buffer
 declare module './bsp.js' {
