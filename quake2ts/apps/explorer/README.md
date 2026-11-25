@@ -68,6 +68,11 @@ can be linked.
   recorded (`slide.ts`), so one frame is taken apart: each sweep, what it met, the step up and the
   push down. STEPSIZE and the heading are on sliders; id's PM_ClipVelocity, PM_StepSlideMove_Generic
   and PM_StepSlideMove (2023 and 1997) beside the port's `frame.ts`.
+- `src/labs/light/`: the light styles lab (`/labs/light`): one of demo1's lights with a style
+  (the flickering room's style 6, or the strobe's style 4) played letter by letter in the engine's
+  renderer, or as another pattern of the game's table or typed; the view can draw lightmaps only or
+  textures only. `light.ts` counts the faces each style lights. id's SP_worldspawn table,
+  CL_SetLightstyle and CL_RunLightStyles, R_BuildLightMap and SP_light beside the port's.
 - `src/labs/source/`: id's code beside the port's. `excerpt.ts` cuts a function out of a file by
   name; the labs read `rerelease/` and `full/` (outside the workspace, allowed in `vite.config.ts`)
   and the port's files with `?raw`, so what is shown is what runs.
