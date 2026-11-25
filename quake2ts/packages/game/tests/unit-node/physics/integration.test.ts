@@ -150,16 +150,29 @@ describe('Physics Integration Tests', () => {
         { x: 100, y: 100, z: 0 },
         CONTENTS_WATER
     );
-    const model = makeLeafModel([water]);
+    // Two leaves split at z=0, as a compiled map would have: water below, air above.
+    // CM_PointContents reads the leaf, so the water has to be a leaf, not just a brush.
+    const surface = { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 2, signbits: 0 };
+    const model = {
+      planes: [surface],
+      nodes: [{ plane: surface, children: [-1, -2] as [number, number] }],
+      leaves: [
+        { contents: 0, cluster: 0, area: 0, firstLeafBrush: 0, numLeafBrushes: 0 },
+        { contents: CONTENTS_WATER, cluster: 0, area: 0, firstLeafBrush: 0, numLeafBrushes: 1 },
+      ],
+      brushes: [water],
+      leafBrushes: [0],
+      bmodels: [],
+    };
 
     // Test point in water
     const pInWater = { x: 0, y: 0, z: -32 };
-    const c1 = pointContents(pInWater, model, -1);
+    const c1 = pointContents(pInWater, model, 0);
     expect(c1 & CONTENTS_WATER).toBeTruthy();
 
     // Test point above water
     const pAbove = { x: 0, y: 0, z: 10 };
-    const c2 = pointContents(pAbove, model, -1);
+    const c2 = pointContents(pAbove, model, 0);
     expect(c2 & CONTENTS_WATER).toBeFalsy();
   });
 

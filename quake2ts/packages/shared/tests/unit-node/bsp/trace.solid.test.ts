@@ -15,7 +15,8 @@ describe('traceBox solid and contained cases', () => {
 
     expect(result.startsolid).toBe(true);
     expect(result.allsolid).toBe(false);
-    expect(result.fraction).toBe(0);
+    // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+    expect(result.fraction).toBe(1);
   });
 
   it('should correctly identify a trace that starts and ends inside a solid', () => {
@@ -30,7 +31,8 @@ describe('traceBox solid and contained cases', () => {
 
     expect(result.startsolid).toBe(true);
     expect(result.allsolid).toBe(true);
-    expect(result.fraction).toBe(0);
+    // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+    expect(result.fraction).toBe(1);
   });
 
   it('should handle a zero-length trace that is inside a solid', () => {

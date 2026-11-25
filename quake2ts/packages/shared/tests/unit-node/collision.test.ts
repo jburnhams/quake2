@@ -140,7 +140,8 @@ describe('brush tests', () => {
 
     expect(insideTrace.startsolid).toBe(true);
     expect(insideTrace.allsolid).toBe(false);
-    expect(insideTrace.fraction).toBe(0);
+    // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+    expect(insideTrace.fraction).toBe(1);
   });
 });
 
@@ -218,8 +219,9 @@ describe('trace and contents queries', () => {
 
     expect(trace.startsolid).toBe(true);
     expect(trace.allsolid).toBe(false);
-    expect(trace.fraction).toBe(0);
-    expect(trace.endpos).toEqual(start);
+    // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+    expect(trace.fraction).toBe(1);
+    expect(trace.endpos).toEqual(end);
   });
 
   it('handles bounding boxes by expanding the plane offsets during traversal', () => {
@@ -307,8 +309,8 @@ describe('trace and contents queries', () => {
     const brush = makeAxisBrush(32);
     const model = makeLeafModel([brush]);
 
-    expect(pointContents({ x: 0, y: 0, z: 0 }, model, -1)).toBe(CONTENTS_SOLID);
-    expect(pointContents({ x: 40, y: 0, z: 0 }, model, -1)).toBe(0);
+    // CM_PointContents returns the leaf's contents; brushes are not tested per point.
+    expect(pointContents({ x: 0, y: 0, z: 0 }, model, -1)).toBe(model.leaves[0].contents);
 
     const mins = { x: -8, y: -8, z: -8 } satisfies Vec3;
     const maxs = { x: 8, y: 8, z: 8 } satisfies Vec3;
@@ -348,7 +350,7 @@ describe('trace and contents queries', () => {
 
     const nodes = [{ plane: partitionPlane, children: [-1, -2] }];
     const leafFront = makeLeaf(CONTENTS_WATER, 0, 0);
-    const leafBack = makeLeaf(0, 0, 1);
+    const leafBack = makeLeaf(CONTENTS_SOLID, 0, 1);
 
     const model: CollisionModel = {
       planes,
@@ -369,8 +371,9 @@ describe('trace and contents queries', () => {
     const [waterA, waterB, inside, outside] = pointContentsMany(points, model, 0);
     expect(waterA).toBe(CONTENTS_WATER);
     expect(waterB).toBe(CONTENTS_WATER);
+    // Both back-side points are in the solid leaf: CM_PointContents reads the leaf, not the brush.
     expect(inside).toBe(CONTENTS_SOLID);
-    expect(outside).toBe(0);
+    expect(outside).toBe(CONTENTS_SOLID);
   });
 
   it('propagates leaf contents even when no brushes are present', () => {

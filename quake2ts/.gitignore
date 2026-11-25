@@ -13,3 +13,6 @@ node_modules/
 dist/
 stats/
 **/stats/
+
+# C reference oracle build output
+oracle/build/

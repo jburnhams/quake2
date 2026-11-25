@@ -199,9 +199,10 @@ describe('traceBox BSP traversal splits', () => {
 
       const result = traceBox({ model, start, end, mins, maxs, headnode: 0 });
 
-      // BBox at x=8 extends from -8 to 24, brush is at -16 to -4
-      // No overlap, should not be solid
-      expect(result.startsolid).toBe(false);
+      // BBox at x=8 extends from -8 to 24 and the brush from -16 to -4, so they overlap
+      // between -8 and -4. The old expectation of no overlap was wrong; cmodel.c's position
+      // test (CM_TestInLeaf) reports it as solid.
+      expect(result.startsolid).toBe(true);
     });
 
     it('should detect startsolid when bbox overlaps brush across split', () => {

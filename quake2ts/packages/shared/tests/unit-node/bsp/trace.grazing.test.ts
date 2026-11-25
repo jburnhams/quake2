@@ -202,7 +202,8 @@ describe('traceBox grazing hit scenarios', () => {
 
       expect(result.startsolid).toBe(true);
       expect(result.allsolid).toBe(true);
-      expect(result.fraction).toBe(0);
+      // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+      expect(result.fraction).toBe(1);
     });
 
     it('should handle start point exactly on a corner', () => {

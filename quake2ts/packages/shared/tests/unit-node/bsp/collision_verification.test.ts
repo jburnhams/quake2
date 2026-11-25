@@ -57,7 +57,8 @@ describe('Trace System Verification', () => {
 
             expect(trace.startsolid).toBe(true);
             expect(trace.allsolid).toBe(false);
-            expect(trace.fraction).toBe(0);
+            // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+            expect(trace.fraction).toBe(1);
         });
 
         it('should handle allsolid correctly (staying inside)', () => {
@@ -72,7 +73,8 @@ describe('Trace System Verification', () => {
 
            expect(trace.startsolid).toBe(true);
            expect(trace.allsolid).toBe(true);
-           expect(trace.fraction).toBe(0);
+           // cmodel.c leaves the fraction alone when the start is inside a brush; callers check startsolid/allsolid.
+           expect(trace.fraction).toBe(1);
        });
 
          it('should handle grazing edges', () => {
