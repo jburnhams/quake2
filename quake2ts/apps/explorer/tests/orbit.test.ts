@@ -1,14 +1,13 @@
 // @vitest-environment node
 import { describe, expect, it } from 'vitest';
-import { describeOrbit, dragOrbit, frameRun, keyOrbit, orbitEye, zoomOrbit, type Orbit } from '../src/labs/movement/orbit';
-import type { MovementFrame } from '../src/labs/movement/simulate';
+import { describeOrbit, dragOrbit, framePoints, keyOrbit, orbitEye, zoomOrbit, type Orbit } from '../src/labs/orbit';
 
 // The lab's camera: framed on the run from its side, turned and zoomed by keys and drags.
-const frame = (x: number, y: number, z: number): MovementFrame => ({ t: 0, distance: 0, height: 0, speed: 0, onGround: true, origin: { x, y, z } });
+const frame = (x: number, y: number, z: number) => ({ x, y, z });
 
 describe('the lab orbit', () => {
   it('frames a run along +x from its right side and above, looking at its middle', () => {
-    const o = frameRun([frame(0, 0, 0), frame(400, 0, 40)]);
+    const o = framePoints([frame(0, 0, 0), frame(400, 0, 40)]);
     expect(o.target).toEqual({ x: 200, y: 0, z: 20 });
     expect(o.yaw).toBe(90);
     expect(o.pitch).toBe(35);
@@ -31,6 +30,6 @@ describe('the lab orbit', () => {
   });
 
   it('says the view in words', () => {
-    expect(describeOrbit({ target: { x: 0, y: 0, z: 0 }, yaw: -90, pitch: 20, distance: 600 })).toBe('Facing south, looking down 20°, 600 units from the middle of the run.');
+    expect(describeOrbit({ target: { x: 0, y: 0, z: 0 }, yaw: -90, pitch: 20, distance: 600 })).toBe('Facing south, looking down 20°, 600 units from the middle of what is drawn.');
   });
 });

@@ -33,9 +33,16 @@ can be linked.
 - `src/files/`: the tree (strata `Tree`) and the details pane (strata `Inspector`).
 - `src/preview/`: `decode.ts` (bytes to what is drawn; tested in Node) and the previews.
 - `src/screens/ExplorerScreen.tsx`: the strata `Workspace` of three panes.
+- `src/labs/`: what every lab shares: `LabScreen` (the frame: sliders left, stage right, Reset),
+  `LabScene` (demo1 through the engine's WebGL renderer with the lab's lines in it, on the
+  `orbit.ts` camera), `params.ts` (numbers on sliders held in the URL) and `world.ts` (demo1's
+  collision and player start, read once for every lab).
 - `src/labs/movement/`: the movement lab (`/labs/movement`): the game's `runPmove` on demo1 with its
   constants on sliders held in the URL, drawn beside the run the game's values give. `simulate.ts` is
   the run, pure and tested in Node on demo1.
+- `src/labs/traces/`: the traces lab (`/labs/traces`): a box swept from demo1's player start by the
+  game's `traceBox`, aimed by sliders, with the mask a choice of the game's callers; it says how far
+  the box got and the face it met (normal, slope, contents, surface flags). `trace.ts` is the sweep.
 - `src/routes.tsx`: the route tree, shared by `main.tsx` and the tests (`renderRoutes`).
 
 ## Still in the old explorer

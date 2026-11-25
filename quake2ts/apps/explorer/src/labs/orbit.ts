@@ -1,11 +1,9 @@
-// The movement lab's 3D camera: an orbit around a target, in Quake's axes (x forward, y left,
-// z up; positive pitch looks down), framed on the run so the whole path is in view from the side.
+// The labs' 3D camera: an orbit around a target, in Quake's axes (x forward, y left,
+// z up; positive pitch looks down), framed on what a lab draws so all of it is in view.
 // Pure, so the framing and the controls are tested without WebGL. strata-react#370
-// (SceneViewport) is meant to take the input side over; until then RunScene maps keys and drags
+// (SceneViewport) is meant to take the input side over; until then LabScene maps keys and drags
 // to these functions itself.
-import type { MovementFrame } from './simulate';
-
-type Vec = { readonly x: number; readonly y: number; readonly z: number };
+export type Vec = { readonly x: number; readonly y: number; readonly z: number };
 
 export interface Orbit {
   readonly target: Vec;
@@ -29,12 +27,11 @@ export function orbitEye(o: Orbit): Vec {
 }
 
 /**
- * A view of the whole run from its right side and above, so a jump shows as an arc. On
- * demo1 the start's yard has room on that side; where it does not, clipEye pulls the camera in
- * and the arrow keys turn it round.
+ * A view of a path from its right side and above (the path runs from its first point to its
+ * last), so a jump shows as an arc. Where a level has no room on that side, clipEye pulls the
+ * camera in and the arrow keys turn it round.
  */
-export function frameRun(frames: readonly MovementFrame[]): Orbit {
-  const points = frames.map((f) => f.origin);
+export function framePoints(points: readonly Vec[]): Orbit {
   if (points.length === 0) return { target: { x: 0, y: 0, z: 0 }, yaw: 0, pitch: 20, distance: 512 };
   const min = { x: Math.min(...points.map((p) => p.x)), y: Math.min(...points.map((p) => p.y)), z: Math.min(...points.map((p) => p.z)) };
   const max = { x: Math.max(...points.map((p) => p.x)), y: Math.max(...points.map((p) => p.y)), z: Math.max(...points.map((p) => p.z)) };
@@ -89,7 +86,7 @@ export function describeOrbit(o: Orbit): string {
   const compass = ['east', 'north-east', 'north', 'north-west', 'west', 'south-west', 'south', 'south-east'];
   const facing = compass[Math.round((((o.yaw % 360) + 360) % 360) / 45) % 8];
   const tilt = o.pitch > 5 ? `looking down ${Math.round(o.pitch)}°` : o.pitch < -5 ? `looking up ${Math.round(-o.pitch)}°` : 'level';
-  return `Facing ${facing}, ${tilt}, ${Math.round(o.distance)} units from the middle of the run.`;
+  return `Facing ${facing}, ${tilt}, ${Math.round(o.distance)} units from the middle of what is drawn.`;
 }
 
 /**

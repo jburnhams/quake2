@@ -2,10 +2,9 @@
 // explorer parsed, driven by one fixed script so that changing a constant is the only thing that
 // changes the path. Pure and DOM-free, so the node tests run it on demo1 and the screen can run it
 // on every slider change (100 frames take a few milliseconds).
-import type { BspMap } from '@quake2ts/formats/bsp';
-import { traceBox, pointContents, type CollisionModel } from '@quake2ts/shared/bsp/collision';
+import { traceBox, pointContents } from '@quake2ts/shared/bsp/collision';
 import { MASK_PLAYERSOLID } from '@quake2ts/shared/bsp/contents';
-import { collisionModelFromBsp } from '@quake2ts/shared/bsp/fromBsp';
+import { worldFromMap, type LabWorld } from '../world';
 import {
   DEFAULT_PMOVE_TUNING,
   PlayerButton,
@@ -19,10 +18,8 @@ import {
 } from '@quake2ts/shared/pmove';
 
 /** The world a run happens in: the map's collision and where the player starts. */
-export interface MovementWorld {
-  readonly model: CollisionModel;
-  readonly start: { readonly origin: Vec; readonly yaw: number };
-}
+export type MovementWorld = LabWorld;
+export { worldFromMap };
 
 type Vec = { readonly x: number; readonly y: number; readonly z: number };
 
@@ -57,23 +54,6 @@ export const DEFAULT_LAB_TUNING: LabTuning = Object.freeze({ ...DEFAULT_PMOVE_TU
 
 const PLAYER_MINS = { x: -16, y: -16, z: -24 };
 const PLAYER_MAXS = { x: 16, y: 16, z: 32 };
-
-/**
- * The world from a parsed map: its collision, and the spawn a new game uses (the
- * info_player_start with no targetname; one with a targetname is where a level change from
- * that level lands), else any player spawn, raised 9 units as SelectSpawnPoint does so the box
- * does not start in the floor.
- */
-export function worldFromMap(map: BspMap): MovementWorld {
-  const spawns = map.entities.entities.filter((e) => e.classname?.startsWith('info_player_'));
-  const starts = spawns.filter((e) => e.classname === 'info_player_start');
-  const spot = starts.find((e) => !e.properties.targetname) ?? starts[0] ?? spawns[0];
-  const [x, y, z] = (spot?.properties.origin ?? '0 0 0').split(/\s+/).map(Number);
-  return {
-    model: collisionModelFromBsp(map),
-    start: { origin: { x: x ?? 0, y: y ?? 0, z: (z ?? 0) + 9 }, yaw: Number(spot?.properties.angle ?? 0) || 0 },
-  };
-}
 
 /** Runs the script in the world with the given constants and returns every frame. */
 export function simulateRun(world: MovementWorld, tuning: LabTuning = DEFAULT_LAB_TUNING): MovementFrame[] {
