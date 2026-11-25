@@ -82,6 +82,7 @@ export function createMockRenderer(overrides?: Partial<Renderer>): Renderer {
     renderInstanced: vi.fn(),
     uploadBspGeometry: vi.fn().mockReturnValue({ surfaces: [], lightmaps: [] }),
     uploadWorld: vi.fn((world: PreparedWorld): WorldRenderState => ({ map: world.map, surfaces: [] })),
+    uploadModels: vi.fn(),
     dispose: vi.fn(),
     ...overrides,
   };

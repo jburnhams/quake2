@@ -10,7 +10,7 @@ import { SkyboxPipeline } from './skybox.js';
 import { SpriteRenderer } from './sprite.js';
 import { Texture2D } from './resources.js';
 import { CollisionVisRenderer } from './collisionVis.js';
-import { calculateEntityLight } from './light.js';
+import { calculateEntityLight, MODEL_LIGHT_DIRECTION } from './light.js';
 import { GpuProfiler, RenderStatistics, FrameStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
 import { findLeafForPoint, gatherVisibleFaces, isClusterVisible, calculateReachableAreas } from './bspTraversal.js';
@@ -30,7 +30,8 @@ import { IRenderer, Pic } from './interface.js';
 import { BspMap } from '../assets/bsp.js';
 import { BspGeometryBuildResult, buildBspGeometry, createBspSurfaces } from './bsp.js';
 import type { PreparedWorld } from './prepareWorld.js';
-import { uploadWorldWebGL } from './uploadWorld.js';
+import { uploadWorldTexture, uploadWorldWebGL } from './uploadWorld.js';
+import type { PreparedModels } from './prepareModels.js';
 
 // Re-export Pic for backward compatibility
 export type { Pic };
@@ -312,6 +313,12 @@ export const createRenderer = (
             }
         }
 
+        // Models are opaque and write depth. The world's transparent pass leaves depth writes
+        // off and blending on; without this a model drew its back faces over its front ones.
+        gl.enable(gl.DEPTH_TEST);
+        gl.depthMask(true);
+        gl.disable(gl.BLEND);
+
         let lastTexture: Texture2D | undefined;
         let entityDrawCalls = 0;
         let entityVertices = 0;
@@ -444,7 +451,9 @@ export const createRenderer = (
                 y: entity.transform[13],
                 z: entity.transform[14]
             };
-            const light = calculateEntityLight(options.world?.map, position);
+            const light = entity.type === 'md2' && entity.ambientLight !== undefined
+                ? entity.ambientLight
+                : calculateEntityLight(options.world?.map, position);
 
             const highlightColor = (entity.id !== undefined) ? highlightedEntities.get(entity.id) : undefined;
 
@@ -488,6 +497,7 @@ export const createRenderer = (
                             cameraState: cameraState!,
                             modelViewProjection,
                             modelMatrix: entity.transform,
+                            lightDirection: MODEL_LIGHT_DIRECTION,
                             ambientLight: light,
                             dlights: options.dlights,
                             renderMode: activeRenderMode,
@@ -1005,6 +1015,14 @@ export const createRenderer = (
 
     const uploadWorld = (world: PreparedWorld): WorldRenderState => uploadWorldWebGL(gl, world);
 
+    const uploadModels = (world: WorldRenderState, models: PreparedModels): void => {
+        const textures = world.textures as Map<string, Texture2D> | undefined;
+        if (!textures) throw new Error('uploadModels: the world has no texture map (upload it with uploadWorld)');
+        for (const [name, prepared] of models.textures) {
+            if (!textures.has(name)) textures.set(name, uploadWorldTexture(gl, prepared));
+        }
+    };
+
     const uploadBspGeometry = (map: BspMap): BspGeometryBuildResult => {
         const surfaces = createBspSurfaces(map);
         return buildBspGeometry(gl, surfaces, map);
@@ -1047,6 +1065,7 @@ export const createRenderer = (
         renderInstanced,
         uploadBspGeometry,
         uploadWorld,
+        uploadModels,
         dispose: () => {
             // Cleanup logic if needed, typically resource disposal
             gpuProfiler.dispose();

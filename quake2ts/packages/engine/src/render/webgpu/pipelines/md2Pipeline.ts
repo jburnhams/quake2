@@ -123,14 +123,22 @@ export class Md2MeshBuffers {
 
 export class Md2Pipeline {
   private pipeline: RenderPipeline;
-  private uniformBuffer: UniformBuffer; // Global uniforms
-  private frameUniformBuffer: UniformBuffer; // Per-draw frame uniforms (blend)
 
   private frameBindGroupLayout: import('../resources.js').BindGroupLayout;
 
   private defaultSampler: Sampler;
   private matrixBuilder = new WebGPUMatrixBuilder();
-  private meshCache = new WeakMap<Md2Model, Md2MeshBuffers>();
+  private meshCache = new WeakMap<Md2Model, Md2MeshBuffers[]>();
+  /** How many meshes of each model this frame has used; reset by beginFrame. */
+  private meshUses = new Map<Md2Model, number>();
+  /**
+   * Uniform buffers by draw within the frame. Every draw needs its own: queue.writeBuffer calls
+   * all land before the pass runs, so one shared buffer gave every model the last one's
+   * transform, frame blend and light (the same bug the BSP pipeline had).
+   */
+  private globalPool: UniformBuffer[] = [];
+  private framePool: UniformBuffer[] = [];
+  private drawIndex = 0;
 
   constructor(private device: GPUDevice, private format: GPUTextureFormat) {
       // Shader
@@ -204,30 +212,44 @@ export class Md2Pipeline {
           label: 'md2-pipeline'
       });
 
-      this.uniformBuffer = new UniformBuffer(device, {
-          size: 2048,
-          label: 'md2-global-uniforms',
-          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-      });
-
-      this.frameUniformBuffer = new UniformBuffer(device, {
-          size: 16,
-          label: 'md2-frame-uniforms',
-          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST
-      });
-
       this.defaultSampler = createLinearSampler(device);
 
       this.frameBindGroupLayout = bindGroupLayout;
   }
 
+  /** Starts a frame: draws reuse the pooled uniform buffers and meshes from the start. */
+  beginFrame(): void {
+    this.drawIndex = 0;
+    this.meshUses.clear();
+  }
+
+  /**
+   * A mesh for one draw of this model this frame. Two soldiers on different frames need two
+   * vertex buffers, for the same reason draws need their own uniforms.
+   */
   getMesh(model: Md2Model): Md2MeshBuffers {
-    let mesh = this.meshCache.get(model);
-    if (!mesh) {
-      mesh = new Md2MeshBuffers(this.device, model);
-      this.meshCache.set(model, mesh);
+    let meshes = this.meshCache.get(model);
+    if (!meshes) {
+      meshes = [];
+      this.meshCache.set(model, meshes);
     }
-    return mesh;
+    const use = this.meshUses.get(model) ?? 0;
+    this.meshUses.set(model, use + 1);
+    if (!meshes[use]) meshes[use] = new Md2MeshBuffers(this.device, model);
+    return meshes[use];
+  }
+
+  private takeUniforms(): { global: UniformBuffer; frame: UniformBuffer } {
+    const i = this.drawIndex++;
+    if (!this.globalPool[i]) {
+      this.globalPool[i] = new UniformBuffer(this.device, {
+        size: 2048, label: `md2-global-uniforms-${i}`, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      this.framePool[i] = new UniformBuffer(this.device, {
+        size: 16, label: `md2-frame-uniforms-${i}`, usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+    }
+    return { global: this.globalPool[i], frame: this.framePool[i] };
   }
 
   bind(passEncoder: GPURenderPassEncoder, options: Md2BindOptions, texture: Texture2D, blend: number): void {
@@ -343,16 +365,17 @@ export class Md2Pipeline {
           offset += 32;
       }
 
-      this.uniformBuffer.write(buffer);
+      const uniforms = this.takeUniforms();
+      uniforms.global.write(buffer);
 
       // 2. Write Frame Uniforms
       const frameData = new Float32Array([blend, 0, 0, 0]); // pad to 16 bytes
-      this.frameUniformBuffer.write(frameData);
+      uniforms.frame.write(frameData);
 
       // 3. Create BindGroup
       const bg = new BindGroup(this.device, this.frameBindGroupLayout, [
-          { binding: 0, resource: this.uniformBuffer },
-          { binding: 1, resource: this.frameUniformBuffer },
+          { binding: 0, resource: uniforms.global },
+          { binding: 1, resource: uniforms.frame },
           { binding: 2, resource: texture.createView() },
           { binding: 3, resource: this.defaultSampler }
       ], 'md2-bind-group');

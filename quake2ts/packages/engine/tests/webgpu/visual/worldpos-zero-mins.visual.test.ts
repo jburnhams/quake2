@@ -3,6 +3,7 @@ import { createWebGPURenderer } from '../../../src/render/webgpu/renderer.js';
 import { Camera } from '../../../src/render/camera.js';
 import { BspMap, BspNode, BspPlane, BspLeaf } from '../../../src/assets/bsp.js';
 import { setupHeadlessWebGPUEnv, createWebGPULifecycle, captureTexture, expectSnapshot } from '@quake2ts/test-utils';
+import { Texture2D } from '../../../src/render/webgpu/resources.js';
 import path from 'path';
 
 /**
@@ -38,7 +39,8 @@ function createZeroMinsGeometry(options: { min: [number, number, number], max: [
         mins: { x: options.min[0], y: options.min[1], z: options.min[2] },
         maxs: { x: options.max[0], y: options.max[1], z: options.max[2] },
         texInfo: { texture: options.texture, flags: 0, value: 0, nextTexInfo: -1 },
-        lightmap: undefined
+        // A black lightmap: dlights add to a lightmap (R_AddDynamicLights), so the wall needs one.
+        lightmap: { atlasIndex: 0 } as any
     };
 }
 
@@ -95,6 +97,12 @@ describe('WorldPos Zero Mins Test', () => {
 
     afterAll(lifecycle.cleanup);
 
+    const darkLightmap = () => {
+        const texture = new Texture2D(renderer.device, { width: 1, height: 1, format: 'rgba8unorm', label: 'dark-lightmap' });
+        texture.upload(new Uint8Array([0, 0, 0, 255]));
+        return { texture, width: 1, height: 1 };
+    };
+
     it('zero-mins-centered-light.png', async () => {
         // Wall at X=200, with Z starting at 0 (testing zero Z-min)
         // Using Y centered on 0 for proper camera framing
@@ -113,14 +121,13 @@ describe('WorldPos Zero Mins Test', () => {
         // Light at center: (180, 0, 200) - 20 units in front of wall center
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [{
                 origin: { x: 180, y: 0, z: 200 },  // At wall center
                 color: { x: 1, y: 0, z: 0 },
                 intensity: 400,
                 die: 0
             }],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.1,
             timeSeconds: 0
@@ -155,14 +162,13 @@ describe('WorldPos Zero Mins Test', () => {
         // The Z=0 edge of wall is closest to this light
         renderer.renderFrame({
             camera,
-            world: { map, surfaces: [wall] },
+            world: { map, surfaces: [wall], lightmaps: [darkLightmap()] } as any,
             dlights: [{
                 origin: { x: 0, y: 0, z: 0 },
                 color: { x: 0, y: 1, z: 0 },  // Green
                 intensity: 500,
                 die: 0
             }],
-            disableLightmaps: true,
             fullbright: false,
             ambient: 0.05,
             timeSeconds: 0

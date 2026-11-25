@@ -161,3 +161,9 @@ export function calculateEntityLight(map: BspMap | undefined, origin: Vec3): num
 
     return Math.max(minLight, 0.2);
 }
+
+/**
+ * The one light direction both backends shade MD2s with (normalised (1, 1, 1)): a stand-in for
+ * ref_gl's shadedots, which light a model from a fixed direction turned by its yaw.
+ */
+export const MODEL_LIGHT_DIRECTION: readonly [number, number, number] = [0.57735, 0.57735, 0.57735];

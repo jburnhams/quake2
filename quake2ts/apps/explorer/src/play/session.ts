@@ -5,10 +5,26 @@
 //
 // The game runs at 40 Hz in fixed 25 ms frames, as the rerelease does; the display draws whenever
 // it can, so a frame of game time is run for every 25 ms of real time that has passed (capped,
-// so a tab that was hidden does not fast-forward). What is drawn today is the world alone: doors
-// and lifts move in the game but are drawn where the map puts them, and monsters and items are
-// not drawn yet. Those come as the renderer learns brush models and MD2s in the world.
-import { Camera, createRenderer, parseBsp, prepareWorld, type FileSource, type Renderer, type WorldRenderState } from '@quake2ts/engine';
+// so a tab that was hidden does not fast-forward). Each frame draws the world, the brush models
+// (doors and lifts where the game has moved them), every MD2 the game shows (monsters, items,
+// gibs) and the weapon in the player's hands. Models are loaded the first time the game names
+// them, in the background, so one that appears mid-game (a gib) shows a frame or two later.
+import {
+  Camera,
+  brushModelsFromEntities,
+  createRenderer,
+  modelEntitiesFromEntities,
+  parseBsp,
+  prepareModels,
+  prepareWorld,
+  viewWeaponEntity,
+  type FileSource,
+  type Md2Model,
+  type RenderableEntity,
+  type SceneEntitySource,
+  type Renderer,
+  type WorldRenderState,
+} from '@quake2ts/engine';
 import { LocalHost } from '@quake2ts/server';
 
 const FRAME_MS = 25;
@@ -68,6 +84,9 @@ export class GameSession {
   private owed = 0;
   private lastStatus = '';
   private readonly camera: Camera;
+  /** MD2s loaded so far by name, and every model name already asked for. */
+  private readonly models = new Map<string, Md2Model>();
+  private readonly requested = new Set<string>();
 
   private constructor(
     private readonly options: SessionOptions,
@@ -154,6 +173,25 @@ export class GameSession {
     return toUserCommand({ keys: this.keys, attack: this.attack, pitch: this.pitch, yaw: this.yaw });
   }
 
+  /** Starts loading any model the game has named since the last frame (CS_MODELS grows as it precaches). */
+  private loadNewModels(): void {
+    const names: string[] = [];
+    for (let i = 1; ; i++) {
+      const name = this.host.modelName(i);
+      if (name === undefined) break;
+      if (!this.requested.has(name) && name.endsWith('.md2')) names.push(name);
+    }
+    if (names.length === 0) return;
+    for (const name of names) this.requested.add(name);
+    prepareModels(this.options.files, names).then(
+      (prepared) => {
+        this.renderer.uploadModels(this.world, prepared);
+        for (const [name, model] of prepared.models) this.models.set(name, model);
+      },
+      () => undefined, // a model that fails to load is not drawn; the game goes on
+    );
+  }
+
   private draw(timeSeconds: number): void {
     const player = this.host.player;
     const { canvas } = this.options;
@@ -163,7 +201,36 @@ export class GameSession {
       this.camera.setRotation(view.x, view.y, view.z);
     }
     this.gl.viewport(0, 0, canvas.width, canvas.height);
-    this.renderer.renderFrame({ camera: this.camera, world: this.world, clearColor: [0, 0, 0, 1], timeSeconds }, []);
+    this.loadNewModels();
+    const entities: SceneEntitySource[] = [];
+    this.host.map.game.entities.forEachEntity((entity) => entities.push(entity));
+    const modelName = (i: number) => this.host.modelName(i);
+    const drawn: RenderableEntity[] = modelEntitiesFromEntities(entities, modelName, {
+      models: this.models,
+      timeSeconds,
+      viewer: player,
+    });
+    const gunindex = player?.client?.gunindex ?? 0;
+    const weapon = player && gunindex
+      ? viewWeaponEntity({
+          origin: { x: this.camera.position[0], y: this.camera.position[1], z: this.camera.position[2] },
+          angles: { x: this.camera.angles[0], y: this.camera.angles[1], z: this.camera.angles[2] },
+          model: this.host.modelName(gunindex),
+          frame: player.client?.gun_frame ?? 0,
+          models: this.models,
+        })
+      : undefined;
+    if (weapon) drawn.push(weapon);
+    this.renderer.renderFrame(
+      {
+        camera: this.camera,
+        world: this.world,
+        clearColor: [0, 0, 0, 1],
+        timeSeconds,
+        brushModels: brushModelsFromEntities(entities, modelName),
+      },
+      drawn,
+    );
   }
 
   private report(): void {

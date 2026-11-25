@@ -9,8 +9,12 @@ import { PakArchive } from '../../../src/assets/pak.js';
 import { parseBsp, type BspMap } from '../../../src/assets/bsp.js';
 import { prepareWorld, type PreparedWorld } from '../../../src/render/prepareWorld.js';
 import { Camera } from '../../../src/render/camera.js';
-import { animatedTextureName, buildWorldDrawList, isTransparentSurface, type WorldDrawSurface } from '../../../src/render/worldDrawList.js';
-import { DEMO1_SHOTS, DEMO_PAK, demoPakAvailable } from '../../demo1/shots.js';
+import {
+  animatedTextureName, brushModelTransform, buildWorldDrawList, isTransparentSurface,
+  type BrushModelInstance, type WorldDrawSurface,
+} from '../../../src/render/worldDrawList.js';
+import { brushModelsFromEntities } from '../../../src/render/sceneEntities.js';
+import { DEMO1_SHOTS, DEMO_PAK, demoPakAvailable, shotBrushModels } from '../../demo1/shots.js';
 
 const toArrayBuffer = (b: Uint8Array) => b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength) as ArrayBuffer;
 
@@ -27,7 +31,7 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
     world = { map, surfaces: prepared.geometry.surfaces as WorldDrawSurface[] };
   });
 
-  const listFor = (shotIndex: number, timeSeconds = 0) => {
+  const listFor = (shotIndex: number, timeSeconds = 0, brushModels?: readonly BrushModelInstance[]) => {
     const shot = DEMO1_SHOTS[shotIndex];
     const camera = new Camera(320, 240);
     camera.fov = 90;
@@ -37,8 +41,10 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
       cameraPosition: { x: shot.origin[0], y: shot.origin[1], z: shot.origin[2] },
       viewProjection: camera.viewProjectionMatrix,
       timeSeconds,
+      brushModels,
     });
   };
+  const shotIndex = (name: string) => DEMO1_SHOTS.findIndex((s) => s.name === name);
 
   it('draws a visible subset of the map, without sky, opaque front to back', () => {
     const list = listFor(0);
@@ -74,5 +80,58 @@ describe.skipIf(!demoPakAvailable())('buildWorldDrawList on demo1', () => {
     expect(animatedTextureName(map, animated, 0.5)).toBe(map.texInfo[first.nextTexInfo].texture);
     const still = map.faces.findIndex((face) => (map.texInfo[face.texInfo]?.nextTexInfo ?? 0) < 0);
     expect(animatedTextureName(map, still, 3)).toBeUndefined();
+  });
+
+  it('draws a brush model in view with its transform, and leaves it out of the world walk', () => {
+    const door = shotIndex('door-shut');
+    const without = listFor(door);
+    const doorFaces = new Set(Array.from({ length: map.models[19].numFaces }, (_, i) => map.models[19].firstFace + i));
+    expect(without.opaque.some((d) => doorFaces.has(d.faceIndex))).toBe(false);
+
+    const instances = shotBrushModels(map, DEMO1_SHOTS[door]);
+    const withDoor = listFor(door, 0, instances);
+    const drawn = withDoor.opaque.filter((d) => doorFaces.has(d.faceIndex));
+    expect(drawn.length).toBeGreaterThan(0);
+    for (const d of drawn) expect(d.transform).toBeDefined();
+    for (const d of withDoor.opaque) if (!doorFaces.has(d.faceIndex) && d.transform === undefined) expect(d.faceIndex).toBeLessThan(map.models[0].numFaces);
+    // A change of transform starts a batch, so a backend sets the model matrix there.
+    expect(drawn.some((d) => d.startsBatch)).toBe(true);
+  });
+
+  it('culls a brush model outside the view and moves one by its origin', () => {
+    const door = shotIndex('door-shut');
+    const behind: BrushModelInstance = { model: 19, origin: { x: 4000, y: 0, z: 0 } };
+    expect(listFor(door, 0, [behind]).opaque.some((d) => d.transform)).toBe(false);
+
+    const raised = brushModelTransform({ model: 19, origin: { x: 0, y: 0, z: 120 } });
+    expect(Array.from(raised.slice(12, 15))).toEqual([0, 0, 120]);
+    // Yaw 90 turns +x into +y, as R_RotateForEntity does.
+    const turned = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 90, z: 0 } });
+    expect(turned[0]).toBeCloseTo(0);
+    expect(turned[1]).toBeCloseTo(1);
+    // Pitch and roll turn the drawn model the way the collision model turns (angleVectors):
+    // R_DrawBrushModel cancels R_RotateForEntity's negations. Pitch 90 tips +x to -z (down).
+    const pitched = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 90, y: 0, z: 0 } });
+    expect(pitched[2]).toBeCloseTo(-1);
+    // Roll 90 turns +y (left) to +z, as angleVectors' right vector (-y at rest) turns to -z.
+    const rolled = brushModelTransform({ model: 1, origin: { x: 0, y: 0, z: 0 }, angles: { x: 0, y: 0, z: 90 } });
+    expect(rolled[6]).toBeCloseTo(1);
+  });
+
+  it('reads brush models from entities, skipping free slots, hidden entities and non-submodels', () => {
+    const at = { x: 1, y: 2, z: 3 };
+    const none = { x: 0, y: 0, z: 0 };
+    const names = ['', 'maps/demo1.bsp', '*19', '*1', 'models/items/armor/shard/tris.md2'];
+    const instances = brushModelsFromEntities(
+      [
+        { modelindex: 2, origin: at, angles: none, inUse: true },
+        { modelindex: 3, origin: none, angles: none, svflags: 1 }, // a trigger
+        { modelindex: 2, origin: none, angles: none, inUse: false },
+        { modelindex: 4, origin: none, angles: none },
+        { modelindex: 0, origin: none, angles: none },
+      ],
+      (i) => names[i]
+    );
+    expect(instances).toEqual([{ model: 19, origin: at, angles: none }]);
   });
 });

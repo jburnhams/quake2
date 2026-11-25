@@ -47,6 +47,7 @@ const mockGL = {
   enable: vi.fn(),
   disable: vi.fn(),
   blendFunc: vi.fn(),
+  blendFuncSeparate: vi.fn(),
   bindAttribLocation: vi.fn(), // Added this missing function
 
   ARRAY_BUFFER: 0x8892,

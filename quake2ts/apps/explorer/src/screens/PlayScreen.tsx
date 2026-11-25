@@ -1,7 +1,7 @@
 // One question: "Can I walk demo1?" The game fills the screen; a strip above it says how to start
 // (a click captures the mouse, as a browser requires for mouse look), the controls, and the
 // player's health, which is the one figure a person checks while playing. What is not drawn yet
-// is said beside the game, so a door that opens without moving on screen is not taken for a bug.
+// is said beside the game, so a missing weapon or effect is not taken for a bug.
 //
 // Movement keys are held, not pressed, so they are read from keydown/keyup on the canvas rather
 // than through useHotkeys (which binds single presses to actions); they only reach the game while
@@ -30,7 +30,7 @@ export function PlayScreen() {
       <header className="flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
         <h1 className="type-label">Play demo1</h1>
         <p className="type-body-sm text-muted-foreground">
-          The world is drawn; doors, lifts, monsters and items act in the game but are not drawn yet.
+          The world, doors, lifts, monsters and items are drawn. Not yet: the weapon in your hands, effects and sound.
         </p>
         <div className="ms-auto flex items-center gap-2">
           <ButtonLink to="/explore" size="sm" variant="ghost">
