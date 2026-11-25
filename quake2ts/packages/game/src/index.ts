@@ -78,6 +78,8 @@ export interface GameStateSnapshot {
 
 import { findPlayerStart, SelectSpawnPoint } from './entities/spawn.js';
 import { player_die, player_think, player_pain } from './entities/player.js';
+import { WeaponStateEnum } from './combat/weapons/state.js';
+import { fireFromUsercmd, latchButtons, weaponBeginServerFrame } from './combat/weapons/think.js';
 import { populatePlayerStats } from './entities/playerStats.js';
 
 import { UserCommand, runPmove, PmType, MASK_PLAYERSOLID, type PmoveState } from '@quake2ts/shared';
@@ -508,6 +510,14 @@ export function createGame(
     }
   };
 
+  /** ClientThink: latch the buttons, move, then fire from where the move ended. */
+  const clientThink = (player: Entity, command: UserCommand) => {
+    latchButtons(player, command.buttons ?? 0);
+    runPlayerMove(player, command);
+    fireFromUsercmd(player, entities);
+  };
+  entities.beginClientFrame = (ent) => weaponBeginServerFrame(ent, entities);
+
   const gameExports: GameExports = {
     // CustomEntityRegistration implementation
     registerEntitySpawn(classname: string, spawnFunc: (entity: Entity) => void): void {
@@ -633,6 +643,14 @@ export function createGame(
        ent.client.anim_end = 0;
        ent.frame = 0; // Stand
        ent.client.damage_indicators = []; // Clear indicators
+       // PutClientInServer's ChangeWeapon: raise the held weapon from its first frame.
+       ent.client.weaponstate = WeaponStateEnum.WEAPON_ACTIVATING;
+       ent.client.gun_frame = 0;
+       ent.client.weapon_think_time = 0;
+       ent.client.weapon_fire_finished = 0;
+       ent.client.weapon_fire_buffered = false;
+       ent.client.weapon_thunk = false;
+       ent.client.newWeapon = undefined;
 
        // Reset Inventory for Deathmatch (or initial spawn)
        if (deathmatch) {
@@ -676,7 +694,7 @@ export function createGame(
         }
     },
     clientThink(ent: Entity, cmd: UserCommand) {
-        runPlayerMove(ent, cmd);
+        clientThink(ent, cmd);
     },
     frame(step: FixedStepContext, command?: UserCommand) {
       const context = frameLoop.advance(step);
@@ -686,7 +704,7 @@ export function createGame(
         // ... SP movement logic ...
         // In MP, this logic moves to SV_ClientThink or similar.
         // If 'command' is passed, we apply it to 'player' (SP style).
-        runPlayerMove(player, command);
+        clientThink(player, command);
       }
       return snapshot(context.frame);
     },

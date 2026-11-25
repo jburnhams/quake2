@@ -1,0 +1,30 @@
+{
+  "name": "strata-math",
+  "version": "0.0.878",
+  "private": true,
+  "description": "3D vector, matrix and angle helpers, convex polygon clipping, and a seeded MT19937 random generator. No dependencies.",
+  "type": "module",
+  "license": "GPL-2.0",
+  "exports": {
+    ".": "./src/index.ts",
+    "./vec3": "./src/vec3.ts",
+    "./angles": "./src/angles.ts",
+    "./mat4": "./src/mat4.ts",
+    "./random": "./src/random.ts",
+    "./winding": "./src/winding.ts"
+  },
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "quake2ts/packages/strata-math"
+  },
+  "scripts": {
+    "build": "tsc -b",
+    "test": "vitest run",
+    "test:unit": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "^5.1.1"
+  }
+}

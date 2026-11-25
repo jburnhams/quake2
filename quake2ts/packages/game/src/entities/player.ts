@@ -436,9 +436,7 @@ export function player_think(self: Entity, sys: EntitySystem) {
                 self.client.currentAmmoCount = 0;
             }
 
-            if (weaponItem.think) {
-                weaponItem.think(self, sys);
-            }
+            // The weapon itself runs every server frame (weaponBeginServerFrame), not here.
         }
     }
 

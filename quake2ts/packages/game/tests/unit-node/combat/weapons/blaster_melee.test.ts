@@ -55,9 +55,8 @@ describe('Blaster Alt-Fire (Melee)', () => {
     });
 
     it('should perform melee attack (trace) instead of projectile on Alt-Fire', () => {
+        // Pressed while ready, the blaster goes to its fire frame (5) and fires at once.
         player.client.buttons = 32; // BUTTON_ATTACK2
-        player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
-        player.client.gun_frame = 5; // Fire frame
 
         // Setup trace for melee hit
         // Mock trace to return a hit on an enemy
@@ -86,8 +85,6 @@ describe('Blaster Alt-Fire (Melee)', () => {
 
     it('should fire projectile on Primary Fire (1)', () => {
         player.client.buttons = 1; // BUTTON_ATTACK
-        player.client.weaponstate = WeaponStateEnum.WEAPON_FIRING;
-        player.client.gun_frame = 5; // Fire frame
 
         blasterThink(player, sys);
 

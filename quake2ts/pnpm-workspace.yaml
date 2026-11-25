@@ -10,3 +10,7 @@ allowBuilds:
 # Order does not matter here: `build:types` builds every project reference first and tsup
 # keeps @quake2ts/* external.
 ignoreWorkspaceCycles: true
+# strata-react is Jonathan's own and released often; pnpm 12's minimum release age would hold the
+# explorer a day behind it.
+minimumReleaseAgeExclude:
+  - strata-react
