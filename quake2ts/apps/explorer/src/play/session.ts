@@ -33,14 +33,16 @@ export type InputState = { keys: ReadonlySet<string>; attack: boolean; pitch: nu
 export function toUserCommand({ keys, attack, pitch, yaw }: InputState) {
   const held = (...codes: string[]) => codes.some((c) => keys.has(c));
   const axis = (plus: boolean, minus: boolean) => (plus ? 1 : 0) - (minus ? 1 : 0);
-  const up = axis(held('Space'), held('KeyC', 'ControlLeft'));
+  const jump = held('Space');
+  const crouch = held('KeyC', 'ControlLeft');
+  const up = axis(jump, crouch);
   return {
     angles: { x: pitch, y: yaw, z: 0 },
     forwardmove: MOVE_SPEED * axis(held('KeyW', 'ArrowUp'), held('KeyS', 'ArrowDown')),
     sidemove: MOVE_SPEED * axis(held('KeyD'), held('KeyA')),
     upmove: UP_SPEED * up,
     buttons:
-      (attack || held('ControlRight') ? BUTTON_ATTACK : 0) | (up > 0 ? BUTTON_JUMP : 0) | (up < 0 ? BUTTON_CROUCH : 0),
+      (attack || held('ControlRight') ? BUTTON_ATTACK : 0) | (jump ? BUTTON_JUMP : 0) | (crouch ? BUTTON_CROUCH : 0),
   };
 }
 

@@ -21,6 +21,10 @@ describe('playing demo1', () => {
     expect(toUserCommand(input('Space')).buttons & (1 << 3)).toBeTruthy();
     expect(toUserCommand(input('KeyC')).buttons & (1 << 4)).toBeTruthy();
     expect(toUserCommand(input()).buttons).toBe(0);
+    // Both held: upmove cancels, but each button stays set, as pmove reads them separately.
+    const both = toUserCommand(input('Space', 'KeyC'));
+    expect(both.upmove).toBe(0);
+    expect(both.buttons).toBe((1 << 3) | (1 << 4));
   });
 
   it('jumps when space is held, once until it is let go', () => {
