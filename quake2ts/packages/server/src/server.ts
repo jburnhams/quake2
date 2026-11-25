@@ -68,6 +68,9 @@ export interface Server {
     // but server needs collision models.
     collisionModel: CollisionModel | null;
 
+    /** The map's entity lump, which SV_SpawnServer hands to the game's SpawnEntities. */
+    entityString: string;
+
     configStrings: string[]; // [MAX_CONFIGSTRINGS]
     baselines: (EntityState | null)[]; // [MAX_EDICTS]
 

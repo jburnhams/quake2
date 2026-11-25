@@ -367,6 +367,8 @@ export function createClient(imports: ClientImports): ClientExports {
       netchan
   });
   multiplayer.setDemoRecorder(demoRecorder);
+  // Snapshots from the server become prediction's base (CL_PredictMovement starts from them).
+  multiplayer.setPrediction(prediction);
   multiplayer.setEffectSystem(effectSystem); // Inject Effect System
 
   const multiplayerFactory = new MultiplayerMenuFactory(menuSystem, multiplayer);
@@ -733,11 +735,9 @@ export function createClient(imports: ClientImports): ClientExports {
       }
 
       // If connected to multiplayer, send command to server
-      if (multiplayer.isConnected()) {
-          multiplayer.sendCommand(command);
-      }
-
-      return prediction.enqueueCommand(command);
+      // Predict with the command as sent, numbered by the packet that carries it.
+      const sent = multiplayer.isConnected() ? multiplayer.sendCommand(command) : command;
+      return prediction.enqueueCommand(sent);
     },
 
     handleInput(key: string, down: boolean): boolean {
@@ -1533,6 +1533,14 @@ export function createClient(imports: ClientImports): ClientExports {
       if (clientExports.onChatMessage) {
           clientExports.onChatMessage(sender, message, team);
       }
+  });
+
+  // CL_ParseConfigString: a configstring from a server reaches the client and cgame as one from a
+  // demo or the local game does. Before, the connection only stored them, so a networked game got
+  // no models, sounds, images, light styles or skins from them.
+  multiplayer.setConfigStringListener({
+    set: (index, value) => clientExports.ParseConfigString(index, value),
+    clear: () => configStrings.clear(),
   });
 
   return clientExports;

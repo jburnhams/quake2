@@ -4,18 +4,22 @@
 // The constants are sliders on the left and live in the URL; the run is redrawn on every change,
 // since 100 frames of runPmove take a few milliseconds. The stage is demo1 in 3D through the
 // engine's renderer (RunScene) with both paths drawn in it, then the figures and the charts,
-// which say the same in numbers and stand in when the browser has no WebGL 2.
+// which say the same in numbers and stand in when the browser has no WebGL 2. A second view (Air
+// strafing, AirView) takes one frame of the air move apart to show why strafe-jumping is faster
+// than the top speed; the same constants drive both, and the view is held in the URL.
 import * as React from 'react';
 import {
   LineChart,
   Metric,
   MetricStrip,
+  Tabs,
   format,
   type ChartSpan,
   type Point,
 } from 'strata-react';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import { LabScreen } from '../LabScreen';
+import { AirView } from './AirView';
 import { RunScene } from './RunScene';
 import { CONSTANTS, useLabTuning } from './constants';
 import {
@@ -31,13 +35,18 @@ import {
 
 export const LAB_PATH = '/labs/movement';
 
+const VIEWS = [
+  { value: 'run', label: 'Run on demo1' },
+  { value: 'air', label: 'Air strafing' },
+];
+
 export function MovementLab() {
   const lab = useLabTuning();
   return (
     <LabScreen
       title="Movement lab"
       path={LAB_PATH}
-      stageName="Run on demo1"
+      stageName="demo1"
       params={CONSTANTS}
       state={lab}
       defaults={DEFAULT_LAB_TUNING}
@@ -45,7 +54,11 @@ export function MovementLab() {
       unchanged="Every constant at the game's value"
       noun="constant"
     >
-      {({ map, world }) => <RunView map={map} world={world} />}
+      {({ map, world }) => (
+        <Tabs param="view" label="Views" items={VIEWS} className="p-4">
+          {(view) => (view === 'air' ? <AirView tuning={lab.tuning} path={LAB_PATH} /> : <RunView map={map} world={world} />)}
+        </Tabs>
+      )}
     </LabScreen>
   );
 }
@@ -63,7 +76,7 @@ function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
     Math.abs(n - g) < 0.5 ? "The same as the game's." : `The game's run: ${say(g)}.`;
 
   return (
-    <div className="grid gap-4 p-4">
+    <div className="grid gap-4">
       <p className="type-body-sm text-muted-foreground">
         The player runs forward from demo1's start, jumps after {seconds((JUMP_FRAME * FRAME_MSEC) / 1000)}, lets go after{' '}
         {seconds((RELEASE_FRAME * FRAME_MSEC) / 1000)} and slides to a stop, through the game's own movement code and the map's walls and floors.

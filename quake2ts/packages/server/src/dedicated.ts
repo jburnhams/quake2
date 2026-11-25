@@ -1,12 +1,12 @@
 import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
-import { Client, createClient, ClientState } from './client.js';
-import { ClientMessageParser } from './protocol.js';
+import { Client, createClient, ClientState, COMMAND_MSEC } from './client.js';
+import { ClientMessageParser, type MoveCommands } from './protocol.js';
 import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
 import { parseBsp, PakArchive } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import * as path from 'node:path';
-import { createPlayerInventory, createPlayerWeaponStates } from '@quake2ts/game';
+import { createPlayerInventory, createPlayerWeaponStates, spawnEntitiesFromText } from '@quake2ts/game';
 import { Server, ServerState, ServerStatic } from './server.js';
 import { writeDeltaEntity, writeRemoveEntity } from '@quake2ts/shared';
 import { writePlayerState, ProtocolPlayerState } from './protocol/player.js';
@@ -54,6 +54,12 @@ export interface ServerOptions {
     port?: number;
     transport?: NetworkTransport;
     floodLimit?: number;
+    /**
+     * sv_enforcetime: refuse movement beyond the time the server has given the client
+     * (SV_GiveMsec gives 1800 ms every 16 frames). id ships it off; the port has it on, so a
+     * client cannot run more movement than real time allows.
+     */
+    enforceTime?: boolean;
 }
 
 export class DedicatedServer implements GameEngine {
@@ -105,6 +111,7 @@ export class DedicatedServer implements GameEngine {
             frame: 0,
             name: '',
             collisionModel: null,
+            entityString: '',
             configStrings: new Array(MAX_CONFIGSTRINGS).fill(''),
             baselines: new Array(MAX_EDICTS).fill(null),
             multicastBuf: new Uint8Array(0)
@@ -299,6 +306,7 @@ export class DedicatedServer implements GameEngine {
             }
 
             const bspMap = parseBsp(arrayBuffer);
+            this.sv.entityString = bspMap.entities.raw;
 
             // Convert BspMap to CollisionModel manually
             const planes = bspMap.planes.map(p => {
@@ -448,6 +456,19 @@ export class DedicatedServer implements GameEngine {
                 };
             },
             pointcontents: (p) => 0,
+            // PF_setmodel (sv_game.c): the model's index, and for a submodel ("*3", a door or a
+            // trigger) its bounds from the map, then the entity is linked at them. Without it a
+            // door spawned from the map had zero bounds and so no travel and no volume.
+            setmodel: (ent, name) => {
+                ent.modelindex = this.modelIndex(name);
+                if (name.startsWith('*')) {
+                    const sub = this.sv.collisionModel?.bmodels[Number(name.slice(1))];
+                    if (!sub) throw new Error(`setmodel: no submodel ${name}`);
+                    ent.mins = { ...sub.mins };
+                    ent.maxs = { ...sub.maxs };
+                    imports.linkentity(ent);
+                }
+            },
             linkentity: (ent) => {
                 if (!this.entityIndex) return;
                 this.entityIndex.link({
@@ -476,6 +497,18 @@ export class DedicatedServer implements GameEngine {
         });
 
         this.game.init(0);
+        // SV_SpawnServer: client edicts come first (1..maxclients), then ge->SpawnEntities
+        // puts the map's entities in the world. Until 2026-11-25 the dedicated server spawned
+        // none, so there were no spawn points, doors or triggers and players began at the origin.
+        this.game.entities.reserveClientSlots(this.options.maxPlayers ?? 1);
+        if (this.sv.entityString) {
+            const game = this.game;
+            spawnEntitiesFromText(this.sv.entityString, {
+                registry: { get: (classname: string) => game.entities.getSpawnFunction(classname) } as never,
+                entities: game.entities,
+                onWarning: () => {},
+            });
+        }
         this.game.spawnWorld();
 
         this.populateBaselines();
@@ -580,7 +613,13 @@ export class DedicatedServer implements GameEngine {
         }
     }
 
-    private handleMove(client: Client, cmd: UserCommand, checksum: number, lastFrame: number) {
+    /**
+     * clc_move (SV_ExecuteClientMessage, server/sv_user.c): every command runs as it arrives,
+     * each with its own msec. When packets were lost (netchan.dropped), the older commands this
+     * packet repeats stand in for theirs, and beyond two the last command runs again, up to 20.
+     * Until 2026-11-25 the port kept only the newest command and ran it once per server frame.
+     */
+    private handleMove(client: Client, commands: MoveCommands, checksum: number, lastFrame: number) {
         if (lastFrame > 0 && lastFrame <= client.lastFrame && lastFrame > client.lastFrame - UPDATE_BACKUP) {
              const frameIdx = lastFrame % UPDATE_BACKUP;
              const frame = client.frames[frameIdx];
@@ -590,9 +629,31 @@ export class DedicatedServer implements GameEngine {
              }
         }
 
-        client.lastCmd = cmd;
         client.lastMessage = this.sv.frame;
         client.commandCount++;
+
+        // Over the flood limit the frame drops the client; run none of its commands meanwhile.
+        if (client.commandCount > (this.options.floodLimit ?? 200)) return;
+
+        // SV_ClientThink: each command spends its msec from the time SV_GiveMsec gave.
+        const think = (cmd: UserCommand) => {
+            if (!this.game || client.state !== ClientState.Active || !client.edict) return;
+            client.commandMsec -= cmd.msec;
+            if (client.commandMsec < 0 && (this.options.enforceTime ?? true)) return;
+            this.game.clientThink(client.edict, cmd);
+        };
+
+        let netDrop = client.netchan.dropped;
+        if (netDrop < 20) {
+            while (netDrop > 2) {
+                think(client.lastCmd);
+                netDrop--;
+            }
+            if (netDrop > 1) think(commands.oldest);
+            if (netDrop > 0) think(commands.old);
+        }
+        think(commands.current);
+        client.lastCmd = commands.current;
     }
 
     private handleUserInfo(client: Client, info: string) {
@@ -824,7 +885,7 @@ export class DedicatedServer implements GameEngine {
 
                 const reader = new BinaryStream(buffer);
                 const parser = new ClientMessageParser(reader, {
-                    onMove: (checksum, lastFrame, cmd) => this.handleMove(client, cmd, checksum, lastFrame),
+                    onMove: (checksum, lastFrame, commands) => this.handleMove(client, commands, checksum, lastFrame),
                     onUserInfo: (info) => this.handleUserInfo(client, info),
                     onStringCmd: (cmd) => this.handleStringCmd(client, cmd),
                     onNop: () => {},
@@ -850,10 +911,17 @@ export class DedicatedServer implements GameEngine {
         this.sv.frame++;
         this.sv.time += 100; // 100ms per frame
 
+        // SV_GiveMsec: every 16 frames, 1.6 s of movement (plus slop) for each client.
+        if ((this.sv.frame & 15) === 0) {
+            for (const client of this.svs.clients) {
+                if (client && client.state !== ClientState.Free) client.commandMsec = COMMAND_MSEC;
+            }
+        }
+
         // 1. Read network packets
         this.SV_ReadPackets();
 
-        // 2. Run client commands
+        // 2. Check on clients (their commands ran as they arrived, in SV_ReadPackets)
         for (const client of this.svs.clients) {
             if (!client || client.state === ClientState.Free) continue;
 
@@ -883,8 +951,6 @@ export class DedicatedServer implements GameEngine {
                      this.dropClient(client);
                      continue;
                 }
-
-                this.game.clientThink(client.edict, client.lastCmd);
             }
         }
 
@@ -913,9 +979,17 @@ export class DedicatedServer implements GameEngine {
     }
 
     private SV_SendClientMessages(snapshot: GameStateSnapshot) {
+        const now = Date.now();
         for (const client of this.svs.clients) {
             if (client && client.state === ClientState.Active) {
                 this.SV_SendClientFrame(client, snapshot);
+            } else if (client && client.state !== ClientState.Free && client.net) {
+                // SV_SendClientMessages: a client still connecting gets no frame, but its
+                // reliable messages (serverdata, configstrings) go out as they are due, and a
+                // keepalive each second. The port's fragments need a packet each to go out.
+                if (client.netchan.needReliable() || client.netchan.needsKeepalive(now)) {
+                    client.net.send(client.netchan.transmit());
+                }
             }
         }
     }
@@ -1022,7 +1096,6 @@ export class DedicatedServer implements GameEngine {
     }
 
     modelIndex(name: string): number {
-        console.log(`modelIndex(${name}) called`);
         // Find existing
         const start = ConfigStringIndex.Models;
         const end = ConfigStringIndex.Sounds;

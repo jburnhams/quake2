@@ -5,7 +5,7 @@ import {
   UserCommand,
   BinaryStream,
   NetworkMessageBuilder,
-  writeUserCommand,
+  writeMoveCommands,
   BinaryWriter,
   CMD_BACKUP,
   NetChan,
@@ -47,6 +47,12 @@ export interface MultiplayerConnectionOptions {
     netchan?: NetChan;
 }
 
+/** Where a connection's configstrings go: each one as it arrives, and a clear for a new server. */
+export interface ConfigStringListener {
+  set(index: number, value: string): void;
+  clear(): void;
+}
+
 export class MultiplayerConnection implements NetworkMessageHandler {
   private driver: NetDriver;
   private state: ConnectionState = ConnectionState.Disconnected;
@@ -76,6 +82,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   // Demo Recording
   private demoRecorder: DemoRecorder | null = null;
+  private configStringListener: ConfigStringListener | null = null;
 
   // Events
   public onConnectionStateChange?: (state: ConnectionState) => void;
@@ -112,6 +119,16 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   public setDemoRecorder(recorder: DemoRecorder) {
       this.demoRecorder = recorder;
+  }
+
+  /**
+   * Told of every configstring the server sends, after it is stored: the client parses it as
+   * CL_ParseConfigString does (models, sounds, images, light styles, skins, the CD track). Told
+   * to clear them on new server data and on disconnect, as CL_ClearState does, since a server
+   * sends only the configstrings it has set.
+   */
+  public setConfigStringListener(listener: ConfigStringListener | null) {
+    this.configStringListener = listener;
   }
 
   public setEffectSystem(system: ClientEffectSystem) {
@@ -160,6 +177,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   private cleanup(): void {
     this.configStrings.clear();
+    this.configStringListener?.clear();
     this.baselines.clear();
     this.entities.clear();
     this.commandHistory = [];
@@ -182,24 +200,24 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       return this.currentPing;
   }
 
-  public sendCommand(cmd: UserCommand): void {
-      if (this.state !== ConnectionState.Active) return;
+  /**
+   * Sends one command (CL_SendCmd) and returns it as sent, numbered with the netchan sequence of
+   * the packet that carries it. That number is what a snapshot acknowledges (the netchan's
+   * incoming acknowledged sequence), so the caller predicts with the returned command.
+   */
+  public sendCommand(cmd: UserCommand): UserCommand {
+      if (this.state !== ConnectionState.Active) return cmd;
 
-      // Assign the last acknowledged server frame to this command
       const commandWithFrame: UserCommand = {
           ...cmd,
+          sequence: this.netchan.outgoingSequence + 1,
           serverFrame: cmd.serverFrame ?? this.latestServerFrame
       };
 
-      // Buffer command for retransmission/prediction
+      // Buffer command for retransmission
       this.commandHistory.push(commandWithFrame);
       if (this.commandHistory.length > CMD_BACKUP) {
           this.commandHistory.shift();
-      }
-
-      // Enqueue to local prediction system if available
-      if (this.prediction) {
-          this.prediction.enqueueCommand(commandWithFrame);
       }
 
       const writer = new BinaryWriter();
@@ -211,11 +229,12 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
       writer.writeLong(this.latestServerFrame); // lastframe (ack)
 
-      writeUserCommand(writer, commandWithFrame);
+      writeMoveCommands(writer, this.commandHistory);
 
       // Use NetChan to wrap the command
       const packet = this.netchan.transmit(writer.getData());
       this.driver.send(packet);
+      return commandWithFrame;
   }
 
   private handleMessage(data: Uint8Array): void {
@@ -299,11 +318,16 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
       console.log(`Server Data: Protocol ${protocol}, Level ${levelName}`);
+      // CL_ClearState: a new server (or level) starts from no configstrings.
+      this.configStrings.clear();
+      this.configStringListener?.clear();
       this.serverProtocol = protocol;
       this.serverCount = serverCount;
       this.gameDir = gameDir;
       this.playerNum = playerNum;
       this.levelName = levelName;
+      // CL_ParseServerData begins with CL_ClearState: a new server numbers its frames afresh.
+      this.prediction?.reset();
 
       this.setState(ConnectionState.Connected);
 
@@ -320,6 +344,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
   onConfigString(index: number, str: string): void {
       this.configStrings.set(index, str);
+      this.configStringListener?.set(index, str);
   }
 
   onSpawnBaseline(entity: EntityState): void {
@@ -397,7 +422,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
             state: predState
         };
 
-        this.prediction.setAuthoritative(gameFrame);
+        // CL_PredictMovement replays from the last command the server had when it sent this
+        // snapshot: the netchan's incoming acknowledged sequence, which this packet just set.
+        this.prediction.setAuthoritative(gameFrame, this.netchan.incomingAcknowledged);
     }
   }
 

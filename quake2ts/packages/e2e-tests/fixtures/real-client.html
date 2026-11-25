@@ -28,6 +28,19 @@
     <script>
         window.clientConnected = false;
 
+        // The lowest the prediction's base state has put the player's feet (the server's frame
+        // once one arrives, the default state before): the floor the harness's trace stands on.
+        let harnessFloorZ = null;
+        function harnessFloor() {
+            const base = window.clientInstance?.prediction?.baseFrame;
+            const state = base ? base.state : null;
+            if (state && state.origin) {
+                const feet = state.origin.z + (state.mins ? state.mins.z : -24);
+                if (harnessFloorZ === null || feet < harnessFloorZ) harnessFloorZ = feet;
+            }
+            return harnessFloorZ;
+        }
+
         async function start() {
             console.log('Harness script loaded.');
 
@@ -86,14 +99,38 @@
                 const mockEngine = {
                     renderer: mockRenderer,
                     assets: mockAssets,
-                    trace: (start, end) => ({
-                        fraction: 1.0,
-                        contents: 0,
-                        allSolid: false,
-                        startSolid: false,
-                        endpos: { x: end.x, y: end.y, z: end.z },
-                        plane: { normal: { x: 0, y: 0, z: 1 }, dist: 0, type: 0 }
-                    })
+                    // The harness has no map, but the client predicts with the server's own move
+                    // (runPmove), which needs ground to stand on as the server's player does. So
+                    // the world is a flat floor under the prediction's base state (harnessFloor).
+                    trace: (start, end, mins, maxs) => {
+                        const open = {
+                            fraction: 1.0,
+                            contents: 0,
+                            allsolid: false,
+                            startsolid: false,
+                            endpos: { x: end.x, y: end.y, z: end.z },
+                        };
+                        const floorZ = harnessFloor();
+                        if (floorZ === null) return open;
+                        const bottom = mins ? mins.z : 0;
+                        const startFeet = start.z + bottom;
+                        const endFeet = end.z + bottom;
+                        if (endFeet >= floorZ || startFeet < floorZ - 0.125) return open;
+                        const fraction = Math.max(0, (startFeet - floorZ) / (startFeet - endFeet));
+                        return {
+                            fraction,
+                            contents: 1,
+                            allsolid: false,
+                            startsolid: false,
+                            endpos: {
+                                x: start.x + (end.x - start.x) * fraction,
+                                y: start.y + (end.y - start.y) * fraction,
+                                z: floorZ - bottom,
+                            },
+                            planeNormal: { x: 0, y: 0, z: 1 },
+                            plane: { normal: { x: 0, y: 0, z: 1 }, dist: floorZ, type: 2 },
+                        };
+                    }
                 };
 
                 const mockHost = {
@@ -164,10 +201,10 @@
                 // Monkey-patch predict to ensure commands are sent if we believe we are connected,
                 // bypassing internal state checks that might lag or mismatch in the harness.
                 client.predict = function(cmd) {
-                    if (window.clientConnected) {
-                        client.multiplayer.sendCommand(cmd);
-                    }
-                    return client.prediction.enqueueCommand(cmd);
+                    // Predict with the command as sent: sendCommand numbers it by its packet,
+                    // which is what the server's snapshots acknowledge.
+                    const sent = window.clientConnected ? client.multiplayer.sendCommand(cmd) : cmd;
+                    return client.prediction.enqueueCommand(sent);
                 };
 
                 window.clientInstance = client;
