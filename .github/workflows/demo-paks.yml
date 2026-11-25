@@ -9,6 +9,9 @@ on:
   push:
     paths:
       - .github/workflows/demo-paks.yml
+      - .github/actions/demo-paks/**
+      - quake2ts/scripts/fetch-paks.sh
+      - quake2ts/scripts/demo-paks.sha256
 
 permissions:
   contents: write
@@ -43,3 +46,13 @@ jobs:
             --target main --prerelease --title "Quake 2 demo data" \
             --notes "id Software's original, unmodified Quake 2 demo (q2-314-demo-x86.exe), redistributed under its licence for this repo's tests. Fetched with quake2ts/scripts/fetch-paks.sh."
           gh release upload demo-paks .paks/q2-314-demo-x86.exe
+
+  verify:
+    # Fetches through the cached action with the pinned hashes, as test jobs will.
+    needs: mirror
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - id: paks
+        uses: ./.github/actions/demo-paks
+      - run: test -s "${{ steps.paks.outputs.pak }}" && ls -l "${{ steps.paks.outputs.pak }}"
