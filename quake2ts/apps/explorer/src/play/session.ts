@@ -26,6 +26,7 @@ import {
   type WorldRenderState,
 } from '@quake2ts/engine';
 import { LocalHost } from '@quake2ts/server';
+import { FrameStats, type FrameTimings } from './stats';
 
 const FRAME_MS = 25;
 const MAX_CATCH_UP_FRAMES = 8;
@@ -84,6 +85,7 @@ export class GameSession {
   private owed = 0;
   private lastStatus = '';
   private readonly camera: Camera;
+  private readonly timings = new FrameStats();
   /** MD2s loaded so far by name, and every model name already asked for. */
   private readonly models = new Map<string, Md2Model>();
   private readonly requested = new Set<string>();
@@ -116,6 +118,11 @@ export class GameSession {
     return new GameSession(options, gl, renderer, world, host);
   }
 
+  /** Frame rate and CPU time over the last second, or null before two frames are drawn. */
+  stats(): FrameTimings | null {
+    return this.timings.read();
+  }
+
   /** Starts the loop; returns a function that stops it. */
   run(): () => void {
     const tick = (now: number) => {
@@ -123,12 +130,14 @@ export class GameSession {
       if (!this.last) this.last = now;
       this.owed = Math.min(this.owed + (now - this.last), FRAME_MS * MAX_CATCH_UP_FRAMES);
       this.last = now;
+      const cpuStart = performance.now();
       while (this.owed >= FRAME_MS) {
         this.owed -= FRAME_MS;
         this.host.frame(this.command());
       }
       this.draw(now / 1000);
       this.report();
+      this.timings.frame(now, performance.now() - cpuStart);
     };
     this.raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(this.raf);

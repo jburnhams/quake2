@@ -7,11 +7,12 @@
 // than through useHotkeys (which binds single presses to actions); they only reach the game while
 // the pointer is captured, so typing elsewhere on the page never moves the player.
 import * as React from 'react';
-import { Alert, Button, ButtonLink, DataView, EmptyState, LoadError, Skeleton, Status } from 'strata-react';
+import { Alert, Button, ButtonLink, DataView, EmptyState, LoadError, Skeleton, Status, format } from 'strata-react';
 import { RotateCcw } from 'lucide-react';
 import { useDemoPak, useLibrary } from '../library/context';
 import { DemoProgress } from '../library/DemoProgress';
 import { GameSession, type PlayerStatus } from '../play/session';
+import { readResolution, type FrameTimings, type Resolution } from '../play/stats';
 
 const CONTROLS: [string, string][] = [
   ['W A S D', 'Move'],
@@ -153,6 +154,7 @@ function Game() {
             {status.dead ? 'Dead' : `Health ${status.health}`}
           </Status>
         ) : null}
+        {session ? <StatsReadout session={session} canvas={canvas} /> : null}
       </div>
       {state.phase === 'failed' ? (
         <div className="absolute inset-0 grid place-items-center p-4">
@@ -196,9 +198,55 @@ function Game() {
   );
 }
 
-/** Sizes the canvas's drawing buffer to its box at the screen's pixel ratio. */
+/**
+ * FPS and resolution, read twice a second (a figure that changes every frame cannot be read). The
+ * drawing buffer follows the screen's pixel ratio up to MAX_PIXEL_RATIO, so on a high-density
+ * screen the game is drawn at more pixels than its CSS size, and above the cap at fewer than the
+ * screen has; the readout says which.
+ */
+function StatsReadout({ session, canvas }: { session: GameSession; canvas: React.RefObject<HTMLCanvasElement | null> }) {
+  const [reading, setReading] = React.useState<{ timings: FrameTimings | null; resolution: Resolution } | null>(null);
+  React.useEffect(() => {
+    const read = () => canvas.current && setReading({ timings: session.stats(), resolution: readResolution(canvas.current) });
+    read();
+    const id = window.setInterval(read, 500);
+    return () => window.clearInterval(id);
+  }, [session, canvas]);
+  if (!reading) return null;
+  const { timings, resolution } = reading;
+  const { drawn, shown, devicePixelRatio } = resolution;
+  const scale = shown.width ? drawn.width / shown.width : 1;
+  const n = (v: number, digits = 0) =>
+    new Intl.NumberFormat(undefined, { maximumFractionDigits: digits, minimumFractionDigits: digits }).format(v);
+  const size = (r: { width: number; height: number }) => `${r.width}×${r.height}`;
+  const capped = devicePixelRatio > MAX_PIXEL_RATIO;
+  return (
+    <dl className="type-caption ms-auto grid grid-cols-[auto_auto] gap-x-3 rounded-control bg-popover/80 px-2 py-1 font-mono tabular-nums text-popover-foreground">
+      <dt>FPS</dt>
+      <dd className="text-end">{timings ? n(timings.fps) : format.missing}</dd>
+      <dt>Worst frame</dt>
+      <dd className="text-end">{timings ? `${n(timings.worstFrameMs, 1)} ms` : format.missing}</dd>
+      <dt>CPU per frame</dt>
+      <dd className="text-end">{timings ? `${n(timings.cpuMs, 1)} ms` : format.missing}</dd>
+      <dt>Drawn at</dt>
+      <dd className="text-end">{size(drawn)}</dd>
+      <dt>Shown at</dt>
+      <dd className="text-end">{size(shown)}</dd>
+      <dt>Scale</dt>
+      <dd className="text-end">
+        ×{n(scale, 2)}
+        {capped ? ` (screen ×${n(devicePixelRatio, 2)}, capped)` : ''}
+      </dd>
+    </dl>
+  );
+}
+
+/** The most device pixels per CSS pixel the game draws at; above it the browser scales the picture up. */
+const MAX_PIXEL_RATIO = 2;
+
+/** Sizes the canvas's drawing buffer to its box at the screen's pixel ratio, up to MAX_PIXEL_RATIO. */
 function fit(el: HTMLCanvasElement): { width: number; height: number } {
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const ratio = Math.min(window.devicePixelRatio || 1, MAX_PIXEL_RATIO);
   const width = Math.max(1, Math.round(el.clientWidth * ratio));
   const height = Math.max(1, Math.round(el.clientHeight * ratio));
   if (el.width !== width) el.width = width;
