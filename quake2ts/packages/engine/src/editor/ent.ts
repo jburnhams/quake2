@@ -1,6 +1,6 @@
 import { BspEntity } from '../assets/bsp.js';
 
-export { BspEntity };
+export { type BspEntity };
 
 export interface ValidationResult {
   valid: boolean;

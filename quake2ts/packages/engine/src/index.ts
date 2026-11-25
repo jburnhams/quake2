@@ -316,12 +316,12 @@ export {
   type SparksContext,
   type BlasterImpactContext,
 } from './render/particleSystem.js';
-export { Pic, Renderer, createRenderer } from './render/renderer.js';
+export { createRenderer, type Pic, type Renderer } from './render/renderer.js';
 export { createWebGPURenderer } from './render/webgpu/renderer.js';
-export { FrameRenderStats, FrameRenderOptions, WorldRenderState, type FrameRenderer, type RenderModeConfig } from './render/frame.js'; // Export FrameRenderer and RenderModeConfig
+export { type FrameRenderStats, type FrameRenderOptions, type WorldRenderState, type FrameRenderer, type RenderModeConfig } from './render/frame.js'; // Export FrameRenderer and RenderModeConfig
 export { SpriteRenderer } from './render/sprite.js'; // Export SpriteRenderer
-export { RenderOptions } from './render/options.js'; // Export RenderOptions
-export { RenderableEntity } from './render/scene.js'; // Added export
+export type { RenderOptions } from './render/options.js'; // Export RenderOptions
+export type { RenderableEntity } from './render/scene.js'; // Added export
 export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
 export { MessageWriter } from './demo/writer.js'; // Exporting MessageWriter
 export { DemoValidator, type DemoValidationResult } from './demo/validator.js';
@@ -374,7 +374,7 @@ export { parseEntLump, serializeEntLump, validateEntity, type EntEntity, type Va
 // WebGPU
 export { createWebGPUContext, queryCapabilities, type WebGPUContextOptions, type WebGPUContextState, type WebGPUCapabilities } from './render/webgpu/context.js';
 export { createHeadlessRenderTarget, captureRenderTarget, type HeadlessRenderTarget } from './render/webgpu/headless.js';
-export { IRenderer } from './render/interface.js';
+export type { IRenderer } from './render/interface.js';
 export { NullRenderer } from './render/null/renderer.js';
 export { LoggingRenderer, type LoggingRendererOptions } from './render/logging/renderer.js';
 export { CoordinateSystem } from './render/types/coordinates.js';

@@ -26,7 +26,7 @@ import {
   resolveSurfaceTextures as resolveSurfaceTexturesGeneric
 } from './utils/index.js';
 
-export { FrameRenderStats, FrameRenderOptions };
+export type { FrameRenderStats, FrameRenderOptions };
 
 interface SkyRenderState {
   readonly scrollSpeeds?: readonly [number, number];
