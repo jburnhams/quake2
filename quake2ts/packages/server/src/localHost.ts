@@ -179,22 +179,20 @@ export class LocalHost {
     return this.configstrings.get(index);
   }
 
-  /** Runs one 25 ms game frame, moving the player by cmd if given. */
+  /** Runs one 25 ms game frame. With no cmd the player still moves, with neutral input, as a connected client always sends one. */
   frame(cmd?: Partial<UserCommand>): GameFrameResult<GameStateSnapshot> {
     const { game } = this.map;
     this.frameNumber += 1;
     this.timeMs += FRAME_MSEC;
-    const command: UserCommand | undefined = cmd
-      ? {
-          msec: FRAME_MSEC,
-          buttons: 0,
-          angles: { x: 0, y: 0, z: 0 },
-          forwardmove: 0,
-          sidemove: 0,
-          upmove: 0,
-          ...cmd,
-        } as UserCommand
-      : undefined;
+    const command = {
+      msec: FRAME_MSEC,
+      buttons: 0,
+      angles: this.player?.client?.v_angle ?? { x: 0, y: 0, z: 0 },
+      forwardmove: 0,
+      sidemove: 0,
+      upmove: 0,
+      ...cmd,
+    } as UserCommand;
     return game.frame({ frame: this.frameNumber, deltaMs: FRAME_MSEC, nowMs: this.timeMs }, command);
   }
 

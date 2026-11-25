@@ -378,7 +378,7 @@ export function createGame(
         gravity: { ...gravity },
         origin: player ? { ...player.origin } : { ...origin },
         velocity: player ? { ...player.velocity } : { ...velocity },
-        viewangles: player ? { ...player.angles } : { x:0, y:0, z:0 },
+        viewangles: player ? { ...(player.client?.v_angle ?? player.angles) } : { x:0, y:0, z:0 },
         level: { ...levelClock.current },
         entities: {
           activeCount: entities.activeCount,
@@ -493,8 +493,11 @@ export function createGame(
     if (client) {
       client.pm_flags = next.pmFlags;
       client.pm_type = next.pmType;
+      // The full view (pitch included) is what aim and the camera use.
+      client.v_angle = { ...command.angles };
     }
-    systemImports.linkentity?.(player);
+    // Through the entity system, so its fallback grid moves with the player too.
+    entities.linkentity(player);
   };
 
   const gameExports: GameExports = {
