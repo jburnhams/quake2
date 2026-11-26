@@ -1,0 +1,67 @@
+name: Prune branches
+
+# Deletes old branches, run by hand from the Actions tab. Kept: main, any branch with an open pull
+# request, and any branch with a commit in the last `min_age_days` days (an active thread may still
+# be pushing to it). Of the rest, a branch merged into main always goes; one with commits main lacks
+# goes only when `unmerged` is on. A closed pull request keeps its commits (refs/pull/N/head) after
+# its branch is deleted, and the job summary lists every deleted branch with its SHA, so any of
+# them can be pushed back: git push origin <sha>:refs/heads/<branch>.
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: List what would be deleted without deleting it
+        type: boolean
+        default: true
+      unmerged:
+        description: Also delete branches with commits that are not in main
+        type: boolean
+        default: false
+      min_age_days:
+        description: Keep branches with a commit newer than this many days
+        type: number
+        default: 3
+
+permissions:
+  contents: write
+  pull-requests: read
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ github.token }}
+      DRY_RUN: ${{ inputs.dry_run }}
+      UNMERGED: ${{ inputs.unmerged }}
+      MIN_AGE_DAYS: ${{ inputs.min_age_days }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - name: Prune
+        shell: bash
+        run: |
+          set -euo pipefail
+          git fetch -q --prune origin '+refs/heads/*:refs/remotes/origin/*'
+          gh pr list --state open --limit 1000 --json headRefName --jq '.[].headRefName' | sort -u > open-prs.txt
+          cutoff=$(date -d "-${MIN_AGE_DAYS} days" +%s)
+          : > delete.txt
+          kept_open=0 kept_new=0 kept_unmerged=0
+          while read -r ref sha when; do
+            b=${ref#origin/}
+            case "$b" in main|HEAD|origin) continue ;; esac
+            if grep -qxF "$b" open-prs.txt; then kept_open=$((kept_open+1)); continue; fi
+            if [ "$when" -ge "$cutoff" ]; then kept_new=$((kept_new+1)); continue; fi
+            if git merge-base --is-ancestor "$sha" origin/main; then state=merged
+            elif [ "$UNMERGED" = true ]; then state=unmerged
+            else kept_unmerged=$((kept_unmerged+1)); continue; fi
+            echo "$b $sha $state $(git log -1 --format=%cs "$sha")" >> delete.txt
+          done < <(git for-each-ref refs/remotes/origin --format='%(refname:short) %(objectname) %(committerdate:unix)')
+          {
+            echo "### $( [ "$DRY_RUN" = true ] && echo 'Would delete' || echo 'Deleted' ) $(wc -l < delete.txt) branches"
+            echo "Kept: $kept_open with an open PR, $kept_new newer than $MIN_AGE_DAYS days, $kept_unmerged unmerged (unmerged is off)."
+            echo; echo '```'; echo 'branch sha state last-commit'; cat delete.txt; echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          [ "$DRY_RUN" = true ] && exit 0
+          # Delete in batches; one push can carry many refs.
+          cut -d' ' -f1 delete.txt | sed 's#^#:refs/heads/#' | xargs -r -n 100 git push -q origin
