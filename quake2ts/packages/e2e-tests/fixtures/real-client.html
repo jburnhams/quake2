@@ -30,15 +30,16 @@
     <script>
         window.clientConnected = false;
 
-        // The lowest the prediction's base state has put the player's feet (the server's frame
-        // once one arrives, the default state before): the floor the harness's trace stands on.
+        // Where the prediction's base state (the server's latest frame) has the player's feet:
+        // the floor the harness's trace stands on. The latest, not the lowest ever: a floor left
+        // where the player once stood lower made the prediction fall 2-3 units while the server's
+        // player stood (seen once the full demo pak, and so the monsters, were in the run).
         let harnessFloorZ = null;
         function harnessFloor() {
             const base = window.clientInstance?.prediction?.baseFrame;
             const state = base ? base.state : null;
             if (state && state.origin) {
-                const feet = state.origin.z + (state.mins ? state.mins.z : -24);
-                if (harnessFloorZ === null || feet < harnessFloorZ) harnessFloorZ = feet;
+                harnessFloorZ = state.origin.z + (state.mins ? state.mins.z : -24);
             }
             return harnessFloorZ;
         }
