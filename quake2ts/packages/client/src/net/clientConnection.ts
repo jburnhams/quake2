@@ -8,7 +8,8 @@ import {
   NetworkMessageParser,
   FogData,
   DamageIndicator,
-  ClientFrames
+  ClientFrames,
+  copyEntities
 } from '@quake2ts/engine';
 import {
   ClientCommand,
@@ -149,7 +150,7 @@ export class ClientConnection implements NetworkMessageHandler {
     // gone is neither shown nor acknowledged.
     const parsed = this.frames.parse(frame, this.baselines);
     if (!parsed.valid) return;
-    this.entities = new Map(parsed.entities);
+    this.entities = copyEntities(parsed);
 
     if (this.prediction && frame.playerState) {
         // Update prediction system

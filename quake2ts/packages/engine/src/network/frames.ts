@@ -45,6 +45,16 @@ export function deltaEntity(from: EntityState, partial: EntityState): EntityStat
   return to;
 }
 
+/**
+ * A frame's entities as copies, for code that draws or changes them: the frames keep their own,
+ * which later frames delta from.
+ */
+export function copyEntities(frame: ClientFrame): Map<number, EntityState> {
+  const copy = new Map<number, EntityState>();
+  for (const [number, entity] of frame.entities) copy.set(number, cloneEntity(entity));
+  return copy;
+}
+
 /** The last UPDATE_BACKUP frames, by serverFrame & (UPDATE_BACKUP - 1), as cl.frames holds them. */
 export class ClientFrames {
   private readonly frames: (ClientFrame | undefined)[] = new Array(UPDATE_BACKUP);

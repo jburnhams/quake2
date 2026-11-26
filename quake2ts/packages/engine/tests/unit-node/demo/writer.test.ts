@@ -177,4 +177,27 @@ describe('MessageWriter', () => {
         expect(reader.readShort()).toBe(20);
         expect(reader.readByte()).toBe(6);
     });
+
+    it('writes removals among the deltas in entity-number order', async () => {
+        const { Quake2ProtocolHandler } = await import('../../../src/demo/protocol/quake2.js');
+        const { U_REMOVE } = await import('@quake2ts/shared');
+        const writer = new MessageWriter();
+        const ent = createEmptyEntityState();
+        ent.number = 2;
+        ent.modelindex = 10;
+        writer.writePacketEntities([ent], true, 34, [3, 1]);
+
+        const reader = new BinaryStream(writer.getData());
+        reader.readByte(); // svc_deltapacketentities
+        const proto = new Quake2ProtocolHandler();
+        const order: string[] = [];
+        for (;;) {
+            const bits = proto.parseEntityBits(reader as never);
+            if (bits.number === 0) break;
+            if (bits.bits & U_REMOVE) { order.push(`-${bits.number}`); continue; }
+            proto.parseDelta(createEmptyEntityState(), createEmptyEntityState(), bits.number, bits.bits, bits.bitsHigh, reader as never);
+            order.push(`${bits.number}`);
+        }
+        expect(order).toEqual(['-1', '2', '-3']);
+    });
 });

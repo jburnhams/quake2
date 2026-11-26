@@ -19,7 +19,7 @@ import {
   FogData,
   DamageIndicator
 } from '../demo/parser.js';
-import { ClientFrames } from './frames.js';
+import { ClientFrames, copyEntities } from './frames.js';
 
 export enum ConnectionState {
   Disconnected,
@@ -289,7 +289,7 @@ export class ClientConnection implements NetworkMessageHandler {
     // gone is neither shown nor acknowledged.
     const parsed = this.frames.parse(frame, this.baselines);
     if (!parsed.valid) return;
-    this.entities = new Map(parsed.entities);
+    this.entities = copyEntities(parsed);
 
     this.emit('frame', frame);
   }
