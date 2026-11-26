@@ -360,7 +360,7 @@ export { type FrameRenderStats, type FrameRenderOptions, type WorldRenderState, 
 export { SpriteRenderer } from './render/sprite.js'; // Export SpriteRenderer
 export type { RenderOptions } from './render/options.js'; // Export RenderOptions
 export type { RenderableEntity } from './render/scene.js'; // Added export
-export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser } from './demo/index.js';
+export { DemoPlaybackController, PlaybackState, DemoReader, DemoRecorder, NetworkMessageParser, UnsupportedProtocolError, UNSUPPORTED_PROTOCOLS } from './demo/index.js';
 export { MessageWriter } from './demo/writer.js'; // Exporting MessageWriter
 export { DemoValidator, type DemoValidationResult } from './demo/validator.js';
 export { DemoAnalyzer } from './demo/analyzer.js';

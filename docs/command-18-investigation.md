@@ -1,4 +1,6 @@
-# Command 18 Investigation - RESOLVED
+# Command 18 Investigation - SUPERSEDED
+
+> 2026-11-26: the conclusion below is wrong. demo1.dm2 is a Quake 2 3.00 (protocol 25) demo, and 0x12 is 3.00's `svc_frame`, which starts every frame block; blocks are whole messages. 3.00 is not supported; see [demo-parsing.md](./demo-parsing.md).
 
 ## Summary
 

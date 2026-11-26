@@ -1,3 +1,4 @@
+import { UNSUPPORTED_PROTOCOLS, UnsupportedProtocolError } from './parser.js';
 import { BinaryStream } from '@quake2ts/shared';
 import { ServerCommand } from '@quake2ts/shared';
 
@@ -37,6 +38,11 @@ export class DemoValidator {
     // The first message block usually starts with svc_serverdata (12)
     // Read the first byte of the data block
     const firstCmd = view.getUint8(4);
+
+    // A Quake 2 3.00 demo: its svc_serverdata is 7, and protocol 25 follows it.
+    if (firstCmd === 7 && length >= 5 && UNSUPPORTED_PROTOCOLS[view.getInt32(5, true)]) {
+      return { valid: false, error: new UnsupportedProtocolError(view.getInt32(5, true)).message };
+    }
 
     // svc_serverdata is 12 (decimal)
     if (firstCmd !== ServerCommand.serverdata) {
