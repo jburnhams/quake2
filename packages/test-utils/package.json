@@ -1,0 +1,132 @@
+{
+  "name": "@quake2ts/test-utils",
+  "version": "0.0.878",
+  "type": "module",
+  "main": "./dist/index.cjs",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    },
+    "./src/engine/mocks/webgpu": {
+      "types": "./src/engine/mocks/webgpu.ts",
+      "import": "./src/engine/mocks/webgpu.ts",
+      "require": "./src/engine/mocks/webgpu.ts"
+    },
+    "./src/engine/mocks/assets": {
+      "types": "./src/engine/mocks/assets.ts",
+      "import": "./src/engine/mocks/assets.ts",
+      "require": "./src/engine/mocks/assets.ts"
+    },
+    "./src/engine/mocks/webgl": {
+      "types": "./src/engine/mocks/webgl.ts",
+      "import": "./src/engine/mocks/webgl.ts",
+      "require": "./src/engine/mocks/webgl.ts"
+    },
+    "./src/setup/webgpu": {
+      "types": "./src/setup/webgpu.ts",
+      "import": "./src/setup/webgpu.ts",
+      "require": "./src/setup/webgpu.ts"
+    },
+    "./src/setup/headless-webgl": {
+      "types": "./src/setup/headless-webgl.ts",
+      "import": "./src/setup/headless-webgl.ts",
+      "require": "./src/setup/headless-webgl.ts"
+    }
+  },
+  "files": [
+    "dist",
+    "src"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "packages/test-utils"
+  },
+  "scripts": {
+    "build": "tsup src/index.ts --format esm,cjs --dts",
+    "test": "vitest run --passWithNoTests",
+    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run",
+    "test:webgl": "cross-env TEST_TYPE=webgl vitest run"
+  },
+  "peerDependencies": {
+    "@quake2ts/engine": "workspace:^",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@webgpu/types": "^0.1.74",
+    "gl-matrix": "^3.4.4",
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.65.1",
+    "pngjs": "^7.0.0",
+    "serve-handler": "^6.1.8",
+    "vitest": "^5.1.1",
+    "webgpu": "^0.6.2"
+  },
+  "peerDependenciesMeta": {
+    "@quake2ts/engine": {
+      "optional": true
+    },
+    "@quake2ts/game": {
+      "optional": true
+    },
+    "@quake2ts/server": {
+      "optional": true
+    },
+    "@quake2ts/shared": {
+      "optional": true
+    },
+    "@webgpu/types": {
+      "optional": true
+    },
+    "gl-matrix": {
+      "optional": true
+    },
+    "pixelmatch": {
+      "optional": true
+    },
+    "playwright": {
+      "optional": true
+    },
+    "pngjs": {
+      "optional": true
+    },
+    "serve-handler": {
+      "optional": true
+    },
+    "webgpu": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.2.0",
+    "@quake2ts/bsp-tools": "workspace:*",
+    "@quake2ts/engine": "workspace:^",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/server": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@types/jsdom": "^30.0.0",
+    "@types/pngjs": "^6.0.5",
+    "@types/serve-handler": "^6.1.4",
+    "@types/upng-js": "^2.1.5",
+    "@webgpu/types": "^0.1.74",
+    "fake-indexeddb": "^6.2.8",
+    "gl-matrix": "^3.4.4",
+    "jsdom": "^31.0.1",
+    "pixelmatch": "^8.0.0",
+    "playwright": "^1.65.1",
+    "pngjs": "^7.0.0",
+    "serve-handler": "^6.1.8",
+    "tsup": "^9.0.0",
+    "typescript": "npm:@typescript/typescript6@^6.0.2",
+    "vitest": "^5.1.1",
+    "webgpu": "^0.6.2"
+  },
+  "dependencies": {
+    "@quake2ts/bsp-tools": "workspace:*",
+    "upng-js": "^2.1.0"
+  }
+}

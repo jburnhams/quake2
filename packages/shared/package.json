@@ -1,0 +1,55 @@
+{
+  "name": "@quake2ts/shared",
+  "version": "0.0.878",
+  "description": "Shared math, physics, and protocol helpers for the Quake II TypeScript port.",
+  "type": "module",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
+    },
+    "./browser": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/browser/index.js"
+    },
+    "./testing": "./src/testing.ts",
+    "./bsp/collision": "./src/bsp/collision.ts",
+    "./bsp/contents": "./src/bsp/contents.ts",
+    "./bsp/fromBsp": "./src/bsp/fromBsp.ts",
+    "./pmove": "./src/pmove/index.ts",
+    "./math/vec3": "./src/math/vec3.ts",
+    "./net/netchan": "./src/net/netchan.ts"
+  },
+  "unpkg": "./dist/browser/index.js",
+  "jsdelivr": "./dist/browser/index.js",
+  "files": [
+    "dist",
+    "src"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "packages/shared"
+  },
+  "scripts": {
+    "build": "pnpm run build:types && pnpm run build:bundles",
+    "build:types": "tsc -b",
+    "build:bundles": "tsup",
+    "test": "pnpm run test:unit",
+    "test:unit": "vitest run",
+    "test:integration": "echo 'Integration tests moved to unit-node' && exit 0"
+  },
+  "devDependencies": {
+    "gl-matrix": "^3.4.4",
+    "tsup": "^9.0.0",
+    "strata-binary": "workspace:*",
+    "strata-math": "workspace:*",
+    "@quake2ts/formats": "workspace:*"
+  }
+}

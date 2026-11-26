@@ -1,6 +1,6 @@
 # Quake 2 Demo Parsing
 
-Which `.dm2` files the parser (`quake2ts/packages/engine/src/demo/parser.ts`) reads, and what is known about the ones it does not. Rewritten 2026-11-26: the earlier version of this page described protocol 25 as 3.20 with every opcode shifted by 5, which the demo's own bytes contradict (see below).
+Which `.dm2` files the parser (`packages/engine/src/demo/parser.ts`) reads, and what is known about the ones it does not. Rewritten 2026-11-26: the earlier version of this page described protocol 25 as 3.20 with every opcode shifted by 5, which the demo's own bytes contradict (see below).
 
 ## Supported
 
@@ -13,11 +13,11 @@ Frames are deltas: each `svc_frame` names the frame it deltas from, and `ClientF
 
 Each demo block is a whole network message (`CL_WriteDemoMessage` writes `net_message` past the netchan header), so blocks parse one at a time with the protocol carried over (`DemoPlaybackController`).
 
-**Test demo:** `demos/q2demo1.dm2` in the demo pak0 (Quake 2 3.14 demo, protocol 31; fetched by `quake2ts/scripts/fetch-paks.sh`). All 632 frames parse with no errors and every one rebuilds from the frame it names (`engine/tests/unit-node/demo/real_demo.test.ts`).
+**Test demo:** `demos/q2demo1.dm2` in the demo pak0 (Quake 2 3.14 demo, protocol 31; fetched by `scripts/fetch-paks.sh`). All 632 frames parse with no errors and every one rebuilds from the frame it names (`engine/tests/unit-node/demo/real_demo.test.ts`).
 
 ## Not supported: protocol 25 (Quake 2 3.00)
 
-The committed `quake2ts/pak.pak` holds `demos/demo1.dm2`, a 3.00 demo. The parser refuses it (`UnsupportedProtocolError`; `DemoValidator` gives the reason). Jonathan's decision, 2026-11-26: use the 3.14 demo rather than reverse-engineer 3.00.
+The committed `pak.pak` holds `demos/demo1.dm2`, a 3.00 demo. The parser refuses it (`UnsupportedProtocolError`; `DemoValidator` gives the reason). Jonathan's decision, 2026-11-26: use the 3.14 demo rather than reverse-engineer 3.00.
 
 Why: no source or spec covers 3.00. id released 3.21's source; the DM2 spec ([demospecs.half-empty.de/dm2](http://demospecs.half-empty.de/dm2)) starts at 3.05 and removed the 3.00 codes. What the file itself shows, if someone takes it up:
 
@@ -33,5 +33,5 @@ A nested parser (the rerelease's `svc_spawnbaselineblast`) must be given the out
 ## References
 
 - Vanilla Q2 source: `full/` (3.21); rerelease: `rerelease/`
-- Parser: `quake2ts/packages/engine/src/demo/parser.ts`, handlers in `demo/protocol/`
-- Frame history: `quake2ts/packages/engine/src/network/frames.ts`
+- Parser: `packages/engine/src/demo/parser.ts`, handlers in `demo/protocol/`
+- Frame history: `packages/engine/src/network/frames.ts`

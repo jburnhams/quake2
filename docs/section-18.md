@@ -9,7 +9,7 @@ This document outlines the remaining work to achieve a "perfect port" of Quake I
 **Source Code References**:
 - `/home/user/quake2/rerelease/` - Quake II Rerelease C++ source (primary reference)
 - `/home/user/quake2/full/` - Original Quake II 1.11 C source (fallback reference)
-- `/home/user/quake2/quake2ts/packages/` - TypeScript port
+- `/home/user/quake2/packages/` - TypeScript port
 
 The tasks have been split into multiple sub-documents to enable parallel development across different feature areas.
 

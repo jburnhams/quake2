@@ -1,11 +1,11 @@
 name: id source
-description: Restores or fetches id Software's original source into quake2ts/.id-source (see quake2ts/scripts/fetch-id-source.sh).
+description: Restores or fetches id Software's original source into .id-source (see scripts/fetch-id-source.sh).
 runs:
   using: composite
   steps:
     - uses: actions/cache@v6
       with:
-        path: quake2ts/.id-source
-        key: id-source-${{ hashFiles('quake2ts/scripts/id-source.pins') }}
+        path: .id-source
+        key: id-source-${{ hashFiles('scripts/id-source.pins') }}
     - shell: sh
-      run: quake2ts/scripts/fetch-id-source.sh
+      run: scripts/fetch-id-source.sh

@@ -1,0 +1,85 @@
+{
+  "name": "@quake2ts/engine",
+  "version": "0.0.878",
+  "type": "module",
+  "main": "./dist/cjs/index.cjs",
+  "module": "./dist/esm/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/esm/index.js",
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/esm/index.js"
+    },
+    "./assets/pak.js": {
+      "types": "./dist/types/assets/pak.d.ts",
+      "import": "./dist/esm/assets/pak.js",
+      "require": "./dist/cjs/assets/pak.cjs"
+    },
+    "./assets/bsp.js": {
+      "types": "./dist/types/assets/bsp.d.ts",
+      "import": "./dist/esm/assets/bsp.js",
+      "require": "./dist/cjs/assets/bsp.cjs"
+    },
+    "./browser": {
+      "types": "./dist/types/index.d.ts",
+      "default": "./dist/browser/index.js"
+    }
+  },
+  "unpkg": "./dist/browser/index.js",
+  "jsdelivr": "./dist/browser/index.js",
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jburnhams/quake2.git",
+    "directory": "packages/engine"
+  },
+  "scripts": {
+    "build": "pnpm run build:types && pnpm run build:bundles",
+    "build:types": "tsc -b",
+    "build:bundles": "tsup",
+    "test": "vitest run",
+    "test:unit": "pnpm run test:unit:node && pnpm run test:unit:jsdom",
+    "test:unit:node": "cross-env TEST_TYPE=unit-node vitest run --config vitest.node.ts --passWithNoTests",
+    "test:unit:jsdom": "cross-env TEST_TYPE=unit-jsdom vitest run --config vitest.jsdom.ts --passWithNoTests",
+    "test:integration": "cross-env TEST_TYPE=integration vitest run --config vitest.integration.ts --passWithNoTests",
+    "test:webgpu": "cross-env TEST_TYPE=webgpu vitest run --config vitest.webgpu.ts --passWithNoTests",
+    "test:webgl": "cross-env TEST_TYPE=webgl vitest run --config vitest.webgl.ts --passWithNoTests",
+    "test:webgl:watch": "cross-env TEST_TYPE=webgl vitest watch --config vitest.webgl.ts",
+    "test:webgl:update": "cross-env UPDATE_VISUAL=1 TEST_TYPE=webgl vitest run --config vitest.webgl.ts",
+    "test:webgl:ui": "cross-env TEST_TYPE=webgl vitest --ui --config vitest.webgl.ts",
+    "test:visual": "vitest run tests/integration/visual",
+    "test:visual:update": "vitest run tests/integration/visual --update-snapshots",
+    "test:visual:watch": "vitest tests/integration/visual"
+  },
+  "_comment_gl": "gl is optional only in test-utils and installed on demand and in the webgl github action",
+  "peerDependencies": {
+    "@quake2ts/shared": "workspace:*",
+    "gl-matrix": "^3.4.4"
+  },
+  "dependencies": {
+    "@wasm-audio-decoders/ogg-vorbis": "^0.1.20"
+  },
+  "devDependencies": {
+    "@napi-rs/canvas": "^1.2.0",
+    "@quake2ts/game": "workspace:*",
+    "@quake2ts/shared": "workspace:*",
+    "@quake2ts/test-utils": "workspace:^",
+    "@types/node": "^26.6.6",
+    "@webgpu/types": "^0.1.74",
+    "cross-env": "^10.1.0",
+    "fake-indexeddb": "^6.2.8",
+    "gl-matrix": "^3.4.4",
+    "pixelmatch": "^8.0.0",
+    "pngjs": "^7.0.0",
+    "tsup": "^9.0.0",
+    "vitest": "^5.1.1",
+    "webgpu": "^0.6.2",
+    "@quake2ts/formats": "workspace:*",
+    "strata-vfs": "workspace:*"
+  }
+}

@@ -10,20 +10,17 @@ jobs:
   explorer:
     name: Explorer (typecheck, tests, build)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: quake2ts
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: quake2ts/package.json
+          package_json_file: package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: 'pnpm'
-          cache-dependency-path: quake2ts/pnpm-lock.yaml
-      # id's C source, which the oracles build and the labs quote (quake2ts/scripts/fetch-id-source.sh).
+          cache-dependency-path: pnpm-lock.yaml
+      # id's C source, which the oracles build and the labs quote (scripts/fetch-id-source.sh).
       - name: id source
         uses: ./.github/actions/id-source
       - name: Install dependencies
