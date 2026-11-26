@@ -3,9 +3,8 @@ import {
   ClientCommand,
   NetworkMessageBuilder,
   BinaryStream,
-  crc8,
   BinaryWriter,
-  writeMoveCommands,
+  writeMove,
   CMD_BACKUP,
   UserCommand,
   Vec3
@@ -80,8 +79,6 @@ export class ClientConnection implements NetworkMessageHandler {
   public entities = new Map<number, EntityState>();
 
   public latestServerFrame = 0;
-  private frameCRCs = new Map<number, number>();
-  private currentPacketCRC = 0;
   private commandHistory: UserCommand[] = [];
 
   constructor(options: ClientConnectionOptions) {
@@ -143,7 +140,6 @@ export class ClientConnection implements NetworkMessageHandler {
     this.commandHistory = [];
     this.latestServerFrame = 0;
     this.parser = null;
-    this.frameCRCs.clear();
   }
 
   public getState(): ConnectionState {
@@ -167,9 +163,6 @@ export class ClientConnection implements NetworkMessageHandler {
     if (!processedData || processedData.byteLength === 0) {
       return;
     }
-
-    // Calculate CRC for potential frame update (used in command acknowledgement)
-    this.currentPacketCRC = crc8(processedData);
 
     const stream = new BinaryStream(processedData.buffer as ArrayBuffer);
     // Reuse parser or create new? Parser maintains some state?
@@ -199,11 +192,7 @@ export class ClientConnection implements NetworkMessageHandler {
     }
 
     const writer = new BinaryWriter();
-    writer.writeByte(ClientCommand.move);
-    const checksum = this.frameCRCs.get(this.latestServerFrame) || 0;
-    writer.writeByte(checksum);
-    writer.writeLong(this.latestServerFrame);
-    writeMoveCommands(writer, this.commandHistory);
+    writeMove(writer, this.latestServerFrame, this.commandHistory, this.netchan.outgoingSequence + 1);
 
     this.transmit(writer.getData());
   }
@@ -291,7 +280,6 @@ export class ClientConnection implements NetworkMessageHandler {
     if (frame.serverFrame > this.latestServerFrame) {
       this.latestServerFrame = frame.serverFrame;
     }
-    this.frameCRCs.set(frame.serverFrame, this.currentPacketCRC);
 
     const packetEntities = frame.packetEntities;
     if (!packetEntities.delta) {

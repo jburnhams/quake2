@@ -1,5 +1,7 @@
 import { BinaryWriter } from '../io/binaryWriter.js';
 import { UserCommand } from './usercmd.js';
+import { ClientCommand } from './ops.js';
+import { blockSequenceCrcByte } from './crc.js';
 
 export function writeUserCommand(writer: BinaryWriter, cmd: UserCommand): void {
   // msec (byte)
@@ -94,4 +96,23 @@ export function writeMoveCommands(writer: BinaryWriter, history: readonly UserCo
   writeDeltaUserCommand(writer, NULL_USER_COMMAND, oldest);
   writeDeltaUserCommand(writer, oldest, old);
   writeDeltaUserCommand(writer, old, at(0));
+}
+
+/**
+ * A whole clc_move as CL_SendCmd (client/cl_input.c) writes it: the command byte, a checksum
+ * byte, the last server frame the client has (-1 for none, so the server sends a full frame), and
+ * the three commands. The checksum is COM_BlockSequenceCRCByte over the bytes after it, keyed by
+ * `sequence`, the netchan sequence of the packet that will carry the move; the server works it out
+ * again from its incoming sequence and ignores the rest of the packet when it differs.
+ * Until 2026-11-26 the port sent a CRC-8 of the last server packet instead, which the server only
+ * logged.
+ */
+export function writeMove(writer: BinaryWriter, lastFrame: number, history: readonly UserCommand[], sequence: number): void {
+  writer.writeByte(ClientCommand.move);
+  const checksumAt = writer.getOffset();
+  writer.writeByte(0);
+  writer.writeLong(lastFrame);
+  writeMoveCommands(writer, history);
+  const bytes = writer.getBuffer();
+  bytes[checksumAt] = blockSequenceCrcByte(bytes.subarray(checksumAt + 1, writer.getOffset()), sequence);
 }

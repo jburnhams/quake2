@@ -2,7 +2,7 @@ import { WebSocketNetDriver } from './net/nodeWsDriver.js';
 import { createGame, GameExports, GameImports, GameEngine, Entity, MulticastType, GameStateSnapshot, Solid } from '@quake2ts/game';
 import { Client, createClient, ClientState, COMMAND_MSEC } from './client.js';
 import { ClientMessageParser, type MoveCommands } from './protocol.js';
-import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, crc8, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
+import { BinaryWriter, ServerCommand, BinaryStream, UserCommand, traceBox, CollisionModel, UPDATE_BACKUP, MAX_CONFIGSTRINGS, MAX_EDICTS, EntityState, CollisionEntityIndex, inPVS, inPHS, blockSequenceCrcByte, NetDriver, ConfigStringIndex } from '@quake2ts/shared';
 import { parseBsp, PakArchive } from '@quake2ts/engine';
 import fs from 'node:fs/promises';
 import * as path from 'node:path';
@@ -619,21 +619,22 @@ export class DedicatedServer implements GameEngine {
      * packet repeats stand in for theirs, and beyond two the last command runs again, up to 20.
      * Until 2026-11-25 the port kept only the newest command and ran it once per server frame.
      */
-    private handleMove(client: Client, commands: MoveCommands, checksum: number, lastFrame: number) {
-        if (lastFrame > 0 && lastFrame <= client.lastFrame && lastFrame > client.lastFrame - UPDATE_BACKUP) {
-             const frameIdx = lastFrame % UPDATE_BACKUP;
-             const frame = client.frames[frameIdx];
+    private handleMove(client: Client, commands: MoveCommands, checksum: number, lastFrame: number, checksummed: Uint8Array): boolean {
+        // Not in the game yet: the commands are read and dropped, and the packet goes on.
+        if (client.state !== ClientState.Active) return true;
 
-             if (frame.packetCRC !== checksum) {
-                 console.warn(`Client ${client.index} checksum mismatch for frame ${lastFrame}: expected ${frame.packetCRC}, got ${checksum}`);
-             }
+        // "if the checksum fails, ignore the rest of the packet": the client keyed it by the
+        // sequence of the packet carrying it, which is the netchan's incoming sequence here.
+        const expected = blockSequenceCrcByte(checksummed, client.netchan.incomingSequence);
+        if (expected !== checksum) {
+            console.warn(`Failed command checksum for client ${client.index} (${checksum} != ${expected})/${client.netchan.incomingSequence}`);
+            return false;
         }
 
-        client.lastMessage = this.sv.frame;
         client.commandCount++;
 
         // Over the flood limit the frame drops the client; run none of its commands meanwhile.
-        if (client.commandCount > (this.options.floodLimit ?? 200)) return;
+        if (client.commandCount > (this.options.floodLimit ?? 200)) return true;
 
         // SV_ClientThink: each command spends its msec from the time SV_GiveMsec gave.
         const think = (cmd: UserCommand) => {
@@ -654,6 +655,7 @@ export class DedicatedServer implements GameEngine {
         }
         think(commands.current);
         client.lastCmd = commands.current;
+        return true;
     }
 
     private handleUserInfo(client: Client, info: string) {
@@ -871,6 +873,9 @@ export class DedicatedServer implements GameEngine {
                 if (!data) {
                     continue;
                 }
+                // SV_ReadPackets: any packet the netchan accepts, a keepalive too, keeps the
+                // client from timing out (until 2026-11-26 only a clc_move did).
+                client.lastMessage = this.sv.frame;
 
                 if (data.length === 0) {
                     continue;
@@ -885,7 +890,7 @@ export class DedicatedServer implements GameEngine {
 
                 const reader = new BinaryStream(buffer);
                 const parser = new ClientMessageParser(reader, {
-                    onMove: (checksum, lastFrame, commands) => this.handleMove(client, commands, checksum, lastFrame),
+                    onMove: (checksum, lastFrame, commands, checksummed) => this.handleMove(client, commands, checksum, lastFrame, checksummed),
                     onUserInfo: (info) => this.handleUserInfo(client, info),
                     onStringCmd: (cmd) => this.handleStringCmd(client, cmd),
                     onNop: () => {},
@@ -1081,7 +1086,6 @@ export class DedicatedServer implements GameEngine {
         writer.writeShort(0);
 
         const frameData = writer.getData();
-        currentFrame.packetCRC = crc8(frameData);
 
         const packet = client.netchan.transmit(frameData);
         client.net.send(packet);

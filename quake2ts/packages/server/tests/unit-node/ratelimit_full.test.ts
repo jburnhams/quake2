@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated';
 import { ClientState } from '../../src/client';
 import { NetworkTransport } from '../../src/transport';
-import { NetDriver, NetChan, ClientCommand, BinaryWriter, writeMoveCommands } from '@quake2ts/shared';
+import { NetDriver, NetChan, BinaryWriter, writeMove } from '@quake2ts/shared';
 import { MockNetDriver } from '@quake2ts/test-utils';
 
 // Mock Transport (Server Side)
@@ -42,16 +42,14 @@ describe('Full Stack Rate Limiting', () => {
         client.state = ClientState.Active;
         client.edict = {}; // Mock edict
 
-        // 2. Prepare a movement packet
-        const writer = new BinaryWriter();
-        writer.writeByte(ClientCommand.move);
-        writer.writeByte(0); // Checksum
-        writer.writeLong(0); // LastFrame
-        // Three UserCommands (oldest, old, new), as CL_SendCmd sends them
+        // 2. A movement packet: three UserCommands (oldest, old, new), as CL_SendCmd sends them,
+        // checksummed for the sequence of the packet that carries it
         const cmd = { msec: 16, buttons: 0, angles: { x: 0, y: 0, z: 0 }, forwardmove: 0, sidemove: 0, upmove: 0, impulse: 0, lightlevel: 0, sequence: 0 };
-        writeMoveCommands(writer, [cmd, cmd, cmd]);
-
-        const packetData = writer.getData();
+        const move = (sequence: number) => {
+            const writer = new BinaryWriter();
+            writeMove(writer, 0, [cmd, cmd, cmd], sequence);
+            return writer.getData();
+        };
 
         // 3. Flood packets
         // Send 300 packets via NetChan
@@ -59,7 +57,7 @@ describe('Full Stack Rate Limiting', () => {
 
         for (let i = 0; i < packetCount; i++) {
             // NetChan wraps it
-            const netPacket = clientNetChan.transmit(packetData);
+            const netPacket = clientNetChan.transmit(move(clientNetChan.outgoingSequence + 1));
 
             // Simulate receiving on server driver
             // MockNetDriver.receiveMessage calls handlers
