@@ -134,9 +134,8 @@ function createVanillaDemoData(): ArrayBuffer {
   };
 
   // --- 1. ServerData (Vanilla) ---
-  // Protocol 34 svc_serverdata is 13 (Wire).
-  // The parser translates initial cmd 13 to ServerCommand.serverdata (12).
-  writeByte(13); // svc_serverdata
+  // Protocol 34 numbers its commands as svc_ops_e in qcommon/qcommon.h: svc_serverdata is 12.
+  writeByte(12); // svc_serverdata
   writeLong(34); // Protocol 34
   writeLong(12345); // serverCount
   writeByte(0); // attractLoop (0=game, 1=demo)
@@ -145,18 +144,12 @@ function createVanillaDemoData(): ArrayBuffer {
   writeString("demo1"); // levelName
 
   // --- 2. ConfigString ---
-  // Protocol 34 svc_configstring is 14 (Wire).
-  // ServerCommand.configstring is 13.
-  // Parser maps 14 -> 13.
-  writeByte(14); // svc_configstring (Wire 14)
+  writeByte(13); // svc_configstring
   writeShort(0); // index
   writeString("Vanilla v3.20");
 
   // --- 3. Frame ---
-  // Protocol 34 svc_frame is 5.
-  // ServerCommand.frame is 20.
-  // Parser maps 5 -> 20.
-  writeByte(5); // svc_frame (Wire 5)
+  writeByte(20); // svc_frame
   writeLong(1); // ServerFrame
   writeLong(0); // DeltaFrame
   writeByte(0); // SuppressCount
@@ -169,8 +162,7 @@ function createVanillaDemoData(): ArrayBuffer {
   writeLong(0); // Stats bits
 
   // PacketEntities (REQUIRED after playerinfo in parser logic)
-  // Protocol 34 svc_packetentities is 18.
-  writeByte(18); // svc_packetentities (Wire 18)
+  writeByte(18); // svc_packetentities
   writeByte(0); // Header
   writeByte(0); // Entity Number 0
 

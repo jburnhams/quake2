@@ -102,39 +102,9 @@ describe('Streaming Parser E2E', () => {
             .writeString("maps/test") // LevelName
             .endBlock();
 
-        // Block 3: ConfigString
-        // Protocol 34 svc_configstring is 13 or 14?
-        // 14 is configstring in Q2.
-        // But writer test expects 13? No, writer.test.ts defines WIRE_CONFIGSTRING=14.
-        // Wait, e2e test wrote 13 in original.
-        // Let's use ServerCommand.configstring (13 in shared enum).
-        // If I write 13, and Parser (legacy) maps 13 to serverdata (LegacyProtocolHandler translates 13->serverdata).
-        // Wait, `LegacyProtocolHandler`:
-        // if (cmd===7) serverdata
-        // if (cmd===12) serverdata
-        // if (cmd===0) bad
-        // translated = cmd + 5.
-        // if (13) -> 18 (packetentities).
-        // So 13 is NOT configstring in Legacy.
-        // 14 is configstring. 14+5=19 (deltapacketentities??).
-        // Let's check `LegacyProtocolHandler`.
-        // translated = cmd + 5.
-        // `ServerCommand` enum:
-        // configstring = 13.
-        // Legacy wire = 14.
-        // If I send 13: 13+5 = 18 = packetentities.
-        // If I send 14: 14+5 = 19 = deltapacketentities.
-        // Something is wrong with Legacy mapping or I am misremembering.
-        // `LegacyProtocolHandler`:
-        // `PROTO34_MAP` in `quake2.ts` (which is used for version 34) handles 34.
-        // `LegacyProtocolHandler` (for older) uses `cmd+5`.
-        // `streaming.e2e` sets protocol 34.
-        // So it uses `Quake2ProtocolHandler` (which has `PROTO34_MAP`).
-        // `PROTO34_MAP` maps 14 -> `ServerCommand.configstring` (13).
-        // So we should write 14.
-
+        // Block 3: ConfigString (svc_configstring is 13 in svc_ops_e, qcommon/qcommon.h)
         builder.startBlock()
-            .writeByte(14) // svc_configstring (Wire 14)
+            .writeByte(ServerCommand.configstring)
             .writeShort(1)
             .writeString("gamename")
             .endBlock();
@@ -187,9 +157,8 @@ describe('Streaming Parser E2E', () => {
 
         // Split Print command
         // Block 2: Command + Level + Part of string
-        // Protocol 34 print = 11.
         builder.startBlock()
-            .writeByte(11) // ServerCommand.print (Wire 11)
+            .writeByte(ServerCommand.print)
             .writeByte(1) // Level
             .writeBytes([ 'H'.charCodeAt(0), 'e'.charCodeAt(0) ])
             .endBlock();

@@ -15,11 +15,11 @@ describe('MessageCollector', () => {
     };
 
     const createServerDataCommand = (): Uint8Array => {
-        // svc_serverdata (Protocol 34 = 13)
+        // svc_serverdata (12 in svc_ops_e, qcommon/qcommon.h)
         // protocol(34), servercount(1), attract(0), gamedir, playernum(0), map
         // minimal
         const buffer = [];
-        buffer.push(13); // svc_serverdata
+        buffer.push(12); // svc_serverdata
         // protocol 34
         buffer.push(34, 0, 0, 0);
         // servercount 1
@@ -39,9 +39,9 @@ describe('MessageCollector', () => {
 
     const createPrintCommand = (id: number, text: string): Uint8Array => {
         const textBytes = new TextEncoder().encode(text);
-        // svc_print is 11 in Legacy (Protocol 34)
+        // svc_print is 10 in svc_ops_e (qcommon/qcommon.h)
         const cmd = new Uint8Array(1 + 1 + textBytes.length + 1);
-        cmd[0] = 11; // svc_print
+        cmd[0] = 10; // svc_print
         cmd[1] = id;
         cmd.set(textBytes, 2);
         cmd[2 + textBytes.length] = 0; // Null terminator

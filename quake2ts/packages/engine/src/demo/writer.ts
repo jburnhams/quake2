@@ -31,9 +31,6 @@ function toNetEntity(e: EntityState): NetEntityState {
     };
 }
 
-// Use Legacy opcodes for testing until we unify
-const PROTO34_SERVERDATA = 13;
-
 export class MessageWriter {
     private writer: BinaryWriter;
     private protocol: number;
@@ -47,37 +44,9 @@ export class MessageWriter {
         return this.writer.getData();
     }
 
-    private getOpcode(cmd: ServerCommand): number {
-        if (this.protocol === 34) {
-            switch(cmd) {
-                case ServerCommand.serverdata: return 13;
-                case ServerCommand.frame: return 5;
-                case ServerCommand.playerinfo: return 17;
-                case ServerCommand.packetentities: return 18;
-                case ServerCommand.deltapacketentities: return 19;
-                case ServerCommand.print: return 11;
-                case ServerCommand.centerprint: return 16;
-                case ServerCommand.stufftext: return 12;
-                case ServerCommand.sound: return 10;
-                case ServerCommand.temp_entity: return 9;
-                case ServerCommand.configstring: return 14;
-                case ServerCommand.spawnbaseline: return 15;
-                case ServerCommand.layout: return 7;
-                case ServerCommand.inventory: return 6;
-                case ServerCommand.muzzleflash: return 8;
-                case ServerCommand.muzzleflash2: return 20;
-            }
-        }
-        return cmd;
-    }
-
-    writeCommand(cmd: ServerCommand, protocol?: number): void {
-        const proto = protocol ?? this.protocol;
-        if (proto === 34 || proto === 0) {
-             this.writer.writeByte(this.getOpcode(cmd));
-        } else {
-             this.writer.writeByte(cmd);
-        }
+    /** Every protocol this writes numbers its commands as ServerCommand does (svc_ops_e for 34). */
+    writeCommand(cmd: ServerCommand, _protocol?: number): void {
+        this.writer.writeByte(cmd);
     }
 
     writeServerData(protocol: number, serverCount: number, attractLoop: number, gameDir: string, playerNum: number, levelName: string): void {
