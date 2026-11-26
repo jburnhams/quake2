@@ -1,7 +1,7 @@
 name: C Oracle (differential tests)
 
 # Runs the TS collision and player movement against id Software's cmodel.c and the
-# rerelease's p_move.cpp, the message code and ref_gl's model loader (see quake2ts/oracle) on the same random
+# rerelease's p_move.cpp, the message code and ref_gl's model loader (see oracle) on the same random
 # inputs. Any difference fails the build. The job name is kept for branch protection.
 on:
   push:
@@ -13,22 +13,19 @@ jobs:
   oracle:
     name: Collision vs cmodel.c
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: quake2ts
     steps:
       - uses: actions/checkout@v7
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: quake2ts/package.json
+          package_json_file: package.json
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: 'pnpm'
-          cache-dependency-path: quake2ts/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-      # id's C source, which the oracles build and the labs quote (quake2ts/scripts/fetch-id-source.sh).
+      # id's C source, which the oracles build and the labs quote (scripts/fetch-id-source.sh).
       - name: id source
         uses: ./.github/actions/id-source
       # The loader oracle reads every map, model and sprite in the demo pak0.pak.

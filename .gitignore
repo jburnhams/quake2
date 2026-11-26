@@ -1,14 +1,28 @@
-.vite
 node_modules/
+.pnpm-store
 dist/
+.vite/
 .turbo/
+coverage
+*.log
+*.tsbuildinfo
+test-results/
+results.json
+junit.xml
+stats/
 
-# Visual Test Artifacts
+# Visual test artifacts
+__screenshots__
 **/__snapshots__/actual/
 **/__snapshots__/diff/
 **/__snapshots__/stats/
 visual-tests.json
 test_output/
 
-# GitHub Pages
-pages-dist/
+# C reference oracle build output
+oracle/build/
+
+# Demo pak fetched by scripts/fetch-paks.sh (never committed)
+.paks/
+# id Software's source, fetched by scripts/fetch-id-source.sh (see scripts/id-source.pins)
+.id-source/

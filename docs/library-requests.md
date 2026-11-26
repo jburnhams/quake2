@@ -69,7 +69,7 @@ This document outlines suggested improvements for the `quake2ts` library to faci
 
 ### [x] 1. Export `test-utils` in Package Configuration
 **Problem:** The `test-utils` package is present in `node_modules` but not exported via the main `package.json` `exports` field, requiring fragile path aliases to access.
-**Status:** Validated. The `quake2ts/package.json` exports correctly point to the existing `dist` structure (`./packages/test-utils/dist/index.js` and `index.cjs`). No changes were required to `quake2ts/package.json`.
+**Status:** Validated. The `package.json` exports correctly point to the existing `dist` structure (`./packages/test-utils/dist/index.js` and `index.cjs`). No changes were required to `package.json`.
 
 ### [x] 2. Rendering Mocks
 **Problem:** Tests for `UniversalViewer` and adapters require extensive manual mocking of `quake2ts/engine` internals (WebGL context, Pipelines, Camera).

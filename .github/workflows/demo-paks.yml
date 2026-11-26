@@ -10,8 +10,8 @@ on:
     paths:
       - .github/workflows/demo-paks.yml
       - .github/actions/demo-paks/**
-      - quake2ts/scripts/fetch-paks.sh
-      - quake2ts/scripts/demo-paks.sha256
+      - scripts/fetch-paks.sh
+      - scripts/demo-paks.sha256
 
 permissions:
   contents: write
@@ -19,9 +19,6 @@ permissions:
 jobs:
   mirror:
     runs-on: ubuntu-24.04
-    defaults:
-      run:
-        working-directory: quake2ts
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
@@ -31,7 +28,7 @@ jobs:
           scripts/fetch-paks.sh --unpinned 2> fetch.log || { cat fetch.log; exit 1; }
           cat fetch.log
           {
-            echo '### Pin these in quake2ts/scripts/demo-paks.sha256'
+            echo '### Pin these in scripts/demo-paks.sha256'
             echo '```'
             grep -E '  (archive|pak)$' fetch.log
             echo '```'
@@ -44,7 +41,7 @@ jobs:
           fi
           gh release view demo-paks >/dev/null 2>&1 || gh release create demo-paks \
             --target main --prerelease --title "Quake 2 demo data" \
-            --notes "id Software's original, unmodified Quake 2 demo (q2-314-demo-x86.exe), redistributed under its licence for this repo's tests. Fetched with quake2ts/scripts/fetch-paks.sh."
+            --notes "id Software's original, unmodified Quake 2 demo (q2-314-demo-x86.exe), redistributed under its licence for this repo's tests. Fetched with scripts/fetch-paks.sh."
           gh release upload demo-paks .paks/q2-314-demo-x86.exe
 
   verify:

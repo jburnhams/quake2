@@ -30,7 +30,7 @@ No setup needed - D3D12 is built-in on Windows 10+
 ### Running Integration Tests
 
 ```bash
-cd quake2ts/packages/engine
+cd packages/engine
 
 # Unit tests (work without GPU)
 pnpm test:unit tests/render/webgpu
@@ -46,20 +46,20 @@ Already configured in `package.json`:
 - `@webgpu/types@^0.1.74` - TypeScript definitions
 
 The `webgpu` package downloads platform-specific Dawn binaries during postinstall. pnpm 12 runs a
-dependency's install script only when `allowBuilds` in `quake2ts/pnpm-workspace.yaml` lists it
+dependency's install script only when `allowBuilds` in `pnpm-workspace.yaml` lists it
 (`esbuild` and `webgpu` are there); add a package there if it needs its postinstall.
 
 ## id Software's source
 
-Not committed. `quake2ts/scripts/fetch-id-source.sh [dir...]` fetches it into `quake2ts/.id-source/`
+Not committed. `scripts/fetch-id-source.sh [dir...]` fetches it into `.id-source/`
 (`full/`, `rerelease/`, `original/`, `fgd/`, `q2tools/`, the layout the repo root used to have, so a
 comment citing `full/qcommon/cmodel.c` still names the file), pinned by git tree hash in
-`quake2ts/scripts/id-source.pins`. `oracle/build.sh` and `apps/explorer/vite.config.ts` call it;
+`scripts/id-source.pins`. `oracle/build.sh` and `apps/explorer/vite.config.ts` call it;
 CI caches it with `.github/actions/id-source`. Never copy id's files back into the repository.
 
 ## Toolchain
 
-- Node 26 and pnpm 12 (`packageManager` in `quake2ts/package.json`; CI reads it from there).
+- Node 26 and pnpm 12 (`packageManager` in `package.json`; CI reads it from there).
 - TypeScript 7 compiles (`tsc -b`, the `typescript7` alias in `devDependencies`). TypeScript 7 ships no
   compiler API, so the `typescript` name points at `@typescript/typescript6`, the TypeScript team's
   API package: tsup's `--dts` needs it, and `packages/tools`' report generators import it directly.
@@ -92,15 +92,15 @@ CI caches it with `.github/actions/id-source`. Never copy id's files back into t
 - Integration tests (real GPU): ✅ 2/2 passing
 
 Files:
-- `quake2ts/packages/engine/src/render/webgpu/context.ts`
-- `quake2ts/packages/engine/src/render/webgpu/headless.ts`
-- `quake2ts/packages/engine/src/render/interface.ts`
-- `quake2ts/packages/test-utils/src/engine/mocks/webgpu.ts`
+- `packages/engine/src/render/webgpu/context.ts`
+- `packages/engine/src/render/webgpu/headless.ts`
+- `packages/engine/src/render/interface.ts`
+- `packages/test-utils/src/engine/mocks/webgpu.ts`
 
 Tests:
-- `quake2ts/packages/engine/tests/render/webgpu/context.test.ts`
-- `quake2ts/packages/engine/tests/render/webgpu/headless.test.ts`
-- `quake2ts/packages/engine/tests/render/webgpu/integration.test.ts`
+- `packages/engine/tests/render/webgpu/context.test.ts`
+- `packages/engine/tests/render/webgpu/headless.test.ts`
+- `packages/engine/tests/render/webgpu/integration.test.ts`
 
 ### Next Steps
 - Section 20-2: Core Resource Abstractions (buffers, textures, shaders)

@@ -10,21 +10,18 @@ jobs:
   integration:
     name: WebGpu Tests (Node 26)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: quake2ts
     steps:
       - uses: actions/checkout@v7
 
       - uses: pnpm/action-setup@v6
         with:
-          package_json_file: quake2ts/package.json
+          package_json_file: package.json
 
       - uses: actions/setup-node@v7
         with:
           node-version: 26
           cache: 'pnpm'
-          cache-dependency-path: quake2ts/pnpm-lock.yaml
+          cache-dependency-path: pnpm-lock.yaml
 
       # WebGPU headless testing requires Vulkan drivers
       - name: Install System Dependencies
@@ -59,6 +56,6 @@ jobs:
         with:
           name: visual-test-results
           path: |
-            quake2ts/visual-tests.json
-            quake2ts/packages/engine/tests/webgpu/visual/__snapshots__
-            quake2ts/packages/engine/tests/demo1/__snapshots__
+            visual-tests.json
+            packages/engine/tests/webgpu/visual/__snapshots__
+            packages/engine/tests/demo1/__snapshots__

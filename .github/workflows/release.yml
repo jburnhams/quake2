@@ -13,9 +13,6 @@ jobs:
     name: 'Bump Version on main'
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    defaults:
-      run:
-        working-directory: quake2ts
     steps:
       - name: 'Checkout source code'
         uses: 'actions/checkout@v7'
@@ -43,7 +40,7 @@ jobs:
           skip-tag: 'true'
         env:
           GITHUB_TOKEN: ${{ secrets.RELEASE_TOKEN }}
-          PACKAGEJSON_DIR: 'quake2ts'
+          PACKAGEJSON_DIR: '.'
 
       - name: 'Sync versions'
         run: node packages/tools/sync-versions.js
