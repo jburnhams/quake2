@@ -7,7 +7,7 @@
 // all of it, and the presets set them as other games in the family ship.
 import * as React from 'react';
 import { ButtonLink, Field, LineChart, Metric, MetricStrip, PropertyList, Slider, format } from 'strata-react';
-import pmoveCpp from '../../../../../../rerelease/p_move.cpp?raw';
+import pmoveCpp from '../../../../../.id-source/rerelease/p_move.cpp?raw';
 import frameTs from '../../../../../packages/shared/src/pmove/frame.ts?raw';
 import { useNumberParams, type NumberParam } from '../params';
 import { excerpt } from '../source/excerpt';

@@ -19,3 +19,5 @@ oracle/build/
 
 # Demo pak fetched by scripts/fetch-paks.sh (never committed)
 .paks/
+# id Software's source, fetched by scripts/fetch-id-source.sh (see scripts/id-source.pins)
+.id-source/

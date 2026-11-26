@@ -16,7 +16,7 @@
 #include <setjmp.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include "../../full/ref_gl/gl_local.h"
+#include "full/ref_gl/gl_local.h"
 
 extern model_t mod_known[];
 extern model_t *loadmodel;

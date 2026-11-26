@@ -1,26 +1,32 @@
-// The code a lab runs, shown beside it: id's original and the port, each cut from the repository's
-// own copy (excerpt.ts) so what is shown is what runs, with where it came from, its licence and a
-// link to the lines. id's code is GPL-2.0, as the port is; the attribution line says so on every
+// The code a lab runs, shown beside it: id's original and the port, each cut from the file itself
+// (excerpt.ts) so what is shown is what runs, with where it came from, its licence and a link to
+// the lines. id's files are read from quake2ts/.id-source (scripts/fetch-id-source.sh, pinned in
+// scripts/id-source.pins) and linked in id's own repositories at those pinned commits. id's code is GPL-2.0, as the port is; the attribution line says so on every
 // excerpt. Two excerpts sit side by side on a wide screen and one above the other on a narrow one.
 // strata-react has no code block yet, so this is a plain <pre> on the theme's roles.
 import * as React from 'react';
 import { TextLink } from 'strata-react';
 import type { Excerpt } from './excerpt';
 
-const REPO = 'https://github.com/jburnhams/quake2/blob/main';
+const PORT_REPO = 'https://github.com/jburnhams/quake2/blob/main';
+// The commits pinned in quake2ts/scripts/id-source.pins.
+const RERELEASE_REPO = 'https://github.com/id-Software/quake2-rerelease-dll/blob/8dc1fc9794c01ece06881e703851b768fb3994de';
+const ORIGINAL_REPO = 'https://github.com/id-Software/Quake-2/blob/372afde46e7defc9dd2d719a1732b8ace1fa096e';
 
 /** Where a file comes from, and under what licence. */
 export interface SourceFile {
-  /** Its path from the repository root: "rerelease/p_move.cpp". */
+  /** Its path as shown: "rerelease/p_move.cpp" (id's, as laid out in .id-source) or "quake2ts/…". */
   readonly path: string;
+  /** The file on GitHub, without a line anchor. */
+  readonly href: string;
   /** Who wrote it: "id Software, Quake II rerelease (2023)". */
   readonly by: string;
   readonly licence: string;
 }
 
-export const RERELEASE = (file: string): SourceFile => ({ path: `rerelease/${file}`, by: 'id Software, the 2023 rerelease game code (© ZeniMax Media)', licence: 'GPL-2.0' });
-export const ORIGINAL = (file: string): SourceFile => ({ path: `full/${file}`, by: 'id Software, the 1997 source release', licence: 'GPL-2.0' });
-export const PORT = (file: string): SourceFile => ({ path: `quake2ts/${file}`, by: 'the TypeScript port', licence: 'GPL-2.0' });
+export const RERELEASE = (file: string): SourceFile => ({ path: `rerelease/${file}`, href: `${RERELEASE_REPO}/rerelease/${file}`, by: 'id Software, the 2023 rerelease game code (© ZeniMax Media)', licence: 'GPL-2.0' });
+export const ORIGINAL = (file: string): SourceFile => ({ path: `full/${file}`, href: `${ORIGINAL_REPO}/${file}`, by: 'id Software, the 1997 source release', licence: 'GPL-2.0' });
+export const PORT = (file: string): SourceFile => ({ path: `quake2ts/${file}`, href: `${PORT_REPO}/quake2ts/${file}`, by: 'the TypeScript port', licence: 'GPL-2.0' });
 
 export function SourceCode({ title, file, excerpt }: { title: string; file: SourceFile; excerpt: Excerpt }) {
   const lines = `${excerpt.firstLine}–${excerpt.lastLine}`;
@@ -29,7 +35,7 @@ export function SourceCode({ title, file, excerpt }: { title: string; file: Sour
       <figcaption className="grid gap-0.5">
         <span className="type-label">{title}</span>
         <span className="type-caption text-muted-foreground">
-          <TextLink href={`${REPO}/${file.path}#L${excerpt.firstLine}-L${excerpt.lastLine}`}>
+          <TextLink href={`${file.href}#L${excerpt.firstLine}-L${excerpt.lastLine}`}>
             {file.path}, lines {lines}
           </TextLink>
           . By {file.by}, {file.licence}.

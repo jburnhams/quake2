@@ -1,7 +1,7 @@
 # C reference oracle
 
 Differential tests that run the TypeScript port and id Software's original C code
-(GPL, vendored in `../../full`) on the same inputs and fail on any difference.
+(GPL, fetched unmodified into `../.id-source` by `scripts/fetch-id-source.sh`) on the same inputs and fail on any difference.
 
 - `harness.c` links `full/qcommon/cmodel.c` unchanged and answers queries on stdin
   (`trace`, `contents`, `ttrace`, `btrace`, `tcontents`, `model`) as JSON lines. `build.sh` compiles it with the system

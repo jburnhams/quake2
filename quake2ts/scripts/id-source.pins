@@ -1,0 +1,14 @@
+# id Software's source (and the q2tools compiler) that the C oracles build and the explorer's labs
+# quote, fetched by scripts/fetch-id-source.sh into quake2ts/.id-source/<dir>.
+#
+# Each line: <dir> <git tree> <repo> <commit> <path in that repo>
+# The tree is what is checked: git names a tree by the hash of every file in it, so a match means
+# the files are byte for byte the ones pinned, wherever they came from. The commit is where to get
+# it upstream; if upstream is gone, the same trees are fetched from this repo's commit 3dada0f
+# (the last on main that carried them at the repository root, where <dir> was the path). That copy
+# of q2tools left out upstream's .github and .gitignore, so its tree differs and only upstream serves it.
+full      6b1e834e265b4a026e1274971234e78dcd13ad51 id-Software/Quake-2             372afde46e7defc9dd2d719a1732b8ace1fa096e .
+rerelease 7c3a380c5114dab4e7b7511a5c9c96390b72a1cd id-Software/quake2-rerelease-dll 8dc1fc9794c01ece06881e703851b768fb3994de rerelease
+original  6bffe6326fa40660be628477236ae7346e7f342d id-Software/quake2-rerelease-dll 8dc1fc9794c01ece06881e703851b768fb3994de original
+fgd       be4268858e84f792fcf27495641d1eda2f804750 id-Software/quake2-rerelease-dll 8dc1fc9794c01ece06881e703851b768fb3994de fgd
+q2tools   9cda987025853f627d5375d75e98a5a1ab61948e qbism/q2tools-220               db2afb35cf592a139bebcbb25b31db4c4dae4c1c .

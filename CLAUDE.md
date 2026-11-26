@@ -49,6 +49,14 @@ The `webgpu` package downloads platform-specific Dawn binaries during postinstal
 dependency's install script only when `allowBuilds` in `quake2ts/pnpm-workspace.yaml` lists it
 (`esbuild` and `webgpu` are there); add a package there if it needs its postinstall.
 
+## id Software's source
+
+Not committed. `quake2ts/scripts/fetch-id-source.sh [dir...]` fetches it into `quake2ts/.id-source/`
+(`full/`, `rerelease/`, `original/`, `fgd/`, `q2tools/`, the layout the repo root used to have, so a
+comment citing `full/qcommon/cmodel.c` still names the file), pinned by git tree hash in
+`quake2ts/scripts/id-source.pins`. `oracle/build.sh` and `apps/explorer/vite.config.ts` call it;
+CI caches it with `.github/actions/id-source`. Never copy id's files back into the repository.
+
 ## Toolchain
 
 - Node 26 and pnpm 12 (`packageManager` in `quake2ts/package.json`; CI reads it from there).

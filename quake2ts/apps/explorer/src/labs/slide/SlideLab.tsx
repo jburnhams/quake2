@@ -11,8 +11,8 @@
 import * as React from 'react';
 import { ChoiceGroup, LineChart, Metric, MetricStrip, format, useSearchParam } from 'strata-react';
 import type { BspMap } from '@quake2ts/formats/bsp';
-import pmoveCpp from '../../../../../../rerelease/p_move.cpp?raw';
-import pmoveC from '../../../../../../full/qcommon/pmove.c?raw';
+import pmoveCpp from '../../../../../.id-source/rerelease/p_move.cpp?raw';
+import pmoveC from '../../../../../.id-source/full/qcommon/pmove.c?raw';
 import frameTs from '../../../../../packages/shared/src/pmove/frame.ts?raw';
 import { AMBER, BLUE, GREY, LabScene, type Lines } from '../LabScene';
 import { LabScreen } from '../LabScreen';

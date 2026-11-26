@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include "../../full/qcommon/qcommon.h"
+#include "full/qcommon/qcommon.h"
 
 /* client/cl_ents.c, linked for its delta reader. */
 int CL_ParseEntityBits(unsigned *bits);
