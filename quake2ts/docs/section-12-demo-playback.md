@@ -16,7 +16,7 @@
 - ✅ **Added**: Demo file validation (Task 2.2.2)
 - ✅ **Added**: Demo file storage (IndexedDB) (Task 2.2.3)
 - ✅ **Robust**: Parser now handles corrupted/truncated data gracefully (Task 4.1)
-- ⚠️ Protocol 25 parsing functional for frames, but sequence number handling may still be fragile for non-frame messages
+- ❌ Protocol 25 (Quake 2 3.00, pak.pak's demo1.dm2) is not supported and is refused (2026-11-26); the test demo is the demo pak's q2demo1.dm2 (3.14, protocol 31). See `docs/demo-parsing.md` at the repo root.
 - ❌ Rerelease Protocol 2023 unverified with real demos
 
 **Goal**: Enable playback of Quake II `.dm2` demo files in browser with full rendering.
@@ -140,7 +140,7 @@ if (cls.serverProtocol != 26)
 ---
 
 **Phase 0 Success Criteria:**
-- ✅ Real demo1.dm2 (Protocol 25) parses with ZERO errors
+- ✅ Real q2demo1.dm2 (protocol 31) parses with zero errors (2026-11-26; the earlier claim for demo1.dm2, protocol 25, was wrong: its frames came out empty)
 - ✅ No "unknown command" warnings in console
 - ✅ All frames have entity data
 - ✅ Test suite passes

@@ -11,7 +11,7 @@ import { parsePcx } from '../../../src/assets/pcx.js';
 import { parseWav } from '../../../src/assets/wav.js';
 import { decodeOgg } from '../../../src/assets/ogg.js';
 import { DemoReader } from '../../../src/demo/demoReader.js';
-import { NetworkMessageParser } from '../../../src/demo/parser.js';
+import { NetworkMessageParser, UnsupportedProtocolError } from '../../../src/demo/parser.js';
 import { DemoStream } from '../../../src/demo/demoStream.js';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -115,7 +115,14 @@ describe('PAK Integration Test', () => {
             demoStream.loadComplete();
 
             const parser = new NetworkMessageParser(demoStream.getBuffer());
-            parser.parseMessage();
+            try {
+              parser.parseMessage();
+            } catch (e) {
+              // pak.pak's demos/demo1.dm2 is Quake 2 3.00, which the parser refuses by name.
+              if (!(e instanceof UnsupportedProtocolError)) throw e;
+              expect(e.protocol).toBe(25);
+              break;
+            }
 
             const totalErrors = parser.getErrorCount();
             if (totalErrors > 0) {

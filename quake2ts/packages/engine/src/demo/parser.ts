@@ -100,6 +100,25 @@ class BinaryStreamAdapter extends StreamingBuffer {
     }
 }
 
+/**
+ * Quake 2 3.00 (protocol 25) numbers its messages and lays out its player state and entities
+ * differently from 3.05 and later, and neither id's source nor the DM2 spec covers it (the spec
+ * starts at 3.05). The parser reads 3.05+ (26 to 34) and the rerelease; a 3.00 demo is refused
+ * here rather than read as garbage. Until 2026-11-26 it was read with 3.20's layout and every
+ * frame came out empty.
+ */
+export const UNSUPPORTED_PROTOCOLS: Readonly<Record<number, string>> = {
+  25: 'Quake 2 3.00',
+};
+
+/** Thrown for a demo or server whose protocol the parser does not read (UNSUPPORTED_PROTOCOLS). */
+export class UnsupportedProtocolError extends Error {
+  constructor(readonly protocol: number) {
+    super(`${UNSUPPORTED_PROTOCOLS[protocol] ?? 'This'} demos (protocol ${protocol}) are not supported; 3.05 and later (protocol 26 to 34) and the rerelease are`);
+    this.name = 'UnsupportedProtocolError';
+  }
+}
+
 export class NetworkMessageParser {
   private stream: StreamingBuffer;
   private handler?: NetworkMessageHandler;
@@ -202,6 +221,8 @@ export class NetworkMessageParser {
         }
 
       } catch (e) {
+          // Not a parse error to step over: nothing after it can be read.
+          if (e instanceof UnsupportedProtocolError) throw e;
           const errMsg = (e as Error).message;
           if (errMsg === 'Buffer underflow' || errMsg.includes('StreamingBuffer')) {
               try {
@@ -265,6 +286,7 @@ export class NetworkMessageParser {
 
   private parseServerData(): void {
     const data = this.protocolHandler.parseServerData(this.stream);
+    if (UNSUPPORTED_PROTOCOLS[data.protocol]) throw new UnsupportedProtocolError(data.protocol);
 
     // Switch Protocol Handler
     this.setProtocolVersion(data.protocol);

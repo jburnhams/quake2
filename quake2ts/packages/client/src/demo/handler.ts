@@ -158,8 +158,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.latestFrame = frame;
         this.stats = [...frame.playerState.stats];
 
-        // A bare svc_packetentities (how this parser reads demo1's protocol 25) applies to the
-        // entities so far.
+        // A bare svc_packetentities, with no svc_frame before it (hand-built test streams; no
+        // supported demo sends one), applies to the entities so far.
         const packetEntities = frame.packetEntities;
         const newEntities = new Map<number, EntityState>();
 

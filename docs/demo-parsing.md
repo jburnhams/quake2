@@ -1,187 +1,37 @@
 # Quake 2 Demo Parsing
 
-This document describes the findings and implementation details for parsing Quake 2 demo files across different protocol versions.
+Which `.dm2` files the parser (`quake2ts/packages/engine/src/demo/parser.ts`) reads, and what is known about the ones it does not. Rewritten 2026-11-26: the earlier version of this page described protocol 25 as 3.20 with every opcode shifted by 5, which the demo's own bytes contradict (see below).
 
-## Protocol Versions
+## Supported
 
-Quake 2 has several protocol versions with different server command enumerations:
+| Protocol | Version | Notes |
+|---|---|---|
+| 26 to 34 | 3.05 to 3.20 | 3.20's `svc_ops_e` (`full/qcommon/qcommon.h`); `svc_frame` has no suppress byte in 26 only |
+| 2023 | Kex rerelease | own handler (`protocol/rerelease.ts`) |
 
-### Protocol 25 (Quake 2 v3.00 / v3.14)
-- Original retail Quake 2 version
-- Demo files from original game PAK files use this protocol
-- **Key difference**: Commands 1-5 (game DLL commands) did not exist in the network protocol
+Frames are deltas: each `svc_frame` names the frame it deltas from, and `ClientFrames` (`engine/src/network/frames.ts`) rebuilds the entities and the player state from it, as `CL_ParseFrame` does. A demo is a record of what reached the client, so the same rebuild applies.
 
-### Protocol 26
-- Similar to protocol 25
-- One difference: `svc_frame` does not include `suppressCount` byte (see `parser.ts:1064`)
+Each demo block is a whole network message (`CL_WriteDemoMessage` writes `net_message` past the netchan header), so blocks parse one at a time with the protocol carried over (`DemoPlaybackController`).
 
-### Protocol 34 (Quake 2 v3.20+)
-- Added commands 1-5: muzzleflash, muzzleflash2, temp_entity, layout, inventory
-- All subsequent commands shifted by +5
+**Test demo:** `demos/q2demo1.dm2` in the demo pak0 (Quake 2 3.14 demo, protocol 31; fetched by `quake2ts/scripts/fetch-paks.sh`). All 632 frames parse with no errors and every one rebuilds from the frame it names (`engine/tests/unit-node/demo/real_demo.test.ts`).
 
-### Protocol 2023 (Kex Rerelease)
-- Extended enum with additional commands after `svc_frame`
-- Commands like splitclient (21), configblast (22), spawnbaselineblast (23) are rerelease additions
+## Not supported: protocol 25 (Quake 2 3.00)
 
-## Source Code Evidence
+The committed `quake2ts/pak.pak` holds `demos/demo1.dm2`, a 3.00 demo. The parser refuses it (`UnsupportedProtocolError`; `DemoValidator` gives the reason). Jonathan's decision, 2026-11-26: use the 3.14 demo rather than reverse-engineer 3.00.
 
-### Vanilla Q2 Enum (Protocol 34)
+Why: no source or spec covers 3.00. id released 3.21's source; the DM2 spec ([demospecs.half-empty.de/dm2](http://demospecs.half-empty.de/dm2)) starts at 3.05 and removed the 3.00 codes. What the file itself shows, if someone takes it up:
 
-From `/home/user/quake2/full/qcommon/qcommon.h`:
+- Opcodes differ, not by a constant: serverdata 7, configstring 8, spawnbaseline 9, playerinfo 14, packetentities 16, frame 18 (3.20: 12, 13, 14, 17, 18, 20). Every frame block starts with 18.
+- `svc_frame` is serverframe (long), areabytes (byte), areabits; no deltaframe, no suppress byte.
+- Player-state flags differ: the demo uses only 0x04|0x10 (20 bytes: three vectors and a short), 0x08 (8 bytes, the gun) and 0x01 (4 bytes, the blend, read last), then a 32-bit stat mask and shorts as in 3.20.
+- Entity bits differ too (the first entity's header does not decode with 3.20's U_* bits).
 
-```c
-enum svc_ops_e
-{
-    svc_bad,                    // 0
+## Nested parsers
 
-    // these ops are known to the game dll
-    svc_muzzleflash,           // 1
-    svc_muzzleflash2,          // 2
-    svc_temp_entity,           // 3
-    svc_layout,                // 4
-    svc_inventory,             // 5
-
-    // the rest are private to the client and server
-    svc_nop,                   // 6
-    svc_disconnect,            // 7
-    svc_reconnect,             // 8
-    svc_sound,                 // 9
-    svc_print,                 // 10
-    svc_stufftext,             // 11
-    svc_serverdata,            // 12
-    svc_configstring,          // 13
-    svc_spawnbaseline,         // 14
-    svc_centerprint,           // 15
-    svc_download,              // 16
-    svc_playerinfo,            // 17
-    svc_packetentities,        // 18
-    svc_deltapacketentities,   // 19
-    svc_frame                  // 20
-};
-```
-
-## Protocol 25/26 Command Translation
-
-Since protocol 25/26 lacks commands 1-5, all command bytes need translation when parsing:
-
-**Protocol 25 byte → Modern enum value**
-- 0 → 0 (svc_bad)
-- 1 → 6 (svc_nop)
-- 2 → 7 (svc_disconnect)
-- 3 → 8 (svc_reconnect)
-- 4 → 9 (svc_sound)
-- 5 → 10 (svc_print)
-- 6 → 11 (svc_stufftext)
-- **7 → 12 (svc_serverdata)** ← Critical for parsing
-- 8 → 13 (svc_configstring)
-- 9 → 14 (svc_spawnbaseline)
-- 10 → 15 (svc_centerprint)
-- 11 → 16 (svc_download)
-- 12 → 17 (svc_playerinfo)
-- 13 → 18 (svc_packetentities)
-- 14 → 19 (svc_deltapacketentities)
-- 15 → 20 (svc_frame)
-
-### Implementation
-
-See `packages/engine/src/demo/parser.ts:280-337` for the `translateCommand()` method.
-
-**Key points:**
-- Protocol 25/26 commands 1-15 get +5 offset
-- Command 0 (svc_bad) maps to itself
-- Commands beyond 15 did not exist in vanilla protocol 25
-- Translation must be applied before switch statement in `parseMessage()`
-
-## Demo File Verification
-
-### Real Demo Analysis (demo1.dm2 from PAK)
-
-Hex dump of first message block:
-```
-00000000: 07 00 00 00 19 00 00 00 4a 24 01 00 01 00 6d 61  ........J$....ma
-```
-
-Breakdown:
-- Bytes 0-3: `07 00 00 00` (little-endian 7) = Protocol 25 command for svc_serverdata
-- Bytes 4-7: `19 00 00 00` (little-endian 25) = Protocol version
-- Bytes 8-11: `4a 24 01 00` (little-endian 74826) = Server count
-- Byte 12: `01` = Attractloop flag
-
-This confirms:
-1. Protocol 25 demos start with command byte 7 (not 12)
-2. Byte 7 must translate to ServerCommand.serverdata (12) for correct parsing
-
-## Nested Parser Considerations
-
-When creating nested parsers (e.g., for compressed data in `svc_spawnbaselineblast`), the protocol version MUST be propagated.
-
-**Example from `parser.ts:650-652`:**
-```typescript
-const blastStream = new BinaryStream(decompressed.buffer);
-const blastParser = new NetworkMessageParser(blastStream, this.handler, this.strictMode);
-blastParser.setProtocolVersion(this.protocolVersion);  // Critical!
-```
-
-Without this, nested parsers will fail to translate commands correctly.
-
-## Demo Block Architecture - Critical Discovery
-
-### The Problem
-
-Demo blocks are **NOT independent messages**. They are arbitrary chunks of a continuous network stream.
-
-**Evidence**: Blocks 8+ start with byte 0x12, which is NOT a valid server command.
-
-**Root Cause**: Byte 0x12 is entity data from a frame that spans multiple blocks:
-- Block 7: Contains `svc_frame` + playerinfo + `svc_packetentities` + PART of entity data
-- Block 8+: Contains CONTINUATION of entity data (first byte = entity number, not command)
-
-### Current Status
-
-**Working:**
-- ✓ Protocol 25 command translation (+5 offset)
-- ✓ Protocol auto-detection
-- ✓ pak-integration.test.ts: **PASSES** (stops at first invalid byte, so no errors counted)
-
-**Broken:**
-- ✗ real_demo.test.ts: **FAILS** (frameCount=0, blocks 8+ never parsed)
-
-### The Fix Required
-
-Demo blocks must be parsed as a **continuous stream**, not independent messages.
-
-**For demo files** (current use case - all data available):
-```typescript
-// Concatenate all blocks into one continuous stream
-const allBlocks = [];
-while (reader.hasMore()) {
-    allBlocks.push(reader.readNextBlock().data);
-}
-const stream = BinaryStream.concatenate(allBlocks);
-const parser = new NetworkMessageParser(stream);
-parser.parseMessage();  // Parse entire demo as one continuous message
-```
-
-**For live network streams** (future - data arrives incrementally):
-```typescript
-// Streaming parser maintains state across blocks
-const stream = new GrowableStream();
-const parser = new NetworkMessageParser(stream);
-
-while (newBlockArrives) {
-    stream.append(newBlock.data);  // Append to growing buffer
-    parser.parseMessage();  // Continues from last position
-}
-```
-
-Both approaches use **one continuous stream parser** instead of creating new parsers per block.
-
-**See detailed analysis**: [command-18-investigation.md](./command-18-investigation.md)
+A nested parser (the rerelease's `svc_spawnbaselineblast`) must be given the outer parser's protocol (`setProtocolVersion`), or it reads with the bootstrap handler.
 
 ## References
 
-- Vanilla Q2 source: `/home/user/quake2/full/`
-- Rerelease source: `/home/user/quake2/rerelease/`
-- Parser implementation: `packages/engine/src/demo/parser.ts`
-- Integration test: `packages/engine/tests/integration/pak-integration.test.ts`
-- Demo test: `packages/engine/tests/demo/real_demo.test.ts`
+- Vanilla Q2 source: `full/` (3.21); rerelease: `rerelease/`
+- Parser: `quake2ts/packages/engine/src/demo/parser.ts`, handlers in `demo/protocol/`
+- Frame history: `quake2ts/packages/engine/src/network/frames.ts`

@@ -37,5 +37,9 @@ jobs:
           cache-dependency-path: quake2ts/pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # The real-demo test (engine tests/unit-node/demo/real_demo.test.ts) reads demos/q2demo1.dm2 from the demo pak0.pak
+      - name: Demo paks
+        if: matrix.group == 'engine-client'
+        uses: ./.github/actions/demo-paks
       - name: Run Node unit tests
         run: pnpm test:unit:node ${{ matrix.packages }}
