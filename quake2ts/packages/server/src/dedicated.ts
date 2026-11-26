@@ -620,8 +620,15 @@ export class DedicatedServer implements GameEngine {
      * Until 2026-11-25 the port kept only the newest command and ran it once per server frame.
      */
     private handleMove(client: Client, commands: MoveCommands, checksum: number, lastFrame: number, checksummed: Uint8Array): boolean {
-        // Not in the game yet: the commands are read and dropped, and the packet goes on.
-        if (client.state !== ClientState.Active) return true;
+        // The frame the client has, which the next frame deltas from (before the checksum, as in the C).
+        client.lastFrame = lastFrame;
+
+        // Not in the game yet: the commands are read and dropped, the next frame is whole, and the
+        // packet goes on.
+        if (client.state !== ClientState.Active) {
+            client.lastFrame = -1;
+            return true;
+        }
 
         // "if the checksum fails, ignore the rest of the packet": the client keyed it by the
         // sequence of the packet carrying it, which is the netchan's incoming sequence here.
@@ -1005,8 +1012,11 @@ export class DedicatedServer implements GameEngine {
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(this.sv.frame);
 
-        let deltaFrame = 0;
-        if (client.lastFrame && client.lastFrame < this.sv.frame && client.lastFrame >= this.sv.frame - UPDATE_BACKUP) {
+        // SV_WriteFrameToClient: a delta from the frame the client last said it has, unless it has
+        // none or that frame is too old to still be held. Until 2026-11-26 this was the last frame
+        // sent, whether or not it arrived, so one lost packet left the client's entities wrong.
+        let deltaFrame = -1;
+        if (client.lastFrame > 0 && client.lastFrame < this.sv.frame && this.sv.frame - client.lastFrame < UPDATE_BACKUP - 3) {
             deltaFrame = client.lastFrame;
         }
 
@@ -1042,46 +1052,45 @@ export class DedicatedServer implements GameEngine {
 
         writer.writeByte(ServerCommand.packetentities);
 
-        const entities = snapshot.packetEntities || [];
-        const currentEntityIds: number[] = [];
+        // SV_EmitPacketEntities: walk the old frame's entities and this frame's in number order. One
+        // in both is a delta from its old state (nothing when unchanged); one only in this frame is a
+        // delta from its baseline, forced; one only in the old frame is removed.
+        const entities = [...(snapshot.packetEntities || [])].sort((a, b) => a.number - b.number);
+        const oldEntities = deltaFrame > 0 ? client.frames[deltaFrame % UPDATE_BACKUP].entities : [];
+        const maxClients = this.options.maxPlayers ?? 1;
+        // What the client will hold after this frame: everything written, plus the old frame's
+        // entities it carries when the packet fills up before they are reached.
+        const held: EntityState[] = [];
 
-        const frameIdx = this.sv.frame % UPDATE_BACKUP;
-        const currentFrame = client.frames[frameIdx];
-        currentFrame.entities = entities;
-
-        let oldEntities: EntityState[] = [];
-        if (deltaFrame > 0) {
-            const oldFrameIdx = deltaFrame % UPDATE_BACKUP;
-            oldEntities = client.frames[oldFrameIdx].entities;
-        }
-
-        for (const entityState of currentFrame.entities) {
+        let newIndex = 0;
+        let oldIndex = 0;
+        while (newIndex < entities.length || oldIndex < oldEntities.length) {
             if (writer.getOffset() > MTU - 200) {
                 console.warn('Packet MTU limit reached, dropping remaining entities');
+                while (oldIndex < oldEntities.length) held.push(oldEntities[oldIndex++]);
                 break;
             }
+            const newEnt = entities[newIndex];
+            const oldEnt = oldEntities[oldIndex];
+            const newNum = newEnt ? newEnt.number : Infinity;
+            const oldNum = oldEnt ? oldEnt.number : Infinity;
 
-            currentEntityIds.push(entityState.number);
-
-            const oldState = oldEntities.find(e => e.number === entityState.number);
-
-            if (oldState) {
-                 writeDeltaEntity(oldState, entityState, writer, false, false);
+            if (newNum === oldNum) {
+                writeDeltaEntity(oldEnt, newEnt, writer, false, newEnt.number <= maxClients);
+                held.push(newEnt);
+                newIndex++;
+                oldIndex++;
+            } else if (newNum < oldNum) {
+                writeDeltaEntity(this.sv.baselines[newNum] ?? ({ number: newNum } as EntityState), newEnt, writer, true, true);
+                held.push(newEnt);
+                newIndex++;
             } else {
-                 writeDeltaEntity({} as EntityState, entityState, writer, false, true);
+                writeRemoveEntity(oldNum, writer);
+                oldIndex++;
             }
         }
 
-        for (const oldId of client.lastPacketEntities) {
-            if (writer.getOffset() > MTU - 10) {
-                console.warn('Packet MTU limit reached, dropping remaining removals');
-                break;
-            }
-
-            if (!currentEntityIds.includes(oldId)) {
-                writeRemoveEntity(oldId, writer);
-            }
-        }
+        client.frames[this.sv.frame % UPDATE_BACKUP].entities = held;
 
         writer.writeShort(0);
 
@@ -1090,8 +1099,6 @@ export class DedicatedServer implements GameEngine {
         const packet = client.netchan.transmit(frameData);
         client.net.send(packet);
 
-        client.lastFrame = this.sv.frame;
-        client.lastPacketEntities = currentEntityIds;
     }
 
     // GameEngine Implementation

@@ -19,6 +19,7 @@ import {
   FogData,
   DamageIndicator
 } from '../demo/parser.js';
+import { ClientFrames } from './frames.js';
 
 export enum ConnectionState {
   Disconnected,
@@ -76,7 +77,9 @@ export class ClientConnection implements NetworkMessageHandler {
   public levelName = '';
   public configStrings = new Map<number, string>();
   public baselines = new Map<number, EntityState>();
+  /** The entities of the newest valid frame. */
   public entities = new Map<number, EntityState>();
+  private frames = new ClientFrames();
 
   public latestServerFrame = 0;
   private commandHistory: UserCommand[] = [];
@@ -137,6 +140,7 @@ export class ClientConnection implements NetworkMessageHandler {
     this.configStrings.clear();
     this.baselines.clear();
     this.entities.clear();
+    this.frames.reset();
     this.commandHistory = [];
     this.latestServerFrame = 0;
     this.parser = null;
@@ -192,7 +196,7 @@ export class ClientConnection implements NetworkMessageHandler {
     }
 
     const writer = new BinaryWriter();
-    writeMove(writer, this.latestServerFrame, this.commandHistory, this.netchan.outgoingSequence + 1);
+    writeMove(writer, this.frames.acknowledged, this.commandHistory, this.netchan.outgoingSequence + 1);
 
     this.transmit(writer.getData());
   }
@@ -281,13 +285,11 @@ export class ClientConnection implements NetworkMessageHandler {
       this.latestServerFrame = frame.serverFrame;
     }
 
-    const packetEntities = frame.packetEntities;
-    if (!packetEntities.delta) {
-      this.entities.clear();
-    }
-    for (const ent of packetEntities.entities) {
-      this.entities.set(ent.number, ent);
-    }
+    // CL_ParseFrame: the frame is its delta frame plus this packet; one whose delta frame is
+    // gone is neither shown nor acknowledged.
+    const parsed = this.frames.parse(frame, this.baselines);
+    if (!parsed.valid) return;
+    this.entities = new Map(parsed.entities);
 
     this.emit('frame', frame);
   }

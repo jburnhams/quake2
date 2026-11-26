@@ -16,8 +16,7 @@ import {
   NetworkMessageHandler,
   EntityState,
   FrameData,
-  createEmptyEntityState,
-  applyEntityDelta,
+  ClientFrames,
   PROTOCOL_VERSION_RERELEASE,
   DemoRecorder,
   FogData,
@@ -67,7 +66,10 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   public levelName = '';
   public configStrings = new Map<number, string>();
   public baselines = new Map<number, EntityState>();
+  /** The entities of the newest valid frame, updated in place. */
   public entities = new Map<number, EntityState>();
+  /** The last UPDATE_BACKUP frames, for the next frame's delta (cl.frames). */
+  private frames = new ClientFrames();
 
   private challenge = 0;
   private connectPacketCount = 0;
@@ -92,8 +94,6 @@ export class MultiplayerConnection implements NetworkMessageHandler {
   private currentPing = 0;
 
   private effectSystem?: ClientEffectSystem;
-
-  // Frame CRC
 
   constructor(options: MultiplayerConnectionOptions) {
     this.driver = new BrowserWebSocketNetDriver();
@@ -177,6 +177,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     this.configStringListener?.clear();
     this.baselines.clear();
     this.entities.clear();
+    this.frames.reset();
     this.commandHistory = [];
     this.latestServerFrame = 0;
     this.parser = null;
@@ -218,7 +219,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
 
       const writer = new BinaryWriter();
 
-      writeMove(writer, this.latestServerFrame, this.commandHistory, commandWithFrame.sequence);
+      writeMove(writer, this.frames.acknowledged, this.commandHistory, commandWithFrame.sequence);
 
       // Use NetChan to wrap the command
       const packet = this.netchan.transmit(writer.getData());
@@ -368,22 +369,13 @@ export class MultiplayerConnection implements NetworkMessageHandler {
       this.latestServerFrame = frame.serverFrame;
     }
 
-    // Update Entities Map
-    const packetEntities = frame.packetEntities;
+    // CL_ParseFrame: the frame is its delta frame plus this packet. One whose delta frame is
+    // gone is not drawn and not acknowledged, so the server's next frame is whole.
+    const parsed = this.frames.parse(frame, this.baselines);
+    if (!parsed.valid) return;
 
-    if (!packetEntities.delta) {
-        this.entities.clear();
-    }
-
-    for (const ent of packetEntities.entities) {
-        let current = this.entities.get(ent.number);
-        if (!current) {
-            current = createEmptyEntityState();
-            current.number = ent.number;
-            this.entities.set(ent.number, current);
-        }
-        applyEntityDelta(current, ent);
-    }
+    this.entities.clear();
+    for (const [number, entity] of parsed.entities) this.entities.set(number, entity);
 
     if (this.prediction && frame.playerState) {
         const ps = frame.playerState;

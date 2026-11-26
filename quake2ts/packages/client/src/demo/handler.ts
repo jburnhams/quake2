@@ -153,6 +153,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
             // If not delta, we start fresh (empty newEntities)
         }
 
+        // U_REMOVE: the parser lists removals apart from the deltas.
+        for (const number of packetEntities.removed ?? []) newEntities.delete(number);
+
         for (const partial of packetEntities.entities) {
             if (partial.bits & U_REMOVE) {
                 // Explicit removal: remove from newEntities if present

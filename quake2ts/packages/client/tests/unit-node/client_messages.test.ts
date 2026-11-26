@@ -72,6 +72,10 @@ vi.mock('@quake2ts/engine', () => ({
                 setCallbacks: vi.fn()
             };
         }
+    },
+    ClientFrames: class {
+        reset() {}
+        acknowledged = -1;
     }
 }));
 
