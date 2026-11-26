@@ -1,9 +1,11 @@
 // The movement lab's air view: one frame of the game's air move seen from above, and why turning
-// while strafing in the air speeds a player up. Pure and DOM-free. The step calls the same
-// functions pmove's air move does (applyPmoveAccelerate, applyPmoveAirAccelerate from shared) and
-// takes the same branch (move.ts, PM_AirMove in p_move.cpp): with sv_airaccelerate at 0, as the
-// game ships, PM_Accelerate with an acceleration of 1; above 0, PM_AirAccelerate with that value,
-// whose wished speed is capped at 30 when it decides how much to add.
+// while strafing in the air speeds a player up. Pure and DOM-free. The step uses shared's
+// applyPmoveAccelerate and applyPmoveAirAccelerate, the same sums the player move runs inline
+// (accelerate and airAccelerate in pmove/frame.ts, which rounds each step to a 32-bit float as the
+// C does; these work in doubles, a difference far below what the view draws), and takes the same
+// branch (PM_AirMove in p_move.cpp): with sv_airaccelerate at 0, as the game ships, PM_Accelerate
+// with an acceleration of 1; above 0, PM_AirAccelerate with that value, whose wished speed is
+// capped at 30 when it decides how much to add.
 //
 // The finding the view draws: acceleration only looks at the velocity's part along the wish
 // direction (currentspeed = dot(velocity, wishdir)). Point the wish direction far enough from the
