@@ -6,7 +6,7 @@ import {
     U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME,
     U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH,
-    BinaryWriter, ServerCommand, ANORMS, writeDeltaEntity as writeDeltaEntity34, writeRemoveEntity,
+    BinaryWriter, ServerCommand, writePlayerState as writeSharedPlayerState, ANORMS, writeDeltaEntity as writeDeltaEntity34, writeRemoveEntity,
     type EntityState as NetEntityState,
 } from '@quake2ts/shared';
 
@@ -132,92 +132,16 @@ export class MessageWriter {
         }
     }
 
-    writePlayerState(ps: ProtocolPlayerState): void {
+    /**
+     * svc_playerinfo: the fields that differ from `from`, the player state of the frame this one
+     * deltas from (zero for a whole frame). The shared writer is the server's, so both quantise
+     * alike; until 2026-11-26 this kept its own copy, which truncated where the server rounds.
+     */
+    writePlayerState(ps: ProtocolPlayerState, from?: ProtocolPlayerState): void {
         this.writeCommand(ServerCommand.playerinfo);
-
-        let flags = 0;
-        if (ps.pm_type !== 0) flags |= 1;
-        if (ps.origin.x !== 0 || ps.origin.y !== 0 || ps.origin.z !== 0) flags |= 2;
-        if (ps.velocity.x !== 0 || ps.velocity.y !== 0 || ps.velocity.z !== 0) flags |= 4;
-        if (ps.pm_time !== 0) flags |= 8;
-        if (ps.pm_flags !== 0) flags |= 16;
-        if (ps.gravity !== 0) flags |= 32;
-        if (ps.delta_angles.x !== 0 || ps.delta_angles.y !== 0 || ps.delta_angles.z !== 0) flags |= 64;
-        if (ps.viewoffset.x !== 0 || ps.viewoffset.y !== 0 || ps.viewoffset.z !== 0) flags |= 128;
-        if (ps.viewangles.x !== 0 || ps.viewangles.y !== 0 || ps.viewangles.z !== 0) flags |= 256;
-        if (ps.kick_angles.x !== 0 || ps.kick_angles.y !== 0 || ps.kick_angles.z !== 0) flags |= 512;
-        if (ps.gun_index !== 0) flags |= 4096;
-        if (ps.gun_frame !== 0 || ps.gun_offset.x !== 0 || ps.gun_offset.y !== 0 || ps.gun_offset.z !== 0 ||
-            ps.gun_angles.x !== 0 || ps.gun_angles.y !== 0 || ps.gun_angles.z !== 0) flags |= 8192;
-        if (ps.blend[0] !== 0 || ps.blend[1] !== 0 || ps.blend[2] !== 0 || ps.blend[3] !== 0) flags |= 1024;
-        if (ps.fov !== 0) flags |= 2048;
-        if (ps.rdflags !== 0) flags |= 16384;
-        if (ps.watertype !== 0) flags |= 32768;
-
-        this.writer.writeShort(flags);
-
-        if (flags & 1) this.writer.writeByte(ps.pm_type);
-        if (flags & 2) {
-            this.writer.writeShort(ps.origin.x / 0.125);
-            this.writer.writeShort(ps.origin.y / 0.125);
-            this.writer.writeShort(ps.origin.z / 0.125);
-        }
-        if (flags & 4) {
-            this.writer.writeShort(ps.velocity.x / 0.125);
-            this.writer.writeShort(ps.velocity.y / 0.125);
-            this.writer.writeShort(ps.velocity.z / 0.125);
-        }
-        if (flags & 8) this.writer.writeByte(ps.pm_time);
-        if (flags & 16) this.writer.writeByte(ps.pm_flags);
-        if (flags & 32) this.writer.writeShort(ps.gravity);
-        if (flags & 64) {
-            this.writer.writeShort(ps.delta_angles.x / (180 / 32768));
-            this.writer.writeShort(ps.delta_angles.y / (180 / 32768));
-            this.writer.writeShort(ps.delta_angles.z / (180 / 32768));
-        }
-        if (flags & 128) {
-             this.writer.writeByte(ps.viewoffset.x / 0.25);
-             this.writer.writeByte(ps.viewoffset.y / 0.25);
-             this.writer.writeByte(ps.viewoffset.z / 0.25);
-        }
-        if (flags & 256) {
-             this.writer.writeShort(ps.viewangles.x / (360.0 / 65536));
-             this.writer.writeShort(ps.viewangles.y / (360.0 / 65536));
-             this.writer.writeShort(ps.viewangles.z / (360.0 / 65536));
-        }
-        if (flags & 512) {
-             this.writer.writeByte(ps.kick_angles.x / 0.25);
-             this.writer.writeByte(ps.kick_angles.y / 0.25);
-             this.writer.writeByte(ps.kick_angles.z / 0.25);
-        }
-        if (flags & 4096) this.writer.writeByte(ps.gun_index);
-        if (flags & 8192) {
-             this.writer.writeByte(ps.gun_frame);
-             this.writer.writeByte(ps.gun_offset.x / 0.25);
-             this.writer.writeByte(ps.gun_offset.y / 0.25);
-             this.writer.writeByte(ps.gun_offset.z / 0.25);
-             this.writer.writeByte(ps.gun_angles.x / 0.25);
-             this.writer.writeByte(ps.gun_angles.y / 0.25);
-             this.writer.writeByte(ps.gun_angles.z / 0.25);
-        }
-        if (flags & 1024) {
-             this.writer.writeByte(ps.blend[0]);
-             this.writer.writeByte(ps.blend[1]);
-             this.writer.writeByte(ps.blend[2]);
-             this.writer.writeByte(ps.blend[3]);
-        }
-        if (flags & 2048) this.writer.writeByte(ps.fov);
-        if (flags & 16384) this.writer.writeByte(ps.rdflags);
-        if (flags & 32768) this.writer.writeByte(ps.watertype);
-
-        let statbits = 0;
-        for (let i = 0; i < 32; i++) {
-             if (ps.stats[i] !== 0) statbits |= (1 << i);
-        }
-        this.writer.writeLong(statbits);
-        for (let i = 0; i < 32; i++) {
-             if (statbits & (1 << i)) this.writer.writeShort(ps.stats[i]);
-        }
+        // The same fields; the shared type's vectors carry an index signature the demo state's lack.
+        type Shared = Parameters<typeof writeSharedPlayerState>[1];
+        writeSharedPlayerState(this.writer, ps as unknown as Shared, from as unknown as Shared | undefined);
     }
 
     writePacketEntities(entities: EntityState[], delta: boolean, protocol: number, removed: readonly number[] = []): void {
@@ -239,7 +163,8 @@ export class MessageWriter {
         this.writer.writeShort(0);
     }
 
-    writeFrame(frame: FrameData, protocol: number): void {
+    /** svc_frame; `from` is the player state of `frame.deltaFrame`, which the reader starts from. */
+    writeFrame(frame: FrameData, protocol: number, from?: ProtocolPlayerState): void {
         this.writeCommand(ServerCommand.frame);
         this.writer.writeLong(frame.serverFrame);
         this.writer.writeLong(frame.deltaFrame);
@@ -251,7 +176,7 @@ export class MessageWriter {
         this.writer.writeByte(frame.areaBytes);
         this.writer.writeBytes(frame.areaBits);
 
-        this.writePlayerState(frame.playerState);
+        this.writePlayerState(frame.playerState, from);
         this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocol, frame.packetEntities.removed);
     }
 

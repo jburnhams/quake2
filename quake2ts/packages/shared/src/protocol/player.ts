@@ -46,44 +46,60 @@ const PS_WEAPONFRAME = (1 << 13);
 const PS_RDFLAGS = (1 << 14);
 const PS_WATERTYPE = (1 << 15);
 
-export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState): void {
-  // Determine mask
+const zero: ProtocolPlayerState = {
+  pm_type: 0, origin: { x: 0, y: 0, z: 0 }, velocity: { x: 0, y: 0, z: 0 }, pm_time: 0, pm_flags: 0, gravity: 0,
+  delta_angles: { x: 0, y: 0, z: 0 }, viewoffset: { x: 0, y: 0, z: 0 }, viewangles: { x: 0, y: 0, z: 0 },
+  kick_angles: { x: 0, y: 0, z: 0 }, gun_index: 0, gun_frame: 0, gun_offset: { x: 0, y: 0, z: 0 },
+  gun_angles: { x: 0, y: 0, z: 0 }, blend: [0, 0, 0, 0], fov: 0, rdflags: 0, stats: [], watertype: 0,
+};
+
+// The pmove fields are shorts in the C's player_state_t, so it compares what goes on the wire.
+const coord = (v: number) => Math.round(v * 8);
+const angle = (v: number) => Math.round(v * (32768 / 180));
+const sameShorts = (a: Vec3, b: Vec3, q: (v: number) => number) => q(a.x) === q(b.x) && q(a.y) === q(b.y) && q(a.z) === q(b.z);
+const same = (a: Vec3, b: Vec3) => a.x === b.x && a.y === b.y && a.z === b.z;
+
+/**
+ * SV_WritePlayerstateToClient (server/sv_ents.c): the fields of `ps` that differ from `from`, the
+ * player state of the frame the client acknowledged, or from zero when there is none (a whole
+ * frame). The client starts from the same frame's state, so a field that is not sent keeps its
+ * old value. Until 2026-11-26 this always wrote against zero, so a field that went back to 0 (a
+ * stat cleared, the blend gone) never reached a client that deltaed.
+ */
+export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState, from: ProtocolPlayerState = zero): void {
   let mask = 0;
 
-  if (ps.pm_type !== 0) mask |= PS_M_TYPE;
-  if (ps.origin.x !== 0 || ps.origin.y !== 0 || ps.origin.z !== 0) mask |= PS_M_ORIGIN;
-  if (ps.velocity.x !== 0 || ps.velocity.y !== 0 || ps.velocity.z !== 0) mask |= PS_M_VELOCITY;
-  if (ps.pm_time !== 0) mask |= PS_M_TIME;
-  if (ps.pm_flags !== 0) mask |= PS_M_FLAGS;
-  if (ps.gravity !== 0) mask |= PS_M_GRAVITY;
-  if (ps.delta_angles.x !== 0 || ps.delta_angles.y !== 0 || ps.delta_angles.z !== 0) mask |= PS_M_DELTA_ANGLES;
-  if (ps.viewoffset.x !== 0 || ps.viewoffset.y !== 0 || ps.viewoffset.z !== 0) mask |= PS_VIEWOFFSET;
-  if (ps.viewangles.x !== 0 || ps.viewangles.y !== 0 || ps.viewangles.z !== 0) mask |= PS_VIEWANGLES;
-  if (ps.kick_angles.x !== 0 || ps.kick_angles.y !== 0 || ps.kick_angles.z !== 0) mask |= PS_KICKANGLES;
-  if (ps.gun_index !== 0) mask |= PS_WEAPONINDEX;
+  if (ps.pm_type !== from.pm_type) mask |= PS_M_TYPE;
+  if (!sameShorts(ps.origin, from.origin, coord)) mask |= PS_M_ORIGIN;
+  if (!sameShorts(ps.velocity, from.velocity, coord)) mask |= PS_M_VELOCITY;
+  if (ps.pm_time !== from.pm_time) mask |= PS_M_TIME;
+  if (ps.pm_flags !== from.pm_flags) mask |= PS_M_FLAGS;
+  if (ps.gravity !== from.gravity) mask |= PS_M_GRAVITY;
+  if (!sameShorts(ps.delta_angles, from.delta_angles, angle)) mask |= PS_M_DELTA_ANGLES;
+  if (!same(ps.viewoffset, from.viewoffset)) mask |= PS_VIEWOFFSET;
+  if (!same(ps.viewangles, from.viewangles)) mask |= PS_VIEWANGLES;
+  if (!same(ps.kick_angles, from.kick_angles)) mask |= PS_KICKANGLES;
+  if (ps.gun_index !== from.gun_index) mask |= PS_WEAPONINDEX;
 
-  // Weapon frame includes offset/angles
-  if (ps.gun_frame !== 0 ||
-      ps.gun_offset.x !== 0 || ps.gun_offset.y !== 0 || ps.gun_offset.z !== 0 ||
-      ps.gun_angles.x !== 0 || ps.gun_angles.y !== 0 || ps.gun_angles.z !== 0) {
+  // Weapon frame carries the gun's offset and angles with it.
+  if (ps.gun_frame !== from.gun_frame || !same(ps.gun_offset, from.gun_offset) || !same(ps.gun_angles, from.gun_angles)) {
       mask |= PS_WEAPONFRAME;
   }
 
-  if (ps.blend && (ps.blend[0] !== 0 || ps.blend[1] !== 0 || ps.blend[2] !== 0 || ps.blend[3] !== 0)) {
+  const blend = ps.blend ?? zero.blend;
+  const oldBlend = from.blend ?? zero.blend;
+  if (blend[0] !== oldBlend[0] || blend[1] !== oldBlend[1] || blend[2] !== oldBlend[2] || blend[3] !== oldBlend[3]) {
       mask |= PS_BLEND;
   }
 
-  if (ps.fov !== 0) mask |= PS_FOV;
-  if (ps.rdflags !== 0) mask |= PS_RDFLAGS;
-  if (ps.watertype !== 0) mask |= PS_WATERTYPE;
+  if (ps.fov !== from.fov) mask |= PS_FOV;
+  if (ps.rdflags !== from.rdflags) mask |= PS_RDFLAGS;
+  // Not in the C (bit 15 is unused there); the port sends the water type with the frame.
+  if ((ps.watertype ?? 0) !== (from.watertype ?? 0)) mask |= PS_WATERTYPE;
 
-  // Stats mask calculation
   let statsMask = 0;
-  // Only support first 32 stats for now
   for (let i = 0; i < 32; i++) {
-      if (ps.stats[i] && ps.stats[i] !== 0) {
-          statsMask |= (1 << i);
-      }
+      if ((ps.stats[i] ?? 0) !== (from.stats[i] ?? 0)) statsMask |= (1 << i);
   }
 
   // Write header
@@ -109,9 +125,9 @@ export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState):
   if (mask & PS_M_GRAVITY) writer.writeShort(ps.gravity);
 
   if (mask & PS_M_DELTA_ANGLES) {
-      writer.writeShort(Math.round(ps.delta_angles.x * (32768 / 180)));
-      writer.writeShort(Math.round(ps.delta_angles.y * (32768 / 180)));
-      writer.writeShort(Math.round(ps.delta_angles.z * (32768 / 180)));
+      writer.writeShort(angle(ps.delta_angles.x));
+      writer.writeShort(angle(ps.delta_angles.y));
+      writer.writeShort(angle(ps.delta_angles.z));
   }
 
   if (mask & PS_VIEWOFFSET) {
@@ -145,21 +161,21 @@ export function writePlayerState(writer: BinaryWriter, ps: ProtocolPlayerState):
   }
 
   if (mask & PS_BLEND) {
-      writer.writeByte(Math.round(ps.blend[0]));
-      writer.writeByte(Math.round(ps.blend[1]));
-      writer.writeByte(Math.round(ps.blend[2]));
-      writer.writeByte(Math.round(ps.blend[3]));
+      writer.writeByte(Math.round(blend[0]));
+      writer.writeByte(Math.round(blend[1]));
+      writer.writeByte(Math.round(blend[2]));
+      writer.writeByte(Math.round(blend[3]));
   }
 
   if (mask & PS_FOV) writer.writeByte(ps.fov);
   if (mask & PS_RDFLAGS) writer.writeByte(ps.rdflags);
-  if (mask & PS_WATERTYPE) writer.writeByte(ps.watertype);
+  if (mask & PS_WATERTYPE) writer.writeByte(ps.watertype ?? 0);
 
   // Write Stats
   writer.writeLong(statsMask);
   for (let i = 0; i < 32; i++) {
       if (statsMask & (1 << i)) {
-          writer.writeShort(ps.stats[i]);
+          writer.writeShort(ps.stats[i] ?? 0);
       }
   }
 }

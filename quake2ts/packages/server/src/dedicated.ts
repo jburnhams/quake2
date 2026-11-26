@@ -1048,7 +1048,18 @@ export class DedicatedServer implements GameEngine {
             watertype: snapshot.watertype // Populate watertype
         };
 
-        writePlayerState(writer, ps);
+        // SV_WritePlayerstateToClient: against the player state of the frame it deltas from. What
+        // was sent is kept with this frame (vectors copied: the snapshot's are the game's own).
+        const oldState = deltaFrame > 0 ? client.frames[deltaFrame % UPDATE_BACKUP].playerState : undefined;
+        writePlayerState(writer, ps, oldState);
+        const v = (a: { x: number; y: number; z: number }) => ({ x: a.x, y: a.y, z: a.z });
+        client.frames[this.sv.frame % UPDATE_BACKUP].playerState = {
+            ...ps,
+            origin: v(ps.origin), velocity: v(ps.velocity), delta_angles: v(ps.delta_angles),
+            viewoffset: v(ps.viewoffset), viewangles: v(ps.viewangles), kick_angles: v(ps.kick_angles),
+            gun_offset: v(ps.gun_offset), gun_angles: v(ps.gun_angles),
+            blend: [...(ps.blend ?? [0, 0, 0, 0])], stats: [...(ps.stats ?? [])],
+        };
 
         writer.writeByte(ServerCommand.packetentities);
 

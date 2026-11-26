@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BinaryWriter } from '@quake2ts/shared';
+import { BinaryStream, BinaryWriter } from '@quake2ts/shared';
 import { writePlayerState, ProtocolPlayerState } from '../../../src/protocol/player.js';
 import { parseProtocolPlayerState } from '@quake2ts/test-utils';
 
@@ -84,5 +84,27 @@ describe('writePlayerState', () => {
 
         expect(read.stats[31]).toBe(999);
         expect(read.stats[32]).toBeUndefined(); // Array size is 32 in reader
+    });
+
+    it('writes only the fields that differ from the frame it deltas from (SV_WritePlayerstateToClient)', () => {
+        const base = (): ProtocolPlayerState => ({
+            pm_type: 0, origin: {x:10,y:20,z:30}, velocity: {x:0,y:0,z:0}, pm_time: 0, pm_flags: 0, gravity: 800,
+            delta_angles: {x:0,y:0,z:0}, viewoffset: {x:0,y:0,z:22}, viewangles: {x:0,y:90,z:0}, kick_angles: {x:0,y:0,z:0},
+            gun_index: 3, gun_frame: 0, gun_offset: {x:0,y:0,z:0}, gun_angles: {x:0,y:0,z:0},
+            blend: [255,0,0,64], fov: 90, rdflags: 0, stats: new Array(32).fill(0), watertype: 0
+        });
+        const from = base();
+        from.stats[1] = 100;
+        const to = base();
+        to.blend = [0, 0, 0, 0]; // the flash is over
+        to.stats[1] = 0;         // and the player is dead
+
+        const writer = new BinaryWriter();
+        writePlayerState(writer, to, from);
+        const stream = new BinaryStream(writer.getData().buffer.slice(0, writer.getOffset()));
+        expect(stream.readShort() & 0xffff).toBe(1 << 10); // PS_BLEND only
+        expect([stream.readByte(), stream.readByte(), stream.readByte(), stream.readByte()]).toEqual([0, 0, 0, 0]);
+        expect(stream.readLong()).toBe(1 << 1); // stat 1 changed, to 0
+        expect(stream.readShort()).toBe(0);
     });
 });

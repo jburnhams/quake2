@@ -1,4 +1,4 @@
-import { NetDriver, UserCommand, PlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState, NetChan } from '@quake2ts/shared';
+import { NetDriver, UserCommand, ProtocolPlayerState, UPDATE_BACKUP, MAX_CONFIGSTRINGS, EntityState, NetChan } from '@quake2ts/shared';
 import { Entity } from '@quake2ts/game';
 
 /** SV_GiveMsec's allowance: 1600 ms of movement per 16 frames, plus slop. */
@@ -15,7 +15,8 @@ export enum ClientState {
 export interface ClientFrame {
     areaBytes: number;
     areaBits: Uint8Array;
-    playerState: PlayerState;
+    /** What the client was sent (client_frame_t's ps), which the next frame's player state deltas from. */
+    playerState: ProtocolPlayerState;
     numEntities: number;
     firstEntity: number; // into the circular sv_packet_entities[]
     sentTime: number;    // for ping calculations
@@ -145,32 +146,11 @@ function createEmptyUserCommand(): UserCommand {
     };
 }
 
-function createEmptyPlayerState(): PlayerState {
+function createEmptyPlayerState(): ProtocolPlayerState {
+    const v = () => ({ x: 0, y: 0, z: 0 });
     return {
-        origin: { x: 0, y: 0, z: 0 },
-        velocity: { x: 0, y: 0, z: 0 },
-        viewAngles: { x: 0, y: 0, z: 0 },
-        onGround: false,
-        waterLevel: 0,
-        watertype: 0,
-        mins: { x: -16, y: -16, z: -24 },
-        maxs: { x: 16, y: 16, z: 32 },
-        damageAlpha: 0,
-        damageIndicators: [],
-        blend: [0, 0, 0, 0],
-        // Stubs for new fields
-        stats: [],
-        kick_angles: { x: 0, y: 0, z: 0 },
-        kick_origin: { x: 0, y: 0, z: 0 },
-        gunoffset: { x: 0, y: 0, z: 0 },
-        gunangles: { x: 0, y: 0, z: 0 },
-        gunindex: 0,
-        pm_type: 0,
-        pm_time: 0,
-        pm_flags: 0,
-        gun_frame: 0,
-        rdflags: 0,
-        fov: 90,
-        renderfx: 0
+        pm_type: 0, origin: v(), velocity: v(), pm_time: 0, pm_flags: 0, gravity: 0, delta_angles: v(),
+        viewoffset: v(), viewangles: v(), kick_angles: v(), gun_index: 0, gun_frame: 0, gun_offset: v(),
+        gun_angles: v(), blend: [0, 0, 0, 0], fov: 0, rdflags: 0, stats: [], watertype: 0,
     };
 }

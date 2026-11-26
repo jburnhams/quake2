@@ -152,9 +152,10 @@ export class ClientConnection implements NetworkMessageHandler {
     if (!parsed.valid) return;
     this.entities = copyEntities(parsed);
 
-    if (this.prediction && frame.playerState) {
+    if (this.prediction) {
         // Update prediction system
-        const ps = frame.playerState;
+        // The whole state (CL_ParsePlayerstate), not the packet's changed fields.
+        const ps = parsed.playerState;
         const predState: PredictionState = {
             ...defaultPredictionState(),
             origin: { x: ps.origin.x, y: ps.origin.y, z: ps.origin.z },

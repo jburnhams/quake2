@@ -143,17 +143,20 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
                 this.previousEntities.set(k, JSON.parse(JSON.stringify(v)));
             }
         }
-        this.latestFrame = frame;
-        this.stats = [...frame.playerState.stats];
-
         // A frame that names its server frame (svc_frame, as a recorded multiplayer game has) is
         // rebuilt from the frame it deltas from, as CL_ParseFrame does: under latency that is not
-        // the frame before it. One whose delta frame is gone is not shown.
+        // the frame before it. Its player state is a delta from the same frame's. One whose delta
+        // frame is gone is not shown.
         if (frame.serverFrame > 0) {
             const parsed = this.frames.parse(frame, this.baselines);
+            this.latestFrame = { ...frame, playerState: parsed.playerState };
+            this.stats = [...parsed.playerState.stats];
             if (parsed.valid) this.entities = copyEntities(parsed);
             return;
         }
+
+        this.latestFrame = frame;
+        this.stats = [...frame.playerState.stats];
 
         // A bare svc_packetentities (how this parser reads demo1's protocol 25) applies to the
         // entities so far.

@@ -85,6 +85,13 @@ export interface ProtocolPlayerState {
   damage_blend: number[];
   team_id: number;
   watertype: number;
+  /**
+   * The PS_* flags and stat bits of the svc_playerinfo this was read from, which say what it
+   * carries (CL_ParsePlayerstate copies the rest from the delta frame). Absent on a state built
+   * whole, by hand or by the server.
+   */
+  bits?: number;
+  statbits?: number;
 }
 
 export const createEmptyProtocolPlayerState = (): ProtocolPlayerState => ({

@@ -8,12 +8,20 @@
 // held, the new frame is invalid: the client draws nothing new from it and sends `lastframe` -1,
 // so the server sends a whole frame next.
 //
+// The player state is a delta from the same frame's (CL_ParsePlayerstate), so it is kept here too.
+//
 // Until 2026-11-26 the network clients applied every packet to one running entity map, ignored
 // removals and the delta frame, which only worked while the server deltaed from the last frame it
 // sent whether or not it arrived.
 import { UPDATE_BACKUP } from '@quake2ts/shared';
 import { applyEntityDelta } from '../demo/delta.js';
-import { createEmptyEntityState, type EntityState, type FrameData } from '../demo/state.js';
+import {
+  createEmptyEntityState,
+  createEmptyProtocolPlayerState,
+  type EntityState,
+  type FrameData,
+  type ProtocolPlayerState,
+} from '../demo/state.js';
 
 /** One parsed server frame. */
 export interface ClientFrame {
@@ -23,6 +31,8 @@ export interface ClientFrame {
   readonly valid: boolean;
   /** Every entity in the frame, by number, whole (not deltas). */
   readonly entities: ReadonlyMap<number, EntityState>;
+  /** The player state, whole: the delta frame's with the fields this packet carried. */
+  readonly playerState: ProtocolPlayerState;
 }
 
 const cloneEntity = (e: EntityState): EntityState => ({
@@ -42,6 +52,59 @@ export function deltaEntity(from: EntityState, partial: EntityState): EntityStat
   to.event = 0;
   applyEntityDelta(to, partial);
   to.number = partial.number;
+  return to;
+}
+
+const vec = (v: { x: number; y: number; z: number }) => ({ x: v.x, y: v.y, z: v.z });
+
+const clonePlayerState = (ps: ProtocolPlayerState): ProtocolPlayerState => ({
+  ...ps,
+  origin: vec(ps.origin),
+  velocity: vec(ps.velocity),
+  delta_angles: vec(ps.delta_angles),
+  viewoffset: vec(ps.viewoffset),
+  viewangles: vec(ps.viewangles),
+  kick_angles: vec(ps.kick_angles),
+  gun_offset: vec(ps.gun_offset),
+  gun_angles: vec(ps.gun_angles),
+  blend: [...(ps.blend ?? [0, 0, 0, 0])],
+  stats: [...(ps.stats ?? [])],
+  damage_blend: [...(ps.damage_blend ?? [0, 0, 0, 0])],
+});
+
+/**
+ * CL_ParsePlayerstate: the delta frame's state with the fields the packet carried (its `bits` and
+ * `statbits`). A state with no bits was built whole, not read, and is taken as it is.
+ */
+export function deltaPlayerState(from: ProtocolPlayerState, read: ProtocolPlayerState): ProtocolPlayerState {
+  if (!read) return clonePlayerState(from);
+  if (read.bits === undefined) return clonePlayerState(read);
+  const flags = read.bits;
+  const to = clonePlayerState(from);
+  if (flags & 1) to.pm_type = read.pm_type;
+  if (flags & 2) to.origin = vec(read.origin);
+  if (flags & 4) to.velocity = vec(read.velocity);
+  if (flags & 8) to.pm_time = read.pm_time;
+  if (flags & 16) to.pm_flags = read.pm_flags;
+  if (flags & 32) to.gravity = read.gravity;
+  if (flags & 64) to.delta_angles = vec(read.delta_angles);
+  if (flags & 128) to.viewoffset = vec(read.viewoffset);
+  if (flags & 256) to.viewangles = vec(read.viewangles);
+  if (flags & 512) to.kick_angles = vec(read.kick_angles);
+  if (flags & 4096) to.gun_index = read.gun_index;
+  if (flags & 8192) {
+    to.gun_frame = read.gun_frame;
+    to.gun_offset = vec(read.gun_offset);
+    to.gun_angles = vec(read.gun_angles);
+  }
+  if (flags & 1024) to.blend = [...read.blend];
+  if (flags & 2048) to.fov = read.fov;
+  if (flags & 16384) to.rdflags = read.rdflags;
+  if (flags & 32768) to.watertype = read.watertype;
+  const statbits = read.statbits ?? 0;
+  for (let i = 0; i < 32; i++) if (statbits & (1 << i)) to.stats[i] = read.stats[i];
+  to.bits = read.bits;
+  to.statbits = read.statbits;
   return to;
 }
 
@@ -96,7 +159,16 @@ export class ClientFrames {
       entities.set(partial.number, deltaEntity(from, partial));
     }
 
-    const parsed: ClientFrame = { serverFrame: frame.serverFrame, deltaFrame: frame.deltaFrame, valid, entities };
+    // CL_ParsePlayerstate: from the delta frame's player state, or from zero for a whole frame.
+    const playerState = deltaPlayerState(old?.playerState ?? createEmptyProtocolPlayerState(), frame.playerState);
+
+    const parsed: ClientFrame = {
+      serverFrame: frame.serverFrame,
+      deltaFrame: frame.deltaFrame,
+      valid,
+      entities,
+      playerState,
+    };
     this.frames[frame.serverFrame & (UPDATE_BACKUP - 1)] = parsed;
     this.current = parsed;
     return parsed;

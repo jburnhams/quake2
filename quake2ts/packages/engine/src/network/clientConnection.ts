@@ -291,7 +291,8 @@ export class ClientConnection implements NetworkMessageHandler {
     if (!parsed.valid) return;
     this.entities = copyEntities(parsed);
 
-    this.emit('frame', frame);
+    // With the whole player state, not only the fields this packet changed.
+    this.emit('frame', { ...frame, playerState: parsed.playerState });
   }
 
   onDisconnect(): void {

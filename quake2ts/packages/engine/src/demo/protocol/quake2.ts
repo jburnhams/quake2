@@ -159,6 +159,9 @@ export class Quake2ProtocolHandler implements ProtocolHandler {
         for (let i = 0; i < 32; i++) {
             if (statbits & (1 << i)) ps.stats[i] = stream.readShort();
         }
+        // Which fields the packet carried: the client applies only those to its delta frame's state.
+        ps.bits = flags & 0xffff;
+        ps.statbits = statbits;
         return ps;
     }
 }
