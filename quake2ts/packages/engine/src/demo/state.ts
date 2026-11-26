@@ -122,7 +122,13 @@ export interface FrameData {
     playerState: ProtocolPlayerState;
     packetEntities: {
         delta: boolean;
+        /** The entities this packet sends, each a delta (its `bits` say which fields it carries). */
         entities: EntityState[];
+        /**
+         * The entities this packet removes (U_REMOVE), which CL_ParsePacketEntities drops from the
+         * delta frame's list. Left out by code that builds frames by hand, which removes nothing.
+         */
+        removed?: number[];
     };
 }
 

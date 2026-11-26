@@ -29,7 +29,11 @@ export interface Client {
     netchan: NetChan; // Network channel for reliable communication
     userInfo: string;
 
-    lastFrame: number; // for delta compression
+    /**
+     * cl->lastframe: the newest frame the client says it has (clc_move), which the next frame is
+     * a delta from; -1 for none, so the next frame is whole.
+     */
+    lastFrame: number;
     lastCmd: UserCommand;
 
     commandMsec: number; // For anti-cheat/speed control
@@ -61,7 +65,6 @@ export interface Client {
     challenge: number;
 
     messageQueue: Uint8Array[]; // Queue for incoming packets
-    lastPacketEntities: number[]; // List of entity numbers sent in the last packet
 
     // Rate limiting
     commandQueue: UserCommand[];
@@ -95,7 +98,7 @@ export function createClient(index: number, net: NetDriver): Client {
         netchan,
         userInfo: '',
 
-        lastFrame: 0,
+        lastFrame: -1,
         lastCmd: createEmptyUserCommand(),
 
         commandMsec: COMMAND_MSEC,
@@ -121,7 +124,6 @@ export function createClient(index: number, net: NetDriver): Client {
         challenge: 0,
 
         messageQueue: [],
-        lastPacketEntities: [],
 
         commandQueue: [],
         lastCommandTime: 0,

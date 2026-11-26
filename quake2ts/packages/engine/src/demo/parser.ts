@@ -568,7 +568,7 @@ export class NetworkMessageParser {
           if (this.strictMode) throw new Error(`Expected svc_packetentities after svc_playerinfo, got ${peCmd}`);
           return;
       }
-      const entities = this.collectPacketEntities();
+      const { entities, removed } = this.collectPacketEntities();
 
       if (this.isDemo === RECORD_RELAY) {
           const connectedCount = this.stream.readByte();
@@ -578,7 +578,7 @@ export class NetworkMessageParser {
 
       if (this.handler) this.handler.onFrame({
               serverFrame, deltaFrame, surpressCount, areaBytes, areaBits, playerState,
-              packetEntities: { delta: true, entities }
+              packetEntities: { delta: true, entities, removed }
       });
   }
 
@@ -587,20 +587,23 @@ export class NetworkMessageParser {
   }
 
   private parsePacketEntities(delta: boolean): void {
-      const entities = this.collectPacketEntities();
+      const { entities, removed } = this.collectPacketEntities();
       if (this.handler) this.handler.onFrame({
               serverFrame: 0, deltaFrame: 0, surpressCount: 0, areaBytes: 0, areaBits: new Uint8Array(),
               playerState: createEmptyProtocolPlayerState(),
-              packetEntities: { delta, entities }
+              packetEntities: { delta, entities, removed }
       });
   }
 
-  private collectPacketEntities(): EntityState[] {
+  /** The entity deltas of one packet, and the numbers it removes (until 2026-11-26 the removals were read and dropped). */
+  private collectPacketEntities(): { entities: EntityState[]; removed: number[] } {
       const entities: EntityState[] = [];
+      const removed: number[] = [];
       while (true) {
           const bits = this.protocolHandler.parseEntityBits(this.stream);
           if (bits.bits & U_REMOVE) {
               if (bits.number === 0) break;
+              removed.push(bits.number);
               continue;
           }
           const entity = createEmptyEntityState();
@@ -612,6 +615,6 @@ export class NetworkMessageParser {
           this.protocolHandler.parseDelta(createEmptyEntityState(), entity, bits.number, bits.bits, bits.bitsHigh, this.stream);
           entities.push(entity);
       }
-      return entities;
+      return { entities, removed };
   }
 }

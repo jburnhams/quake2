@@ -6,7 +6,7 @@ import {
     U_SKIN8, U_FRAME16, U_RENDERFX16, U_EFFECTS16, U_MODEL2, U_MODEL3, U_MODEL4, U_MOREBITS3,
     U_OLDORIGIN, U_SKIN16, U_SOUND, U_SOLID, U_SCALE, U_INSTANCE_BITS, U_LOOP_VOLUME,
     U_MOREBITS4, U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH,
-    BinaryWriter, ServerCommand, ANORMS, writeDeltaEntity as writeDeltaEntity34,
+    BinaryWriter, ServerCommand, ANORMS, writeDeltaEntity as writeDeltaEntity34, writeRemoveEntity,
     type EntityState as NetEntityState,
 } from '@quake2ts/shared';
 
@@ -251,11 +251,21 @@ export class MessageWriter {
         }
     }
 
-    writePacketEntities(entities: EntityState[], delta: boolean, protocol: number): void {
+    writePacketEntities(entities: EntityState[], delta: boolean, protocol: number, removed: readonly number[] = []): void {
         this.writeCommand(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities);
 
-        for (const ent of entities) {
-            this.writeDeltaEntity(createEmptyEntityState(), ent, true);
+        // In entity-number order, removals among the deltas: CL_ParsePacketEntities walks the old
+        // frame in that order and copies every entity below the next number it reads.
+        const updates = [...entities].sort((a, b) => a.number - b.number);
+        const removals = [...removed].sort((a, b) => a - b);
+        let u = 0;
+        let r = 0;
+        while (u < updates.length || r < removals.length) {
+            if (r >= removals.length || (u < updates.length && updates[u].number < removals[r])) {
+                this.writeDeltaEntity(createEmptyEntityState(), updates[u++], true);
+            } else {
+                writeRemoveEntity(removals[r++], this.writer);
+            }
         }
         this.writer.writeShort(0);
     }
@@ -273,7 +283,7 @@ export class MessageWriter {
         this.writer.writeBytes(frame.areaBits);
 
         this.writePlayerState(frame.playerState);
-        this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocol);
+        this.writePacketEntities(frame.packetEntities.entities, frame.packetEntities.delta, protocol, frame.packetEntities.removed);
     }
 
     /**

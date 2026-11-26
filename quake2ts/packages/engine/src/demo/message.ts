@@ -223,7 +223,8 @@ export class MessageCollector implements NetworkMessageHandler {
             playerState: { ...frame.playerState, origin: { ...frame.playerState.origin }, velocity: { ...frame.playerState.velocity } }, // Shallow clone of player state structure, deep clone mutable parts if needed
             packetEntities: {
                 delta: frame.packetEntities.delta,
-                entities: frame.packetEntities.entities.map(e => ({ ...e, origin: {...e.origin}, angles: {...e.angles} }))
+                entities: frame.packetEntities.entities.map(e => ({ ...e, origin: {...e.origin}, angles: {...e.angles} })),
+                removed: frame.packetEntities.removed ? [...frame.packetEntities.removed] : undefined
             }
         };
         this.messages.push({ type: ServerCommand.frame, data: clonedFrame });

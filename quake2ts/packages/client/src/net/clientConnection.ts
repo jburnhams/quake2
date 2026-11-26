@@ -7,7 +7,9 @@ import {
   NetworkMessageHandler,
   NetworkMessageParser,
   FogData,
-  DamageIndicator
+  DamageIndicator,
+  ClientFrames,
+  copyEntities
 } from '@quake2ts/engine';
 import {
   ClientCommand,
@@ -51,7 +53,10 @@ export class ClientConnection implements NetworkMessageHandler {
   public levelName = '';
   public configStrings = new Map<number, string>();
   public baselines = new Map<number, EntityState>();
+  /** The entities of the newest valid frame. */
   public entities = new Map<number, EntityState>();
+  /** The last UPDATE_BACKUP frames, for the next frame's delta (cl.frames). */
+  public readonly frames = new ClientFrames();
 
   public latestServerFrame = 0;
 
@@ -73,6 +78,7 @@ export class ClientConnection implements NetworkMessageHandler {
     this.configStrings.clear();
     this.baselines.clear();
     this.entities.clear();
+    this.frames.reset();
     this.latestServerFrame = 0;
     this.serverProtocol = 0;
     this.setState(ConnectionState.Disconnected);
@@ -140,16 +146,11 @@ export class ClientConnection implements NetworkMessageHandler {
       this.latestServerFrame = frame.serverFrame;
     }
 
-    // Update Entities Map
-    const packetEntities = frame.packetEntities;
-
-    if (!packetEntities.delta) {
-        this.entities.clear();
-    }
-
-    for (const ent of packetEntities.entities) {
-        this.entities.set(ent.number, ent);
-    }
+    // CL_ParseFrame: the frame is its delta frame plus this packet; one whose delta frame is
+    // gone is neither shown nor acknowledged.
+    const parsed = this.frames.parse(frame, this.baselines);
+    if (!parsed.valid) return;
+    this.entities = copyEntities(parsed);
 
     if (this.prediction && frame.playerState) {
         // Update prediction system

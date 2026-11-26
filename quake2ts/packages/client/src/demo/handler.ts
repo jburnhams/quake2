@@ -1,4 +1,6 @@
 import {
+    ClientFrames,
+    copyEntities,
     NetworkMessageHandler,
     EntityState,
     FrameData,
@@ -69,6 +71,8 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
     public configstrings: string[] = new Array(MAX_CONFIGSTRINGS).fill('');
     public entities: Map<number, EntityState> = new Map(); // Current frame entities
     public previousEntities: Map<number, EntityState> = new Map(); // Previous frame entities
+    /** The last UPDATE_BACKUP server frames, for frames that delta from one of them. */
+    private frames = new ClientFrames();
     public baselines: Map<number, EntityState> = new Map();
 
     public previousFrame: FrameData | null = null;
@@ -107,6 +111,7 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.entities.clear();
         this.previousEntities.clear();
         this.baselines.clear();
+        this.frames.reset();
         this.latestFrame = null;
         this.previousFrame = null;
         this.playerNum = playerNum;
@@ -141,6 +146,17 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         this.latestFrame = frame;
         this.stats = [...frame.playerState.stats];
 
+        // A frame that names its server frame (svc_frame, as a recorded multiplayer game has) is
+        // rebuilt from the frame it deltas from, as CL_ParseFrame does: under latency that is not
+        // the frame before it. One whose delta frame is gone is not shown.
+        if (frame.serverFrame > 0) {
+            const parsed = this.frames.parse(frame, this.baselines);
+            if (parsed.valid) this.entities = copyEntities(parsed);
+            return;
+        }
+
+        // A bare svc_packetentities (how this parser reads demo1's protocol 25) applies to the
+        // entities so far.
         const packetEntities = frame.packetEntities;
         const newEntities = new Map<number, EntityState>();
 
@@ -152,6 +168,9 @@ export class ClientNetworkHandler implements NetworkMessageHandler {
         } else {
             // If not delta, we start fresh (empty newEntities)
         }
+
+        // U_REMOVE: the parser lists removals apart from the deltas.
+        for (const number of packetEntities.removed ?? []) newEntities.delete(number);
 
         for (const partial of packetEntities.entities) {
             if (partial.bits & U_REMOVE) {
