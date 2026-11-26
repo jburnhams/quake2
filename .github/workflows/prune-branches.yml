@@ -63,5 +63,12 @@ jobs:
             echo; echo '```'; echo 'branch sha state last-commit'; cat delete.txt; echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           [ "$DRY_RUN" = true ] && exit 0
-          # Delete in batches; one push can carry many refs.
-          cut -d' ' -f1 delete.txt | sed 's#^#:refs/heads/#' | xargs -r -n 100 git push -q origin
+          # Delete in batches of 100 refs per push. Each delete is leased on the SHA checked above, so a
+          # branch someone pushed to since is refused (and kept) instead of deleted with its new work.
+          args=()
+          flush() { [ ${#args[@]} -eq 0 ] || git push -q origin "${args[@]}" || echo "::warning::a batch was refused; branches pushed to since the check were kept"; args=(); }
+          while read -r b sha _; do
+            args+=("--force-with-lease=refs/heads/$b:$sha" ":refs/heads/$b")
+            [ ${#args[@]} -ge 200 ] && flush
+          done < delete.txt
+          flush
