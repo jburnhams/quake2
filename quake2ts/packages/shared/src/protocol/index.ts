@@ -17,3 +17,4 @@ export * from './entityEvent.js';
 export * from './entity.js';
 export * from './entityState.js';
 export * from './player.js';
+export * from './lightstyles.js';

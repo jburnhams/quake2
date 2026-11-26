@@ -33,6 +33,7 @@ import {
 } from '@quake2ts/engine';
 import { ClientEffectSystem } from '@quake2ts/client';
 import { LocalHost } from '@quake2ts/server';
+import { ConfigStringIndex, MAX_LIGHTSTYLES } from '@quake2ts/shared';
 import { FrameStats, type FrameTimings } from './stats';
 
 const FRAME_MS = 25;
@@ -102,6 +103,8 @@ export class GameSession {
   private readonly dlights = new DynamicLightManager();
   private readonly effects: ClientEffectSystem;
   private lastDrawSeconds = 0;
+  /** The pattern last given the renderer for each style (undefined: never given). */
+  private readonly lightStyles: (string | null | undefined)[] = [];
 
   private constructor(
     private readonly options: SessionOptions,
@@ -231,6 +234,7 @@ export class GameSession {
     }
     this.gl.viewport(0, 0, canvas.width, canvas.height);
     this.loadNewModels();
+    this.syncLightStyles();
     const gameSeconds = this.host.timeSeconds;
     for (const effect of this.host.takeEffects()) {
       if (effect.kind === 'muzzleflash') this.effects.onMuzzleFlash(effect.entity, effect.weapon, gameSeconds);
@@ -291,6 +295,19 @@ export class GameSession {
       },
       drawn,
     );
+  }
+
+  /**
+   * CL_SetLightstyle: the game's CS_LIGHTS configstrings (the table SP_worldspawn sets, and a
+   * switchable light's on and off) are the patterns the renderer plays for each style.
+   */
+  private syncLightStyles(): void {
+    for (let i = 0; i < MAX_LIGHTSTYLES; i++) {
+      const pattern = this.host.configstring(ConfigStringIndex.Lights + i) ?? null;
+      if (pattern === this.lightStyles[i]) continue;
+      this.lightStyles[i] = pattern;
+      this.renderer.setLightStyle(i, pattern);
+    }
   }
 
   private report(): void {

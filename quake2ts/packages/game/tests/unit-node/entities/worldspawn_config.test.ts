@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { SP_worldspawn } from '../../../src/entities/worldspawn';
 import { Entity } from '../../../src/entities/entity';
 import { createTestContext } from '@quake2ts/test-utils';
-import { ConfigStringIndex } from '@quake2ts/shared';
+import { ConfigStringIndex, DEFAULT_LIGHT_STYLES } from '@quake2ts/shared';
 
 describe('worldspawn', () => {
   it('should set sky configstrings', () => {
@@ -31,5 +31,17 @@ describe('worldspawn', () => {
     SP_worldspawn(self, context);
 
     expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.CdTrack, '4');
+  });
+
+  it('sets the light animation tables, as SP_worldspawn does', () => {
+    const context = createTestContext();
+    context.keyValues = {};
+    SP_worldspawn(new Entity(0), context);
+
+    const set = context.entities.imports.configstring;
+    expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 0, 'm');
+    expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 4, 'mamamamamama');
+    expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 63, 'a');
+    expect(set).toHaveBeenCalledTimes(DEFAULT_LIGHT_STYLES.size);
   });
 });
