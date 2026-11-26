@@ -77,7 +77,7 @@
     "pixelmatch": "^8.0.0",
     "pngjs": "^7.0.0",
     "tsup": "^9.0.0",
-    "vitest": "^5.1.1",
+    "vitest": "^4.1.11",
     "webgpu": "^0.6.2",
     "@quake2ts/formats": "workspace:*",
     "strata-vfs": "workspace:*"
