@@ -64,3 +64,12 @@ describe('ClientFrames', () => {
     expect(frames.acknowledged).toBe(-1);
   });
 });
+
+describe('deltaEntity', () => {
+  it('keeps the rerelease fields the high bits carry', async () => {
+    const { deltaEntity } = await import('../../../src/network/frames.js');
+    const { U_LOOP_ATTENUATION_HIGH, U_OWNER_HIGH, U_OLD_FRAME_HIGH } = await import('@quake2ts/shared');
+    const partial = { ...createEmptyEntityState(), number: 3, bits: 0, bitsHigh: U_LOOP_ATTENUATION_HIGH | U_OWNER_HIGH | U_OLD_FRAME_HIGH, loopAttenuation: 0.5, owner: 7, oldFrame: 12 };
+    expect(deltaEntity(createEmptyEntityState(), partial)).toMatchObject({ loopAttenuation: 0.5, owner: 7, oldFrame: 12 });
+  });
+});

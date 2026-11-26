@@ -223,10 +223,19 @@ export class MessageWriter {
     writePacketEntities(entities: EntityState[], delta: boolean, protocol: number, removed: readonly number[] = []): void {
         this.writeCommand(delta ? ServerCommand.deltapacketentities : ServerCommand.packetentities);
 
-        for (const ent of entities) {
-            this.writeDeltaEntity(createEmptyEntityState(), ent, true);
+        // In entity-number order, removals among the deltas: CL_ParsePacketEntities walks the old
+        // frame in that order and copies every entity below the next number it reads.
+        const updates = [...entities].sort((a, b) => a.number - b.number);
+        const removals = [...removed].sort((a, b) => a - b);
+        let u = 0;
+        let r = 0;
+        while (u < updates.length || r < removals.length) {
+            if (r >= removals.length || (u < updates.length && updates[u].number < removals[r])) {
+                this.writeDeltaEntity(createEmptyEntityState(), updates[u++], true);
+            } else {
+                writeRemoveEntity(removals[r++], this.writer);
+            }
         }
-        for (const number of removed) writeRemoveEntity(number, this.writer);
         this.writer.writeShort(0);
     }
 

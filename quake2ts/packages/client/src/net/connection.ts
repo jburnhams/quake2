@@ -17,6 +17,7 @@ import {
   EntityState,
   FrameData,
   ClientFrames,
+  copyEntities,
   PROTOCOL_VERSION_RERELEASE,
   DemoRecorder,
   FogData,
@@ -375,7 +376,7 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     if (!parsed.valid) return;
 
     this.entities.clear();
-    for (const [number, entity] of parsed.entities) this.entities.set(number, entity);
+    for (const [number, entity] of copyEntities(parsed)) this.entities.set(number, entity);
 
     if (this.prediction && frame.playerState) {
         const ps = frame.playerState;

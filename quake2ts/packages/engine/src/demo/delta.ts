@@ -14,8 +14,11 @@ export function writeDeltaEntity(from: EntityState, to: EntityState, buffer: num
 export function applyEntityDelta(target: EntityState, delta: EntityState): void {
     const bits = delta.bits;
 
+    const bitsHigh = delta.bitsHigh ?? 0;
+
     // Update metadata
     target.bits = bits;
+    target.bitsHigh = bitsHigh;
     target.number = delta.number; // Ensure number is propagated
 
     if (bits & U_MODEL) target.modelindex = delta.modelindex;
@@ -58,4 +61,7 @@ export function applyEntityDelta(target: EntityState, delta: EntityState): void 
     if (bits & U_SCALE) target.scale = delta.scale;
     if (bits & U_INSTANCE_BITS) target.instanceBits = delta.instanceBits;
     if (bits & U_LOOP_VOLUME) target.loopVolume = delta.loopVolume;
+    if (bitsHigh & U_LOOP_ATTENUATION_HIGH) target.loopAttenuation = delta.loopAttenuation;
+    if (bitsHigh & U_OWNER_HIGH) target.owner = delta.owner;
+    if (bitsHigh & U_OLD_FRAME_HIGH) target.oldFrame = delta.oldFrame;
 }
