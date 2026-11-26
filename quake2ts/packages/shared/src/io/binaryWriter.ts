@@ -8,12 +8,14 @@ export class BinaryWriter extends BaseBinaryWriter {
     this.writeShort(Math.trunc(value * 8));
   }
 
+  // MSG_WriteAngle and ANGLE2SHORT work in 32-bit floats ((f * 256) / 360, each step rounded);
+  // in doubles an angle far outside 0..360 can truncate to the next value (oracle/tests/msg).
   public writeAngle(value: number): void {
-    this.writeByte(Math.trunc(value * 256.0 / 360.0) & 255);
+    this.writeByte(Math.trunc(Math.fround(Math.fround(Math.fround(value) * 256) / 360)) & 255);
   }
 
   public writeAngle16(value: number): void {
-    this.writeShort(Math.trunc(value * 65536.0 / 360.0) & 65535);
+    this.writeShort(Math.trunc(Math.fround(Math.fround(Math.fround(value) * 65536) / 360)) & 65535);
   }
 
   public writePos(pos: Vec3): void {

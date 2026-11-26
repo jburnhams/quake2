@@ -17,37 +17,7 @@
 #include <stdarg.h>
 #include "../../full/qcommon/qcommon.h"
 
-/* ---- stubs for the engine services cmodel.c calls ---- */
-
-static char *bsp_path;
-
-void Com_Error(int code, char *fmt, ...) {
-	va_list ap; va_start(ap, fmt);
-	fprintf(stderr, "Com_Error: "); vfprintf(stderr, fmt, ap); fputc('\n', stderr);
-	va_end(ap); exit(2);
-}
-void Com_Printf(char *fmt, ...) { (void)fmt; }
-void Com_DPrintf(char *fmt, ...) { (void)fmt; }
-void Sys_Error(char *fmt, ...) {
-	va_list ap; va_start(ap, fmt); vfprintf(stderr, fmt, ap); va_end(ap); exit(2);
-}
-static cvar_t dummy_cvar;
-cvar_t *Cvar_Get(char *name, char *value, int flags) { (void)name; (void)value; (void)flags; return &dummy_cvar; }
-float Cvar_VariableValue(char *name) { (void)name; return 0; }
-unsigned Com_BlockChecksum(void *buffer, int length) { (void)buffer; (void)length; return 0; }
-
-int FS_LoadFile(char *path, void **buffer) {
-	(void)path;
-	FILE *f = fopen(bsp_path, "rb");
-	if (!f) { *buffer = NULL; return -1; }
-	fseek(f, 0, SEEK_END); long len = ftell(f); fseek(f, 0, SEEK_SET);
-	*buffer = malloc(len);
-	if (fread(*buffer, 1, len, f) != (size_t)len) { fclose(f); free(*buffer); *buffer = NULL; return -1; }
-	fclose(f);
-	return (int)len;
-}
-void FS_FreeFile(void *buffer) { free(buffer); }
-void FS_Read(void *buffer, int len, FILE *f) { if (fread(buffer, 1, len, f) != (size_t)len) Com_Error(ERR_FATAL, "FS_Read"); }
+extern char *bsp_path;
 
 /* ---- query loop ---- */
 

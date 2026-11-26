@@ -101,8 +101,18 @@ export function writeRemoveEntity(
     }
 }
 
+/** RF_BEAM: a beam's other end travels in old_origin. */
+const RF_BEAM = 128;
+
 /**
- * Writes the delta between two entity states to a binary writer.
+ * MSG_WriteDeltaEntity (qcommon/common.c), held to the C by oracle/tests/msg.oracle.test.ts,
+ * plus the rerelease's extra fields (alpha, scale, ...) when a state has them.
+ *
+ * As in the C: `force` writes the header even when nothing changed (otherwise nothing is
+ * written); `newEntity` (or a beam) also sends old_origin; event is not delta compressed, only
+ * sent when non-zero; skin, effects and renderfx too big for 16 bits go as a long (both size
+ * bits set), which is how laser colours and the high effect flags get through. Fields `from`
+ * leaves out count as 0, so `{}` is the null baseline.
  */
 export function writeDeltaEntity(
   from: EntityState,
@@ -111,150 +121,79 @@ export function writeDeltaEntity(
   force: boolean,
   newEntity: boolean
 ): void {
+  from = { ...NULL_STATE, ...from };
   let bits = 0;
   let bitsHigh = 0;
 
-  // If this is a new entity, use a null baseline
-  if (newEntity) {
-    from = NULL_STATE;
+  if (to.number >= 256) bits |= U_NUMBER16; // number8 is implicit otherwise
+
+  if (to.origin.x !== from.origin.x) bits |= U_ORIGIN1;
+  if (to.origin.y !== from.origin.y) bits |= U_ORIGIN2;
+  if (to.origin.z !== from.origin.z) bits |= U_ORIGIN3;
+  if (to.angles.x !== from.angles.x) bits |= U_ANGLE1;
+  if (to.angles.y !== from.angles.y) bits |= U_ANGLE2;
+  if (to.angles.z !== from.angles.z) bits |= U_ANGLE3;
+
+  const skin = to.skinNum >>> 0;
+  if (to.skinNum !== from.skinNum) {
+    if (skin < 256) bits |= U_SKIN8;
+    else if (skin < 0x10000) bits |= U_SKIN16;
+    else bits |= U_SKIN8 | U_SKIN16;
   }
 
-  // --- Compare fields and build the bitmask ---
-  if (to.modelIndex !== from.modelIndex || force) {
-    bits |= U_MODEL;
-  }
-  if (to.modelIndex2 !== from.modelIndex2 || force) {
-      bits |= U_MODEL2;
-  }
-  if (to.modelIndex3 !== from.modelIndex3 || force) {
-      bits |= U_MODEL3;
-  }
-  if (to.modelIndex4 !== from.modelIndex4 || force) {
-      bits |= U_MODEL4;
+  if (to.frame !== from.frame) {
+    if (to.frame < 256) bits |= U_FRAME8;
+    else bits |= U_FRAME16;
   }
 
-  if (to.origin.x !== from.origin.x || force) {
-    bits |= U_ORIGIN1;
-  }
-  if (to.origin.y !== from.origin.y || force) {
-    bits |= U_ORIGIN2;
-  }
-  if (to.origin.z !== from.origin.z || force) {
-    bits |= U_ORIGIN3;
-  }
-  if (to.angles.x !== from.angles.x || force) {
-    bits |= U_ANGLE1;
-  }
-  if (to.angles.y !== from.angles.y || force) {
-    bits |= U_ANGLE2;
-  }
-  if (to.angles.z !== from.angles.z || force) {
-    bits |= U_ANGLE3;
+  const effects = to.effects >>> 0; // unsigned in entity_state_t
+  if (to.effects !== from.effects) {
+    if (effects < 256) bits |= U_EFFECTS8;
+    else if (effects < 0x8000) bits |= U_EFFECTS16;
+    else bits |= U_EFFECTS8 | U_EFFECTS16;
   }
 
-  if (to.frame !== from.frame || force) {
-      if (to.frame >= 256) bits |= U_FRAME16;
-      else bits |= U_FRAME8;
+  if (to.renderfx !== from.renderfx) {
+    if (to.renderfx < 256) bits |= U_RENDERFX8;
+    else if (to.renderfx < 0x8000) bits |= U_RENDERFX16;
+    else bits |= U_RENDERFX8 | U_RENDERFX16;
   }
 
-  if (to.skinNum !== from.skinNum || force) {
-      if (to.skinNum >= 256) bits |= U_SKIN16;
-      else bits |= U_SKIN8;
-  }
+  if (to.solid !== from.solid) bits |= U_SOLID;
+  if (to.event) bits |= U_EVENT; // not delta compressed, just 0 compressed
 
-  if (to.effects !== from.effects || force) {
-      if (to.effects >= 256) bits |= U_EFFECTS16;
-      else bits |= U_EFFECTS8;
-  }
+  if (to.modelIndex !== from.modelIndex) bits |= U_MODEL;
+  if ((to.modelIndex2 ?? 0) !== (from.modelIndex2 ?? 0)) bits |= U_MODEL2;
+  if ((to.modelIndex3 ?? 0) !== (from.modelIndex3 ?? 0)) bits |= U_MODEL3;
+  if ((to.modelIndex4 ?? 0) !== (from.modelIndex4 ?? 0)) bits |= U_MODEL4;
+  if ((to.sound ?? 0) !== (from.sound ?? 0)) bits |= U_SOUND;
+  if (newEntity || to.renderfx & RF_BEAM) bits |= U_OLDORIGIN;
 
-  if (to.renderfx !== from.renderfx || force) {
-      if (to.renderfx >= 256) bits |= U_RENDERFX16;
-      else bits |= U_RENDERFX8;
-  }
+  // Rerelease fields, only for states that carry them.
+  if (to.alpha !== undefined && to.alpha !== from.alpha) bits |= U_ALPHA;
+  if (to.scale !== undefined && to.scale !== from.scale) bits |= U_SCALE;
+  if (to.instanceBits !== undefined && to.instanceBits !== from.instanceBits) bits |= U_INSTANCE_BITS;
+  if (to.loopVolume !== undefined && to.loopVolume !== from.loopVolume) bits |= U_LOOP_VOLUME;
+  if (to.loopAttenuation !== undefined && to.loopAttenuation !== from.loopAttenuation) bitsHigh |= U_LOOP_ATTENUATION_HIGH;
+  if (to.owner !== undefined && to.owner !== from.owner) bitsHigh |= U_OWNER_HIGH;
+  if (to.oldFrame !== undefined && to.oldFrame !== from.oldFrame) bitsHigh |= U_OLD_FRAME_HIGH;
 
-  if (to.solid !== from.solid || force) {
-    bits |= U_SOLID;
-  }
-  if (to.sound !== from.sound || force) {
-    bits |= U_SOUND;
-  }
-  if (to.event !== from.event || force) {
-    bits |= U_EVENT;
-  }
+  if (!bits && !bitsHigh && !force) return; // nothing to send
 
-  // Rerelease Fields
-  if ((to.alpha !== from.alpha || force) && to.alpha !== undefined) {
-      bits |= U_ALPHA;
-  }
-  if ((to.scale !== from.scale || force) && to.scale !== undefined) {
-      bits |= U_SCALE;
-  }
-  if ((to.instanceBits !== from.instanceBits || force) && to.instanceBits !== undefined) {
-      bits |= U_INSTANCE_BITS;
-  }
-  if ((to.loopVolume !== from.loopVolume || force) && to.loopVolume !== undefined) {
-      bits |= U_LOOP_VOLUME;
-  }
+  if (bitsHigh) bits |= U_MOREBITS4;
+  if (bits & 0xff000000) bits |= U_MOREBITS3 | U_MOREBITS2 | U_MOREBITS1;
+  else if (bits & 0x00ff0000) bits |= U_MOREBITS2 | U_MOREBITS1;
+  else if (bits & 0x0000ff00) bits |= U_MOREBITS1;
 
-  // High Bits Fields
-  if ((to.loopAttenuation !== from.loopAttenuation || force) && to.loopAttenuation !== undefined) {
-      bitsHigh |= U_LOOP_ATTENUATION_HIGH;
-  }
-  if ((to.owner !== from.owner || force) && to.owner !== undefined) {
-      bitsHigh |= U_OWNER_HIGH;
-  }
-  if ((to.oldFrame !== from.oldFrame || force) && to.oldFrame !== undefined) {
-      bitsHigh |= U_OLD_FRAME_HIGH;
-  }
+  writer.writeByte(bits & 0xff);
+  if (bits & U_MOREBITS1) writer.writeByte((bits >>> 8) & 0xff);
+  if (bits & U_MOREBITS2) writer.writeByte((bits >>> 16) & 0xff);
+  if (bits & U_MOREBITS3) writer.writeByte((bits >>> 24) & 0xff);
+  if (bits & U_MOREBITS4) writer.writeByte(bitsHigh & 0xff);
 
+  if (bits & U_NUMBER16) writer.writeShort(to.number);
+  else writer.writeByte(to.number);
 
-  // Handle entity number
-  if (to.number >= 256) {
-      bits |= U_NUMBER16;
-  }
-
-  // Determine needed bytes for header
-
-  // If we have high bits, we set U_MOREBITS4 on the 4th byte
-  if (bitsHigh > 0) {
-      bits |= U_MOREBITS4;
-  }
-
-  // Now calculate cascading flags
-  if (bits & 0xFF000000) { // e.g. U_MOREBITS4 (bit 31) is here
-      bits |= U_MOREBITS3;
-  }
-  if (bits & 0xFFFF0000) { // e.g. U_MOREBITS3 (bit 23) is here
-      bits |= U_MOREBITS2;
-  }
-  if (bits & 0xFFFFFF00) { // e.g. U_MOREBITS2 (bit 15) is here
-      bits |= U_MOREBITS1;
-  }
-
-  // Write Header
-  writer.writeByte(bits & 0xFF);
-
-  if (bits & U_MOREBITS1) {
-      writer.writeByte((bits >> 8) & 0xFF);
-  }
-  if (bits & U_MOREBITS2) {
-      writer.writeByte((bits >> 16) & 0xFF);
-  }
-  if (bits & U_MOREBITS3) {
-      writer.writeByte((bits >> 24) & 0xFF);
-  }
-  if (bits & U_MOREBITS4) {
-      writer.writeByte(bitsHigh & 0xFF);
-  }
-
-  // Write Number
-  if (bits & U_NUMBER16) {
-      writer.writeShort(to.number);
-  } else {
-      writer.writeByte(to.number);
-  }
-
-  // Write Fields in Order (matching NetworkMessageParser.parseDelta)
   if (bits & U_MODEL) writer.writeByte(to.modelIndex);
   if (bits & U_MODEL2) writer.writeByte(to.modelIndex2 ?? 0);
   if (bits & U_MODEL3) writer.writeByte(to.modelIndex3 ?? 0);
@@ -263,14 +202,17 @@ export function writeDeltaEntity(
   if (bits & U_FRAME8) writer.writeByte(to.frame);
   if (bits & U_FRAME16) writer.writeShort(to.frame);
 
-  if (bits & U_SKIN8) writer.writeByte(to.skinNum);
-  if (bits & U_SKIN16) writer.writeShort(to.skinNum);
+  if (bits & U_SKIN8 && bits & U_SKIN16) writer.writeLong(to.skinNum); // used for laser colors
+  else if (bits & U_SKIN8) writer.writeByte(to.skinNum);
+  else if (bits & U_SKIN16) writer.writeShort(to.skinNum);
 
-  if (bits & U_EFFECTS8) writer.writeByte(to.effects);
-  if (bits & U_EFFECTS16) writer.writeShort(to.effects);
+  if ((bits & (U_EFFECTS8 | U_EFFECTS16)) === (U_EFFECTS8 | U_EFFECTS16)) writer.writeLong(to.effects);
+  else if (bits & U_EFFECTS8) writer.writeByte(to.effects);
+  else if (bits & U_EFFECTS16) writer.writeShort(to.effects);
 
-  if (bits & U_RENDERFX8) writer.writeByte(to.renderfx);
-  if (bits & U_RENDERFX16) writer.writeShort(to.renderfx);
+  if ((bits & (U_RENDERFX8 | U_RENDERFX16)) === (U_RENDERFX8 | U_RENDERFX16)) writer.writeLong(to.renderfx);
+  else if (bits & U_RENDERFX8) writer.writeByte(to.renderfx);
+  else if (bits & U_RENDERFX16) writer.writeShort(to.renderfx);
 
   if (bits & U_ORIGIN1) writer.writeCoord(to.origin.x);
   if (bits & U_ORIGIN2) writer.writeCoord(to.origin.y);
@@ -281,23 +223,21 @@ export function writeDeltaEntity(
   if (bits & U_ANGLE3) writer.writeAngle(to.angles.z);
 
   if (bits & U_OLDORIGIN) {
-      // Not implemented in EntityState usually, skip or zero
-      // writer.writePos(to.old_origin);
+    const old = to.oldOrigin ?? { x: 0, y: 0, z: 0 };
+    writer.writeCoord(old.x);
+    writer.writeCoord(old.y);
+    writer.writeCoord(old.z);
   }
 
   if (bits & U_SOUND) writer.writeByte(to.sound ?? 0);
-
   if (bits & U_EVENT) writer.writeByte(to.event ?? 0);
-
   if (bits & U_SOLID) writer.writeShort(to.solid);
 
-  // Rerelease Fields Writing
+  // Rerelease fields
   if (bits & U_ALPHA) writer.writeByte(Math.floor((to.alpha ?? 0) * 255));
   if (bits & U_SCALE) writer.writeFloat(to.scale ?? 0);
   if (bits & U_INSTANCE_BITS) writer.writeLong(to.instanceBits ?? 0);
   if (bits & U_LOOP_VOLUME) writer.writeByte(Math.floor((to.loopVolume ?? 0) * 255));
-
-  // High bits fields
   if (bitsHigh & U_LOOP_ATTENUATION_HIGH) writer.writeByte(Math.floor((to.loopAttenuation ?? 0) * 255));
   if (bitsHigh & U_OWNER_HIGH) writer.writeShort(to.owner ?? 0);
   if (bitsHigh & U_OLD_FRAME_HIGH) writer.writeShort(to.oldFrame ?? 0);

@@ -8,6 +8,7 @@ export default defineConfig({
   test: {
     environment: 'node',
     include: ['oracle/tests/**/*.test.ts'],
+    globalSetup: ['oracle/tests/build.global.ts'],
     pool: 'forks',
     testTimeout: 120_000,
     hookTimeout: 120_000,

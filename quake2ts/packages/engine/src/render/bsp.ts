@@ -6,7 +6,7 @@ import {
   VertexBuffer,
   type VertexAttributeLayout,
 } from './resources.js';
-import { BspMap, createFaceLightmap } from '../assets/bsp.js';
+import { BspMap, createFaceLightmap, surfaceExtents } from '../assets/bsp.js';
 
 export interface BspLightmapData {
   readonly width: number;
@@ -351,24 +351,13 @@ export function createBspSurfaces(map: BspMap): BspSurfaceInput[] {
     const lightmapInfo = map.lightMapInfo[faceIndex];
 
     if (lightmapInfo) {
-      // Calculate the extents of the texture coordinates to determine lightmap dimensions.
-      // Quake 2 lightmaps are 1/16th scale of the texture coordinates.
-      let minS = Infinity, maxS = -Infinity, minT = Infinity, maxT = -Infinity;
-      for (let k = 0; k < textureCoords.length; k+=2) {
-        const s = textureCoords[k];
-        const t = textureCoords[k+1];
-        if (s < minS) minS = s;
-        if (s > maxS) maxS = s;
-        if (t < minT) minT = t;
-        if (t > maxT) maxT = t;
-      }
-
-      // As CalcSurfaceExtents in the original: the lightmap covers floor(min/16)..ceil(max/16)
-      // in 16-unit luxels, so it is ceil(max/16) - floor(min/16) + 1 samples on each axis.
-      const floorMinS = Math.floor(minS / 16);
-      const floorMinT = Math.floor(minT / 16);
-      const lmWidth = Math.ceil(maxS / 16) - floorMinS + 1;
-      const lmHeight = Math.ceil(maxT / 16) - floorMinT + 1;
+      // CalcSurfaceExtents: the lightmap covers floor(min/16)..ceil(max/16) in 16-unit luxels,
+      // so it is extents / 16 + 1 samples on each axis (computed in floats, as the C does).
+      const { textureMins, extents } = surfaceExtents(map, faceIndex);
+      const floorMinS = textureMins[0] / 16;
+      const floorMinT = textureMins[1] / 16;
+      const lmWidth = extents[0] / 16 + 1;
+      const lmHeight = extents[1] / 16 + 1;
 
       // Each light style has its own lmWidth x lmHeight RGB layer, stored one after another.
       // The lump's per-face length runs to the next face's data, so take exactly what the

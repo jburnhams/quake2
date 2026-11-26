@@ -5,6 +5,9 @@ import type { FileSource } from './fileSource.js';
 const MD2_MAGIC = 844121161; // 'IDP2'
 const MD2_VERSION = 8;
 const HEADER_SIZE = 68;
+/** gl_local.h and qfiles.h limits that gl_model.c checks a model against. */
+const MAX_LBM_HEIGHT = 480;
+const MAX_VERTS = 2048;
 
 export interface Md2Header {
   readonly ident: number;
@@ -161,6 +164,14 @@ function parseHeader(buffer: ArrayBuffer): Md2Header {
     offsetEnd: view.getInt32(64, true),
     magic: ident
   };
+
+  // Mod_LoadAliasModel's sanity checks, in its order.
+  if (header.skinHeight > MAX_LBM_HEIGHT) throw new Md2ParseError(`Skin taller than ${MAX_LBM_HEIGHT}`);
+  if (header.numVertices <= 0) throw new Md2ParseError('MD2 has no vertices');
+  if (header.numVertices > MAX_VERTS) throw new Md2ParseError('MD2 has too many vertices');
+  if (header.numTexCoords <= 0) throw new Md2ParseError('MD2 has no st vertices');
+  if (header.numTriangles <= 0) throw new Md2ParseError('MD2 has no triangles');
+  if (header.numFrames <= 0) throw new Md2ParseError('MD2 has no frames');
 
   const expectedFrameSize = 40 + header.numVertices * 4;
   if (header.frameSize !== expectedFrameSize) {
