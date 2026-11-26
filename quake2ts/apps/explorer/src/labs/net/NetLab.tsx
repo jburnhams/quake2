@@ -6,9 +6,11 @@
 // client and server arrange them). The stage shows a moment in 3D (where the server has the player,
 // where the client draws them, and where it would without prediction), the packets around that
 // moment, the figures and a chart over the whole run; then id's code beside the port's, and where
-// the port's own client and server differ from id's.
+// the port's own client and server differ from id's. The moment is the labs' one player
+// (LabPlayer), so the run plays like a video.
 import * as React from 'react';
-import { ChoiceGroup, Field, LineChart, Metric, MetricStrip, Slider, format, useSearchParam } from 'strata-react';
+import { ChoiceGroup, LineChart, Metric, MetricStrip, format, useSearchParam } from 'strata-react';
+import { LabPlayer, useLabClock } from '../LabPlayer';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import clPred from '../../../../../../full/client/cl_pred.c?raw';
 import clEnts from '../../../../../../full/client/cl_ents.c?raw';
@@ -115,7 +117,16 @@ function NetView({ map, world, setup, predict }: { map: BspMap; world: LabWorld;
   const run = React.useMemo(() => simulateNet(world, setup, predict), [world, key, predict]);
   const other = React.useMemo(() => simulateNet(world, setup, !predict), [world, key, predict]);
   const [moment, setMoment] = useSearchParam<string>('at', { default: '1000', parse: (raw) => (Number.isFinite(Number(raw)) && Number(raw) >= 0 && Number(raw) < NET_RUN_MS ? raw : undefined) });
-  const at = Number(moment);
+  // The labs' one player over the run, a client frame a step; the moment in the URL is where it
+  // opens and where it is left.
+  const step = setup.clientMsec;
+  const snap = (t: number) => Math.round((t * 1000) / step) * step;
+  const clock = useLabClock({
+    duration: (NET_RUN_MS - step) / 1000,
+    frame: step / 1000,
+    held: { time: Number(moment) / 1000, set: (t) => setMoment(String(snap(t))) },
+  });
+  const at = snap(clock.time);
   const frame = run.frames.reduce((best, f) => (Math.abs(f.t - at) < Math.abs(best.t - at) ? f : best), run.frames[0]!);
 
   const home = React.useMemo(() => framePoints(run.frames.map((f) => f.server)), [world]);
@@ -146,9 +157,10 @@ function NetView({ map, world, setup, predict }: { map: BspMap; world: LabWorld;
         every {ms(setup.serverMsec)}. {predict ? 'With prediction the client also runs its commands itself, at once, and draws that.' : 'Without prediction the client draws the player between the last two snapshots, so every key waits for a round trip and a server frame.'}
       </p>
 
-      <Field label="Moment" hint="The time the 3D view and the packet strip show. Click the chart below to move it.">
-        <Slider value={at} onChange={(n) => setMoment(String(n))} min={0} max={NET_RUN_MS - setup.clientMsec} step={setup.clientMsec} unit="ms" />
-      </Field>
+      <div className="grid gap-1">
+        <LabPlayer clock={clock} label="The moment" frame={step / 1000} />
+        <p className="type-body-sm text-muted-foreground">Play the run, or stop on the moment the 3D view and the packet strip show; the frame buttons step one client frame. Click the chart below to move it.</p>
+      </div>
 
       <LabScene
         label="The player in 3D at this moment"
@@ -176,7 +188,7 @@ function NetView({ map, world, setup, predict }: { map: BspMap; world: LabWorld;
         planned={series(run, 'server')}
         plannedLabel="The server"
         current={at / 1000}
-        onPick={(x) => setMoment(String(Math.round((x * 1000) / setup.clientMsec) * setup.clientMsec))}
+        onPick={(x) => clock.seek(snap(x) / 1000)}
         formatX={(t) => `${format.decimal.format(t)} s`}
         xLabel="Time"
         formatY={units}
