@@ -160,11 +160,16 @@ describe('E2E Prediction and Reconciliation Test', () => {
   it('should correct position when server disagrees (Task 4.5.3)', async () => {
       const { page } = testClient;
       (await page.evaluate(() => { (window as any).testInput = null; }));
-      await page.waitForTimeout(500);
+
+      // Wait for the player to come to rest after the earlier tests' moves: a player still
+      // sliding when it is moved ends up short of the target by the slide.
+      const player = (server as any).svs.clients.find((c: any) => c)?.edict;
+      const speed = () => Math.hypot(player.velocity.x, player.velocity.y);
+      for (let waited = 0; waited < 3000 && speed() > 0.1; waited += 100) await page.waitForTimeout(100);
+      await page.waitForTimeout(200);
 
       // The server moves the player 128 units along x, as a teleporter would; the client
       // cannot have predicted it.
-      const player = (server as any).svs.clients.find((c: any) => c)?.edict;
       const before = await page.evaluate(() => ({ ...(window as any).clientInstance.prediction.getPredictedState().origin }));
       player.origin = { ...player.origin, x: player.origin.x + 128 };
       player.velocity = { x: 0, y: 0, z: 0 };
@@ -174,9 +179,14 @@ describe('E2E Prediction and Reconciliation Test', () => {
       await page.waitForTimeout(1000);
       const after = await page.evaluate(() => ({ ...(window as any).clientInstance.prediction.getPredictedState().origin }));
 
+      // Against where the server has the player now, not the spot it was put: on the real map
+      // the spot can be a ledge the player falls from, or a wall pmove's stuck test nudges it
+      // out of, and the client follows that too.
+      const now = player.origin;
       expect(Math.abs(after.x - before.x)).toBeGreaterThan(100);
-      expect(Math.abs(after.x - target.x)).toBeLessThan(1);
-      expect(Math.abs(after.y - target.y)).toBeLessThan(1);
+      expect(Math.abs(after.x - target.x)).toBeLessThan(2);
+      expect(Math.abs(after.x - now.x)).toBeLessThan(1);
+      expect(Math.abs(after.y - now.y)).toBeLessThan(1);
   });
 
 });

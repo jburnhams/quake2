@@ -24,6 +24,8 @@
     <canvas id="game-canvas"></canvas>
 
     <script src="/packages/client/dist/browser/index.global.js"></script>
+    <!-- The engine's own bundle, for its asset loaders (Quake2Engine.AssetManager over the paks). -->
+    <script src="/packages/engine/dist/browser/index.global.js"></script>
 
     <script>
         window.clientConnected = false;
@@ -39,6 +41,19 @@
                 if (harnessFloorZ === null || feet < harnessFloorZ) harnessFloorZ = feet;
             }
             return harnessFloorZ;
+        }
+
+        /** An AssetManager over every pak in `urls` that the static server has. */
+        async function loadPakAssets(urls) {
+            const { AssetManager, PakArchive, VirtualFileSystem } = Quake2Engine;
+            const vfs = new VirtualFileSystem();
+            for (const url of urls) {
+                const response = await fetch(url);
+                if (!response.ok) continue;
+                vfs.mountPak(PakArchive.fromArrayBuffer(url, await response.arrayBuffer()));
+                console.log(`Harness mounted ${url}`);
+            }
+            return new AssetManager(vfs);
         }
 
         async function start() {
@@ -88,13 +103,23 @@
                     setUnderwaterWarp: () => {}
                 };
 
+                // Models and sprites come from the real loaders over the paks the server reads:
+                // the demo pak if scripts/fetch-paks.sh has fetched it, and the committed pak.pak.
+                // So a model configstring from the server is loaded and parsed as a player would.
+                // Textures and sounds stay stubs: the renderer and audio are mocks.
+                const realAssets = await loadPakAssets(['/.paks/baseq2/pak0.pak', '/pak.pak']);
                 const mockAssets = {
                     getMap: () => null,
                     listFiles: () => [],
                     loadTexture: async () => ({ width: 16, height: 16, rgba: new Uint8Array(16*16*4) }),
-                    loadSprite: async () => ({ frames: [] }),
-                    loadSound: async () => ({ duration: 0, buffer: null })
+                    loadSound: async () => ({ duration: 0, buffer: null }),
+                    loadMd2Model: (path) => realAssets.loadMd2Model(path),
+                    getMd2Model: (path) => realAssets.getMd2Model(path),
+                    loadMd3Model: (path) => realAssets.loadMd3Model(path),
+                    getMd3Model: (path) => realAssets.getMd3Model(path),
+                    loadSprite: (path) => realAssets.loadSprite(path),
                 };
+                window.harnessAssets = realAssets;
 
                 const mockEngine = {
                     renderer: mockRenderer,
