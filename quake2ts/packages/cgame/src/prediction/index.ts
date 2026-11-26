@@ -238,6 +238,8 @@ export function predictMove(
   const pm: PmoveState = {
     pmType: state.pmType,
     pmFlags: state.pmFlags,
+    // pm_time: the landing, teleport and water-jump timers, counted down a command at a time.
+    pmTime: state.pm_time ?? 0,
     origin: state.origin,
     velocity: state.velocity,
     angles: state.viewAngles,
@@ -270,6 +272,7 @@ export function predictMove(
     watertype: next.watertype,
     pmFlags: next.pmFlags,
     pm_flags: next.pmFlags,
+    pm_time: next.pmTime ?? 0,
     pmType: next.pmType,
     onGround: hasPmFlag(next.pmFlags, PmFlag.OnGround),
     viewAngles: viewangles,

@@ -63,6 +63,11 @@ can be linked.
   door's area portal, or outside the PVS), by the engine's own culling (`pvs.ts`); a click on a floor
   moves the eye. The 3D view stands the renderer at the eye (`LabScene standAt`, with the door's
   portal set), so the same cull is what it draws. id's ref_gl and cmodel code beside the port's.
+- `src/labs/slide/`: the slide and step lab (`/labs/slide`): a second of running from a place in
+  demo1 (a wall met at 45°, a staircase) by the game's `runPmove`, with every trace it asks for
+  recorded (`slide.ts`), so one frame is taken apart: each sweep, what it met, the step up and the
+  push down. STEPSIZE and the heading are on sliders; id's PM_ClipVelocity, PM_StepSlideMove_Generic
+  and PM_StepSlideMove (2023 and 1997) beside the port's `frame.ts`.
 - `src/labs/source/`: id's code beside the port's. `excerpt.ts` cuts a function out of a file by
   name; the labs read `rerelease/` and `full/` (outside the workspace, allowed in `vite.config.ts`)
   and the port's files with `?raw`, so what is shown is what runs.
