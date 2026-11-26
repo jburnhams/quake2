@@ -64,9 +64,6 @@ export class ClientConnection implements NetworkMessageHandler {
   public onDisconnected?: () => void;
   public onPacket?: (data: Uint8Array) => void; // Outgoing data (e.g. stringcmd)
 
-  // Prediction helpers
-  private frameCRCs = new Map<number, number>();
-
   constructor(options: ClientConnectionOptions = {}) {
       this.prediction = options.prediction;
       this.effectSystem = options.effectSystem;
@@ -77,7 +74,6 @@ export class ClientConnection implements NetworkMessageHandler {
     this.baselines.clear();
     this.entities.clear();
     this.latestServerFrame = 0;
-    this.frameCRCs.clear();
     this.serverProtocol = 0;
     this.setState(ConnectionState.Disconnected);
   }
@@ -109,14 +105,6 @@ export class ClientConnection implements NetworkMessageHandler {
       }
 
       parser.parseMessage();
-  }
-
-  public recordFrameCRC(frame: number, crc: number): void {
-      this.frameCRCs.set(frame, crc);
-  }
-
-  public getFrameCRC(frame: number): number {
-      return this.frameCRCs.get(frame) || 0;
   }
 
   // ==================================================================================

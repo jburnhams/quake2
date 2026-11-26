@@ -23,9 +23,12 @@ export interface MoveCommands {
 export interface ClientMessageHandler {
   /**
    * clc_move: the oldest, the older and the newest command (CL_SendCmd sends three, so the
-   * commands of lost packets arrive in the next one).
+   * commands of lost packets arrive in the next one). `checksummed` is the bytes the checksum
+   * covers (from the last frame to the end of the commands), for COM_BlockSequenceCRCByte.
+   * Returning false ignores the rest of the packet, as SV_ExecuteClientMessage does when the
+   * checksum fails.
    */
-  onMove(checksum: number, lastFrame: number, commands: MoveCommands): void;
+  onMove(checksum: number, lastFrame: number, commands: MoveCommands, checksummed: Uint8Array): boolean | void;
   onUserInfo(info: string): void;
   onStringCmd(cmd: string): void;
   onNop(): void;
@@ -42,13 +45,18 @@ export class ClientMessageParser {
   }
 
   public parseMessage(): void {
+    // SV_ExecuteClientMessage's move_issued: a second clc_move in one packet is someone cheating,
+    // and the rest of the packet is dropped.
+    let moveIssued = false;
     while (this.stream.hasMore()) {
       const cmdId = this.stream.readByte();
       if (cmdId === -1) break;
 
       switch (cmdId) {
         case ClientCommand.move:
-          this.parseMove();
+          if (moveIssued) return;
+          moveIssued = true;
+          if (!this.parseMove()) return;
           break;
         case ClientCommand.userinfo:
           this.parseUserInfo();
@@ -67,8 +75,10 @@ export class ClientMessageParser {
     }
   }
 
-  private parseMove(): void {
+  /** Reads one clc_move and hands it on; false when the handler refused it. */
+  private parseMove(): boolean {
     const checksum = this.stream.readByte();
+    const checksumEnd = this.stream.getPosition();
     const lastFrame = this.stream.readLong();
 
     // SV_ExecuteClientMessage reads three commands, each a delta from the one before, the
@@ -77,7 +87,11 @@ export class ClientMessageParser {
     const old = this.readDeltaUserCommand(oldest);
     const current = this.readDeltaUserCommand(old);
 
-    this.handler.onMove(checksum, lastFrame, { oldest, old, current });
+    const end = this.stream.getPosition();
+    this.stream.setReadPosition(checksumEnd);
+    const checksummed = this.stream.readData(end - checksumEnd);
+
+    return this.handler.onMove(checksum, lastFrame, { oldest, old, current }, checksummed) !== false;
   }
 
   /** MSG_ReadDeltaUsercmd: `from` with the fields the bit byte names replaced. */

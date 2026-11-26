@@ -5,7 +5,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { DedicatedServer } from '../../src/dedicated';
 import { ClientState } from '../../src/client';
 import type { NetworkTransport } from '../../src/transport';
-import { NetChan, ClientCommand, BinaryWriter, writeMoveCommands, type NetDriver, type UserCommand } from '@quake2ts/shared';
+import { NetChan, ClientCommand, BinaryWriter, writeMove, type NetDriver, type UserCommand } from '@quake2ts/shared';
 import { MockNetDriver } from '@quake2ts/test-utils';
 
 class Transport implements NetworkTransport {
@@ -40,15 +40,14 @@ function setup(options: { floodLimit?: number } = {}) {
   const send = (n: number, lost = false) => {
     history.push(command(n));
     const writer = new BinaryWriter();
-    writer.writeByte(ClientCommand.move);
-    writer.writeByte(0);
-    writer.writeLong(0);
-    writeMoveCommands(writer, history);
+    writeMove(writer, 0, history, chan.outgoingSequence + 1);
     const packet = chan.transmit(writer.getData());
     if (!lost) driver.receiveMessage(packet);
   };
+  /** Sends `payload` as the next packet, as written (for broken or doubled moves). */
+  const sendRaw = (payload: Uint8Array) => driver.receiveMessage(chan.transmit(payload));
   const read = () => server.SV_ReadPackets();
-  return { send, read, ran, client };
+  return { send, sendRaw, read, ran, client, chan, history, server };
 }
 
 describe('clc_move on the server', () => {
@@ -103,5 +102,71 @@ describe('clc_move on the server', () => {
     send(4);
     read();
     expect(ran).toEqual([1, 2]);
+  });
+
+  describe('the checksum (COM_BlockSequenceCRCByte, keyed by the packet sequence)', () => {
+    const move = (n: number, sequence: number, history: UserCommand[]) => {
+      history.push(command(n));
+      const writer = new BinaryWriter();
+      writeMove(writer, 0, history, sequence);
+      return writer.getData();
+    };
+
+    it('runs a move whose checksum matches its packet', () => {
+      const { sendRaw, read, ran, chan, history } = setup();
+      sendRaw(move(1, chan.outgoingSequence + 1, history));
+      read();
+      expect(ran).toEqual([1]);
+    });
+
+    it('drops a move keyed by another sequence, and the rest of its packet', () => {
+      const { sendRaw, read, ran, chan, history, server } = setup();
+      const said = vi.spyOn(server, 'handleStringCmd');
+      const bad = move(1, chan.outgoingSequence + 2, history);
+      const stringcmd = new BinaryWriter();
+      stringcmd.writeByte(ClientCommand.stringcmd);
+      stringcmd.writeString('say hello');
+      const payload = new Uint8Array(bad.length + stringcmd.getData().length);
+      payload.set(bad);
+      payload.set(stringcmd.getData(), bad.length);
+      sendRaw(payload);
+      read();
+      expect(ran).toEqual([]);
+      expect(said).not.toHaveBeenCalled();
+    });
+
+    it('drops a move whose commands were changed after the checksum', () => {
+      const { sendRaw, read, ran, chan, history } = setup();
+      const data = move(1, chan.outgoingSequence + 1, history);
+      data[data.length - 2] ^= 1; // the last command's msec
+      sendRaw(data);
+      read();
+      expect(ran).toEqual([]);
+    });
+
+    it('runs only the first of two moves in one packet (move_issued)', () => {
+      const { sendRaw, read, ran, chan, history } = setup();
+      const sequence = chan.outgoingSequence + 1;
+      const first = move(1, sequence, history);
+      const second = move(2, sequence, history);
+      const payload = new Uint8Array(first.length + second.length);
+      payload.set(first);
+      payload.set(second, first.length);
+      sendRaw(payload);
+      read();
+      expect(ran).toEqual([1]);
+    });
+
+    it('keeps reading the packet after a move from a client not yet in the game', () => {
+      const { sendRaw, read, ran, chan, history, client } = setup();
+      client.state = ClientState.Connected;
+      const data = move(1, chan.outgoingSequence + 1, history);
+      const nop = new Uint8Array(data.length + 1);
+      nop.set(data);
+      nop[data.length] = ClientCommand.nop;
+      sendRaw(nop);
+      expect(() => read()).not.toThrow();
+      expect(ran).toEqual([]);
+    });
   });
 });

@@ -20,7 +20,6 @@ export interface ClientFrame {
     firstEntity: number; // into the circular sv_packet_entities[]
     sentTime: number;    // for ping calculations
     entities: EntityState[];
-    packetCRC: number;   // CRC of the packet sending this frame
 }
 
 export interface Client {
@@ -82,7 +81,6 @@ export function createClient(index: number, net: NetDriver): Client {
             firstEntity: 0,
             sentTime: 0,
             entities: [],
-            packetCRC: 0
         });
     }
 
