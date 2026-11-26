@@ -182,6 +182,7 @@ describe('Weapon Firing Logic', () => {
         it('should penetrate multiple targets in SP', () => {
             (mockGame.trace as any)
                 .mockReturnValueOnce(createTraceMock({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 })) // P_ProjectSource
+                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 8192, y: 0, z: 22 }, ent: null })) // P_ProjectShot: the crosshair trace, 8192 along the view
                 .mockReturnValueOnce(createTraceMock({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1 }))
                 .mockReturnValueOnce(createTraceMock({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2 }))
                 .mockReturnValueOnce(createTraceMock({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0 }));
@@ -202,6 +203,7 @@ describe('Weapon Firing Logic', () => {
             mockGame.deathmatch = true;
             (mockGame.trace as any)
                 .mockReturnValueOnce(createTraceMock({ ent: null, endpos: { x: 0, y: 0, z: 0 }, fraction: 1.0 })) // P_ProjectSource
+                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 8192, y: 0, z: 22 }, ent: null })) // P_ProjectShot: the crosshair trace, 8192 along the view
                 .mockReturnValueOnce(createTraceMock({ ent: target1, endpos: { x: 100, y: 0, z: 0 }, fraction: 0.1 }))
                 .mockReturnValueOnce(createTraceMock({ ent: target2, endpos: { x: 200, y: 0, z: 0 }, fraction: 0.2 }))
                 .mockReturnValueOnce(createTraceMock({ ent: mockGame.entities.world, endpos: { x: 8192, y: 0, z: 0 }, fraction: 1.0 }));

@@ -30,8 +30,9 @@ import {
   type WorldRenderState,
   type EngineImports,
   type EntityState,
+  type DLight,
 } from '@quake2ts/engine';
-import { ClientEffectSystem } from '@quake2ts/client';
+import { ClientEffectSystem, processEntityEffects } from '@quake2ts/client';
 import { LocalHost } from '@quake2ts/server';
 import { ConfigStringIndex, MAX_LIGHTSTYLES } from '@quake2ts/shared';
 import { FrameStats, type FrameTimings } from './stats';
@@ -71,6 +72,18 @@ export function toUserCommand({ keys, attack, pitch, yaw }: InputState) {
   };
 }
 
+/** What the last frame drew and the game sent, for tests that drive the page (see `inspect`). */
+export type FrameInspection = {
+  /** The camera's view-projection matrix (column-major), to put a world point on the screen. */
+  viewProjection: number[];
+  /** The model name of every entity drawn (monsters, items, the weapon in the player's hands). */
+  drawnModels: string[];
+  /** Impacts and explosions the game sent since the last inspection, where they happened. */
+  impacts: { type: number; pos: { x: number; y: number; z: number } }[];
+  pitch: number;
+  yaw: number;
+};
+
 export type PlayerStatus = { health: number; dead: boolean; map: string };
 
 export type SessionOptions = {
@@ -103,6 +116,8 @@ export class GameSession {
   private readonly dlights = new DynamicLightManager();
   private readonly effects: ClientEffectSystem;
   private lastDrawSeconds = 0;
+  private lastDrawn: RenderableEntity[] = [];
+  private impactsSinceInspect: FrameInspection['impacts'] = [];
   /** The pattern last given the renderer for each style (undefined: never given). */
   private readonly lightStyles: (string | null | undefined)[] = [];
 
@@ -144,6 +159,21 @@ export class GameSession {
   /** Frame rate and CPU time over the last second, or null before two frames are drawn. */
   stats(): FrameTimings | null {
     return this.timings.read();
+  }
+
+  /** What the last frame drew and where shots landed since the last call: the end-to-end tests' view of the game. */
+  inspect(): FrameInspection {
+    const names = new Map<unknown, string>();
+    for (const [name, model] of this.models) names.set(model, name);
+    const impacts = this.impactsSinceInspect;
+    this.impactsSinceInspect = [];
+    return {
+      viewProjection: Array.from(this.camera.viewProjectionMatrix),
+      drawnModels: this.lastDrawn.map((e) => names.get(e.model) ?? '?'),
+      impacts,
+      pitch: this.pitch,
+      yaw: this.yaw,
+    };
   }
 
   /** Starts the loop; returns a function that stops it. */
@@ -238,7 +268,10 @@ export class GameSession {
     const gameSeconds = this.host.timeSeconds;
     for (const effect of this.host.takeEffects()) {
       if (effect.kind === 'muzzleflash') this.effects.onMuzzleFlash(effect.entity, effect.weapon, gameSeconds);
-      else this.effects.onTempEntity(effect.type, effect.pos, gameSeconds, effect.dir, effect.pos2);
+      else {
+        this.effects.onTempEntity(effect.type, effect.pos, gameSeconds, effect.dir, effect.pos2);
+        this.impactsSinceInspect = [...this.impactsSinceInspect.slice(-31), { type: effect.type, pos: { ...effect.pos } }];
+      }
     }
     const deltaTime = this.lastDrawSeconds ? Math.min(timeSeconds - this.lastDrawSeconds, 0.1) : 0;
     this.lastDrawSeconds = timeSeconds;
@@ -246,6 +279,7 @@ export class GameSession {
     // Game time now, between game frames: the 25 ms frames run so far plus the time owed to the next.
     const nowMs = this.host.timeSeconds * 1000 + this.owed;
     const entities: SceneEntitySource[] = [];
+    const entityLights: DLight[] = [];
     let viewer: SceneEntitySource | undefined;
     this.host.map.game.entities.forEachEntity((entity) => {
       const source: SceneEntitySource = {
@@ -261,6 +295,10 @@ export class GameSession {
       };
       if (entity === player) viewer = source;
       entities.push(source);
+      // CL_AddPacketEntities: a blaster bolt, rocket or grenade carries its own light.
+      if (entity.inUse && entity.effects) {
+        processEntityEffects({ effects: entity.effects, renderfx: entity.renderfx ?? 0, origin: entity.origin }, entityLights, gameSeconds);
+      }
     });
     const modelName = (i: number) => this.host.modelName(i);
     const drawn: RenderableEntity[] = modelEntitiesFromEntities(entities, modelName, {
@@ -283,6 +321,7 @@ export class GameSession {
         })
       : undefined;
     if (weapon) drawn.push(weapon);
+    this.lastDrawn = drawn;
     this.renderer.renderFrame(
       {
         camera: this.camera,
@@ -290,7 +329,7 @@ export class GameSession {
         clearColor: [0, 0, 0, 1],
         timeSeconds,
         deltaTime,
-        dlights: this.dlights.getActiveLights(),
+        dlights: [...this.dlights.getActiveLights(), ...entityLights],
         brushModels: brushModelsFromEntities(entities, modelName),
       },
       drawn,

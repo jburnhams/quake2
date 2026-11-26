@@ -64,8 +64,8 @@ describe('Super Shotgun', () => {
     it('should fire standard pellets (Wide Spread, High Damage)', () => {
         fire(game, player, WeaponId.SuperShotgun);
 
-        // 1 trace for P_ProjectSource + 20 traces for pellets (10 per barrel) = 21
-        expect(imports.trace).toHaveBeenCalledTimes(21);
+        // each barrel's P_ProjectShot (muzzle check + crosshair trace) + 10 pellets = 24
+        expect(imports.trace).toHaveBeenCalledTimes(24);
         // Verify damage is 6
         expect(T_Damage).toHaveBeenCalledWith(
             expect.anything(),
@@ -90,7 +90,7 @@ describe('Super Shotgun', () => {
 
         fire(game, player, WeaponId.SuperShotgun);
 
-        expect(imports.trace).toHaveBeenCalledTimes(21);
+        expect(imports.trace).toHaveBeenCalledTimes(24);
         // Verify damage is 4
         expect(T_Damage).toHaveBeenCalledWith(
             expect.anything(),

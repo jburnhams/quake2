@@ -39,7 +39,7 @@ describe('Super Shotgun', () => {
         fire(game, player, WeaponId.SuperShotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(8);
-        expect(customTrace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
+        expect(customTrace).toHaveBeenCalledTimes(24); // 2 traces per barrel (P_ProjectShot) + 20 pellets
         // DamageFlags.BULLET (16), DamageMod.SSHOTGUN (3)
         expect(T_Damage).toHaveBeenCalledWith(target, player, player, expect.anything(), expect.anything(), expect.anything(), 6, 1, 16, 3, 0, expect.any(Function), expect.objectContaining({ hooks: expect.anything() }));
     });
@@ -71,7 +71,7 @@ describe('Super Shotgun', () => {
 
         fire(game, player, WeaponId.SuperShotgun);
 
-        expect(customTrace).toHaveBeenCalledTimes(21); // 1 source + 20 pellets
+        expect(customTrace).toHaveBeenCalledTimes(24); // 2 traces per barrel (P_ProjectShot) + 20 pellets
 
         // Check the trace calls to verify the spread pattern
         const calls = customTrace.mock.calls;
@@ -108,4 +108,30 @@ describe('Super Shotgun', () => {
         expect(firstVolleyAverage).toBeGreaterThan(0);
         expect(secondVolleyAverage).toBeLessThan(0);
     });
+
+    it('aims both barrels where the player looks, pitch included', () => {
+        const { game, imports } = createTestGame();
+        const player = spawnEntity(game.entities, createPlayerEntityFactory({
+            angles: { x: 0, y: 0, z: 0 }, // the body never pitches; the view does
+            origin: { x: 0, y: 0, z: 0 }
+        }));
+        player.client!.v_angle = { x: 45, y: 0, z: 0 };
+        player.client!.inventory = createPlayerInventory({
+            weapons: [WeaponId.SuperShotgun],
+            ammo: { [AmmoType.Shells]: 10 },
+        });
+        imports.trace.mockImplementation((start: any, _mins: any, _maxs: any, end: any) => createTraceMock({ fraction: 1, endpos: end }));
+
+        fire(game, player, WeaponId.SuperShotgun);
+
+        // Pellets are the long traces (8192 units); each heads down at about 45 degrees.
+        const pellets = imports.trace.mock.calls.filter(([s, , , e]: any[]) => Math.hypot(e.x - s.x, e.y - s.y, e.z - s.z) > 4000);
+        expect(pellets.length).toBeGreaterThanOrEqual(20);
+        for (const [s, , , e] of pellets as any[]) {
+            const pitch = Math.atan2(-(e.z - s.z), Math.hypot(e.x - s.x, e.y - s.y)) * 180 / Math.PI;
+            expect(pitch).toBeGreaterThan(30);
+            expect(pitch).toBeLessThan(60);
+        }
+    });
 });
+

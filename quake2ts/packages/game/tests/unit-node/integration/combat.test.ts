@@ -74,6 +74,12 @@ describe('Combat and Items', () => {
           endpos: { x: 0, y: 0, z: 0 },
           ent: null
        }))
+       // 0b. P_ProjectShot's crosshair trace, 8192 along the view
+       .mockReturnValueOnce(createTraceMock({
+          fraction: 1.0,
+          endpos: { x: 8192, y: 0, z: 22 },
+          ent: null
+       }))
        // 1. Hit target1
        .mockReturnValueOnce(createTraceMock({
           fraction: 0.1,

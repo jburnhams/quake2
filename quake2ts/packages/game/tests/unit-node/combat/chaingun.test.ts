@@ -93,7 +93,7 @@ describe('Chaingun', () => {
         fire(game, player, WeaponId.Chaingun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 for P_ProjectSource + 1 for bullet
+        expect(trace).toHaveBeenCalledTimes(3); // P_ProjectShot's two traces + 1 for bullet
         expect(T_Damage).toHaveBeenCalledWith(
             target,
             expect.anything(),
@@ -117,7 +117,7 @@ describe('Chaingun', () => {
         fire(game, player, WeaponId.Chaingun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        expect(trace).toHaveBeenCalledTimes(2); // 1 for P_ProjectSource + 1 for bullet
+        expect(trace).toHaveBeenCalledTimes(3); // P_ProjectShot's two traces + 1 for bullet
 
         // Expected 6 base, but test environment introduces slight distance falloff resulting in 5
         // 6 - (10 * 0.002) = 5.98 -> 5
@@ -197,7 +197,7 @@ describe('Chaingun', () => {
             // Stage 1: 1 shot per fire
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 2; // 1 for P_ProjectSource + 1 shot
+                totalTraceCalls += 3; // P_ProjectShot's two traces + 1 shot
                 ammoConsumed += 1;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
@@ -207,7 +207,7 @@ describe('Chaingun', () => {
             // Stage 2: 2 shots per fire
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 3; // 1 for P_ProjectSource + 2 shots
+                totalTraceCalls += 4; // P_ProjectShot's two traces + 2 shots
                 ammoConsumed += 2;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
@@ -217,7 +217,7 @@ describe('Chaingun', () => {
             // Stage 3: 3 shots per fire
             for (let i = 1; i <= 5; i++) {
                 fire(game, player, WeaponId.Chaingun);
-                totalTraceCalls += 4; // 1 for P_ProjectSource + 3 shots
+                totalTraceCalls += 5; // P_ProjectShot's two traces + 3 shots
                 ammoConsumed += 3;
                 expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
                 expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
@@ -228,7 +228,7 @@ describe('Chaingun', () => {
             game.advanceTime!(300);
 
             fire(game, player, WeaponId.Chaingun);
-            totalTraceCalls += 2; // Should reset to 1 shot (+1 source check)
+            totalTraceCalls += 3; // Should reset to 1 shot (+ P_ProjectShot's two traces)
             ammoConsumed += 1;
             expect(trace).toHaveBeenCalledTimes(totalTraceCalls);
             expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(200 - ammoConsumed);
@@ -291,8 +291,8 @@ describe('Chaingun', () => {
              expect(weaponState.spinupCount).toBe(woundUpCount + 1);
 
              // Check if it fired 3 shots (because spinup > 10)
-             // 1 trace for ProjectSource, 3 for bullets = 4 traces
-             expect(trace).toHaveBeenCalledTimes(4);
+             // 2 traces for P_ProjectShot, 3 for bullets = 5 traces
+             expect(trace).toHaveBeenCalledTimes(5);
              expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(47); // 50 - 3
         });
 

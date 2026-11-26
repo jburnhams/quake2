@@ -316,6 +316,13 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
     return null;
   }
 
+  // The original spawn functions set s.modelindex = gi.modelindex("models/.../tris.md2"); the
+  // port's (every monster, barrels, dead bodies) name the model in `model` only, so without this
+  // they spawn with modelindex 0 and are never sent to the renderer (monsters were invisible in /play).
+  if (entity.model && !entity.model.startsWith('*') && !entity.modelindex) {
+    entity.modelindex = options.entities.modelIndex(entity.model);
+  }
+
   options.entities.finalizeSpawn(entity);
 
   return entity;

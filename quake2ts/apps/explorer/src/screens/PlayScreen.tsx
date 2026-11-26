@@ -31,7 +31,7 @@ export function PlayScreen() {
       <header className="hud-bar flex min-h-(--control-h) shrink-0 flex-wrap items-center gap-3 border-b border-border px-3 py-1">
         <h1 className="type-label">Play demo1</h1>
         <p className="type-body-sm text-muted-foreground">
-          The world, doors, lifts, monsters, items, muzzle flashes and impacts are drawn. Not yet: the weapon in your hands and sound.
+          The world, doors, lifts, monsters, items, muzzle flashes and impacts are drawn. Not yet: sound.
         </p>
         <div className="ms-auto flex items-center gap-2">
           <ButtonLink to="/explore" size="sm" variant="ghost">
@@ -84,6 +84,8 @@ function Game() {
       .then((session) => {
         if (cancelled) return;
         stop = session.run();
+        // The dev server (and the end-to-end test that runs it) can drive and inspect the game.
+        if (import.meta.env.DEV) (window as unknown as { q2play?: GameSession }).q2play = session;
         setState({ phase: 'running', session });
       })
       .catch((e: unknown) => !cancelled && setState({ phase: 'failed', message: e instanceof Error ? e.message : String(e) }));

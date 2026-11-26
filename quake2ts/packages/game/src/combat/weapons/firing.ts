@@ -9,7 +9,7 @@ import { WEAPON_ITEMS, WeaponItem } from '../../inventory/items.js';
 import { PlayerInventory, WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import {
-    ZERO_VEC3, angleVectors, addVec3, scaleVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
+    ZERO_VEC3, angleVectors, addVec3, scaleVec3, normalizeVec3, createRandomGenerator, ServerCommand, TempEntity, Vec3,
     MZ_BLASTER, MZ_MACHINEGUN, MZ_SHOTGUN, MZ_CHAINGUN1, MZ_CHAINGUN2, MZ_CHAINGUN3,
     MZ_RAILGUN, MZ_ROCKET, MZ_GRENADE, MZ_LOGIN, MZ_LOGOUT, MZ_SSHOTGUN, MZ_BFG, MZ_HYPERBLASTER,
     ATTN_NORM, MASK_SHOT, lengthVec3, subtractVec3
@@ -20,7 +20,7 @@ import { DamageMod } from '../damageMods.js';
 import { createRocket, createGuidedRocket, createGrenade, createBfgBall, createBlasterBolt, createProxMine } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
 import { fireIonRipper, firePhalanx, firePlasmaBeam, fireEtfRifle } from './rogue.js';
-import { P_ProjectSource } from './projectSource.js';
+import { P_ProjectShot } from './projectSource.js';
 import { Throw_Generic } from './animation.js';
 import {
     FRAME_GRENADE_IDLE_FIRST, FRAME_GRENADE_IDLE_LAST, FRAME_GRENADE_THROW_FIRST,
@@ -163,9 +163,12 @@ function fireMultiplePellets(game: GameExports, player: Entity, start: Vec3, for
 
     try {
         for (let i = 0; i < count; i++) {
-            const spread = addVec3(scaleVec3(right, random.crandom() * hspread), scaleVec3(up, random.crandom() * vspread));
-            const dir = addVec3(forward, spread);
-            const end = { x: start.x + dir.x * 8192, y: start.y + dir.y * 8192, z: start.z + dir.z * 8192 };
+            // fire_lead: the spread is in units at the end of an 8192-unit shot (hspread 500 is about
+            // 3.5 degrees), not added to the unit direction (which sent pellets out sideways).
+            const end = addVec3(
+                addVec3(addVec3(start, scaleVec3(forward, 8192)), scaleVec3(right, random.crandom() * hspread)),
+                scaleVec3(up, random.crandom() * vspread),
+            );
             const trace = game.trace(start, null, null, end, player, 0);
 
             if (trace.ent && trace.ent.takedamage) {
@@ -299,14 +302,10 @@ export function fireHandGrenade(game: GameExports, player: Entity, inventory: Pl
                 game.multicast(ent.origin, MulticastType.Pvs, ServerCommand.muzzleflash, ent.index, MZ_GRENADE);
                 applyKick(ent, -2, 0, -2);
 
-                let throwAngles = { ...ent.angles };
-                if (throwAngles.x < -62.5) throwAngles.x = -62.5;
-                throwAngles.z = 0;
-
-                const { forward } = angleVectors(throwAngles);
-                const { right, up } = angleVectors(ent.angles);
-
-                const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
+                // weapon_grenade_fire: thrown where the player looks, but no higher than 62.5
+                // degrees up so it never goes over their head (the port threw along the body's yaw only).
+                const view = ent.client?.v_angle ?? ent.angles;
+                const { start: source, dir: forward } = P_ProjectShot(game, ent, { ...view, x: Math.max(-62.5, view.x) }, { x: 2, y: 0, z: -14 });
 
                 createGrenade(game.entities, ent, source, forward, 120, speed, timer);
 
@@ -340,8 +339,7 @@ export function fireShotgun(game: GameExports, player: Entity) {
     applyKick(player, -2, 0, -2);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     const count = game.deathmatch ? DEFAULT_DEATHMATCH_SHOTGUN_COUNT : DEFAULT_SHOTGUN_COUNT;
     fireMultiplePellets(game, player, source, forward, right, up, count, 4, 1, DEFAULT_SHOTGUN_HSPREAD, DEFAULT_SHOTGUN_VSPREAD, DamageMod.SHOTGUN);
@@ -362,8 +360,9 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
     applyKick(player, -4, 0, -4);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    // p_weapon.cpp weapon_supershotgun_fire: half the pellets 5 degrees each side of the view,
+    // pitch included (the port used the body's angles, so the barrels never aimed up or down).
+    const view = player.client.v_angle ?? player.angles;
 
     const count = DEFAULT_SSHOTGUN_COUNT / 2;
     let hspread = DEFAULT_SSHOTGUN_HSPREAD; // Default 1000
@@ -376,10 +375,10 @@ export function fireSuperShotgun(game: GameExports, player: Entity) {
         damage = 4;    // Reduced damage per pellet
     }
 
-    const { forward: forward1, right: right1, up: up1 } = angleVectors({ ...player.angles, y: player.angles.y - 5 });
-    fireMultiplePellets(game, player, source, forward1, right1, up1, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
-    const { forward: forward2, right: right2, up: up2 } = angleVectors({ ...player.angles, y: player.angles.y + 5 });
-    fireMultiplePellets(game, player, source, forward2, right2, up2, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
+    for (const turn of [-5, 5]) {
+        const shot = P_ProjectShot(game, player, { ...view, y: view.y + turn }, { x: 8, y: 8, z: -8 });
+        fireMultiplePellets(game, player, shot.start, shot.dir, shot.right, shot.up, count, damage, 1, hspread, vspread, DamageMod.SSHOTGUN);
+    }
 }
 
 export function fireMachinegun(game: GameExports, player: Entity) {
@@ -393,8 +392,7 @@ export function fireMachinegun(game: GameExports, player: Entity) {
     applyKick(player, -1, random.crandom() * 0.5, 0);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     fireHitscan(game, player, source, forward, 8, 1, DamageMod.MACHINEGUN);
 }
@@ -450,16 +448,15 @@ export function fireChaingun(game: GameExports, player: Entity) {
     applyKick(player, -0.5, random.crandom() * (0.5 + (shots * 0.15)), 0);
     setPlayerAttackAnim(player);
 
-    const vectors = angleVectors(player.client?.v_angle ?? player.angles);
-    if (!vectors || !vectors.forward) {
-        console.log('DEBUG: angleVectors returned undefined or missing forward', vectors, 'player.angles:', player.angles);
-    }
-    const { forward, right, up } = vectors;
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     for (let i = 0; i < shots; i++) {
-        const spread = addVec3(scaleVec3(right, random.crandom() * 4), scaleVec3(up, random.crandom() * 4));
-        const dir = addVec3(forward, spread);
+        // Chaingun_Fire -> fire_bullet: DEFAULT_BULLET_HSPREAD/VSPREAD (300, 500) units at 8192, a
+        // few degrees; the port added 4 to the unit direction, spraying bullets up to 80 degrees off.
+        const dir = normalizeVec3(addVec3(
+            addVec3(scaleVec3(forward, 8192), scaleVec3(right, random.crandom() * 300)),
+            scaleVec3(up, random.crandom() * 500),
+        ));
         fireHitscan(game, player, source, dir, damage, knockback, DamageMod.CHAINGUN);
     }
 
@@ -478,8 +475,7 @@ export function fireRailgunShot(game: GameExports, player: Entity) {
     applyKick(player, -3, 0, -3);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     const damage = game.deathmatch ? 100 : 125;
     const knockback = game.deathmatch ? 200 : 225;
@@ -497,8 +493,7 @@ export function fireHyperBlaster(game: GameExports, player: Entity) {
     applyKick(player, -0.5, 0, 0);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     const damage = game.deathmatch ? 15 : 20;
     createBlasterBolt(game.entities, player, source, forward, damage, 1000, DamageMod.HYPERBLASTER);
@@ -514,8 +509,7 @@ export function fireBlaster(game: GameExports, player: Entity) {
         applyKick(player, -2, 0, 0);
         setPlayerAttackAnim(player);
 
-        const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+        const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
         const range = 64;
         const damage = 50;
@@ -558,8 +552,8 @@ export function fireBlaster(game: GameExports, player: Entity) {
         applyKick(player, -0.5, 0, 0);
         setPlayerAttackAnim(player);
 
-        const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+        // Blaster_Fire: the bolt leaves the gun's muzzle, 24 units out.
+        const { start: source, dir: forward } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 24, y: 8, z: -8 });
 
         createBlasterBolt(game.entities, player, source, forward, 15, 1500, DamageMod.BLASTER);
     }
@@ -576,8 +570,7 @@ export function fireRocket(game: GameExports, player: Entity) {
     applyKick(player, -2, 0, -2);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     const damage = 100 + game.random.irandom(21);
     const radiusDamage = 120;
@@ -602,8 +595,7 @@ export function fireGrenadeLauncher(game: GameExports, player: Entity, timer?: n
     applyKick(player, -2, 0, -2);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     createGrenade(game.entities, player, source, forward, 120, 600, timer);
 }
@@ -631,8 +623,7 @@ export function fireHyperBlasterBeam(game: GameExports, player: Entity, weaponSt
     applyKick(player, -1, 0, 0);
     setPlayerAttackAnim(player);
 
-    const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-    const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+    const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
     // Beam trace
     const damage = 25;
@@ -692,8 +683,7 @@ export function fireBFG(game: GameExports, player: Entity) {
         applyKick(player, -5, 0, -2);
         setPlayerAttackAnim(player);
 
-        const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-        const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+        const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
 
         const damage = game.deathmatch ? 200 : 500;
         createBfgBall(game.entities, player, source, forward, damage, 400, 200);
@@ -755,8 +745,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
         case WeaponId.BFG10K: fireBFG(game, player); break;
         // Rogue weapons
         case WeaponId.PlasmaBeam: {
-            const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
             firePlasmaBeam(game, player, inventory, weaponState, source, forward);
             break;
         }
@@ -769,8 +758,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             break;
         }
         case WeaponId.EtfRifle: {
-            const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
             fireEtfRifle(game, player, inventory, weaponState, source, forward);
             break;
         }
@@ -781,8 +769,7 @@ export function fire(game: GameExports, player: Entity, weaponId: WeaponId) {
             inventory.ammo.counts[AmmoType.Prox]--;
             game.multicast(player.origin, MulticastType.Pvs, ServerCommand.muzzleflash, player.index, MZ_GRENADE);
             applyKick(player, -2, 0, -2);
-            const { forward, right, up } = angleVectors(player.client?.v_angle ?? player.angles);
-            const source = P_ProjectSource(game, player, { x: 8, y: 8, z: -8 }, forward, right, up);
+            const { start: source, dir: forward, right, up } = P_ProjectShot(game, player, player.client?.v_angle ?? player.angles, { x: 8, y: 8, z: -8 });
             createProxMine(game.entities, player, source, forward, 600);
             break;
         }

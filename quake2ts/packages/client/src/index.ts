@@ -81,6 +81,8 @@ export type { ViewEffectSettings, ViewKick, ViewSample } from '@quake2ts/cgame';
 
 export { ClientConfigStrings } from './configStrings.js';
 export { ClientEffectSystem, type EntityProvider } from './effects-system.js';
+/** CL_AddPacketEntities' lights: the glow an entity's EF_ flags give it this frame (a blaster bolt's yellow light). */
+export { processEntityEffects } from './effects.js';
 export * from './scoreboard.js';
 
 export { HudData, StatusBarData, CrosshairInfo } from './hud/data.js';

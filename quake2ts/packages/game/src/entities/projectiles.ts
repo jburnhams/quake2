@@ -2,7 +2,7 @@
 // Quake II - Projectile Entities
 // =================================================================
 
-import { Entity, MoveType, Solid, ServerFlags, CollisionSurface } from './entity.js';
+import { Entity, MoveType, Solid, ServerFlags, CollisionSurface, EntityEffects } from './entity.js';
 import { EntitySystem } from './system.js';
 import { T_Damage, T_RadiusDamage } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
@@ -248,8 +248,16 @@ export function createBlasterBolt(sys: EntitySystem, owner: Entity, start: Vec3,
         bolt.classname = 'blaster_bolt';
     }
 
+    // fire_blaster: every bolt is the laser model turned along its flight, glowing (EF_BLASTER,
+    // EF_HYPERBLASTER for the hyperblaster); the port drew none, so a shot could not be seen.
+    if (!bolt.modelindex) bolt.modelindex = sys.modelIndex('models/objects/laser/tris.md2');
+    if (mod !== DamageMod.BLUEBLASTER) {
+        bolt.effects |= mod === DamageMod.HYPERBLASTER ? EntityEffects.HyperBlaster : EntityEffects.Blaster;
+    }
+    bolt.angles = vectorToAngles(dir);
     bolt.owner = owner;
     bolt.origin = { ...start };
+    bolt.old_origin = { ...start };
     bolt.velocity = { x: dir.x * speed, y: dir.y * speed, z: dir.z * speed };
     bolt.movetype = MoveType.FlyMissile;
     bolt.solid = Solid.BoundingBox;
