@@ -8,8 +8,7 @@
 import * as React from 'react';
 import { ButtonLink, Field, LineChart, Metric, MetricStrip, PropertyList, Slider, format } from 'strata-react';
 import pmoveCpp from '../../../../../../rerelease/p_move.cpp?raw';
-import pmoveTs from '../../../../../packages/shared/src/pmove/pmove.ts?raw';
-import moveTs from '../../../../../packages/shared/src/pmove/move.ts?raw';
+import frameTs from '../../../../../packages/shared/src/pmove/frame.ts?raw';
 import { useNumberParams, type NumberParam } from '../params';
 import { excerpt } from '../source/excerpt';
 import { FurtherReading, PORT, RERELEASE, SourceCode, SourcePair } from '../source/SourceCode';
@@ -35,9 +34,9 @@ const PRESETS = [
 const C_ACCELERATE = excerpt(pmoveCpp, 'void PM_Accelerate(const vec3_t &wishdir');
 const C_AIR_ACCELERATE = excerpt(pmoveCpp, 'void PM_AirAccelerate(const vec3_t &wishdir', { comment: false });
 const C_AIR_BRANCH = excerpt(pmoveCpp, '{ // not on ground, so little effect on velocity', { comment: false });
-const TS_ACCELERATE = excerpt(pmoveTs, 'export function applyPmoveAccelerate(');
-const TS_AIR_ACCELERATE = excerpt(pmoveTs, 'export function applyPmoveAirAccelerate(');
-const TS_AIR_BRANCH = excerpt(moveTs, 'if (pmAirAccelerate > 0) {', { comment: false });
+const TS_ACCELERATE = excerpt(frameTs, 'const accelerate = (wishdir');
+const TS_AIR_ACCELERATE = excerpt(frameTs, 'const airAccelerate = (wishdir');
+const TS_AIR_BRANCH = excerpt(frameTs, '// pm_config.airaccel (sv_airaccelerate)', { upTo: 'stepSlideMove();', comment: false });
 
 const units = (n: number, unit: string) => `${format.integer.format(Math.round(n))} ${unit}`;
 const fine = (n: number) => format.decimal.format(Math.round(n * 10) / 10 + 0);
@@ -169,21 +168,21 @@ export function AirView({ tuning, path }: { tuning: LabTuning; path: string }) {
         }
       >
         <SourceCode title="id's C++" file={RERELEASE('p_move.cpp')} excerpt={C_ACCELERATE} />
-        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/pmove.ts')} excerpt={TS_ACCELERATE} />
+        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/frame.ts')} excerpt={TS_ACCELERATE} />
       </SourcePair>
       <SourcePair
         heading="The capped air move: PM_AirAccelerate"
         note={`Used when sv_airaccelerate is above 0. The wished speed is capped at ${AIR_WISH_CAP} when deciding how much room is left, but not when deciding how much to add, which is why the gain band sits tight around 90°.`}
       >
         <SourceCode title="id's C++" file={RERELEASE('p_move.cpp')} excerpt={C_AIR_ACCELERATE} />
-        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/pmove.ts')} excerpt={TS_AIR_ACCELERATE} />
+        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/frame.ts')} excerpt={TS_AIR_ACCELERATE} />
       </SourcePair>
       <SourcePair
         heading="Which one the air move calls"
         note="The end of PM_AirMove. The 1997 source passes pm_accelerate to PM_AirAccelerate here; the rerelease passes sv_airaccelerate itself, and the port follows the rerelease."
       >
         <SourceCode title="id's C++" file={RERELEASE('p_move.cpp')} excerpt={C_AIR_BRANCH} />
-        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/move.ts')} excerpt={TS_AIR_BRANCH} />
+        <SourceCode title="The port" file={PORT('packages/shared/src/pmove/frame.ts')} excerpt={TS_AIR_BRANCH} />
       </SourcePair>
 
       <FurtherReading

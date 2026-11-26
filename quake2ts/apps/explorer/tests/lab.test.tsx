@@ -48,7 +48,7 @@ describe("the movement lab's air view", () => {
     expect(screen.getByRole('tab', { name: 'Air strafing' })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('slider', { name: 'Angle to the wish direction' })).toHaveValue('45');
     expect(screen.getAllByRole('link', { name: /rerelease\/p_move\.cpp, lines \d+–\d+/ }).length).toBe(3);
-    expect(screen.getAllByRole('link', { name: /packages\/shared\/src\/pmove\/(pmove|move)\.ts, lines/ }).length).toBe(3);
+    expect(screen.getAllByRole('link', { name: /packages\/shared\/src\/pmove\/frame\.ts, lines/ }).length).toBe(3);
     // PM_Accelerate and PM_AirAccelerate both take the dot product.
     expect(screen.getAllByText(/currentspeed = pml\.velocity\.dot\(wishdir\);/, { selector: 'code' })).toHaveLength(2);
   });
