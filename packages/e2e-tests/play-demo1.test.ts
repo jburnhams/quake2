@@ -125,19 +125,9 @@ describe.skipIf(!havePak)('/play on demo1 in the browser', () => {
     await page.mouse.up();
 
     let impact: Inspection['impacts'][number] | undefined;
-    const seen: unknown[] = [];
-    try {
-      await expect
-        .poll(async () => { const got = (await inspect()).impacts; seen.push(...got); return (impact = got.find((i) => i.type === TE_BLASTER)); }, { timeout: 5_000 })
-        .toBeDefined();
-    } catch (e) {
-      const state = await page.evaluate(() => {
-        const s = (window as any).q2play; const p = s.host?.player; const c = p?.client;
-        return { health: p?.health, origin: p?.origin, deadflag: p?.deadflag, weaponstate: c?.weaponstate, gunframe: c?.gunframe, weapon: c?.pers?.weapon?.classname ?? c?.weapon?.classname, buttons: c?.buttons, latched: c?.latched_buttons, raf: s.raf, owed: s.owed, stats: s.stats?.() };
-      });
-      console.error('DIAG shot', _, JSON.stringify({ seen, state, before: { pitch: before.pitch, yaw: before.yaw } }));
-      throw e;
-    }
+    await expect
+      .poll(async () => (impact = (await inspect()).impacts.find((i) => i.type === TE_BLASTER)), { timeout: 5_000 })
+      .toBeDefined();
     const onScreen = toScreen(before.viewProjection, impact!.pos);
     // The centre of the screen is (0, 0); the gun is below and to the right of the eye, and the
     // bolt turns in to meet the crosshair.

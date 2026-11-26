@@ -99,6 +99,12 @@ const toArrayBuffer = (bytes: Uint8Array): ArrayBuffer =>
 export class GameSession {
   private readonly keys = new Set<string>();
   private attack = false;
+  /**
+   * Set by a press and cleared once a frame has sent it, so a click shorter than a frame still
+   * fires: the original's kbutton_t "impulse down" bit (cl_input.c KeyDown sets state |= 2,
+   * CL_FinishMove sends BUTTON_ATTACK when state & 3, then clears the 2).
+   */
+  private attackPressed = false;
   private yaw = 0;
   private pitch = 0;
   private raf = 0;
@@ -209,6 +215,7 @@ export class GameSession {
   }
 
   fire(down: boolean): void {
+    if (down && !this.attack) this.attackPressed = true;
     this.attack = down;
   }
 
@@ -221,6 +228,7 @@ export class GameSession {
   releaseAll(): void {
     this.keys.clear();
     this.attack = false;
+    this.attackPressed = false;
   }
 
   resize(width: number, height: number): void {
@@ -232,7 +240,9 @@ export class GameSession {
   }
 
   private command() {
-    return toUserCommand({ keys: this.keys, attack: this.attack, pitch: this.pitch, yaw: this.yaw });
+    const attack = this.attack || this.attackPressed;
+    this.attackPressed = false;
+    return toUserCommand({ keys: this.keys, attack, pitch: this.pitch, yaw: this.yaw });
   }
 
   /** Starts loading any model the game has named since the last frame (CS_MODELS grows as it precaches). */
