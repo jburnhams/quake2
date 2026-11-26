@@ -378,8 +378,9 @@ export class MultiplayerConnection implements NetworkMessageHandler {
     this.entities.clear();
     for (const [number, entity] of copyEntities(parsed)) this.entities.set(number, entity);
 
-    if (this.prediction && frame.playerState) {
-        const ps = frame.playerState;
+    if (this.prediction) {
+        // The whole state (CL_ParsePlayerstate), not the packet's changed fields.
+        const ps = parsed.playerState;
         const predState: PredictionState = {
             ...defaultPredictionState(),
             origin: { x: ps.origin.x, y: ps.origin.y, z: ps.origin.z },

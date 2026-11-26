@@ -23,12 +23,13 @@ const entity = (number: number, x: number, frame = 0): EntityState => ({
   number, origin: { x, y: 0, z: 0 }, angles: zero, modelIndex: 2, frame, skinNum: 0, effects: 0, renderfx: 0, solid: 0,
 });
 
-function snapshot(entities: EntityState[]) {
+function snapshot(entities: EntityState[], player: Record<string, unknown> = {}) {
   return {
     pmType: 0, origin: zero, velocity: zero, pm_time: 0, pmFlags: 0, gravity: { x: 0, y: 0, z: -800 },
     deltaAngles: zero, viewangles: zero, kick_angles: zero, gunindex: 0, gun_frame: 0, gunoffset: zero,
     gunangles: zero, blend: [0, 0, 0, 0], fov: 90, rdflags: 0, stats: new Array(32).fill(0), watertype: 0,
     packetEntities: entities,
+    ...player,
   };
 }
 
@@ -43,21 +44,27 @@ function setup() {
   const chan = new NetChan();
   chan.setup(client.netchan.qport);
   const frames = new ClientFrames();
-  const parsed: { serverFrame: number; deltaFrame: number; valid: boolean; entities: Map<number, EntityState> }[] = [];
+  const parsed: {
+    serverFrame: number; deltaFrame: number; valid: boolean; entities: Map<number, EntityState>;
+    playerState: any; bits: number | undefined;
+  }[] = [];
   const handler = new Proxy({}, {
     get: (_t, name) => name === 'onFrame'
       ? (frame: FrameData) => {
         const f = frames.parse(frame, new Map());
-        parsed.push({ serverFrame: f.serverFrame, deltaFrame: f.deltaFrame, valid: f.valid, entities: new Map(f.entities as any) });
+        parsed.push({
+          serverFrame: f.serverFrame, deltaFrame: f.deltaFrame, valid: f.valid, entities: new Map(f.entities as any),
+          playerState: f.playerState, bits: frame.playerState.bits,
+        });
       }
       : () => {},
   }) as NetworkMessageHandler;
 
   /** The server sends frame n; `lost` frames never reach the client. */
-  const send = (n: number, entities: EntityState[], lost = false) => {
+  const send = (n: number, entities: EntityState[], lost = false, player: Record<string, unknown> = {}) => {
     server.sv.frame = n;
     const before = driver.state.messagesSent.length;
-    server.SV_SendClientFrame(client, snapshot(entities));
+    server.SV_SendClientFrame(client, snapshot(entities, player));
     const packet = driver.state.messagesSent[before];
     if (lost) return;
     const data = chan.process(packet);
@@ -111,5 +118,34 @@ describe('frames delta from the frame the client has', () => {
     send(15, [entity(5, 15)]);
     expect(client.lastFrame).toBe(1);
     expect(parsed.at(-1)).toMatchObject({ serverFrame: 15, deltaFrame: -1, valid: true });
+  });
+});
+
+// SV_WritePlayerstateToClient and CL_ParsePlayerstate: the player state is a delta from the same
+// frame the entities are, so a field that is not sent keeps the client's old value.
+describe('the player state deltas from the frame the client has', () => {
+  const PS_FOV = 2048;
+  const withHealth = (health: number) => { const stats = new Array(32).fill(0); stats[1] = health; return stats; };
+
+  it('sends only what changed, and a field going back to zero', () => {
+    const { send, ack, parsed } = setup();
+    send(1, [], false, { stats: withHealth(100), fov: 90 });
+    ack();
+    send(2, [], false, { stats: withHealth(0), fov: 90 });
+    expect(parsed[1].deltaFrame).toBe(1);
+    expect(parsed[1].bits! & PS_FOV).toBe(0); // the fov did not change, so it is not sent
+    expect(parsed[1].playerState.fov).toBe(90); // and the client keeps it
+    expect(parsed[1].playerState.stats[1]).toBe(0); // health 0 did reach the client
+  });
+
+  it('deltas from the acknowledged frame past a lost one', () => {
+    const { send, ack, parsed } = setup();
+    send(1, [], false, { fov: 90 });
+    ack();
+    send(2, [], true, { fov: 110 }); // lost
+    send(3, [], false, { fov: 110 });
+    expect(parsed[1].deltaFrame).toBe(1);
+    expect(parsed[1].bits! & PS_FOV).toBe(PS_FOV); // against frame 1, which had 90
+    expect(parsed[1].playerState.fov).toBe(110);
   });
 });

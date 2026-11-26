@@ -77,7 +77,7 @@ describe('NetworkMessageParser Performance', () => {
         const ENTITIES_PER_FRAME = 100;
 
         for (let f = 0; f < FRAMES; f++) {
-            bb.addByte(5); // svc_frame (Wire 5)
+            bb.addByte(20); // svc_frame (svc_ops_e 20)
             bb.addLong(f + 1); // serverFrame
             bb.addLong(0); // deltaFrame
             bb.addByte(0); // suppressCount (protocol 34)

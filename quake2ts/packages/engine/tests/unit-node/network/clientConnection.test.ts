@@ -1,3 +1,4 @@
+import { createEmptyProtocolPlayerState } from '../../../src/demo/state.js';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { ClientConnection, ConnectionState } from '../../../src/network/clientConnection.js';
 import { NetChan, ServerCommand, BinaryWriter } from '@quake2ts/shared';
@@ -86,7 +87,29 @@ describe('ClientConnection', () => {
 
     connection.onFrame(mockFrame);
 
-    expect(frameListener).toHaveBeenCalledWith(mockFrame);
+    // The frame comes out with its whole player state (here none was read, so all zero).
+    expect(frameListener).toHaveBeenCalledWith(expect.objectContaining({ serverFrame: 100, packetEntities: mockFrame.packetEntities }));
+    expect(frameListener.mock.calls[0][0].playerState.origin).toEqual({ x: 0, y: 0, z: 0 });
     expect(connection.latestServerFrame).toBe(100);
+  });
+
+  it('emits the player state rebuilt from the delta frame, not only the fields the packet carried', () => {
+    const frames: any[] = [];
+    connection.on('frame', (f: any) => frames.push(f));
+    const ps = (fields: Record<string, unknown>, bits: number, statbits = 0) => ({
+      ...createEmptyProtocolPlayerState(), ...fields, bits, statbits,
+    });
+    const frame = (serverFrame: number, deltaFrame: number, playerState: unknown) => ({
+      serverFrame, deltaFrame, surpressCount: 0, areaBytes: 0, areaBits: new Uint8Array(),
+      playerState: playerState as any, packetEntities: { delta: deltaFrame > 0, entities: [] },
+    });
+    const stats = new Array(32).fill(0);
+    stats[1] = 100;
+    connection.onFrame(frame(1, -1, ps({ origin: { x: 8, y: 16, z: 24 }, fov: 90, stats }, 2 | 2048, 1 << 1)));
+    // Frame 2 carries only a new fov; the origin and the health come from frame 1.
+    connection.onFrame(frame(2, 1, ps({ fov: 110 }, 2048)));
+    expect(frames[1].playerState.origin).toEqual({ x: 8, y: 16, z: 24 });
+    expect(frames[1].playerState.fov).toBe(110);
+    expect(frames[1].playerState.stats[1]).toBe(100);
   });
 });

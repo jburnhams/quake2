@@ -8,6 +8,8 @@ export class DemoRecorder {
     private firstFrame: boolean = true;
     private lastPacketEntities: number[] = [];
     private lastEntityStates: Map<number, EntityState> = new Map();
+    /** The player state of the last frame written, which the next one deltas from. */
+    private lastPlayerState: ProtocolPlayerState | undefined;
     private protocolVersion: number = 34; // Default to 34
 
     constructor() {
@@ -64,7 +66,9 @@ export class DemoRecorder {
         // 1. Write svc_frame
         writer.writeByte(ServerCommand.frame);
         writer.writeLong(frameNumber);
-        writer.writeLong(frameNumber - 1); // delta frame (assume sequential for now)
+        // Each frame deltas from the one before it, as a demo is a record of what arrived; the first
+        // has nothing before it and is whole (-1), or a player would drop it as too old.
+        writer.writeLong(this.lastPlayerState ? frameNumber - 1 : -1);
         writer.writeByte(0); // surpressCount
         writer.writeByte(0); // areaBytes
 
@@ -86,10 +90,10 @@ export class DemoRecorder {
             gun_frame: snapshot.gun_frame,
             gun_offset: { ...snapshot.gunoffset },
             gun_angles: { ...snapshot.gunangles },
-            blend: snapshot.blend,
+            blend: [...snapshot.blend],
             fov: snapshot.fov,
             rdflags: snapshot.rdflags,
-            stats: snapshot.stats,
+            stats: [...snapshot.stats],
             gunskin: 0,
             gunrate: 0,
             damage_blend: [0, 0, 0, 0],
@@ -97,7 +101,8 @@ export class DemoRecorder {
             watertype: snapshot.watertype || 0
         };
 
-        writePlayerState(writer, ps);
+        writePlayerState(writer, ps, this.lastPlayerState);
+        this.lastPlayerState = ps;
 
         // 3. Write svc_packetentities
         writer.writeByte(ServerCommand.packetentities);
