@@ -7,9 +7,10 @@
 // style's brightness. Nothing is lit again while the game runs: a flicker is a weight on a layer.
 // The finding is a light of demo1's own, played letter by letter: the 3D view stands by it with the
 // engine's renderer, the chart shows its pattern, and the pattern can be swapped for any other in
-// the game's table or typed. The view can show the lightmaps alone, or the textures alone.
+// the game's table or typed. The view can show the lightmaps alone, or the textures alone. It plays
+// through the labs' one player (LabPlayer), round and round.
 import * as React from 'react';
-import { Button, ChoiceGroup, Field, Input, LineChart, Metric, MetricStrip, NativeSelect, PropertyList, Slider, format, useSearchParam, type Property } from 'strata-react';
+import { ChoiceGroup, Field, Input, LineChart, Metric, MetricStrip, NativeSelect, PropertyList, format, useSearchParam, type Property } from 'strata-react';
 import { DEFAULT_LIGHT_STYLES } from '@quake2ts/shared';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import gSpawnCpp from '../../../../../../rerelease/g_spawn.cpp?raw';
@@ -22,6 +23,7 @@ import lightsTs from '../../../../../packages/game/src/entities/lights.ts?raw';
 import lightingTs from '../../../../../packages/engine/src/render/utils/lighting.ts?raw';
 import bspPipelineTs from '../../../../../packages/engine/src/render/bspPipeline.ts?raw';
 import clientTs from '../../../../../packages/client/src/index.ts?raw';
+import { LabPlayer, useLabClock } from '../LabPlayer';
 import { LabScene, type SceneLook } from '../LabScene';
 import { LabScreen } from '../LabScreen';
 import type { Orbit, Vec } from '../orbit';
@@ -165,17 +167,11 @@ function LightView({
   const place = PLACES[placeKey]!;
   const styles = React.useMemo(() => mapStyles(map), [map]);
   const values = React.useMemo(() => playPattern(pattern), [pattern]);
-  const [tenth, setTenth] = React.useState(0);
-  const [playing, setPlaying] = React.useState(false);
-  const at = tenth % values.length;
-
-  // Ten letters a second while playing, as CL_RunLightStyles steps them.
-  React.useEffect(() => {
-    if (!playing) return;
-    const id = window.setInterval(() => setTenth((t) => (t + 1) % values.length), 100);
-    return () => window.clearInterval(id);
-  }, [playing, values.length]);
-  React.useEffect(() => setTenth(0), [pattern]);
+  // Ten letters a second, as CL_RunLightStyles steps them, round and round: the labs' one player.
+  const clock = useLabClock({ duration: values.length / 10, frame: 0.1, loop: true });
+  const at = Math.min(Math.floor(clock.time * 10 + 1e-6), values.length - 1);
+  const { seek } = clock;
+  React.useEffect(() => seek(0), [pattern, seek]);
 
   const home = React.useMemo<Orbit>(() => ({ target: place.eye, yaw: place.yaw, pitch: place.pitch, distance: 64 }), [place]);
   // The game's whole table, as SP_worldspawn sets it, with this place's style changed: every other
@@ -206,23 +202,16 @@ function LightView({
         look={look}
       />
 
-      <div className="flex flex-wrap items-end gap-3">
-        <Button variant="default" onPress={() => setPlaying((p) => !p)}>
-          {playing ? 'Pause the light' : 'Play the light'}
-        </Button>
-        <Field label="Letter" hint={place.style === 4 && !playedAs ? 'Fast strobe flashes five times a second; step through it here instead of playing it.' : 'Step through the pattern a tenth of a second at a time. Moving it pauses.'} className="min-w-64 grow">
-          <Slider
-            value={at + 1}
-            onChange={(n) => {
-              setPlaying(false);
-              setTenth(n - 1);
-            }}
-            min={1}
-            max={values.length}
-            step={1}
-          />
-        </Field>
-      </div>
+      <LabPlayer
+        clock={clock}
+        label="The pattern"
+        frame={0.1}
+      />
+      <p className="type-body-sm text-muted-foreground">
+        {place.style === 4 && !playedAs
+          ? 'Fast strobe flashes five times a second; step through it a letter at a time with the frame buttons instead of playing it.'
+          : 'One letter a tenth of a second, round and round. The frame buttons step a letter; moving the bar pauses.'}
+      </p>
 
       <PatternStrip pattern={pattern} at={at} />
 
@@ -238,10 +227,7 @@ function LightView({
         series={steps(values)}
         seriesLabel={`Style ${place.style}`}
         current={(at + 0.5) / 10}
-        onPick={(x) => {
-          setPlaying(false);
-          setTenth(Math.min(values.length - 1, Math.max(0, Math.floor(x * 10))));
-        }}
+        onPick={(x) => clock.seek(Math.min(values.length - 1, Math.max(0, Math.floor(x * 10))) / 10)}
         formatX={(t) => `${format.decimal.format(t)} s`}
         xLabel="Time"
         formatY={(v) => times(v)}

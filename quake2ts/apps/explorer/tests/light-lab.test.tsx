@@ -14,7 +14,7 @@ describe('the light styles lab', () => {
     expect(screen.getByText("demo1's flickering room, as the game plays it")).toBeInTheDocument();
     expect(screen.getByRole('radio', { name: /The flickering room/ })).toBeChecked();
     expect(screen.getByText('17 letters')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Play the light' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Play' })).toBeInTheDocument();
   });
 
   it('plays the style as another of the table, held in the link', async () => {

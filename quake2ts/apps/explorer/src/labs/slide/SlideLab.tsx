@@ -3,12 +3,13 @@
 // the velocity's push into that plane away (PM_ClipVelocity) and sweeps again with the time left,
 // up to four times a frame: that is sliding along a wall. Then it does the whole slide again from
 // STEPSIZE (18 units) higher and pushes back down; if that went further, the player stepped up a
-// stair. The finding is one frame of it, picked on a slider: each trace pmove made, what it met,
-// and how speed and height came out. The run is the game's runPmove (frame.ts, a line-for-line
-// port of p_move.cpp) from a place in demo1, facing a wall at an angle or a staircase, and the
-// lab records every trace it asks for, which is everything pmove learns about the world.
+// stair. The finding is one frame of it, stopped on in the labs' player (LabPlayer; or the run
+// played through like a video): each trace pmove made, what it met, and how speed and height
+// came out. The run is the game's runPmove (frame.ts, a line-for-line port of p_move.cpp) from a
+// place in demo1, facing a wall at an angle or a staircase, and the lab records every trace it
+// asks for, which is everything pmove learns about the world.
 import * as React from 'react';
-import { ChoiceGroup, Field, LineChart, Metric, MetricStrip, Slider, format, useSearchParam } from 'strata-react';
+import { ChoiceGroup, LineChart, Metric, MetricStrip, format, useSearchParam } from 'strata-react';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import pmoveCpp from '../../../../../../rerelease/p_move.cpp?raw';
 import pmoveC from '../../../../../../full/qcommon/pmove.c?raw';
@@ -20,6 +21,7 @@ import { useNumberParams, type NumberParam } from '../params';
 import { excerpt } from '../source/excerpt';
 import { FurtherReading, ORIGINAL, PORT, RERELEASE, SourceCode, SourcePair } from '../source/SourceCode';
 import type { LabWorld } from '../world';
+import { LabPlayer, useLabClock } from '../LabPlayer';
 import { DEFAULT_SLIDE, SLIDE_FRAMES, SLIDE_MSEC, runSlide, type SlideFrame, type SlidePlace, type TraceRecord } from './slide';
 
 export const SLIDE_PATH = '/labs/slide';
@@ -83,6 +85,10 @@ export function SlideLab() {
   );
 }
 
+const SLIDE_SECONDS = SLIDE_MSEC / 1000;
+/** The frame at a time on the player: frame n ends at n × 25 ms, and there is no frame 0. */
+const frameOf = (t: number) => Math.min(SLIDE_FRAMES, Math.max(1, Math.round(t / SLIDE_SECONDS)));
+
 function SlideView({
   map,
   world,
@@ -103,7 +109,15 @@ function SlideView({
   const frames = React.useMemo(() => runSlide(world, place, { turn, stepSize }), [world, place, turn, stepSize]);
   // Without a frame in the URL, the first that met a wall or stepped up: the one worth reading.
   const first = frames.find((f) => f.planes.some((n) => n.z < 0.7) || f.rise > 2) ?? frames[0]!;
-  const at = frameRaw ? Number(frameRaw) : first.frame;
+  const held = frameRaw ? Number(frameRaw) : first.frame;
+  // The labs' one player: frame n is at n × 25 ms, as the charts draw it, and the frame in the URL
+  // is where it opens and where it is left (strata-react's media parts, through LabPlayer).
+  const clock = useLabClock({
+    duration: SLIDE_SECONDS * SLIDE_FRAMES,
+    frame: SLIDE_SECONDS,
+    held: { time: held * SLIDE_SECONDS, set: (t) => setFrame(String(frameOf(t))) },
+  });
+  const at = frameOf(clock.time);
   const frame = frames[at - 1]!;
   const home = React.useMemo(() => framePoints(frames.map((f) => f.after)), [frames]);
   const draw = React.useCallback((lines: Lines) => drawFrame(lines, frames, frame), [frames, frame]);
@@ -112,9 +126,10 @@ function SlideView({
 
   return (
     <div className="grid gap-4 p-4">
-      <Field label="Frame" hint={`Which of the run's ${SLIDE_FRAMES} frames (${SLIDE_MSEC} ms each) to take apart. It starts on the first that met a wall or stepped up.`}>
-        <Slider value={at} onChange={(n) => setFrame(String(n))} min={1} max={SLIDE_FRAMES} step={1} />
-      </Field>
+      <LabPlayer clock={clock} label="The run" frame={SLIDE_SECONDS} marks={[{ time: first.frame * SLIDE_SECONDS, label: `Frame ${first.frame}, the first to meet a wall or step up` }]} />
+      <p className="type-body-sm text-muted-foreground">
+        Play the run's {SLIDE_FRAMES} frames ({SLIDE_MSEC} ms each), or stop on one to take it apart: the frame buttons step one. It opens on the first frame that met a wall or stepped up.
+      </p>
 
       <LabScene
         label="The run in 3D"
@@ -154,7 +169,7 @@ function SlideView({
         series={frames.map((f) => ({ x: f.frame * SLIDE_MSEC / 1000, y: f.speedAfter }))}
         seriesLabel="Speed along the ground"
         current={(at * SLIDE_MSEC) / 1000}
-        onPick={(x) => setFrame(String(Math.min(SLIDE_FRAMES, Math.max(1, Math.round((x * 1000) / SLIDE_MSEC)))))}
+        onPick={(x) => clock.seek(frameOf(x) * SLIDE_SECONDS)}
         formatX={(t) => `${format.decimal.format(t)} s`}
         xLabel="Time"
         formatY={(v) => `${format.integer.format(v)} u/s`}

@@ -7,20 +7,29 @@
 // which say the same in numbers and stand in when the browser has no WebGL 2. A second view (Air
 // strafing, AirView) takes one frame of the air move apart to show why strafe-jumping is faster
 // than the top speed; the same constants drive both, and the view is held in the URL.
+// The run plays like a video (Jonathan, 2026-11-26), through the labs' one player (LabPlayer):
+// it starts at the end, so the still picture is the whole run, and play shows the player making
+// the move. The charts mark the playhead and a pick on the speed chart seeks to it. The camera
+// (from the side, or through the player's eyes) is in the URL; the time is not, as a link is to
+// a run, not a moment.
 import * as React from 'react';
 import {
+  ChoiceGroup,
   LineChart,
   Metric,
   MetricStrip,
   Tabs,
   format,
+  useSearchParam,
   type ChartSpan,
   type Point,
 } from 'strata-react';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import { LabScreen } from '../LabScreen';
 import { AirView } from './AirView';
-import { RunScene } from './RunScene';
+import { RunScene, type RunCamera } from './RunScene';
+import { LabPlayer, useLabClock } from '../LabPlayer';
+import { FRAME_SECONDS, RUN_SECONDS, frameAt } from './at';
 import { CONSTANTS, useLabTuning } from './constants';
 import {
   DEFAULT_LAB_TUNING,
@@ -34,6 +43,12 @@ import {
 } from './simulate';
 
 export const LAB_PATH = '/labs/movement';
+
+const CAMERAS = [
+  { value: 'side', label: 'From the side', detail: "Both runs from their right, so a jump shows as an arc." },
+  { value: 'eyes', label: "Through the player's eyes", detail: 'Ride this run at view height, with the game\'s player beside you.' },
+];
+const parseCamera = (v: string): RunCamera | undefined => (v === 'side' || v === 'eyes' ? v : undefined);
 
 const VIEWS = [
   { value: 'run', label: 'Run on demo1' },
@@ -67,6 +82,12 @@ function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
   const { tuning } = useLabTuning();
   const base = React.useMemo(() => simulateRun(world), [world]);
   const run = React.useMemo(() => simulateRun(world, tuning), [world, ...Object.values(tuning)]);
+  const [camera, setCamera] = useSearchParam<RunCamera>('camera', { default: 'side', parse: parseCamera });
+  const clock = useLabClock({ duration: RUN_SECONDS, frame: FRAME_SECONDS, start: RUN_SECONDS });
+  const at = React.useMemo(
+    () => ({ run: frameAt(run, world.start.origin, clock.time), base: frameAt(base, world.start.origin, clock.time) }),
+    [run, base, world, clock.time],
+  );
   const mine = summarise(run);
   const game = summarise(base);
 
@@ -81,7 +102,18 @@ function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
         The player runs forward from demo1's start, jumps after {seconds((JUMP_FRAME * FRAME_MSEC) / 1000)}, lets go after{' '}
         {seconds((RELEASE_FRAME * FRAME_MSEC) / 1000)} and slides to a stop, through the game's own movement code and the map's walls and floors.
       </p>
-      <RunScene map={map} world={world} run={run} base={base} />
+      <RunScene map={map} world={world} run={run} base={base} at={{ run: at.run.origin, base: at.base.origin }} camera={camera} />
+      <LabPlayer
+        clock={clock}
+        label="The run"
+        frame={FRAME_SECONDS}
+        marks={[
+          { time: JUMP_FRAME * FRAME_SECONDS, label: 'Jump' },
+          { time: RELEASE_FRAME * FRAME_SECONDS, label: 'Let go' },
+        ]}
+        spans={airborne(run).map((s) => ({ start: s.from, end: s.to, label: 'In the air' }))}
+      />
+      <ChoiceGroup legend="Camera" name="camera" value={camera} onChange={(v) => setCamera(v as RunCamera)} choices={CAMERAS} />
       <MetricStrip label="This run">
         <Metric label="Top speed" value={units(mine.topSpeed, 'u/s')} note={against(mine.topSpeed, game.topSpeed, (g) => units(g, 'u/s'))} />
         <Metric label="Highest point" value={units(mine.peakHeight, 'u')} note={against(mine.peakHeight, game.peakHeight, (g) => units(g, 'u'))} />
@@ -98,6 +130,7 @@ function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
         xLabel="Distance"
         formatY={(y) => units(y, 'u')}
         xTicks={({ max }) => ticks(max, 100)}
+        current={at.run.distance}
         end="none"
         readout
         height={220}
@@ -113,6 +146,8 @@ function RunView({ map, world }: { map: BspMap; world: MovementWorld }) {
         xLabel="Time"
         formatY={(y) => units(y, 'u/s')}
         xTicks={[0, 0.5, 1, 1.5, 2, 2.5]}
+        current={clock.time}
+        onPick={clock.seek}
         end="none"
         readout
         height={200}
