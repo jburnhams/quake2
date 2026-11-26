@@ -15,7 +15,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include "../../full/qcommon/qcommon.h"
+#include "full/qcommon/qcommon.h"
 
 extern char *bsp_path;
 

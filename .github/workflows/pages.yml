@@ -40,6 +40,10 @@ jobs:
           cache: 'pnpm'
           cache-dependency-path: quake2ts/pnpm-lock.yaml
 
+      # id's C source, which the labs quote (quake2ts/scripts/fetch-id-source.sh).
+      - name: id source
+        uses: ./.github/actions/id-source
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 

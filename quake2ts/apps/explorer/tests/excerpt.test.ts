@@ -4,8 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { excerpt } from '../src/labs/source/excerpt';
 
 // The labs cut functions out of id's source and the port's by name; these pin what comes out.
+// id's files are in quake2ts/.id-source (scripts/fetch-id-source.sh, run by vite.config.ts).
 const root = new URL('../../../../', import.meta.url);
-const read = (path: string) => readFileSync(new URL(path, root), 'utf8');
+const idSource = new URL('../../../.id-source/', import.meta.url);
+const read = (path: string) => readFileSync(path.startsWith('quake2ts/') ? new URL(path, root) : new URL(path, idSource), 'utf8');
 
 describe('excerpt', () => {
   it('cuts a C++ function with its body and no more', () => {

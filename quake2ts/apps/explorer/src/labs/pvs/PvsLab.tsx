@@ -11,10 +11,10 @@
 import * as React from 'react';
 import { ButtonLink, ChoiceGroup, Metric, MetricStrip, PropertyList, format, useSearchParam, type Property } from 'strata-react';
 import type { BspMap } from '@quake2ts/formats/bsp';
-import glModel from '../../../../../../full/ref_gl/gl_model.c?raw';
-import glRmain from '../../../../../../full/ref_gl/gl_rmain.c?raw';
-import glRsurf from '../../../../../../full/ref_gl/gl_rsurf.c?raw';
-import cmodel from '../../../../../../full/qcommon/cmodel.c?raw';
+import glModel from '../../../../../.id-source/full/ref_gl/gl_model.c?raw';
+import glRmain from '../../../../../.id-source/full/ref_gl/gl_rmain.c?raw';
+import glRsurf from '../../../../../.id-source/full/ref_gl/gl_rsurf.c?raw';
+import cmodel from '../../../../../.id-source/full/qcommon/cmodel.c?raw';
 import traversalTs from '../../../../../packages/engine/src/render/bspTraversal.ts?raw';
 import formatsBsp from '../../../../../packages/formats/src/bsp.ts?raw';
 import { AMBER, LabScene, type Lines } from '../LabScene';

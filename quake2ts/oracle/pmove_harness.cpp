@@ -1,7 +1,7 @@
 /*
  * C reference oracle for the TypeScript player movement (packages/shared/src/pmove).
  *
- * Links the rerelease's p_move.cpp (GPL, vendored in ../../rerelease) unchanged, the
+ * Links the rerelease's p_move.cpp (GPL, fetched into ../.id-source/rerelease) unchanged, the
  * source the TS port follows, with id's cmodel.c (through cm_shim) answering its traces
  * against a map's world. Each `move` runs one Pmove frame and prints the result as JSON.
  *
@@ -13,9 +13,9 @@
  * The state persists between moves (as pm->s does between a client's frames), so a
  * sequence of `move`s is a trajectory; `state` resets it.
  */
-#include "../../rerelease/q_std.h"
+#include "rerelease/q_std.h"
 #define GAME_INCLUDE
-#include "../../rerelease/bg_local.h"
+#include "rerelease/bg_local.h"
 #include "cm_shim.h"
 #include <map>
 

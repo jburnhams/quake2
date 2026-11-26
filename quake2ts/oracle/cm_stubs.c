@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdarg.h>
-#include "../../full/qcommon/qcommon.h"
+#include "full/qcommon/qcommon.h"
 #include "cm_shim.h"
 
 /* ---- stubs for the engine services cmodel.c calls ---- */
