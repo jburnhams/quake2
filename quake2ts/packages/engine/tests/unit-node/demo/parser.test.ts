@@ -150,7 +150,7 @@ describe('NetworkMessageParser', () => {
 
       // Just manually build buffer
       const buffer = [];
-      buffer.push(9); // svc_temp_entity
+      buffer.push(3); // svc_temp_entity (svc_ops_e)
       buffer.push(TempEntity.EXPLOSION1);
       // pos (3 shorts / 8.0). 100 -> 800.
       const px = 100 * 8; const py = 200 * 8; const pz = 300 * 8;

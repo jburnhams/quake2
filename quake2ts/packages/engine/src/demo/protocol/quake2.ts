@@ -10,38 +10,19 @@ import {
 import { EntityState, ProtocolPlayerState, createEmptyProtocolPlayerState, createEmptyEntityState } from '../state.js';
 import { StreamingBuffer } from '../../stream/streamingBuffer.js';
 
-// Protocol 34 (Standard Q2) Mapping
-const PROTO34_MAP: Record<number, number> = {
-    0: ServerCommand.bad,
-    1: ServerCommand.nop,
-    2: ServerCommand.disconnect,
-    3: ServerCommand.reconnect,
-    4: ServerCommand.download,
-    5: ServerCommand.frame,
-    6: ServerCommand.inventory,
-    7: ServerCommand.layout,
-    8: ServerCommand.muzzleflash,
-    9: ServerCommand.temp_entity,
-    10: ServerCommand.sound,
-    11: ServerCommand.print,
-    12: ServerCommand.stufftext,
-    13: ServerCommand.serverdata,
-    14: ServerCommand.configstring,
-    15: ServerCommand.spawnbaseline,
-    16: ServerCommand.centerprint,
-    17: ServerCommand.playerinfo,
-    18: ServerCommand.packetentities,
-    19: ServerCommand.deltapacketentities,
-    20: ServerCommand.muzzleflash2
-};
+/**
+ * Protocol 34's server commands are svc_ops_e (qcommon/qcommon.h) in order, svc_bad 0 to svc_frame
+ * 20, which is how ServerCommand numbers them. Until 2026-11-26 this map was shifted (svc_frame
+ * read as 5, svc_serverdata as 13), matching only MessageWriter's own numbering, so a frame from a
+ * real protocol-34 server or demo was read as another command.
+ */
+const LAST_PROTOCOL_34_COMMAND = ServerCommand.frame;
 
 export class Quake2ProtocolHandler implements ProtocolHandler {
     protocolVersion = 34;
 
     translateCommand(cmd: number): ServerCommand {
-        if (PROTO34_MAP[cmd] !== undefined) {
-            return PROTO34_MAP[cmd];
-        }
+        if (cmd >= 0 && cmd <= LAST_PROTOCOL_34_COMMAND) return cmd as ServerCommand;
         return ServerCommand.bad;
     }
 

@@ -132,8 +132,8 @@ describe('MultiplayerConnection', () => {
 
         // --- 3. Server sends precache ---
         const writer3 = new BinaryWriter();
-        // Protocol 34 uses 12 for stufftext (ServerCommand.stufftext is 11)
-        writer3.writeByte(12);
+        // svc_stufftext, 11 in svc_ops_e (qcommon/qcommon.h)
+        writer3.writeByte(ServerCommand.stufftext);
         writer3.writeString('precache\n');
         const precachePacket = serverNetChan.transmit(writer3.getData());
 

@@ -63,9 +63,7 @@ function setup() {
     const data = chan.process(packet);
     if (!data || data.length === 0) return;
     const parser = new NetworkMessageParser(new BinaryStream(data), handler);
-    // The server writes the C's opcodes (svc_frame 20). The parser's protocol-34 handler numbers
-    // them differently, so read with the handler that keeps the C's numbers and the same layout.
-    parser.setProtocolVersion(31);
+    parser.setProtocolVersion(34); // what the server's svc_serverdata says
     parser.parseMessage();
   };
   /** The client's clc_move reaches the server, saying which frame it has. */
