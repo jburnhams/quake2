@@ -1,5 +1,6 @@
 import { DemoReader } from './demoReader.js';
 import { NetworkMessageParser, NetworkMessageHandler, FrameData, EntityState, ProtocolPlayerState } from './parser.js';
+import { ClientFrames } from '../network/frames.js';
 import { FrameDiff, DemoEvent, DemoEventType, EventSummary, DemoHeader, ServerInfo, DemoStatistics, PlayerStatistics, WeaponStatistics } from './analysis.js';
 import { DemoAnalyzer } from './analyzer.js';
 import { Vec3 } from '@quake2ts/shared';
@@ -66,6 +67,12 @@ export class DemoPlaybackController {
   private callbacks?: DemoPlaybackCallbacks;
 
   private currentProtocolVersion: number = 0;
+  /**
+   * The frames read so far, for their player states: a recorded frame carries only the fields
+   * that changed since the frame it deltas from (CL_ParsePlayerstate), so the accessors and the
+   * frame callback get the state rebuilt from that frame, not the packet's fields alone.
+   */
+  private readonly playerFrames = new ClientFrames();
   private currentFrameIndex: number = -1; // -1 means no frames processed yet
 
   // Last parsed frame data for accessors
@@ -113,6 +120,7 @@ export class DemoPlaybackController {
     this.transitionState(PlaybackState.Stopped);
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
+    this.playerFrames.reset();
     this.currentFrameIndex = -1;
     this.snapshots.clear();
     this.lastFrameData = null;
@@ -147,6 +155,7 @@ export class DemoPlaybackController {
     }
     this.accumulatedTime = 0;
     this.currentProtocolVersion = 0;
+    this.playerFrames.reset();
     this.currentFrameIndex = -1;
     this.lastFrameData = null;
   }
@@ -354,10 +363,12 @@ export class DemoPlaybackController {
           this.reader.reset();
           this.currentFrameIndex = -1;
           this.currentProtocolVersion = 0;
+          this.playerFrames.reset();
       } else if (startIndex === -1) {
           this.reader.reset();
           this.currentFrameIndex = -1;
           this.currentProtocolVersion = 0;
+          this.playerFrames.reset();
       }
 
       // Restore snapshot if we found one better than current
@@ -369,6 +380,7 @@ export class DemoPlaybackController {
                this.reader.reset();
                this.currentFrameIndex = -1;
                this.currentProtocolVersion = 0;
+               this.playerFrames.reset();
           }
       }
 
@@ -426,9 +438,15 @@ export class DemoPlaybackController {
           const proxyHandler: NetworkMessageHandler = {
               ...(this.handler || createNoOpHandler()),
               onFrame: (frame: FrameData) => {
-                  this.lastFrameData = frame; // Capture last frame
+                  // The handler rebuilds the frame itself (as the client's does); what is kept here
+                  // and given to the callback has the whole player state. A bare packetentities
+                  // (serverFrame 0) names no frame and is kept as it came.
+                  const whole = frame.serverFrame > 0
+                      ? { ...frame, playerState: this.playerFrames.parse(frame, new Map()).playerState }
+                      : frame;
+                  this.lastFrameData = whole;
                   if (this.handler?.onFrame) this.handler.onFrame(frame);
-                  if (this.callbacks?.onFrameUpdate) this.callbacks.onFrameUpdate(frame);
+                  if (this.callbacks?.onFrameUpdate) this.callbacks.onFrameUpdate(whole);
               }
           };
 
