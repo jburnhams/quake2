@@ -9,7 +9,7 @@ import { WeaponState } from './state.js';
 import { WeaponId } from '../../inventory/playerInventory.js';
 import { AmmoType } from '../../inventory/ammo.js';
 import {
-    angleVectors, ServerCommand, TempEntity,
+    ServerCommand, TempEntity,
     MZ_GRENADE
 } from '@quake2ts/shared';
 import { T_RadiusDamage } from '../damage.js';
@@ -17,7 +17,7 @@ import { DamageFlags } from '../damageFlags.js';
 import { DamageMod } from '../damageMods.js';
 import { createGrenade } from '../../entities/projectiles.js';
 import { MulticastType } from '../../imports.js';
-import { P_ProjectSource } from './projectSource.js';
+import { P_ProjectShot } from './projectSource.js';
 import { Throw_Generic } from './animation.js';
 import { applyKick } from './common.js';
 import {
@@ -81,14 +81,10 @@ export function grenadeThink(player: Entity, sys: EntitySystem) {
                 game.multicast(ent.origin, MulticastType.Pvs, ServerCommand.muzzleflash, ent.index, MZ_GRENADE);
                 applyKick(ent, -2, 0, -2);
 
-                let throwAngles = { ...ent.angles };
-                if (throwAngles.x < -62.5) throwAngles.x = -62.5;
-                throwAngles.z = 0;
-
-                const { forward } = angleVectors(throwAngles);
-                const { right, up } = angleVectors(ent.angles);
-
-                const source = P_ProjectSource(game, ent, { x: 2, y: 0, z: -14 }, forward, right, up);
+                // weapon_grenade_fire: thrown where the player looks, but no higher than 62.5
+                // degrees up so it never goes over their head (the port threw along the body's yaw only).
+                const view = ent.client?.v_angle ?? ent.angles;
+                const { start: source, dir: forward } = P_ProjectShot(game, ent, { ...view, x: Math.max(-62.5, view.x) }, { x: 2, y: 0, z: -14 });
 
                 createGrenade(game.entities, ent, source, forward, 120, speed, timer);
 

@@ -46,7 +46,7 @@ describe('Shotgun', () => {
         fire(game, player, WeaponId.Shotgun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Shells]).toBe(9);
-        expect(imports.trace).toHaveBeenCalledTimes(13); // 1 for P_ProjectSource + 12 pellets
+        expect(imports.trace).toHaveBeenCalledTimes(14); // P_ProjectShot's muzzle check and crosshair trace + 12 pellets
 
         const calls = imports.trace.mock.calls;
         // calls[0] is P_ProjectSource trace.

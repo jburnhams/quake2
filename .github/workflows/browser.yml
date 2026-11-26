@@ -38,6 +38,11 @@ jobs:
       - name: Validate Dependencies
         run: pnpm exec tsx packages/tools/src/validate-deps.ts
 
+      # The /play test (packages/e2e-tests/play-demo1.test.ts) needs the full demo pak for the
+      # monster models; it skips without it.
+      - name: Demo pak
+        uses: ./.github/actions/demo-paks
+
       - name: Run Browser Test Suite
         run: pnpm run test:browser
 

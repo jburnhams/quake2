@@ -42,8 +42,8 @@ describe('Machinegun', () => {
         fire(game, player, WeaponId.Machinegun);
 
         expect(player.client!.inventory.ammo.counts[AmmoType.Bullets]).toBe(49);
-        // 1 source trace + 1 bullet trace
-        expect(imports.trace).toHaveBeenCalledTimes(2);
+        // the muzzle check, the crosshair trace (P_ProjectShot) and the bullet
+        expect(imports.trace).toHaveBeenCalledTimes(3);
         expect(T_Damage).toHaveBeenCalled();
     });
 });

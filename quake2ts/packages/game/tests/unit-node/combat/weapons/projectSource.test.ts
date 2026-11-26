@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { P_ProjectSource, getProjectileOrigin } from '../../../../src/combat/weapons/projectSource.js';
+import { P_ProjectSource, P_ProjectShot, getProjectileOrigin } from '../../../../src/combat/weapons/projectSource.js';
 import { Entity } from '../../../../src/entities/entity.js';
 import { GameExports } from '../../../../src/index.js';
-import { Vec3, angleVectors, addVec3, scaleVec3 } from '@quake2ts/shared';
+import { Vec3, angleVectors, addVec3, scaleVec3, CONTENTS_MONSTER } from '@quake2ts/shared';
 import { createEntityFactory, createMockGameExports, createTraceMock } from '@quake2ts/test-utils';
 
 describe('P_ProjectSource', () => {
@@ -105,3 +105,35 @@ describe('P_ProjectSource', () => {
         expect(result.z).toBeCloseTo(110);
     });
 });
+
+describe('P_ProjectShot (the rerelease P_ProjectSource)', () => {
+    const player = () => createEntityFactory({ origin: { x: 0, y: 0, z: 0 }, viewheight: 22, angles: { x: 0, y: 0, z: 0 } }) as Entity;
+    const eye = { x: 0, y: 0, z: 22 };
+
+    it.each([[-45], [0], [45]])('aims from the gun at the point under the crosshair (pitch %i)', (pitch) => {
+        const angles = { x: pitch, y: 30, z: 0 };
+        const { forward } = angleVectors(angles);
+        // The crosshair trace stops 400 units out; the muzzle check is clear.
+        const trace = vi.fn((start: Vec3, _mins: unknown, _maxs: unknown, end: Vec3) => {
+            const len = Math.hypot(end.x - start.x, end.y - start.y, end.z - start.z);
+            return len > 1000 ? createTraceMock({ fraction: 400 / 8192, endpos: addVec3(eye, scaleVec3(forward, 400)) }) : createTraceMock({ fraction: 1, endpos: end });
+        });
+        const game = createMockGameExports({ trace }) as GameExports;
+        const shot = P_ProjectShot(game, player(), angles, { x: 8, y: 8, z: -8 });
+        const aim = addVec3(eye, scaleVec3(forward, 400));
+        const t = (aim.x - shot.start.x) / shot.dir.x;
+        expect(shot.start.x + shot.dir.x * t).toBeCloseTo(aim.x, 3);
+        expect(shot.start.y + shot.dir.y * t).toBeCloseTo(aim.y, 3);
+        expect(shot.start.z + shot.dir.z * t).toBeCloseTo(aim.z, 3);
+        expect(Math.hypot(shot.dir.x, shot.dir.y, shot.dir.z)).toBeCloseTo(1, 5);
+    });
+
+    it('flies straight along the view at a monster under 128 units away', () => {
+        const angles = { x: 30, y: 0, z: 0 };
+        const trace = vi.fn(() => createTraceMock({ fraction: 64 / 8192, contents: CONTENTS_MONSTER, endpos: { x: 0, y: 0, z: 0 } }));
+        const game = createMockGameExports({ trace }) as GameExports;
+        const shot = P_ProjectShot(game, player(), angles, { x: 8, y: 8, z: -8 });
+        expect(shot.dir).toEqual(angleVectors(angles).forward);
+    });
+});
+

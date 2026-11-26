@@ -112,6 +112,7 @@ describe('Weapon Tests', () => {
 
             vi.mocked(mockImports.trace)
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
+                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 8192, y: 0, z: 22 }, ent: null })) // P_ProjectShot: the crosshair trace, 8192 along the view
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
@@ -149,6 +150,7 @@ describe('Weapon Tests', () => {
 
             vi.mocked(mockImports.trace)
                 .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 0, y: 0, z: 0 }, ent: null })) // P_ProjectSource trace check
+                .mockReturnValueOnce(createTraceMock({ fraction: 1.0, endpos: { x: 8192, y: 0, z: 22 }, ent: null })) // P_ProjectShot: the crosshair trace, 8192 along the view
                 .mockReturnValueOnce(createTraceMock({
                     fraction: 0.5,
                     endpos: { x: 50, y: 0, z: 0 },
@@ -243,29 +245,29 @@ describe('Weapon Tests', () => {
         });
 
         it('should burst 1->2->3 shots', () => {
-            // First shot (spinup 1) -> 1 shot + 1 source trace
+            // First shot (spinup 1) -> 1 shot + P_ProjectShot's 2 traces
             fireChaingun(mockGame, player);
-            expect(mockImports.trace).toHaveBeenCalledTimes(2);
+            expect(mockImports.trace).toHaveBeenCalledTimes(3);
 
            vi.mocked(mockImports.trace).mockClear();
 
-            // Second shot (spinup 2) -> 1 shot + 1 source trace
+            // Second shot (spinup 2) -> 1 shot + P_ProjectShot's 2 traces
              fireChaingun(mockGame, player);
-            expect(mockImports.trace).toHaveBeenCalledTimes(2);
+            expect(mockImports.trace).toHaveBeenCalledTimes(3);
 
              vi.mocked(mockImports.trace).mockClear();
 
-            // 3, 4, 5 -> 1 shot + 1 source trace each = 3 * 2 = 6
+            // 3, 4, 5 -> 1 shot + P_ProjectShot's 2 traces each = 3 * 3 = 9
             fireChaingun(mockGame, player); // 3
             fireChaingun(mockGame, player); // 4
             fireChaingun(mockGame, player); // 5
-            expect(mockImports.trace).toHaveBeenCalledTimes(6);
+            expect(mockImports.trace).toHaveBeenCalledTimes(9);
 
              vi.mocked(mockImports.trace).mockClear();
 
-            // 6 -> 2 shots + 1 source trace = 3
+            // 6 -> 2 shots + 2 = 4
             fireChaingun(mockGame, player);
-            expect(mockImports.trace).toHaveBeenCalledTimes(3);
+            expect(mockImports.trace).toHaveBeenCalledTimes(4);
 
              vi.mocked(mockImports.trace).mockClear();
 
@@ -273,9 +275,9 @@ describe('Weapon Tests', () => {
              for(let i=0; i<4; i++) fireChaingun(mockGame, player); // 7, 8, 9, 10
              vi.mocked(mockImports.trace).mockClear();
 
-             // 11 -> 3 shots + 1 source trace = 4
+             // 11 -> 3 shots + 2 = 5
              fireChaingun(mockGame, player);
-             expect(mockImports.trace).toHaveBeenCalledTimes(4);
+             expect(mockImports.trace).toHaveBeenCalledTimes(5);
         });
     });
 
