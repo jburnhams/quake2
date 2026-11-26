@@ -4,16 +4,18 @@
  * as an optional third argument; leaving it out (or any field of it) is the game as it ships.
  *
  * The defaults are the C values, rerelease/p_move.cpp:181-188 and qcommon/pmove.c:53-61.
- * `waterAccelerate` was 4 in the port until 2026-11-25; both C sources have 10. `airAccelerate`
- * was 1 until the same day, which took the sv_airaccelerate path; the game's default is 0.
+ * `waterAccelerate` was 4 in the port until 2026-11-25; both C sources have 10. `airAccelerate` was
+ * 1 until the same day, which took PM_AirAccelerate's capped path; sv_airaccelerate is 0 in
+ * g_main.cpp:312, so the game takes PM_Accelerate(wishdir, wishspeed, 1) in the air.
  */
 export interface PmoveTuning {
   /** pm_accelerate: ground acceleration, as a multiple of the wished speed per second. */
   readonly accelerate: number;
   /**
-   * pm_config.airaccel (the server's sv_airaccelerate): 0, the game's default, steers in the air
-   * with plain acceleration at 1; a positive value uses PM_AirAccelerate at that rate, which
-   * caps the added speed at 30 and so allows air strafing.
+   * pm_airaccelerate (sv_airaccelerate): acceleration in the air. 0, as the game ships, is not "no
+   * air control": the air move then calls PM_Accelerate with an acceleration of 1. Above 0 it calls
+   * PM_AirAccelerate with this value, which caps the speed added along the wish direction at 30
+   * (QuakeWorld's and Half-Life's air control).
    */
   readonly airAccelerate: number;
   /** pm_wateraccelerate: acceleration when at least waist deep. */

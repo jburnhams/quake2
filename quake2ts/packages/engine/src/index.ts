@@ -280,7 +280,7 @@ export {
 export { prepareModels, type PreparedModels } from './render/prepareModels.js';
 export { ANIMATION_STEP_MS, FrameLerpTracker, type FrameBlendSample } from './render/frameLerp.js';
 export { extractFrustumPlanes, boxIntersectsFrustum, type FrustumPlane } from './render/culling.js';
-export { calculateReachableAreas, findLeafForPoint, gatherVisibleFaces, isClusterVisible, type VisibleFace } from './render/bspTraversal.js';
+export { calculateReachableAreas, findLeafForPoint, findViewPoint, gatherVisibleFaces, isClusterInView, isClusterVisible, reachableAreasFrom, type ViewPoint, type VisibleFace } from './render/bspTraversal.js';
 export {
   applySurfaceState,
   BspSurfacePipeline,

@@ -123,6 +123,12 @@ describe('DebugMode Integration', () => {
         vi.doMock('../../../src/render/bspTraversal.js', () => ({
             __esModule: true,
             findLeafForPoint: vi.fn().mockReturnValue(0),
+            findViewPoint: vi.fn((map: any) => {
+                const leaf = map?.leafs?.[0];
+                return { leaf: 0, cluster: leaf?.cluster ?? -1, cluster2: leaf?.cluster ?? -1, area: leaf?.area ?? -1 };
+            }),
+            isClusterInView: vi.fn().mockReturnValue(true),
+            reachableAreasFrom: vi.fn().mockReturnValue(null),
             isClusterVisible: vi.fn().mockReturnValue(true),
             gatherVisibleFaces: vi.fn().mockReturnValue([]),
             calculateReachableAreas: vi.fn().mockReturnValue(new Set([0])),

@@ -1,14 +1,9 @@
 // The PVS lab's one step: from an eye in the map, which of the map's floors the renderer would
-// draw, by the port's own culling (findLeafForPoint, isClusterVisible, calculateReachableAreas and
+// draw, by the port's own culling (findViewPoint, isClusterInView, reachableAreasFrom and
 // gatherVisibleFaces from @quake2ts/engine). Pure: a map, an eye and which area portals are open
 // in, each floor's fate out. The floors are the world's faces that face up (pmove's 0.7), flattened
 // to a plan and kept with their height, so the lab can draw the level from above.
-import {
-  calculateReachableAreas,
-  findLeafForPoint,
-  gatherVisibleFaces,
-  isClusterVisible,
-} from '@quake2ts/engine';
+import { findViewPoint, gatherVisibleFaces, isClusterInView, reachableAreasFrom } from '@quake2ts/engine';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import type { Vec } from '../orbit';
 
@@ -92,9 +87,11 @@ export interface PvsView {
   readonly leaf: number;
   /** The eye's cluster; -1 is inside a wall or outside the map, where everything is drawn. */
   readonly cluster: number;
+  /** R_SetupFrame's second cluster, 16 units below the eye (above it in water); the same as `cluster` when there is none. */
+  readonly cluster2: number;
   readonly area: number;
   readonly clusters: number;
-  /** How many clusters the eye's PVS row names, its own included. */
+  /** How many clusters the eye's PVS rows name (both, when it has a second cluster), its own included. */
   readonly clustersSeen: number;
   readonly worldFaces: number;
   /** World faces the renderer draws from here, before the frustum cuts more. */
@@ -112,19 +109,17 @@ const ALL_AROUND: [] = [];
 
 /** The view from `eye` with the given area portals open, by the port's culling. */
 export function viewFrom(map: BspMap, floors: readonly Floor[], eye: Vec, open: ReadonlySet<number>): PvsView {
-  const leaf = findLeafForPoint(map, eye);
-  const at = leaf >= 0 ? map.leafs[leaf]! : null;
-  const cluster = at?.cluster ?? -1;
-  const area = at?.area ?? -1;
+  const view = findViewPoint(map, eye);
+  const { leaf, cluster, cluster2, area } = view;
   const clusters = map.visibility?.numClusters ?? 0;
   let clustersSeen = 0;
-  for (let c = 0; c < clusters; c++) if (isClusterVisible(map.visibility, cluster, c)) clustersSeen++;
+  for (let c = 0; c < clusters; c++) if (isClusterInView(map.visibility, view, c)) clustersSeen++;
 
   const portals = Array.from({ length: PORTAL_SLOTS }, (_, i) => open.has(i));
   const allOpen = new Array<boolean>(PORTAL_SLOTS).fill(true);
   const drawn = new Set(gatherVisibleFaces(map, eye, ALL_AROUND, portals).map((f) => f.faceIndex));
   const inPvs = new Set(gatherVisibleFaces(map, eye, ALL_AROUND, allOpen).map((f) => f.faceIndex));
-  const areas = area >= 0 && map.areas.length > 0 ? calculateReachableAreas(map, area, portals) : null;
+  const areas = reachableAreasFrom(map, area, portals);
 
   const fate = new Map<number, FloorFate>();
   for (const floor of floors) {
@@ -138,6 +133,7 @@ export function viewFrom(map: BspMap, floors: readonly Floor[], eye: Vec, open: 
     eye,
     leaf,
     cluster,
+    cluster2,
     area,
     clusters,
     clustersSeen,
