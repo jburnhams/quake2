@@ -13,7 +13,7 @@ import { CollisionVisRenderer } from './collisionVis.js';
 import { calculateEntityLight, MODEL_LIGHT_DIRECTION } from './light.js';
 import { GpuProfiler, RenderStatistics, FrameStats } from './gpuProfiler.js';
 import { boxIntersectsFrustum, extractFrustumPlanes, transformAabb } from './culling.js';
-import { findLeafForPoint, gatherVisibleFaces, isClusterVisible, calculateReachableAreas } from './bspTraversal.js';
+import { findLeafForPoint, findViewPoint, gatherVisibleFaces, isClusterInView, reachableAreasFrom, type ViewPoint } from './bspTraversal.js';
 import { PreparedTexture } from '../assets/texture.js';
 import { parseColorString } from './colors.js';
 import { RenderOptions } from './options.js';
@@ -292,8 +292,7 @@ export const createRenderer = (
         }
         let culledSurfaces = totalSurfaces - visibleSurfaces;
 
-        let viewCluster = -1;
-        let viewArea = -1;
+        let view: ViewPoint | null = null;
         let reachableAreas: Set<number> | null = null;
 
         if (options.world && options.world.map && renderOptions?.cullingEnabled !== false) {
@@ -302,16 +301,8 @@ export const createRenderer = (
                 y: options.camera.position[1],
                 z: options.camera.position[2],
             };
-            const viewLeafIndex = findLeafForPoint(options.world.map, cameraPosition);
-            if (viewLeafIndex >= 0) {
-                const leaf = options.world.map.leafs[viewLeafIndex];
-                viewCluster = leaf.cluster;
-                viewArea = leaf.area;
-
-                if (viewArea >= 0 && options.world.map.areas.length > 0) {
-                  reachableAreas = calculateReachableAreas(options.world.map, viewArea, portalState);
-                }
-            }
+            view = findViewPoint(options.world.map, cameraPosition);
+            reachableAreas = reachableAreasFrom(options.world.map, view.area, portalState);
         }
 
         // Models are opaque and write depth. The world's transparent pass leaves depth writes
@@ -342,7 +333,7 @@ export const createRenderer = (
         }
 
         for (const entity of allEntities) {
-            if (options.world && viewCluster >= 0) {
+            if (options.world && view && view.cluster >= 0) {
                 const origin = {
                     x: entity.transform[12],
                     y: entity.transform[13],
@@ -385,7 +376,7 @@ export const createRenderer = (
                         continue;
                     }
 
-                    if (!isClusterVisible(options.world.map.visibility, viewCluster, entityCluster)) {
+                    if (!isClusterInView(options.world.map.visibility, view, entityCluster)) {
                         culledEntities++;
                         continue;
                     }
