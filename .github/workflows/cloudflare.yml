@@ -1,0 +1,107 @@
+name: Deploy to Cloudflare
+
+# The site (apps/explorer) at https://quake2.jonathanburnhams.com: a Cloudflare Worker with static
+# assets (apps/explorer/wrangler.jsonc). The Worker serves the demo archive from the demo-paks
+# release, because at 39 MB it is over Cloudflare's 25 MiB limit for one asset
+# (apps/explorer/worker/handle.ts). A pull request that touches the deploy builds it and runs
+# wrangler's dry run; a push to main deploys.
+#
+# Needs the repository secrets CLOUDFLARE_API_TOKEN (Workers Scripts edit, Workers Routes edit and
+# DNS edit on jonathanburnhams.com, for the custom domain) and CLOUDFLARE_ACCOUNT_ID.
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'apps/explorer/worker/**'
+      - 'apps/explorer/wrangler.jsonc'
+      - 'apps/explorer/scripts/build-site.sh'
+      - 'apps/explorer/public/_headers'
+      - '.github/workflows/cloudflare.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cloudflare-${{ github.event_name == 'pull_request' && github.ref || 'deploy' }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  WRANGLER: wrangler@4.168.0
+  SITE_URL: https://quake2.jonathanburnhams.com
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          package_json_file: package.json
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 26
+          cache: 'pnpm'
+          cache-dependency-path: pnpm-lock.yaml
+
+      # id's C source, which the labs quote (scripts/fetch-id-source.sh).
+      - name: id source
+        uses: ./.github/actions/id-source
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the packages the game page imports
+        run: pnpm run build
+
+      - name: Typecheck and test the explorer
+        run: |
+          pnpm --filter @quake2ts/explorer typecheck
+          pnpm --filter @quake2ts/explorer test
+
+      # Only to check its SHA-256: the Worker serves the release's copy, not this one.
+      - name: Fetch the demo archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release download demo-paks --repo "$GITHUB_REPOSITORY" --pattern q2-314-demo-x86.exe --dir "$RUNNER_TEMP" --clobber
+
+      - name: Build the site
+        env:
+          SITE_HOST: cloudflare
+        run: apps/explorer/scripts/build-site.sh "$RUNNER_TEMP/q2-314-demo-x86.exe"
+
+      - name: Dry run
+        if: github.event_name == 'pull_request'
+        working-directory: apps/explorer
+        run: npx --yes "$WRANGLER" deploy --dry-run
+
+      - name: Deploy
+        if: github.event_name != 'pull_request'
+        working-directory: apps/explorer
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ] || [ -z "$CLOUDFLARE_ACCOUNT_ID" ]; then
+            echo "::warning::CLOUDFLARE_API_TOKEN or CLOUDFLARE_ACCOUNT_ID is not set, so the site was built but not deployed."
+            echo "skip=1" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          npx --yes "$WRANGLER" deploy
+
+      # The page and a deep link answer, and the archive comes through whole and unchanged.
+      - name: Check the live site
+        if: github.event_name != 'pull_request' && env.skip != '1'
+        run: |
+          for path in / /explore /play; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --retry 5 --retry-all-errors "$SITE_URL$path")
+            [ "$code" = 200 ] || { echo "$SITE_URL$path answered $code"; exit 1; }
+          done
+          want=$(awk '$2 == "archive" { print $1 }' scripts/demo-paks.sha256)
+          got=$(curl -sfL --retry 5 --retry-all-errors "$SITE_URL/q2-314-demo-x86.exe" | sha256sum | cut -d' ' -f1)
+          [ "$got" = "$want" ] || { echo "the archive's SHA-256 is $got, expected $want"; exit 1; }
+          echo "Live at $SITE_URL"

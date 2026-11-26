@@ -5,7 +5,8 @@ that shows how the game and engine work. A pnpm workspace (Node 26, pnpm 12):
 
 - `packages/`: the engine, game, client, server and shared code, and the libraries
   (`strata-*`, `@quake2ts/*`) cut out of them ([`LIBRARIES.md`](LIBRARIES.md)).
-- `apps/explorer/`: the explorer and its labs, published on GitHub Pages.
+- `apps/explorer/`: the explorer and its labs, published at <https://quake2.jonathanburnhams.com>
+  (Cloudflare) and on GitHub Pages.
 - `oracle/`: differential tests that run the port against id's unmodified C.
 - `scripts/`: fetching the demo pak and id's source.
 - `docs/`: notes on the port (protocol, demo parsing, plans); [`docs/packages.md`](docs/packages.md)

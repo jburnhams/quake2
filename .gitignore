@@ -26,3 +26,6 @@ oracle/build/
 .paks/
 # id Software's source, fetched by scripts/fetch-id-source.sh (see scripts/id-source.pins)
 .id-source/
+
+# wrangler dev state (apps/explorer)
+.wrangler/
