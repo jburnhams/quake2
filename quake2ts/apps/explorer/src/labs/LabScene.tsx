@@ -3,11 +3,12 @@
 // renderer's collisionVis. The camera orbits (orbit.ts): drag or the arrow keys turn it, Ctrl or
 // Cmd with the wheel and + and - zoom, 0 puts it back; plain wheel scrolls the pane, so what is
 // below stays reachable. It draws only when something changes (the drawing, the camera or the
-// size); nothing moves on its own, so there is no animation loop. Without WebGL 2 it says so, and
-// the lab's figures carry the same facts.
+// size, or the time a lab gives it); nothing moves on its own, so there is no animation loop: a
+// lab that animates passes a new `timeSeconds`. Without WebGL 2 it says so, and the lab's figures
+// carry the same facts.
 import * as React from 'react';
 import { Alert, Button, Skeleton } from 'strata-react';
-import { Camera, createRenderer, prepareWorld, type Renderer, type WorldRenderState } from '@quake2ts/engine';
+import { Camera, DebugMode, createRenderer, prepareWorld, type Renderer, type WorldRenderState } from '@quake2ts/engine';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import { traceBox, type CollisionModel } from '@quake2ts/shared/bsp/collision';
 import { MASK_SOLID } from '@quake2ts/shared/bsp/contents';
@@ -31,6 +32,10 @@ export const GREY: LineColour = { r: 0.85, g: 0.88, b: 0.92, a: 0.85 };
 export const BLUE: LineColour = { r: 0.45, g: 0.75, b: 1, a: 1 };
 
 const NO_PORTALS: ReadonlyArray<readonly [number, boolean]> = [];
+const NO_STYLES: ReadonlyArray<readonly [number, string | null]> = [];
+
+/** How the world's surfaces are lit: textures times lightmaps (as the game draws), the lightmaps alone, or the textures alone. */
+export type SceneLook = 'lit' | 'lightmap' | 'fullbright';
 
 /** The camera's own small box, so it stops a little short of a wall rather than in it. */
 const CAMERA_BOX = { mins: { x: -4, y: -4, z: -4 }, maxs: { x: 4, y: 4, z: 4 } };
@@ -60,11 +65,16 @@ export interface LabSceneProps {
   standAt?: boolean;
   /** Area portals to open or close before drawing (renderer.setAreaPortalState), as [number, open]. */
   portals?: ReadonlyArray<readonly [number, boolean]>;
+  /** Light style patterns to play (renderer.setLightStyle), as [style, pattern]; null puts a style back to full. */
+  lightStyles?: ReadonlyArray<readonly [number, string | null]>;
+  /** The time the light styles are played at. */
+  timeSeconds?: number;
+  look?: SceneLook;
   /** Told of every turn of the camera (a drag, a key, a new home), so a lab can show the way it faces elsewhere. */
   onTurn?: (orbit: Orbit) => void;
 }
 
-export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, onTurn }: LabSceneProps) {
+export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, lightStyles = NO_STYLES, timeSeconds = 0, look = 'lit', onTurn }: LabSceneProps) {
   const { library } = useLibrary();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [state, setState] = React.useState<SceneState>({ status: 'loading' });
@@ -150,6 +160,9 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
           traceBox({ model, start: from, end: to, mins: CAMERA_BOX.mins, maxs: CAMERA_BOX.maxs, contentMask: MASK_SOLID }).fraction,
         );
     for (const [number, open] of portals) renderer.setAreaPortalState(number, open);
+    for (const [style, pattern] of lightStyles) renderer.setLightStyle(style, pattern);
+    renderer.setDebugMode(look === 'lightmap' ? DebugMode.Lightmaps : DebugMode.None);
+    renderer.setFullbright(look === 'fullbright');
     camera.setPosition(eye.x, eye.y, eye.z);
     camera.setRotation(orbit.pitch, orbit.yaw, 0);
     draw({
@@ -157,8 +170,8 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
       box: (mins, maxs, colour) => renderer.collisionVis.addBBox(mins, maxs, colour),
     });
     gl.viewport(0, 0, size.width, size.height);
-    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds: 0 }, []);
-  }, [state, size, orbit, draw, model, standAt, portals]);
+    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds }, []);
+  }, [state, size, orbit, draw, model, standAt, portals, lightStyles, timeSeconds, look]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (standAt && ['+', '=', '-', '_'].includes(e.key)) return;
