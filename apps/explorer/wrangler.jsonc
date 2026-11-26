@@ -1,0 +1,17 @@
+// The site on Cloudflare: a Worker with static assets, at quake2.jonathanburnhams.com.
+// Deployed by .github/workflows/cloudflare.yml after scripts/build-site.sh (SITE_HOST=cloudflare).
+{
+  "name": "quake2",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-11-01",
+  "workers_dev": true,
+  "routes": [{ "pattern": "quake2.jonathanburnhams.com", "custom_domain": true }],
+  "assets": {
+    "directory": "./dist",
+    "binding": "ASSETS",
+    // Deep links (/explore?file=..., /labs/movement) get index.html and the router takes over.
+    "not_found_handling": "single-page-application",
+    // The archive is too big to be an asset (worker/handle.ts), so the Worker answers it.
+    "run_worker_first": ["/q2-314-demo-x86.exe"]
+  }
+}

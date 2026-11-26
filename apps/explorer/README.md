@@ -17,11 +17,17 @@ and the game at `/play` (`src/screens/PlayScreen.tsx`, `src/play/session.ts`): `
 `map demo1` at 40 Hz and the engine's WebGL renderer draws the world from the player's eyes. It
 imports `@quake2ts/engine` and `@quake2ts/server` from their `dist/`, so run `pnpm run build` at
 the repository root before the typecheck or a build.
-`.github/workflows/pages.yml` builds and deploys it on every push to main.
+On every push to main, `.github/workflows/cloudflare.yml` deploys it to
+<https://quake2.jonathanburnhams.com>, a Cloudflare Worker with static assets (`wrangler.jsonc`), and
+`.github/workflows/pages.yml` to GitHub Pages at `/quake2/`. Both run `scripts/build-site.sh`
+(`SITE_HOST=cloudflare` or `github`). The demo archive is 39 MB, over Cloudflare's 25 MiB limit for
+one asset, so on Cloudflare the Worker (`worker/handle.ts`) streams it from the `demo-paks` release
+and keeps it in Cloudflare's cache; `npx wrangler dev` after a Cloudflare build runs the same
+Worker locally.
 `scripts/fetch-paks.sh --unpinned` keeps the archive in `.paks/` for a local site build.
 
-It opens on the committed demo PAK (`public/pak.pak` links to `pak.pak`); the GitHub Pages
-build opens on the demo's whole `baseq2/pak0.pak` instead, which the browser takes out of the original
+It opens on the committed demo PAK (`public/pak.pak` links to `pak.pak`); the published
+site opens on the demo's whole `baseq2/pak0.pak` instead, which the browser takes out of the original
 demo archive (`src/library/demo.ts`, `src/library/zip.ts`), since id's demo licence lets only the
 unmodified archive be passed on. The archive is kept in Cache Storage, so it downloads once. **Open PAK files**
 mounts more above it, as the game's search path does, so a later PAK wins any path it shares.
