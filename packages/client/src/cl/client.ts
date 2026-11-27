@@ -846,10 +846,13 @@ export class OriginalClient {
   /** CL_PrepRefresh's model and client registration. */
   /** CL_RegisterSounds: the precache list up to its first empty name. */
   registerSounds(): void {
+    this.snd.beginRegistration();
+    // CL_RegisterTEntSounds: the effects name their sounds as they play them (fx.ts), and register them then
     for (let i = 1; i < d.MAX_SOUNDS; i++) {
       if (!this.configstrings[d.CS_SOUNDS + i]) break;
       this.soundPrecache[i] = this.registerSound(this.configstrings[d.CS_SOUNDS + i]);
     }
+    this.snd.endRegistration();
   }
 
   private registerSound(name: string): Sfx | null {

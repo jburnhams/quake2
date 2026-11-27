@@ -41,6 +41,8 @@ export interface Sfx {
   name: string;
   truename?: string;
   cache: SfxCache | null;
+  /** The registration it was last registered in: S_EndRegistration frees the others. */
+  registration_sequence: number;
 }
 
 /** channel_t. */
@@ -147,7 +149,9 @@ export class ClientSound {
   listener_right: Vec3 = [0, 0, 0];
   listener_up: Vec3 = [0, 0, 0];
 
+  /** known_sfx, by name; a freed slot is reused, so the limit is on the sounds held at once. */
   private readonly known = new Map<string, Sfx>();
+  private registrationSequence = 0;
   /** s_pendingplays, sorted by begin. */
   private pending: Playsound[] = [];
   /**
@@ -189,25 +193,37 @@ export class ClientSound {
     const known = this.known.get(name);
     if (known || !create) return known ?? null;
     if (this.known.size === MAX_SFX) throw new Error('S_FindName: out of sfx_t');
-    const sfx: Sfx = { name, cache: null };
+    const sfx: Sfx = { name, cache: null, registration_sequence: this.registrationSequence };
     this.known.set(name, sfx);
     return sfx;
   }
 
   /** S_AliasName: a name that plays another file. */
   private aliasName(aliasname: string, truename: string): Sfx {
-    const sfx: Sfx = { name: aliasname, truename, cache: null };
+    if (this.known.size === MAX_SFX) throw new Error('S_FindName: out of sfx_t');
+    const sfx: Sfx = { name: aliasname, truename, cache: null, registration_sequence: this.registrationSequence };
     this.known.set(aliasname, sfx);
     return sfx;
   }
 
+  /** S_BeginRegistration: a new map's sounds are registered from here. */
+  beginRegistration(): void {
+    this.registrationSequence++;
+  }
+
+  /** S_EndRegistration: frees every sound the new map did not register. */
+  endRegistration(): void {
+    for (const [name, sfx] of this.known) if (sfx.registration_sequence !== this.registrationSequence) this.known.delete(name);
+  }
+
   /**
-   * S_RegisterSound. Outside S_BeginRegistration the sound loads at once, and CL_RegisterSounds'
-   * S_EndRegistration loads everything it registered, so a registered sound is always loaded.
+   * S_RegisterSound. Outside a registration the sound loads at once, and S_EndRegistration loads
+   * everything registered inside one, so a registered sound is always loaded (here, at once).
    */
   registerSound(name: string): Sfx | null {
     if (!this.dma) return null;
     const sfx = this.findName(name, true)!;
+    sfx.registration_sequence = this.registrationSequence;
     this.loadSound(sfx);
     return sfx;
   }

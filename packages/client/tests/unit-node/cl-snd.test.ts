@@ -118,6 +118,21 @@ describe('the client sound (snd_dma.c, snd_mem.c, snd_mix.c)', () => {
     expect(ch.end - 30000).toBe(painted + 1102);
   });
 
+  it('frees the sounds a new map does not register, so the limit is per map', () => {
+    const { snd } = setup({ 'sound/a.wav': wav(tone.slice(0, 10), 2) });
+    for (let map = 0; map < 3; map++) {
+      snd.beginRegistration();
+      for (let i = 0; i < 200; i++) snd.registerSound(`m${map}/s${i}.wav`);
+      snd.endRegistration();
+    }
+    snd.beginRegistration();
+    expect(snd.registerSound('a.wav')).not.toBeNull();
+    snd.endRegistration();
+    expect(() => {
+      for (let i = 0; i < 600; i++) snd.registerSound(`more/s${i}.wav`);
+    }).toThrow('S_FindName: out of sfx_t');
+  });
+
   it('does nothing without a device, as when SNDDMA_Init fails', () => {
     const snd = new ClientSound({} as SoundHost, null);
     expect(snd.registerSound('a.wav')).toBeNull();
