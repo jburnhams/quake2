@@ -10,8 +10,9 @@ import { LAG_PATH, NetLab } from './labs/net/NetLab';
 import { PVS_PATH, PvsLab } from './labs/pvs/PvsLab';
 import { SLIDE_PATH, SlideLab } from './labs/slide/SlideLab';
 import { LIGHT_PATH, LightLab } from './labs/light/LightLab';
+import { WATCH_PATH, WatchScreen } from './labs/demo/WatchScreen';
 
-/** The site's route tree: the intro at /, the explorer at /explore, the game at /play, the movement lab at /labs/movement. The library sits above them all, so the demo downloads once. Shared by main.tsx and the tests (renderRoutes). */
+/** The site's route tree: the intro at /, the explorer at /explore, the game at /play, the demo's recording at /watch, the movement lab at /labs/movement. The library sits above them all, so the demo downloads once. Shared by main.tsx and the tests (renderRoutes). */
 export const routes: RouteObject[] = [
   {
     element: (
@@ -24,6 +25,7 @@ export const routes: RouteObject[] = [
       { path: '/', element: <IntroScreen /> },
       { path: '/explore', element: <ExplorerScreen /> },
       { path: '/play', element: <PlayScreen /> },
+      { path: WATCH_PATH, element: <WatchScreen /> },
       { path: LAB_PATH, element: <MovementLab /> },
       { path: TRACES_PATH, element: <TracesLab /> },
       { path: LAG_PATH, element: <NetLab /> },

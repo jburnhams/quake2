@@ -6,9 +6,26 @@
 // size, or the time a lab gives it); nothing moves on its own, so there is no animation loop: a
 // lab that animates passes a new `timeSeconds`. Without WebGL 2 it says so, and the lab's figures
 // carry the same facts.
+// A lab that plays a recording (the demo player) also gives it `entities` (brush models and MD2s,
+// as /play draws them, with the first-person weapon) and `follow`: the camera's target (and, for a
+// camera that turns with the player, their angles) moves with the recording while the person's own
+// drag and zoom are kept on top of it, so they can look round while it plays.
 import * as React from 'react';
 import { Alert, Button, Skeleton } from 'strata-react';
-import { Camera, DebugMode, createRenderer, prepareWorld, type Renderer, type WorldRenderState } from '@quake2ts/engine';
+import {
+  Camera,
+  DebugMode,
+  brushModelsFromEntities,
+  createRenderer,
+  modelEntitiesFromEntities,
+  prepareModels,
+  prepareWorld,
+  viewWeaponEntity,
+  type Md2Model,
+  type Renderer,
+  type SceneEntitySource,
+  type WorldRenderState,
+} from '@quake2ts/engine';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import { traceBox, type CollisionModel } from '@quake2ts/shared/bsp/collision';
 import { MASK_SOLID } from '@quake2ts/shared/bsp/contents';
@@ -30,6 +47,26 @@ export const AMBER: LineColour = { r: 1, g: 0.72, b: 0.16, a: 1 };
 export const GREY: LineColour = { r: 0.85, g: 0.88, b: 0.92, a: 0.85 };
 /** Pale blue: a direction, such as a plane's normal. */
 export const BLUE: LineColour = { r: 0.45, g: 0.75, b: 1, a: 1 };
+
+/** What a recording puts in the world: its entities, and the weapon in the player's hand. */
+export interface LabEntities {
+  /** The MD2s the entities use, loaded once for each list. Keep it stable (useMemo). */
+  readonly models: readonly string[];
+  readonly sources: readonly SceneEntitySource[];
+  /** What a modelindex names ("*3", "models/monsters/soldier/tris.md2"). */
+  readonly modelName: (index: number) => string | undefined;
+  /** The first-person weapon, drawn at the camera. */
+  readonly weapon?: { readonly model: string; readonly frame: number; readonly oldFrame?: number; readonly frameLerp?: number };
+}
+
+/** A target that moves (a recorded player), and angles the person's own turn is added to. */
+export interface LabFollow {
+  readonly target: Vec;
+  readonly yaw?: number;
+  readonly pitch?: number;
+}
+
+const NO_MODELS: ReadonlyMap<string, Md2Model> = new Map();
 
 const NO_PORTALS: ReadonlyArray<readonly [number, boolean]> = [];
 const NO_STYLES: ReadonlyArray<readonly [number, string | null]> = [];
@@ -70,16 +107,24 @@ export interface LabSceneProps {
   /** The time the light styles are played at. */
   timeSeconds?: number;
   look?: SceneLook;
+  /** Entities to draw in the world (a recording's). */
+  entities?: LabEntities;
+  /**
+   * Keeps the camera on a moving target: the orbit's target is replaced by it, and its yaw and
+   * pitch are added to the orbit's, so `home` holds the person's own turn (0 is none).
+   */
+  follow?: LabFollow;
   /** Told of every turn of the camera (a drag, a key, a new home), so a lab can show the way it faces elsewhere. */
   onTurn?: (orbit: Orbit) => void;
 }
 
-export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, lightStyles = NO_STYLES, timeSeconds = 0, look = 'lit', onTurn }: LabSceneProps) {
+export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, lightStyles = NO_STYLES, timeSeconds = 0, look = 'lit', entities, follow, onTurn }: LabSceneProps) {
   const { library } = useLibrary();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [state, setState] = React.useState<SceneState>({ status: 'loading' });
   const [orbit, setOrbit] = React.useState<Orbit>(home);
   const [size, setSize] = React.useState({ width: 0, height: 0 });
+  const [models, setModels] = React.useState<ReadonlyMap<string, Md2Model>>(NO_MODELS);
   const drag = React.useRef<{ x: number; y: number } | null>(null);
 
   // Set up the renderer and the world once per map.
@@ -111,6 +156,25 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
     };
   }, [map, library]);
 
+  // Load the entities' models once the world is up; one that fails to load is left undrawn.
+  const wanted = entities?.models;
+  React.useEffect(() => {
+    if (state.status !== 'ready' || !wanted?.length) return;
+    let cancelled = false;
+    const files = { readFile: async (path: string) => new Uint8Array(await library.read(path)) };
+    prepareModels(files, wanted).then(
+      (prepared) => {
+        if (cancelled) return;
+        state.scene.renderer.uploadModels(state.scene.world, prepared);
+        setModels(prepared.models);
+      },
+      () => undefined,
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [state, wanted, library]);
+
   // Size the drawing buffer to the canvas's box, in device pixels.
   React.useEffect(() => {
     const canvas = canvasRef.current;
@@ -130,6 +194,16 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
   const turned = React.useRef(onTurn);
   turned.current = onTurn;
   React.useEffect(() => turned.current?.(orbit), [orbit]);
+
+  // The orbit the camera is at: the person's own, moved onto what it follows.
+  const view: Orbit = follow
+    ? {
+        ...orbit,
+        target: follow.target,
+        yaw: orbit.yaw + (follow.yaw ?? 0),
+        pitch: Math.min(89, Math.max(-89, orbit.pitch + (follow.pitch ?? 0))),
+      }
+    : orbit;
 
   // Ctrl or Cmd with the wheel (and a trackpad pinch, which arrives as one) zooms the camera. A
   // native listener, since React's wheel listener is passive and cannot stop the page zooming too.
@@ -155,8 +229,8 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
     camera.setAspectRatio(size.width / size.height);
     // The camera stays inside the level (see clipEye): the renderer draws only what its cluster sees.
     const eye = standAt
-      ? orbit.target
-      : clipEye(orbit.target, orbitEye(orbit), (from, to) =>
+      ? view.target
+      : clipEye(view.target, orbitEye(view), (from, to) =>
           traceBox({ model, start: from, end: to, mins: CAMERA_BOX.mins, maxs: CAMERA_BOX.maxs, contentMask: MASK_SOLID }).fraction,
         );
     for (const [number, open] of portals) renderer.setAreaPortalState(number, open);
@@ -164,14 +238,25 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
     renderer.setDebugMode(look === 'lightmap' ? DebugMode.Lightmaps : DebugMode.None);
     renderer.setFullbright(look === 'fullbright');
     camera.setPosition(eye.x, eye.y, eye.z);
-    camera.setRotation(orbit.pitch, orbit.yaw, 0);
+    camera.setRotation(view.pitch, view.yaw, 0);
     draw({
       line: (from, to, colour) => renderer.collisionVis.addLine(from, to, colour),
       box: (mins, maxs, colour) => renderer.collisionVis.addBBox(mins, maxs, colour),
     });
     gl.viewport(0, 0, size.width, size.height);
-    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds }, []);
-  }, [state, size, orbit, draw, model, standAt, portals, lightStyles, timeSeconds, look]);
+    const drawn = entities ? modelEntitiesFromEntities(entities.sources, entities.modelName, { models, timeSeconds }) : [];
+    const weapon = entities?.weapon
+      ? viewWeaponEntity({
+          ...entities.weapon,
+          origin: { x: camera.position[0], y: camera.position[1], z: camera.position[2] },
+          angles: { x: camera.angles[0], y: camera.angles[1], z: camera.angles[2] },
+          models,
+        })
+      : undefined;
+    if (weapon) drawn.push(weapon);
+    const brushModels = entities ? brushModelsFromEntities(entities.sources, entities.modelName) : undefined;
+    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds, brushModels }, drawn);
+  }, [state, size, view.target, view.yaw, view.pitch, view.distance, draw, model, standAt, portals, lightStyles, timeSeconds, look, entities, models]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (standAt && ['+', '=', '-', '_'].includes(e.key)) return;
@@ -196,8 +281,8 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
             role="img"
             aria-label={
               standAt
-                ? `${shows} ${describeOrbit(orbit, true)} Drag or use the arrow keys to look around, 0 to go back.`
-                : `${shows} ${describeOrbit(orbit)} Drag or use the arrow keys to turn, Control and the wheel or plus and minus to zoom, 0 to go back.`
+                ? `${shows} ${describeOrbit(view, true)} Drag or use the arrow keys to look around, 0 to go back.`
+                : `${shows} ${describeOrbit(view)} Drag or use the arrow keys to turn, Control and the wheel or plus and minus to zoom, 0 to go back.`
             }
             className="block aspect-video w-full cursor-grab touch-none rounded-surface bg-muted active:cursor-grabbing"
             onKeyDown={onKeyDown}
