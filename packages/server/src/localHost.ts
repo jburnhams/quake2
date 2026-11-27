@@ -62,6 +62,7 @@ export class LocalHost {
   /** Model names by index; index 1 is the world, then the submodels, as SV_SpawnServer lays them out. */
   private models: string[] = [];
   private sounds: string[] = [];
+  private images: string[] = [];
   /** Commands the game sent to the server (gi.AddCommandString), such as `changelevel demo2`. */
   readonly serverCommands: string[] = [];
   /** Effects the game multicast since the last takeEffects(), oldest first. */
@@ -114,6 +115,7 @@ export class LocalHost {
     this.models = ['', path];
     for (let i = 1; i < model.bmodels.length; i++) this.models.push(`*${i}`);
     this.sounds = [''];
+    this.images = [''];
     this.serverCommands.length = 0;
     this.effects = [];
     this.frameNumber = 0;
@@ -171,6 +173,7 @@ export class LocalHost {
         trace: () => undefined,
         modelIndex: (n) => this.modelIndex(n),
         soundIndex: (n) => this.soundIndex(n),
+        imageIndex: (n) => this.imageIndex(n),
         configstring: (index, value) => this.configstrings.set(index, value),
       },
       { gravity: { x: 0, y: 0, z: -800 }, deathmatch: false, skill: this.options.skill ?? 1 },
@@ -186,10 +189,14 @@ export class LocalHost {
       onWarning: this.options.onWarning,
     });
 
-    // Single player: spawnWorld puts the player at info_player_start.
-    game.spawnWorld();
-
     this.current = { name, bsp, model, world, game, spawned: spawned.length };
+
+    // SV_SpawnServer: run two frames to allow everything to settle, before any client is in.
+    this.frame();
+    this.frame();
+
+    // Single player: the client connects and begins; spawnWorld puts the player at info_player_start.
+    game.spawnWorld();
     return this.current;
   }
 
@@ -223,11 +230,23 @@ export class LocalHost {
     return i;
   }
 
+  imageIndex(name: string): number {
+    let i = this.images.indexOf(name);
+    if (i < 0) {
+      i = this.images.length;
+      this.images.push(name);
+    }
+    return i;
+  }
+
   configstring(index: number): string | undefined {
     return this.configstrings.get(index);
   }
 
-  /** Runs one 25 ms game frame. With no cmd the player still moves, with neutral input, as a connected client always sends one. */
+  /**
+   * Runs one 25 ms server frame: the player's usercmd (ClientThink), then the game frame. With no
+   * cmd the player still moves, with neutral input, as a connected client always sends one.
+   */
   frame(cmd?: Partial<UserCommand>): GameFrameResult<GameStateSnapshot> {
     const { game } = this.map;
     this.frameNumber += 1;
@@ -241,7 +260,10 @@ export class LocalHost {
       upmove: 0,
       ...cmd,
     } as UserCommand;
-    return game.frame({ frame: this.frameNumber, deltaMs: FRAME_MSEC, nowMs: this.timeMs }, command);
+    // SV_Frame: the client's usercmds run (ClientThink) as its packets are read, then the game frame.
+    const player = this.player;
+    if (player) game.clientThink(player, command);
+    return game.frame({ frame: this.frameNumber, deltaMs: FRAME_MSEC, nowMs: this.timeMs });
   }
 
   /** Runs frames for a span of game time. */

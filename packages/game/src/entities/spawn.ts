@@ -1,4 +1,5 @@
-import type { Vec3 } from '@quake2ts/shared';
+import { MASK_SOLID, RenderFx, type Vec3 } from '@quake2ts/shared';
+import { G_FixStuckObject } from '../ai/monsterStart.js';
 import {
   ENTITY_FIELD_METADATA,
   type EntityFieldDescriptor,
@@ -23,6 +24,10 @@ import { registerMonsterSpawns } from './monsters/index.js';
 import { registerWorldSpawn } from './worldspawn.js';
 import { registerTargetCamera } from './camera.js';
 import type { EntitySystem } from './system.js';
+
+/** PLAYER_MINS and PLAYER_MAXS (g_local.h). */
+const PLAYER_MINS: Vec3 = { x: -16, y: -16, z: -24 };
+const PLAYER_MAXS: Vec3 = { x: 16, y: 16, z: 32 };
 
 export type ParsedEntity = Record<string, string>;
 
@@ -243,46 +248,59 @@ export interface SpawnOptions {
   readonly onWarning?: (message: string) => void;
 }
 
+const SPAWNFLAG_COOP_ONLY = 0x00004000;
+/** SPAWNFLAG_EDITOR_MASK: the skill, mode and reserved bits, cleared once an entity is kept. */
+const SPAWNFLAG_EDITOR_MASK = 0x0000ff00;
+/** BODY_QUEUE_SIZE (g_local.h). */
+export const BODY_QUEUE_SIZE = 8;
+
+/** G_InhibitEntity (g_spawn.cpp): whether this skill or game mode leaves the entity out. */
+function inhibitEntity(entity: Entity, entities: EntitySystem): boolean {
+  const flags = entity.spawnflags;
+  if (entities.deathmatch) return (flags & SPAWNFLAG_NOT_DEATHMATCH) !== 0;
+  const coop = (entities as { coop?: boolean }).coop ?? false;
+  if (coop && flags & SPAWNFLAG_NOT_COOP) return true;
+  if (!coop && flags & SPAWNFLAG_COOP_ONLY) return true;
+  const skill = entities.skill;
+  return (
+    (skill === 0 && (flags & SPAWNFLAG_NOT_EASY) !== 0) ||
+    (skill === 1 && (flags & SPAWNFLAG_NOT_MEDIUM) !== 0) ||
+    (skill >= 2 && (flags & SPAWNFLAG_NOT_HARD) !== 0)
+  );
+}
+
+/** InitBodyQue (p_client.cpp): reserve some spots for dead player bodies for coop / deathmatch. */
+export function initBodyQue(entities: EntitySystem): void {
+  for (let i = 0; i < BODY_QUEUE_SIZE; i++) {
+    const ent = entities.spawn();
+    ent.classname = 'bodyque';
+  }
+  entities.bodyQueueSize = BODY_QUEUE_SIZE;
+}
+
+/**
+ * One entity of SpawnEntities' loop: the world takes edict 0 and every other entity a new
+ * edict (G_Spawn); ED_ParseEdict fills it, G_InhibitEntity may free it again, then
+ * ED_CallSpawn runs its spawn function.
+ */
 export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: SpawnOptions): Entity | null {
   const warn = options.onWarning ?? defaultWarn;
   const classname = dictionary.classname;
-  if (!classname) {
-    warn('Encountered entity with no classname');
-    return null;
-  }
-
   const isWorld = classname === 'worldspawn';
   const entity = isWorld ? options.entities.world : options.entities.spawn();
   applyEntityKeyValues(entity, dictionary);
 
-  // Check spawn flags for filtering
+  // remove things (except the world) from different skill levels or deathmatch
   if (!isWorld) {
-    if ((entity.spawnflags & SPAWNFLAG_NOT_DEATHMATCH) && options.entities.deathmatch) {
+    if (inhibitEntity(entity, options.entities)) {
       options.entities.freeImmediate(entity);
       return null;
     }
-
-    if ((entity.spawnflags & SPAWNFLAG_NOT_EASY) && options.entities.skill === 0) {
-      options.entities.freeImmediate(entity);
-      return null;
-    }
-
-    if ((entity.spawnflags & SPAWNFLAG_NOT_MEDIUM) && options.entities.skill === 1) {
-      options.entities.freeImmediate(entity);
-      return null;
-    }
-
-    if ((entity.spawnflags & SPAWNFLAG_NOT_HARD) && options.entities.skill >= 2) {
-      options.entities.freeImmediate(entity);
-      return null;
-    }
-
-    // Co-op filtering
-    if ((entity.spawnflags & SPAWNFLAG_NOT_COOP) && (options.entities as any).coop) {
-      options.entities.freeImmediate(entity);
-      return null;
-    }
+    entity.spawnflags &= ~SPAWNFLAG_EDITOR_MASK;
   }
+
+  // PGM - do this before calling the spawn function so it can be overridden.
+  entity.gravityVector = { x: 0, y: 0, z: -1 };
 
   const context: SpawnContext = {
     keyValues: dictionary,
@@ -294,12 +312,11 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
     },
   };
 
-  const spawnFunc = options.registry.get(classname);
+  // ED_CallSpawn: an entity with no spawn function is freed, and so is one with no classname.
+  const spawnFunc = classname ? options.registry.get(classname) : undefined;
   if (!spawnFunc) {
-    warn(`${classname} does not have a spawn function`);
-    if (!isWorld) {
-      options.entities.freeImmediate(entity);
-    }
+    warn(classname ? `${classname} doesn't have a spawn function` : 'ED_CallSpawn: nullptr classname');
+    if (!isWorld) options.entities.freeImmediate(entity);
     return null;
   }
 
@@ -311,6 +328,9 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
   }
 
   spawnFunc(entity, context);
+
+  // SpawnEntities: every entity is visible to IR goggles (PGM), freed or not.
+  entity.renderfx |= RenderFx.IrVisible;
 
   if (!entity.inUse) {
     return null;
@@ -328,9 +348,12 @@ export function spawnEntityFromDictionary(dictionary: ParsedEntity, options: Spa
   return entity;
 }
 
+/** SpawnEntities (g_spawn.cpp): the body queue, then the entity lump in order, then the teams. */
 export function spawnEntitiesFromText(text: string, options: SpawnOptions): Entity[] {
   const parsed = parseEntityLump(text);
   const spawned: Entity[] = [];
+
+  initBodyQue(options.entities);
 
   for (const dictionary of parsed) {
     const entity = spawnEntityFromDictionary(dictionary, options);
@@ -382,34 +405,77 @@ export function SelectDeathmatchSpawnPoint(entities: EntitySystem): Entity | und
   return spots[index];
 }
 
+/**
+ * SelectSpawnPoint: a deathmatch spot in deathmatch; otherwise SelectSingleSpawnPoint, the
+ * info_player_start whose targetname is game.spawnpoint (the one with none when the level was
+ * not entered through a named spot), then any without a targetname, then any at all.
+ */
 export function SelectSpawnPoint(entities: EntitySystem): Entity | undefined {
   if (entities.deathmatch) {
     const spot = SelectDeathmatchSpawnPoint(entities);
     if (spot) return spot;
   }
-  return findPlayerStart(entities);
+  return SelectSingleSpawnPoint(entities);
 }
 
-export function findPlayerStart(entities: EntitySystem): Entity | undefined {
-  return entities.find(
-    (entity: Entity) => entity.classname === 'info_player_start'
-  );
+/** SelectSingleSpawnPoint */
+export function SelectSingleSpawnPoint(entities: EntitySystem): Entity | undefined {
+  const starts = entities.findByClassname('info_player_start');
+  const spawnpoint = entities.spawnpoint;
+  let spot = starts.find((e) => {
+    if (!spawnpoint && !e.targetname) return true;
+    if (!spawnpoint || !e.targetname) return false;
+    return spawnpoint.toLowerCase() === e.targetname.toLowerCase();
+  });
+  // there wasn't a matching targeted spawnpoint, use one that has no targetname
+  if (!spot) spot = starts.find((e) => !e.targetname);
+  // none at all, so just pick any
+  return spot ?? starts[0];
 }
+
+/** The spot the single-player game puts the player at. */
+export function findPlayerStart(entities: EntitySystem): Entity | undefined {
+  return SelectSingleSpawnPoint(entities);
+}
+
+/** SP_info_player_start: fix stuck spawn points. */
+const SP_info_player_start: SpawnFunction = (self, context) => {
+  const sys = context.entities;
+  if (sys.trace(self.origin, PLAYER_MINS, PLAYER_MAXS, self.origin, self, MASK_SOLID).startsolid) G_FixStuckObject(self, { ...self.origin }, sys);
+};
 
 export function registerDefaultSpawns(registry: SpawnRegistry, game?: any): void {
   registerWorldSpawn(registry);
 
-  registry.register('info_player_start', () => {
-    // No-op spawn point
+  registry.register('info_player_start', SP_info_player_start);
+
+  // SP_info_player_deathmatch: only in deathmatch (where it is SP_misc_teleporter_dest)
+  registry.register('info_player_deathmatch', (self, context) => {
+    if (!context.entities.deathmatch) {
+      context.free(self);
+      return;
+    }
+    context.entities.setModel(self, 'models/objects/dmspot/tris.md2');
+    self.skin = 0;
+    self.solid = Solid.BoundingBox;
+    self.mins = { x: -32, y: -32, z: -24 };
+    self.maxs = { x: 32, y: 32, z: -16 };
+    context.entities.linkentity(self);
   });
 
-  registry.register('info_player_deathmatch', () => {
-    // Deathmatch handling is deferred until game rules are implemented
-  });
+  // SP_info_player_coop and SP_info_player_coop_lava: only in coop
+  const coopStart: SpawnFunction = (self, context) => {
+    if (!context.entities.coop) {
+      context.free(self);
+      return;
+    }
+    SP_info_player_start(self, context);
+  };
+  registry.register('info_player_coop', coopStart);
+  registry.register('info_player_coop_lava', coopStart);
 
-  registry.register('info_player_coop', () => {
-    // Coop spawn points share info_player_start behaviour for now
-  });
+  // SP_info_player_intermission: nothing
+  registry.register('info_player_intermission', () => {});
 
   registry.register('info_null', (entity, context) => {
     context.free(entity);

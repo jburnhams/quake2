@@ -14,19 +14,18 @@ describe('Target Entities', () => {
   const entities = new EntitySystem(mockEngine as any, undefined, undefined, 2048);
   (entities.imports as any).configstring = vi.fn();
 
-  it('target_secret should trigger targets when count reaches zero', () => {
+  it('target_secret counts a secret, fires its targets and frees itself when used', () => {
     const useTargetsMock = vi.spyOn(entities, 'useTargets');
     const activator = entities.spawn();
-    const target = spawnEntityFromDictionary({ classname: 'target_secret', count: '2' }, { registry, entities });
-    target.activator = activator;
+    const before = entities.level.total_secrets ?? 0;
+    const target = spawnEntityFromDictionary({ classname: 'target_secret' }, { registry, entities });
+    expect(target.svflags & ServerFlags.NoClient).toBeTruthy();
+    expect(entities.level.total_secrets).toBe(before + 1);
 
     target.use(target, null, activator, entities);
-    expect(target.count).toBe(1);
-    expect(useTargetsMock).not.toHaveBeenCalled();
-
-    target.use(target, null, activator, entities);
-    expect(target.count).toBe(0);
     expect(useTargetsMock).toHaveBeenCalledWith(target, activator);
+    expect(entities.level.found_secrets).toBe(1);
+    expect(target.inUse).toBe(false);
   });
 
   it('target_goal should trigger targets when used', () => {
@@ -43,7 +42,7 @@ describe('Target Entities', () => {
     const target = spawnEntityFromDictionary({ classname: 'target_changelevel', map: 'new_level' }, { registry, entities });
     expect(target).not.toBeNull();
     expect(target.map).toBe('new_level');
-    expect(target.solid).toBe(Solid.Trigger);
+    expect(target.svflags & ServerFlags.NoClient).toBeTruthy();
   });
 
   it('target_explosion should be created', () => {

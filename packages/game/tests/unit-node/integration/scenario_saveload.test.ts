@@ -98,8 +98,8 @@ describe('Scenario 4: Save/Load Mid-Level', () => {
 
   it('should save and load game state correctly', () => {
     // 1. Spawn Player and set some state
-    const player = game.entities.spawn();
-    player.classname = 'player';
+    // the player spawnWorld put in at edict 1
+    const player = game.entities.find((e) => e.classname === 'player')!;
     player.origin = { x: 0, y: 0, z: 25 };
     player.health = 80;
     player.client = {

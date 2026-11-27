@@ -38,9 +38,10 @@ export function collisionModelFromBsp(bsp: BspMap): CollisionModel {
       surfaceFlags: bsp.texInfo[s.texInfo]?.flags ?? 0,
     })),
     leafBrushes,
+    // CMod_LoadSubmodels: spread the mins / maxs by a pixel
     bmodels: bsp.models.map((m) => ({
-      mins: { x: m.mins[0], y: m.mins[1], z: m.mins[2] },
-      maxs: { x: m.maxs[0], y: m.maxs[1], z: m.maxs[2] },
+      mins: { x: m.mins[0] - 1, y: m.mins[1] - 1, z: m.mins[2] - 1 },
+      maxs: { x: m.maxs[0] + 1, y: m.maxs[1] + 1, z: m.maxs[2] + 1 },
       origin: { x: m.origin[0], y: m.origin[1], z: m.origin[2] },
       headnode: m.headNode,
     })),

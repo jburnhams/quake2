@@ -14,6 +14,8 @@ const ATTN_NONE = 0;
 const ATTN_NORM = 1;
 const ATTN_IDLE = 2;
 const ATTN_STATIC = 3;
+const CHAN_VOICE = 2;
+const SPAWNFLAG_GOAL_KEEP_MUSIC = 1;
 
 const SPEAKER_SPAWNFLAGS = {
   LoopedOn: 1 << 0,
@@ -36,11 +38,11 @@ function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity 
     if (self.spawnflags & SPEAKER_SPAWNFLAGS.LoopedOn) {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOn;
       self.spawnflags |= SPEAKER_SPAWNFLAGS.LoopedOff;
-      self.sounds = 0;
+      self.sound = 0;
     } else {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOff;
       self.spawnflags |= SPEAKER_SPAWNFLAGS.LoopedOn;
-      self.sounds = noiseIndex;
+      self.sound = noiseIndex;
     }
   } else { // Normal one-shot
     if (noiseIndex) {
@@ -607,7 +609,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     }
 
     if (entity.spawnflags & SPEAKER_SPAWNFLAGS.LoopedOn) {
-        entity.sounds = entity.noise_index;
+        entity.sound = entity.noise_index;
     }
 
     entity.use = (self, other, activator) => targetSpeakerUse(self, other, activator ?? null, context);
@@ -630,22 +632,47 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     entity.svflags |= ServerFlags.NoClient;
   });
 
-  registry.register('target_secret', (entity, { entities }) => {
-    if (entity.count === 0) {
-      entity.count = 1;
+  // SP_target_secret: counts a secret found; single use.
+  registry.register('target_secret', (entity, { entities, keyValues, free }) => {
+    if (entities.deathmatch) {
+      // auto-remove for deathmatch
+      free(entity);
+      return;
     }
-    entity.use = (self) => {
-      self.count--;
-      if (self.count === 0) {
-        entities.useTargets(self, self.activator ?? null);
-      }
+    // G_VerifyTargetted only warns
+    entity.think = () => {};
+    entity.nextthink = entities.timeSeconds + 0.01;
+    entity.use = (self, _other, activator) => {
+      entities.sound(self, CHAN_VOICE, keyValues.noise || 'misc/secret.wav', 1, ATTN_NORM, 0);
+      entities.level.found_secrets = (entities.level.found_secrets ?? 0) + 1;
+      entities.useTargets(self, activator ?? null);
+      entities.free(self);
     };
+    entity.noise_index = entities.soundIndex(keyValues.noise || 'misc/secret.wav');
+    entity.svflags = ServerFlags.NoClient;
+    entities.level.total_secrets = (entities.level.total_secrets ?? 0) + 1;
   });
 
-  registry.register('target_goal', (entity, { entities }) => {
-    entity.use = (self) => {
-      entities.useTargets(self, self.activator ?? null);
+  // SP_target_goal: counts a goal completed; single use. (N64 goals are not ported.)
+  registry.register('target_goal', (entity, { entities, keyValues, free }) => {
+    if (entities.deathmatch) {
+      // auto-remove for deathmatch
+      free(entity);
+      return;
+    }
+    entity.use = (self, _other, activator) => {
+      entities.sound(self, CHAN_VOICE, keyValues.noise || 'misc/secret.wav', 1, ATTN_NORM, 0);
+      const level = entities.level;
+      level.found_goals = (level.found_goals ?? 0) + 1;
+      if (level.found_goals === level.total_goals && !(self.spawnflags & SPAWNFLAG_GOAL_KEEP_MUSIC)) {
+        entities.imports.configstring(ConfigStringIndex.CdTrack, self.sounds ? `${self.sounds}` : '0');
+      }
+      entities.useTargets(self, activator ?? null);
+      entities.free(self);
     };
+    entity.noise_index = entities.soundIndex(keyValues.noise || 'misc/secret.wav');
+    entity.svflags = ServerFlags.NoClient;
+    entities.level.total_goals = (entities.level.total_goals ?? 0) + 1;
   });
 
   registry.register('target_changelevel', (entity, context) => {
@@ -656,7 +683,7 @@ export function registerTargetSpawns(registry: SpawnRegistry) {
     }
     entity.map = keyValues.map;
     entity.use = (self, other, activator) => useChangeLevel(self, other, activator ?? null, context);
-    entity.solid = Solid.Trigger; // Make it triggerable
+    entity.svflags = ServerFlags.NoClient;
   });
 
   registry.register('target_spawner', (entity, context) => {

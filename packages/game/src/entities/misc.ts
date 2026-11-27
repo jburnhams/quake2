@@ -2,14 +2,16 @@ import type { SpawnRegistry, SpawnFunction } from './spawn.js';
 import { MoveType, Solid, ServerFlags, Entity, EntityFlags, CollisionSurface, DeadFlag } from './entity.js';
 import { EntitySystem } from './system.js';
 import { DamageMod } from '../combat/damageMods.js';
-import { closestPointToBox, createRandomGenerator, CollisionPlane, Vec3 } from '@quake2ts/shared';
+import { closestPointToBox, CollisionPlane, Vec3 } from '@quake2ts/shared';
+import { EntityEffects } from './enums.js';
 import { T_Damage } from '../combat/damage.js';
+import { M_CatagorizePosition, M_WorldEffects, M_droptofloor } from '../ai/monsterStart.js';
+import { M_walkmove, vectoyaw } from '../ai/m_move.js';
 import { registerMiscViper, registerMiscViperBomb, registerMiscStroggShip, registerMiscBigViper } from './misc/flyers.js';
 import { registerMiscViperMissile } from './misc/viperMissile.js';
 import { registerMiscSatelliteDish, registerMiscBlackhole, registerMiscEasterTank, registerMiscEasterChick, registerMiscEasterChick2 } from './misc/decorative.js';
 import { registerFuncClock, registerTargetString, registerTargetCharacter, registerMiscFlare, registerMiscHologram, registerMiscFireball, registerInfoLandmark, registerInfoWorldText, registerMiscPlayerMannequin, registerMiscModel } from './misc/more_misc.js';
 
-const random = createRandomGenerator();
 
 // ============================================================================
 // FUNC OBJECT
@@ -114,20 +116,21 @@ function gib_die(self: Entity, inflictor: Entity | null, attacker: Entity | null
     // Since we don't have full context here easily without a factory closure, we skip logic for now.
 }
 
+/** SP_misc_gib_arm, _leg and _head */
 function spawn_gib(entity: Entity, model: string, context: { entities: EntitySystem }) {
-    context.entities.modelIndex(model);
+    context.entities.setModel(entity, model);
     entity.solid = Solid.Not;
-    // entity.effects |= EF_GIB;
+    entity.effects |= EntityEffects.Gib;
     entity.takedamage = true;
     entity.die = gib_die;
     entity.movetype = MoveType.Toss;
-    entity.deadflag = 2; // DEAD_DEAD
+    entity.deadflag = DeadFlag.Dead;
 
-    entity.avelocity = {
-        x: random.frandom() * 200,
-        y: random.frandom() * 200,
-        z: random.frandom() * 200
-    };
+    const rng = context.entities.rng;
+    const x = rng.frandomMax(200);
+    const y = rng.frandomMax(200);
+    const z = rng.frandomMax(200);
+    entity.avelocity = { x, y, z };
 
     entity.think = (self) => context.entities.free(self);
     context.entities.scheduleThink(entity, context.entities.timeSeconds + 10);
@@ -147,36 +150,97 @@ export function registerMiscSpawns(registry: SpawnRegistry) {
     // Simplified, just a destination marker
   });
 
-  // g_misc.c SP_misc_explobox: a barrel. It blocks as a box; exploding when shot is still to port.
-  registry.register('misc_explobox', (entity, context) => {
-    entity.solid = Solid.BoundingBox;
-    entity.movetype = MoveType.None;
-    entity.model = 'models/objects/barrels/tris.md2';
-    entity.modelindex = context.entities.modelIndex(entity.model);
-    entity.mins = { x: -16, y: -16, z: 0 };
-    entity.maxs = { x: 16, y: 16, z: 40 };
-    if (!entity.mass) entity.mass = 400;
-    if (!entity.health) entity.health = 10;
-    if (!entity.dmg) entity.dmg = 150;
-    entity.takedamage = true;
-    context.entities.linkentity(entity);
+  // SP_misc_explobox: a barrel. It steps (it can be pushed and falls), starts a frame later by
+  // dropping to the floor, and then checks its water every frame (barrel_start, barrel_think).
+  // Shooting it (barrel_delay, burn and explode) is still to port.
+  registry.register('misc_explobox', (self, context) => {
+    const sys = context.entities;
+    if (sys.deathmatch) {
+      // auto-remove for deathmatch
+      context.free(self);
+      return;
+    }
+    sys.modelIndex('models/objects/debris1/tris.md2');
+    sys.modelIndex('models/objects/debris2/tris.md2');
+    sys.modelIndex('models/objects/debris3/tris.md2');
+    sys.soundIndex('weapons/bfg__l1a.wav');
+
+    self.solid = Solid.BoundingBox;
+    self.movetype = MoveType.Step;
+    self.model = 'models/objects/barrels/tris.md2';
+    self.modelindex = sys.modelIndex(self.model);
+    self.mins = { x: -16, y: -16, z: 0 };
+    self.maxs = { x: 16, y: 16, z: 40 };
+    if (!self.mass) self.mass = 50;
+    if (!self.health) self.health = 10;
+    if (!self.dmg) self.dmg = 150;
+    self.takedamage = true;
+    // (FL_TRAP is bit 32 of the rerelease's 64-bit flags, past the port's 32)
+
+    // barrel_touch: something standing on the ground pushes it
+    self.touch = (barrel, other, _plane, _surf) => {
+      if (!other || !other.groundentity || other.groundentity === barrel) return;
+      const ratio = other.mass / barrel.mass;
+      const v = { x: barrel.origin.x - other.origin.x, y: barrel.origin.y - other.origin.y, z: barrel.origin.z - other.origin.z };
+      M_walkmove(barrel, vectoyaw(v), 20 * ratio * sys.frameTimeSeconds, sys);
+    };
+
+    // PGM - change so barrels will think and hence, blow up
+    const barrelThink = (barrel: Entity) => {
+      // the think needs to be first since later stuff may override.
+      barrel.think = barrelThink;
+      barrel.nextthink = sys.timeSeconds + sys.frameTimeSeconds;
+      M_CatagorizePosition(barrel, barrel.origin, sys);
+      barrel.flags |= EntityFlags.ImmuneSlime;
+      barrel.air_finished = sys.timeSeconds + 100;
+      M_WorldEffects(barrel, sys);
+    };
+    self.think = (barrel) => {
+      // barrel_start
+      M_droptofloor(barrel, sys);
+      barrel.think = barrelThink;
+      barrel.nextthink = sys.timeSeconds + sys.frameTimeSeconds;
+    };
+    self.nextthink = sys.timeSeconds + 0.05;
+    sys.linkentity(self);
   });
 
-  registry.register('misc_banner', (entity) => {
+  // SP_misc_banner: the origin is the bottom of the banner, which waves through 16 frames at 10 Hz.
+  registry.register('misc_banner', (entity, context) => {
+    const sys = context.entities;
     entity.movetype = MoveType.None;
     entity.solid = Solid.Not;
-    // Banners are decorative
+    entity.modelindex = sys.modelIndex('models/objects/banner/tris.md2');
+    entity.frame = sys.rng.irandom(16);
+    sys.linkentity(entity);
+
+    entity.think = (self) => {
+      self.frame = (self.frame + 1) % 16;
+      self.nextthink = sys.timeSeconds + 0.1;
+    };
+    entity.nextthink = sys.timeSeconds + 0.1;
   });
 
   // g_misc.c SP_misc_deadsoldier: a corpse; shots and dead-monster masks hit it, players walk over it.
   registry.register('misc_deadsoldier', (entity, context) => {
+    if (context.entities.deathmatch) {
+      // auto-remove for deathmatch
+      context.free(entity);
+      return;
+    }
     entity.movetype = MoveType.None;
     entity.solid = Solid.BoundingBox;
     entity.model = 'models/deadbods/dude/tris.md2';
     entity.modelindex = context.entities.modelIndex(entity.model);
     entity.mins = { x: -16, y: -16, z: 0 };
+    // ON_BACK ON_STOMACH BACK_DECAP FETAL_POS SIT_DECAP IMPALED; defaults to frame 0
+    const poses = [2, 4, 8, 16, 32];
+    const pose = poses.findIndex((flag) => entity.spawnflags & flag);
+    entity.frame = pose < 0 ? 0 : pose + 1;
     entity.maxs = { x: 16, y: 16, z: 16 };
     entity.deadflag = DeadFlag.Dead;
+    // (takedamage and misc_deadsoldier_die come with the gibs, which are not ported yet)
+    // nb: SVF_MONSTER is here so it bleeds
     entity.svflags |= ServerFlags.Monster | ServerFlags.DeadMonster;
     context.entities.linkentity(entity);
   });

@@ -114,6 +114,11 @@ export interface LevelState {
   help1changed: number;
   help2changed: number;
   mapname?: string; // Added mapname
+  /** level.total_secrets, found_secrets, total_goals, found_goals */
+  total_secrets?: number;
+  found_secrets?: number;
+  total_goals?: number;
+  found_goals?: number;
 }
 
 
@@ -216,6 +221,8 @@ export class EntitySystem {
   readonly deathmatch: boolean;
   readonly skill: number;
   readonly coop: boolean;
+  /** game.spawnpoint: the targetname of the info_player_start the level was entered by ("" for none). */
+  spawnpoint = '';
 
   get trace(): TraceFunction {
     return this.imports.trace;
@@ -242,8 +249,9 @@ export class EntitySystem {
       return (this as any)._game;
   }
 
+  /** game.maxclients: the client slots the server reserved (32 when it reserved none, as in unit tests). */
   get maxClients(): number {
-    return 32; // Default, can be configurable or from engine
+    return this.clientSlots || 32;
   }
 
   get entities(): ArrayLike<Entity | null> {
@@ -374,6 +382,10 @@ export class EntitySystem {
       helpmessage2: "",
       help1changed: 0,
       help2changed: 0,
+      total_secrets: 0,
+      found_secrets: 0,
+      total_goals: 0,
+      found_goals: 0,
     };
   }
 
@@ -413,6 +425,17 @@ export class EntitySystem {
   /** See EntityPool.reserveClientSlots. */
   reserveClientSlots(count: number): void {
     this.pool.reserveClientSlots(count);
+    this.clientSlots = count;
+  }
+
+  /** maxclients: the slots reserveClientSlots kept for clients. */
+  clientSlots = 0;
+  /** BODY_QUEUE_SIZE once InitBodyQue has run: those slots after the clients are never freed. */
+  bodyQueueSize = 0;
+
+  /** G_FreeEdict refuses the clients' and the body queue's slots (it unlinks them and stops). */
+  private isSpecialSlot(entity: Entity): boolean {
+    return entity.index <= this.clientSlots + this.bodyQueueSize;
   }
 
   /** An entity in the lowest free client slot, or an ordinary one if no slots are reserved. */
@@ -441,6 +464,7 @@ export class EntitySystem {
     this.spatialGrid.remove(entity);
     this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
+    if (this.isSpecialSlot(entity)) return;
     this.pool.deferFree(entity);
   }
 
@@ -449,6 +473,7 @@ export class EntitySystem {
     this.spatialGrid.remove(entity);
     this.linkedEntities.delete(entity);
     this.imports.unlinkentity?.(entity);
+    if (this.isSpecialSlot(entity)) return;
     this.pool.freeImmediate(entity);
   }
 
@@ -471,6 +496,11 @@ export class EntitySystem {
 
   modelIndex(model: string): number {
     return this.engine.modelIndex?.(model) || 0;
+  }
+
+  /** gi.imageindex. */
+  imageIndex(image: string): number {
+    return this.engine.imageIndex?.(image) || 0;
   }
 
   linkentity(ent: Entity): void {
@@ -511,9 +541,9 @@ export class EntitySystem {
     entity.nextthink = nextThinkSeconds;
   }
 
-  /** gi.frame_time_s: the length of the frame being run. */
+  /** gi.frame_time_s: the length of a frame, 1/40 s before the first frame has run (spawn time). */
   get frameTimeSeconds(): number {
-    return this.currentDeltaSeconds;
+    return this.currentDeltaSeconds || 0.025;
   }
 
   /** level.current_entity: the entity G_RunFrame is running, or null outside the loop. */
@@ -564,6 +594,7 @@ export class EntitySystem {
   beginFrame(timeSeconds: number): void {
     this.currentDeltaSeconds = timeSeconds - this.currentTimeSeconds;
     this.currentTimeSeconds = timeSeconds;
+    this.pool.now = timeSeconds;
     this.frameNumber++;
     this.targetAwareness.timeSeconds = timeSeconds;
     this.targetAwareness.frameNumber = this.frameNumber;

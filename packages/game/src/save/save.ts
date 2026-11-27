@@ -254,8 +254,18 @@ function parsePool(raw: unknown): EntitySystemSnapshot['pool'] {
   return {
     capacity: ensureNumber(pool.capacity, 'pool.capacity'),
     activeOrder: ensureNumberArray(pool.activeOrder, 'pool.activeOrder'),
-    freeList: ensureNumberArray(pool.freeList, 'pool.freeList'),
-    pendingFree: ensureNumberArray(pool.pendingFree, 'pool.pendingFree'),
+    ...(pool.numEdicts !== undefined ? { numEdicts: ensureNumber(pool.numEdicts, 'pool.numEdicts') } : {}),
+    ...(pool.freeTimes !== undefined
+      ? {
+          freeTimes: (Array.isArray(pool.freeTimes) ? pool.freeTimes : ensureNumberArray(pool.freeTimes, 'pool.freeTimes')).map((pair, i) => {
+            const [index, time] = ensureNumberArray(pair, `pool.freeTimes[${i}]`);
+            return [index, time] as const;
+          }),
+        }
+      : {}),
+    // older saves kept these; they are read and ignored
+    ...(pool.freeList !== undefined ? { freeList: ensureNumberArray(pool.freeList, 'pool.freeList') } : {}),
+    ...(pool.pendingFree !== undefined ? { pendingFree: ensureNumberArray(pool.pendingFree, 'pool.pendingFree') } : {}),
   };
 }
 

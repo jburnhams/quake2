@@ -54,7 +54,7 @@ describe('target_speaker', () => {
     }, { registry, entities });
 
     expect(target?.spawnflags & LOOPED_ON).toBe(LOOPED_ON);
-    expect(target?.sounds).toBe(10); // Should match noise_index
+    expect(target?.sound).toBe(10); // Should match noise_index
   });
 
   it('should play sound when used (one-shot)', () => {
@@ -88,7 +88,7 @@ describe('target_speaker', () => {
         spawnflags: `${LOOPED_ON}`
     }, { registry, entities });
 
-    expect(target?.sounds).toBe(10);
+    expect(target?.sound).toBe(10);
 
     // Toggle off
     if (target?.use) {
@@ -97,7 +97,7 @@ describe('target_speaker', () => {
 
     expect(target?.spawnflags & LOOPED_ON).toBe(0);
     expect(target?.spawnflags & LOOPED_OFF).toBe(LOOPED_OFF);
-    expect(target?.sounds).toBe(0);
+    expect(target?.sound).toBe(0);
 
     // Toggle on
     if (target?.use) {
@@ -106,6 +106,6 @@ describe('target_speaker', () => {
 
     expect(target?.spawnflags & LOOPED_ON).toBe(LOOPED_ON);
     expect(target?.spawnflags & LOOPED_OFF).toBe(0);
-    expect(target?.sounds).toBe(10);
+    expect(target?.sound).toBe(10);
   });
 });

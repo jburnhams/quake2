@@ -89,8 +89,10 @@ describe('Prox Mine', () => {
         const newMine = createProxMine(game.entities, player, player.origin, { x: 0, y: 0, z: 1 }, 600);
         newMine.timestamp = 50;
 
-        // Verify only 50 exist (one removed)
-        expect(mines[0].inUse).toBe(false);
+        // Verify only 50 exist (the oldest removed; in the level's first two seconds G_Spawn
+        // hands its slot straight to the new mine)
+        expect(newMine).toBe(mines[0]);
+        expect(newMine.timestamp).toBe(50);
         expect(mines[1].inUse).toBe(true);
         expect(game.entities.findByClassname('prox_mine').length).toBe(50);
     });

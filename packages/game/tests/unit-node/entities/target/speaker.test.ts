@@ -75,7 +75,7 @@ describe('target_speaker', () => {
       free: vi.fn(),
     });
 
-    expect(entity.sounds).toBe(entity.noise_index);
+    expect(entity.sound).toBe(entity.noise_index);
   });
 
   it('toggles loop state on use', () => {
@@ -95,19 +95,19 @@ describe('target_speaker', () => {
 
     // Initial state
     expect(entity.spawnflags & 1).toBeTruthy(); // LoopedOn
-    expect(entity.sounds).toBe(1);
+    expect(entity.sound).toBe(1);
 
     // Use to toggle OFF
     entity.use!(entity, null, null);
     expect(entity.spawnflags & 1).toBeFalsy(); // LoopedOn cleared
     expect(entity.spawnflags & 2).toBeTruthy(); // LoopedOff set
-    expect(entity.sounds).toBe(0);
+    expect(entity.sound).toBe(0);
 
     // Use to toggle ON
     entity.use!(entity, null, null);
     expect(entity.spawnflags & 1).toBeTruthy();
     expect(entity.spawnflags & 2).toBeFalsy();
-    expect(entity.sounds).toBe(1);
+    expect(entity.sound).toBe(1);
   });
 
   it('plays one-shot sound on use if not looped', () => {

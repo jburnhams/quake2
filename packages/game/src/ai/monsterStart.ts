@@ -247,7 +247,7 @@ function stuckTrace(self: Entity, sys: EntitySystem): boolean {
 }
 
 /** G_FixStuckObject */
-function fixStuckObject(self: Entity, check: Vec3, sys: EntitySystem): boolean {
+export function G_FixStuckObject(self: Entity, check: Vec3, sys: EntitySystem): boolean {
   const mask = getClipMask(self);
   const fix = fixStuckObjectGeneric({
     origin: check,
@@ -271,7 +271,7 @@ export function monster_start_go(self: Entity, sys: EntitySystem): void {
     const goodGuyOrFloats = self.monsterinfo.aiflags & AIFlags.GoodGuy || self.flags & (EntityFlags.Fly | EntityFlags.Swim);
     let stuck = goodGuyOrFloats ? stuckTrace(self, sys) : !M_droptofloor(self, sys) || !M_walkmove(self, 0, 0, sys);
 
-    if (stuck && fixStuckObject(self, check, sys)) {
+    if (stuck && G_FixStuckObject(self, check, sys)) {
       if (self.monsterinfo.aiflags & AIFlags.GoodGuy) stuckTrace(self, sys);
       else if (!(self.flags & (EntityFlags.Fly | EntityFlags.Swim))) M_droptofloor(self, sys);
       stuck = false;

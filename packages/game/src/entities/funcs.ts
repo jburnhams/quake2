@@ -4,6 +4,8 @@ import type { SpawnFunction, SpawnRegistry } from './spawn.js';
 import { EntitySystem } from './system.js';
 import { setMovedir } from './utils.js';
 import { SP_func_button, SP_func_door } from './doors.js';
+import { SP_func_train } from './train.js';
+import { SP_func_rotating } from './rotating.js';
 import { T_RadiusDamage, Damageable } from '../combat/damage.js';
 import { DamageFlags } from '../combat/damageFlags.js';
 import { DamageMod } from '../combat/damageMods.js';
@@ -406,86 +408,6 @@ export const func_door_secret: SpawnFunction = (entity, context) => {
 // FUNC TRAIN
 // ============================================================================
 
-const TRAIN_START_ON = 1;
-const TRAIN_TOGGLE = 2;
-const TRAIN_BLOCK_STOPS = 4;
-
-function train_blocked(self: Entity, other: Entity | null) {
-  if (other && other.takedamage) {
-    other.health -= self.dmg || 0;
-  }
-  if (!(self.spawnflags & TRAIN_BLOCK_STOPS)) {
-    return;
-  }
-  self.velocity = { x: 0, y: 0, z: 0 };
-  self.nextthink = 0;
-}
-
-function train_wait(self: Entity, context: EntitySystem) {
-  if (self.target_ent && self.target_ent.pathtarget) {
-    context.useTargets(self.target_ent, self);
-  }
-  if (self.target_ent && self.target_ent.target) {
-    const next = context.pickTarget(self.target_ent.target);
-    if (!next) return;
-    self.target_ent = next;
-
-    // Use move_calc logic for trains?
-    // Trains usually have path corners with "speed" property override?
-    // And standard trains just move at constant speed.
-    // If we want accel/decel on trains, we need to adapt it.
-    // But func_train implementation here is basic.
-    // Let's stick to existing train implementation for now unless requested.
-
-    const dist = distance(self.origin, next.origin);
-    const speed = self.speed || 100;
-    const time = dist / speed;
-    const dir = normalizeVec3(subtractVec3(next.origin, self.origin));
-    self.velocity = scaleVec3(dir, speed);
-    self.think = train_next;
-    context.scheduleThink(self, context.timeSeconds + time);
-  }
-}
-
-function train_next(self: Entity, context: EntitySystem) {
-  self.velocity = { x: 0, y: 0, z: 0 };
-  if (self.target_ent) {
-    self.origin = { ...self.target_ent.origin };
-  }
-  const wait = self.wait || 0;
-  if (wait > 0) {
-    self.think = train_wait;
-    context.scheduleThink(self, context.timeSeconds + wait);
-  } else {
-    train_wait(self, context);
-  }
-}
-
-function train_find(self: Entity, context: EntitySystem) {
-  const target = context.pickTarget(self.target);
-  if (!target) return;
-  self.target_ent = target;
-  self.origin = { ...target.origin };
-  if (self.spawnflags & TRAIN_START_ON) {
-    train_wait(self, context);
-  } else {
-    self.use = (ent) => {
-      if (ent.velocity.x !== 0 || ent.velocity.y !== 0 || ent.velocity.z !== 0) return;
-      train_wait(ent, context);
-    };
-  }
-}
-
-const func_train: SpawnFunction = (entity, context) => {
-  entity.solid = Solid.Bsp;
-  entity.movetype = MoveType.Push;
-  entity.blocked = train_blocked;
-  if (!entity.speed) entity.speed = 100;
-  if (!entity.dmg) entity.dmg = 2;
-  entity.think = (self) => train_find(self, context.entities);
-  context.entities.scheduleThink(entity, context.entities.timeSeconds + 0.1);
-};
-
 // ============================================================================
 // FUNC PLAT
 // ============================================================================
@@ -638,7 +560,7 @@ function plat2_hit_top(ent: Entity, context: EntitySystem) {
         if (moveinfo && moveinfo.sound_end) {
             context.sound(ent, 0, String(moveinfo.sound_end), 1, 1, 0);
         }
-        ent.sounds = 0;
+        ent.sound = 0;
     }
     // Cast to any to avoid MoveInfo type issues for now, or ensure MoveInfo definition in entity.ts includes 'state'
     (ent.moveinfo as any).state = PlatState.Up; // STATE_TOP
@@ -671,7 +593,7 @@ function plat2_hit_bottom(ent: Entity, context: EntitySystem) {
         if (moveinfo && moveinfo.sound_end) {
             context.sound(ent, 0, String(moveinfo.sound_end), 1, 1, 0);
         }
-        ent.sounds = 0;
+        ent.sound = 0;
     }
     (ent.moveinfo as any).state = PlatState.Down; // STATE_BOTTOM
 
@@ -704,7 +626,7 @@ function plat2_go_down(ent: Entity, context: EntitySystem) {
         if (moveinfo && moveinfo.sound_start) {
             context.sound(ent, 0, String(moveinfo.sound_start), 1, 1, 0);
         }
-        ent.sounds = 0; // Don't assign string to number
+        ent.sound = 0;
         if (moveinfo?.sound_middle) {
              // If sound_middle is a string/index, handle it.
              // For now just 0 as we don't have easy lookup here without casting
@@ -723,7 +645,7 @@ function plat2_go_up(ent: Entity, context: EntitySystem) {
         if (moveinfo && moveinfo.sound_start) {
             context.sound(ent, 0, String(moveinfo.sound_start), 1, 1, 0);
         }
-        ent.sounds = 0;
+        ent.sound = 0;
     }
     (ent.moveinfo as any).state = PlatState.GoingUp; // STATE_UP
     ent.plat2flags |= PLAT2_MOVING;
@@ -1126,30 +1048,7 @@ const func_pendulum: SpawnFunction = (entity, context) => {
 // FUNC ROTATING
 // ============================================================================
 
-export const SP_func_rotating: SpawnFunction = (entity, context) => {
-    entity.solid = Solid.Bsp;
-    entity.movetype = MoveType.Push;
-
-    if (!entity.speed) {
-        entity.speed = 100;
-    }
-
-    if (entity.spawnflags & 4) {
-        entity.avelocity = { x: entity.speed, y: 0, z: 0 };
-    } else if (entity.spawnflags & 8) {
-        entity.avelocity = { x: 0, y: entity.speed, z: 0 };
-    } else {
-        entity.avelocity = { x: 0, y: 0, z: entity.speed };
-    }
-
-    if (entity.dmg) {
-        entity.blocked = (self, other) => {
-            if (other && other.takedamage) {
-                other.health -= self.dmg;
-            }
-        };
-    }
-};
+export { SP_func_rotating } from './rotating.js';
 
 // ============================================================================
 // FUNC DOOR ROTATING
@@ -1670,7 +1569,7 @@ export function registerFuncSpawns(registry: SpawnRegistry) {
   registry.register('func_door', SP_func_door);
   registry.register('func_door_secret', func_door_secret);
   registry.register('func_button', SP_func_button);
-  registry.register('func_train', func_train);
+  registry.register('func_train', SP_func_train);
   registry.register('func_plat', func_plat);
   registry.register('func_plat2', func_plat2);
   registry.register('func_rotating', SP_func_rotating);

@@ -1,9 +1,8 @@
 import { Entity, MoveType, Solid, ServerFlags, EntityEffects } from '../entity.js';
 import { EntitySystem } from '../system.js';
 import { SpawnRegistry, SpawnContext } from '../spawn.js';
-import { createRandomGenerator, RenderFx } from '@quake2ts/shared';
+import { RenderFx } from '@quake2ts/shared';
 
-const random = createRandomGenerator();
 
 // ============================================================================
 // MISC SATELLITE DISH

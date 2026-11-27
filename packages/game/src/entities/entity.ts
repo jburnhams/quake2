@@ -314,6 +314,8 @@ export class Entity {
   linkcount = 0;
   inUse = false;
   freePending = false;
+  /** When G_FreeEdict freed this slot (level seconds); G_Spawn skips a slot freed in the last half second. */
+  freetime = 0;
   linkPrevious: Entity | null = null;
   linkNext: Entity | null = null;
 
@@ -327,6 +329,12 @@ export class Entity {
   pathtarget?: string;
   model?: string;
   item?: string;
+  /** The itemlist entry an item entity is (ent->item in the rerelease). */
+  gitem?: import('../items/itemlist.js').ItemDef;
+  /** What touching the item does once it is on the floor (Touch_Item's place, for now the port's pickup). */
+  itemTouch?: Entity['touch'];
+  /** s.event: an impulse event (footstep, item respawn, teleport) sent for one frame; PrepFrame clears it. */
+  event = 0;
   map?: string;
 
   inventory: Record<string, number> = {};
@@ -381,6 +389,8 @@ export class Entity {
   state = 0;
   style = 0;
   sounds = 0;
+  /** s.sound: the sound the entity loops (a sound index); `sounds` is the map's style key. */
+  sound = 0;
   noise_index = 0;
   attenuation = 0;
   volume = 0;
@@ -421,6 +431,8 @@ export class Entity {
   postthink?: ThinkCallback;
   activator: Entity | null = null;
   alpha = 0;
+  /** s.scale: the model's scale (0 draws at 1). */
+  scale = 0;
 
   solid: Solid = Solid.Not;
   clipmask = 0;
@@ -526,6 +538,9 @@ export class Entity {
     this.pathtarget = undefined;
     this.model = undefined;
     this.item = undefined;
+    this.gitem = undefined;
+    this.itemTouch = undefined;
+    this.event = 0;
 
     this.inventory = {};
 
@@ -573,6 +588,7 @@ export class Entity {
     this.lip = 0;
     this.state = 0;
     this.sounds = 0;
+    this.sound = 0;
     this.noise_index = 0;
     this.fly_sound_debounce_time = 0;
     this.last_move_time = 0;
@@ -608,6 +624,7 @@ export class Entity {
     this.postthink = undefined;
     this.activator = null;
     this.alpha = 0;
+    this.scale = 0;
 
     this.solid = Solid.Not;
     this.flags = 0;
@@ -723,6 +740,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'state', type: 'int', save: true },
   { name: 'style', type: 'int', save: true },
   { name: 'sounds', type: 'int', save: true },
+  { name: 'sound', type: 'int', save: true },
   { name: 'noise_index', type: 'int', save: true },
   { name: 'attenuation', type: 'float', save: true },
   { name: 'volume', type: 'float', save: true },
@@ -765,6 +783,7 @@ export const ENTITY_FIELD_METADATA: readonly EntityFieldDescriptor[] = [
   { name: 'beam2', type: 'entity', save: true },
   { name: 'chain', type: 'entity', save: true },
   { name: 'alpha', type: 'float', save: true },
+  { name: 'scale', type: 'float', save: true },
   { name: 'hackflags', type: 'int', save: true },
   { name: 'plat2flags', type: 'int', save: true },
   { name: 'fov', type: 'float', save: true },

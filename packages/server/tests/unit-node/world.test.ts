@@ -136,7 +136,8 @@ describe('World (sv_world.c) on demo1', () => {
     const to = thinX ? v(centre.x + reach, centre.y, centre.z) : v(centre.x, centre.y + reach, centre.z);
     const across = world.trace(from, null, null, to, null, MASK_SHOT);
     expect(across.ent).toBe(door);
-    expect(thinX ? across.endpos.x : across.endpos.y).toBeCloseTo(thinX ? sub.mins.x : sub.mins.y, 0);
+    // the brush face, a pixel inside the submodel's bounds (CMod_LoadSubmodels spreads them by one)
+    expect(thinX ? across.endpos.x : across.endpos.y).toBeCloseTo(thinX ? sub.mins.x + 1 : sub.mins.y + 1, 0);
 
     // Raise the door far out of the way: the same trace now misses it.
     door.origin = v(0, 0, 4096);

@@ -294,6 +294,7 @@ export function createTestContext(options?: {
       engine.sound(ent, chan, sound, vol, attn, timeofs);
     }),
     soundIndex: vi.fn((sound: string) => engine.soundIndex(sound)),
+    imageIndex: vi.fn((_image: string) => 0),
     useTargets: vi.fn((entity: Entity, activator: Entity | null) => {
         if (entity.target) {
             const targets = findByTargetName(entity.target);

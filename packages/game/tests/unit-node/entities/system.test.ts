@@ -59,13 +59,10 @@ describe('Entity System Unit Tests', () => {
     const ent = entitySystem.spawn();
     ent.classname = 'temporary';
 
-    // Mark for removal using free()
+    // G_FreeEdict: out of use at once
     entitySystem.free(ent);
 
-    expect(ent.freePending).toBe(true);
-
-    entitySystem.runFrame();
-
     expect(ent.inUse).toBe(false);
+    expect(ent.classname).toBe('freed');
   });
 });
