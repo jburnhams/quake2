@@ -60,6 +60,12 @@ export function IntroScreen() {
           />
           <LinkCard
             as="h2"
+            to="/watch"
+            title="Watch the demo"
+            description="The recording the 3.14 demo plays when it sits idle: a minute on demo2, through the player's eyes or from behind, with play, pause and seek."
+          />
+          <LinkCard
+            as="h2"
             to="/explore"
             title="Explorer"
             description="Every file in the demo's PAK: pictures, textures, models, sounds and maps, with their facts."

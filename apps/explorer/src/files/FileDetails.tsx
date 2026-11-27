@@ -1,7 +1,7 @@
 // The right pane: facts about the chosen file. Where it is (which PAK wins it, at what offset),
 // then what decoding found. WAL surface flags are named, since a level designer reads them by name.
 import * as React from 'react';
-import { DataView, EmptyState, Inspector, InspectorSection, PropertyList, format, type Property } from 'strata-react';
+import { ButtonLink, DataView, EmptyState, Inspector, InspectorSection, PropertyList, format, type Property } from 'strata-react';
 import { useLibrary } from '../library/context';
 import { KIND_NAMES, kindOf, type Decoded } from '../preview/decode';
 import { isEmptyFile, useDecodedFile } from '../preview/Preview';
@@ -116,6 +116,13 @@ export function FileDetails({ path }: { path: string | null }) {
           <InspectorSection id="contents" title="What is in it">
             <DecodedFacts path={path} />
           </InspectorSection>
+          {path.toLowerCase().endsWith('.dm2') ? (
+            <InspectorSection id="watch" title="Recording">
+              <ButtonLink to={`/watch?demo=${encodeURIComponent(path)}`} size="sm">
+                Watch it
+              </ButtonLink>
+            </InspectorSection>
+          ) : null}
         </>
       ) : null}
     </Inspector>
