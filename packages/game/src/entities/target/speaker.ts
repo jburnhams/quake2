@@ -17,11 +17,11 @@ function targetSpeakerUse(self: Entity, other: Entity | null, activator: Entity 
     if (self.spawnflags & SPEAKER_SPAWNFLAGS.LoopedOn) {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOn;
       self.spawnflags |= SPEAKER_SPAWNFLAGS.LoopedOff;
-      self.sounds = 0;
+      self.sound = 0;
     } else {
       self.spawnflags &= ~SPEAKER_SPAWNFLAGS.LoopedOff;
       self.spawnflags |= SPEAKER_SPAWNFLAGS.LoopedOn;
-      self.sounds = noiseIndex;
+      self.sound = noiseIndex;
     }
   } else { // Normal one-shot
     if (noiseIndex) {
@@ -59,7 +59,7 @@ export function registerTargetSpeaker(registry: SpawnRegistry) {
     }
 
     if (entity.spawnflags & SPEAKER_SPAWNFLAGS.LoopedOn) {
-        entity.sounds = entity.noise_index;
+        entity.sound = entity.noise_index;
     }
 
     entity.use = (self, other, activator) => targetSpeakerUse(self, other, activator ?? null, context);

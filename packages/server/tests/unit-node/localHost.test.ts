@@ -37,8 +37,8 @@ describe('LocalHost: map demo1', () => {
     }
   });
 
-  it('puts the player at info_player_start', () => {
-    const start = host.map.game.entities.findByClassname('info_player_start')[0];
+  it('puts the player at the info_player_start with no targetname (SelectSingleSpawnPoint)', () => {
+    const start = host.map.game.entities.findByClassname('info_player_start').find((e) => !e.targetname)!;
     const player = host.player!;
     expect(player).toBeDefined();
     expect(player.index).toBe(1);

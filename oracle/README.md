@@ -141,3 +141,34 @@ What it found on its first run (2026-11-27): the demo parsers read entity angles
 where `MSG_ReadAngle` reads a signed char (180 where the C has -180); fixed in
 `engine/src/demo/protocol/legacy.ts` and `quake2.ts`. A demo plays with `pm_type` forced to
 `PM_FREEZE` (`cl.attractloop`), so prediction holds the player still and the view is the server's.
+
+## Rerelease game lockstep (`rerelease/`, `tests/rgame.oracle.test.ts`)
+
+Runs id's rerelease game DLL (the code the TS game ports) and the TS game on the same map, and
+compares what they spawn. The work goes in slices, each gated before the next: (1) spawning,
+(2) player movement and state, (3) items, doors and triggers, (4) monsters and combat.
+
+- `rerelease/build.sh` compiles every `.cpp` of `.id-source/rerelease` (the game, bots, ctf, rogue
+  and xatrix; not the client game) unchanged with the game's own flags, plus `host.cpp`, a small
+  server built on 3.21's `cmodel.c` (collision, areas and PVS through `world_shim.c`), into
+  `build/q2rgame`. Needs `libfmt-dev` and `libjsoncpp-dev`; `tests/build.global.ts` builds it and
+  skips the test if that fails, except in CI.
+- `q2rgame <map.bsp> <mapname> <out.jsonl> [ticks=1200] [cvar=value...]` loads the map, spawns its
+  entities, connects one player and runs 25 ms frames, writing a JSON line per tick with every edict and, after ClientBegin, one `cs` line
+  with every configstring. `Q2RGAME_INDEX_LOG=1` logs each new model, sound and image index to stderr.
+- The game's random numbers come from `std::mt19937` through libstdc++'s distributions (MSVC's
+  differ), so `packages/strata-math/src/random.ts` follows libstdc++ 13: `uniform_real<float>` from
+  one 32-bit draw, `uniform_int` by Lemire's method, `random_time` inclusive of its maximum.
+- `tests/rgame.ts` runs both games; `tests/rgame.oracle.test.ts` is the gate.
+
+Slice 1 gated on demo1 (tick 0, floats to 1/128): every edict but the player (slice 2), with
+monsters' frame, skin and origin left for slice 4, and models compared by name; every configstring
+but the model, sound and image lists (the order of precaches is slice 4's monsters), the status bar,
+CS_PLAYERS and General+2.
+
+What slice 1 fixed in the TS game: freed edicts are reused at once in the first two seconds and a
+new edict is `noclass`; inline models' bounds are spread by 1 (CMod_LoadSubmodels); worldspawn,
+the item spawns and wheels, func_train, func_rotating, target_secret, target_goal, misc_banner,
+misc_deadsoldier, misc_explobox and the player starts are ports of the rerelease; `s.sound` (the
+looping sound) is its own field, apart from the map's `sounds` key; a think set at spawn waits one
+frame (25 ms) even before the first frame has run.

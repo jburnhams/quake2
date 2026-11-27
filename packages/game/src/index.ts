@@ -344,7 +344,7 @@ export function createGame(
                  effects: ent.effects,
                  renderfx: ent.renderfx,
                  solid: ent.solid,
-                 sound: ent.sounds
+                 sound: ent.sound
              });
         }
     });
@@ -624,8 +624,8 @@ export function createGame(
 
        const spawnPoint = SelectSpawnPoint(entities);
        ent.classname = 'player';
-       // PutClientInServer: 9 units above the spot (SelectSpawnPoint), moved by pmove, not physics.
-       ent.origin = spawnPoint ? { ...spawnPoint.origin, z: spawnPoint.origin.z + 9 } : { x: 0, y: 0, z: 0 };
+       // SelectSpawnPoint: a deathmatch spot is 9 units above its origin, a single-player one at it.
+       ent.origin = spawnPoint ? { ...spawnPoint.origin, z: spawnPoint.origin.z + (deathmatch ? 9 : 0) } : { x: 0, y: 0, z: 0 };
        ent.angles = spawnPoint ? { ...spawnPoint.angles } : { x: 0, y: 0, z: 0 };
        ent.health = 100;
        ent.takedamage = true;
@@ -691,10 +691,13 @@ export function createGame(
        hookRegistry.onPlayerSpawn(ent);
     },
     clientDisconnect(ent: Entity): void {
-        if (ent && ent.inUse) {
-            // Free entity
-            entities.free(ent);
-        }
+        if (!ent || !ent.inUse) return;
+        // ClientDisconnect: the client's edict is unlinked and left out of use, never freed.
+        entities.unlink(ent);
+        ent.modelindex = 0;
+        ent.solid = Solid.Not;
+        ent.inUse = false;
+        ent.classname = 'disconnected';
     },
     clientThink(ent: Entity, cmd: UserCommand) {
         clientThink(ent, cmd);

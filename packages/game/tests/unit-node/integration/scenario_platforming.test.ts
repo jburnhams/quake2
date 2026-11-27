@@ -102,7 +102,7 @@ describe('Scenario 3: Platforming Challenge', () => {
           contents: result.contents || 0,
           allsolid: result.allsolid,
           startsolid: result.startsolid,
-          ent: result.entityId ? game.entities.get(result.entityId) : null
+          ent: result.entityId ? game.entities.getByIndex(result.entityId) : null
         };
       },
       pointcontents: (point) => {
@@ -136,8 +136,8 @@ describe('Scenario 3: Platforming Challenge', () => {
 
   it('should allow player to jump between platforms', () => {
     // Spawn Player at 0,0,25 (slightly above floor to avoid startsolid).
-    const player = game.entities.spawn();
-    player.classname = 'player';
+    // the player spawnWorld put in (game.frame's command drives the first 'player')
+    const player = game.entities.find((e) => e.classname === 'player')!;
     player.origin = { x: 0, y: 0, z: 25 };
     player.viewheight = 22;
     player.health = 100;

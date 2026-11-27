@@ -58,18 +58,18 @@ function stubbedRandomGenerator(samples: readonly number[]): RandomGenerator {
 }
 
 describe('RandomGenerator helpers', () => {
-  it('produces deterministic fractions in [0, 1)', () => {
+  it('produces deterministic fractions in [0, 1), a sample rounded to a float over 2^32', () => {
     const rng = new RandomGenerator();
-    expect(rng.frandom()).toBeCloseTo(3499211612 / TWO_POW_32, 10);
-    expect(rng.frandom()).toBeCloseTo(581869302 / TWO_POW_32, 10);
+    expect(rng.frandom()).toBe(Math.fround(3499211612) / TWO_POW_32);
+    expect(rng.frandom()).toBe(Math.fround(581869302) / TWO_POW_32);
   });
 
-  it('maps fractions into custom ranges', () => {
+  it('maps fractions into custom ranges in float arithmetic', () => {
     const rng = stubbedRandomGenerator([0, 0xffffffff, 0x40000000]);
     expect(rng.frandomRange(-10, 10)).toBe(-10);
-    const high = -10 + 20 * (0xffffffff / TWO_POW_32);
-    expect(rng.frandomRange(-10, 10)).toBeCloseTo(high, 10);
-    expect(rng.frandomMax(5)).toBeCloseTo(5 * (0x40000000 / TWO_POW_32), 10);
+    // 0xffffffff rounds to 2^32 as a float, which generate_canonical turns into the float below 1
+    expect(rng.frandomRange(-10, 10)).toBe(Math.fround(Math.fround((1 - 2 ** -24) * 20) - 10));
+    expect(rng.frandomMax(5)).toBe(5 * 0.25);
   });
 
   it('respects crandom bounds, including the open variant', () => {
@@ -83,12 +83,13 @@ describe('RandomGenerator helpers', () => {
     expect(open).toBeLessThan(1);
   });
 
-  it('returns deterministic integers across the helper methods', () => {
-    const rng = stubbedRandomGenerator([5, 10, 25]);
-    expect(rng.irandomRange(2, 12)).toBe(7); // (5 % 10) + 2
-    expect(rng.irandom(8)).toBe(2); // 10 % 8
-    expect(rng.randomTime(1000)).toBe(25);
-    expect(rng.randomTimeRange(500, 501)).toBe(500); // collapsed span returns min
+  it('takes integers from the high half of sample * span (Lemire, as libstdc++)', () => {
+    const rng = stubbedRandomGenerator([0x80000001, 0x40000000, 0xc0000000]);
+    expect(rng.irandomRange(2, 12)).toBe(7); // 2 + (2^31 * 10 >> 32)
+    expect(rng.irandom(8)).toBe(2); // 2^30 * 8 >> 32
+    expect(rng.randomTime(1000)).toBe(750); // [0, 1000] inclusive: 0.75 * 1001 >> 0
+    expect(rng.randomTimeRange(500, 501)).toBe(501); // inclusive: 0.75 * 2 >> 0
+    expect(rng.randomTimeRange(500, 500)).toBe(500); // collapsed span returns min
   });
 
   it('selects indices safely even for empty containers', () => {
@@ -113,13 +114,9 @@ describe('RandomGenerator helpers', () => {
     expect(rng1.irandom(100)).toBe(rng2.irandom(100));
   });
 
-  it('debiases integer ranges correctly', () => {
-    const span = 10;
-    const limit = TWO_POW_32 - (TWO_POW_32 % span);
-    // First sample is biased (above the limit), second is not.
-    const rng = stubbedRandomGenerator([limit, 5]);
-    // The first sample should be discarded by the debiasing loop.
-    const result = rng.irandomRange(100, 110);
-    expect(result).toBe(105); // 100 + (5 % 10)
+  it('draws again while the low half of the product is under -span % span', () => {
+    // span 10: threshold (2^32 - 10) % 10 = 6, so a sample whose product's low half is under 6 is redrawn
+    const rng = stubbedRandomGenerator([0, 0x80000001]);
+    expect(rng.irandomRange(100, 110)).toBe(105);
   });
 });

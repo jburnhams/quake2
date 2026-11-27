@@ -48,3 +48,20 @@ describe('RandomGenerator state handling', () => {
     expect(rng.irandomUint32()).toBe(restored.irandomUint32());
   });
 });
+
+describe('RandomGenerator distributions', () => {
+  // Printed by std::mt19937(5489) through libstdc++ 13's uniform_real_distribution<float> and
+  // uniform_int_distribution, one generator for the whole sequence, as the game draws them.
+  it('draws what libstdc++ draws, in the same order', () => {
+    const rng = new RandomGenerator({ seed: 5489 });
+    const f = (n: number, draw: () => number) => Array.from({ length: n }, draw).map((v) => (Number.isInteger(v) ? v : Number(v.toPrecision(9))));
+    expect(f(4, () => rng.frandom())).toEqual([0.81472367, 0.135477006, 0.905791938, 0.835008562]);
+    expect(f(4, () => rng.frandomRange(-5.5, 200))).toEqual([20.5957909, 193.602325, 182.19873, 39.9224968]);
+    expect(f(4, () => rng.crandom())).toEqual([0.264718533, -0.383665919, -0.804919183, 0.0944411755]);
+    expect(f(4, () => rng.crandomOpen())).toEqual([-0.443003476, -0.623236001, 0.0937630534, 0.985762656]);
+    expect(f(4, () => rng.irandom(16))).toEqual([15, 15, 15, 15]);
+    expect(f(4, () => rng.irandomRange(3, 10))).toEqual([4, 8, 9, 9]);
+    expect(f(4, () => rng.irandomRange(0, 2000000001))).toEqual([1914333900, 219723501, 970751297, 1596211714]);
+    expect(f(4, () => rng.randomTimeRange(100, 1500))).toEqual([1221, 516, 298, 106]);
+  });
+});

@@ -20,6 +20,11 @@ interface World {
 }
 
 /** A level with nothing but the given entities; traces hit only what `blocking` says. */
+/** The trigger field a door spawns (it has G_InitEdict's classname and the door as owner). */
+function doorTrigger(w: World): Entity | undefined {
+  return w.entities.findByClassname('noclass').find((e) => e.owner && e.owner.classname === 'func_door');
+}
+
 function level(lump: string, blocking?: (passent: Entity | null) => boolean): World {
   const sound = vi.fn();
   const engine = { sound, centerprintf: vi.fn() } as any;
@@ -97,7 +102,7 @@ describe('func_door', () => {
     const d = w.spawned[0];
     expect(d.touch).toBeUndefined(); // the door itself is not the trigger
     w.run(FRAME);
-    const trigger = w.entities.findByClassname('door_trigger')[0];
+    const trigger = doorTrigger(w)!;
     expect(trigger).toBeDefined();
     expect(trigger.owner).toBe(d);
     expect(trigger.solid).toBe(Solid.Trigger);
@@ -125,7 +130,7 @@ describe('func_door', () => {
   it('a trigger touch is ignored for a second after one that opened it', () => {
     const w = level(door('"wait" "-1"'));
     w.run(FRAME);
-    const trigger = w.entities.findByClassname('door_trigger')[0];
+    const trigger = doorTrigger(w)!;
     const p = visitor(w.entities, { x: 0, y: -50, z: 24 });
     trigger.touch!(trigger, p);
     expect(trigger.touch_debounce_time).toBeCloseTo(w.entities.timeSeconds + 1);
@@ -134,7 +139,7 @@ describe('func_door', () => {
   it('with a targetname, spawns no trigger and opens when used', () => {
     const w = level(door('"targetname" "d1"'));
     w.run(0.1);
-    expect(w.entities.findByClassname('door_trigger')).toHaveLength(0);
+    expect(doorTrigger(w)).toBeUndefined();
     const d = w.spawned[0];
     d.use!(d, null, null);
     w.run(0.5);
@@ -147,7 +152,7 @@ describe('func_door', () => {
     expect(d.takedamage).toBe(true);
     expect(d.max_health).toBe(5);
     w.run(FRAME);
-    expect(w.entities.findByClassname('door_trigger')).toHaveLength(0);
+    expect(doorTrigger(w)).toBeUndefined();
     d.die!(d, null, null, 5, { x: 0, y: 0, z: 0 }, DamageMod.UNKNOWN);
     expect(d.moveinfo!.state).toBe(STATE_UP);
     expect(d.takedamage).toBe(false);

@@ -9,7 +9,8 @@ describe('worldspawn', () => {
     const context = createTestContext();
     context.keyValues = {
       sky: 'unit1_sky',
-      skyrotate: '10 20 30',
+      skyrotate: '10',
+      skyautorotate: '0',
       skyaxis: '0 0 1'
     };
 
@@ -17,17 +18,16 @@ describe('worldspawn', () => {
     SP_worldspawn(self, context);
 
     expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.Sky, 'unit1_sky');
-    expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.SkyRotate, '10 20 30');
+    expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.SkyRotate, '10 0');
     expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.SkyAxis, '0 0 1');
   });
 
   it('should set cdtrack configstring from sounds key', () => {
     const context = createTestContext();
-    context.keyValues = {
-      sounds: '4'
-    };
+    context.keyValues = {};
 
     const self = new Entity(0);
+    self.sounds = 4; // ED_ParseEdict puts the "sounds" key on the entity
     SP_worldspawn(self, context);
 
     expect(context.entities.imports.configstring).toHaveBeenCalledWith(ConfigStringIndex.CdTrack, '4');
@@ -42,6 +42,7 @@ describe('worldspawn', () => {
     expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 0, 'm');
     expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 4, 'mamamamamama');
     expect(set).toHaveBeenCalledWith(ConfigStringIndex.Lights + 63, 'a');
-    expect(set).toHaveBeenCalledTimes(DEFAULT_LIGHT_STYLES.size);
+    const lights = set.mock.calls.filter(([i]: [number]) => i >= ConfigStringIndex.Lights && i < ConfigStringIndex.Lights + 256);
+    expect(lights).toHaveLength(DEFAULT_LIGHT_STYLES.size);
   });
 });

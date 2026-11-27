@@ -82,7 +82,7 @@ describe('Spawning Integration Tests', () => {
         expect(ent.deadflag).toBe(1);
 
         game.entities.free(ent);
-        expect(ent.freePending).toBe(true);
+        expect(ent.inUse).toBe(false); // G_FreeEdict frees at once
 
         game.frame({ frame: 2, deltaSeconds: 0.1, time: 200, pause: false });
         expect(ent.inUse).toBe(false);
@@ -298,6 +298,10 @@ it('activates trigger_multiple when walked into', () => {
         `;
         const spawned = spawnEntitiesFromText(lump, { registry: spawnRegistry, entities: game.entities });
         const item = spawned[0];
+        // SpawnItem leaves the touch to droptofloor, a frame later
+        expect(item.touch).toBeUndefined();
+        game.frame({ frame: 1, deltaSeconds: 0.1, time: 100, pause: false });
+        expect(item.touch).toBeDefined();
 
         const player = game.entities.spawn();
         player.classname = 'player';
@@ -305,7 +309,7 @@ it('activates trigger_multiple when walked into', () => {
 
         item.touch?.(item, player);
 
-        expect(item.freePending).toBe(true);
+        expect(item.inUse).toBe(false);
     });
 
     it('handles func_door functionality', () => {

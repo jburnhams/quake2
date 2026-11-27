@@ -67,6 +67,8 @@ export interface GameEngine {
     soundIndex?(sound: string): number;
     centerprintf?(entity: Entity, message: string): void;
     modelIndex?(model: string): number;
+    /** gi.imageindex: a pic's index in CS_IMAGES. */
+    imageIndex?(image: string): number;
     multicast?(origin: Vec3, type: MulticastType, event: ServerCommand, ...args: any[]): void;
     unicast?(ent: Entity, reliable: boolean, event: ServerCommand, ...args: any[]): void;
     configstring?(index: number, value: string): void;

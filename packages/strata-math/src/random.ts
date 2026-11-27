@@ -83,8 +83,25 @@ export interface RandomGeneratorState {
   readonly mt: MersenneTwisterState;
 }
 
+/** nextafterf(1, 0): the largest float below 1. */
+const FLOAT_BELOW_ONE = 1 - 2 ** -24;
+/** nextafterf(-1, 0) */
+const FLOAT_ABOVE_MINUS_ONE = -FLOAT_BELOW_ONE;
+const f32 = Math.fround;
+
 /**
- * Deterministic helper mirroring the random helpers defined in rerelease g_local.h.
+ * The random helpers of the rerelease's g_local.h, drawing from std::mt19937 through the
+ * distributions of libstdc++ (GCC 13), so a value here is the value the game DLL built with GCC
+ * draws:
+ *
+ * - std::uniform_real_distribution<float> takes one 32-bit sample (generate_canonical with
+ *   24 bits), rounds it to a float, divides by 2^32 (a value of 1 becomes the float below 1),
+ *   and scales it in float arithmetic: `canonical * (b - a) + a`;
+ * - std::uniform_int_distribution takes Lemire's nearly divisionless sample: the high 32 bits
+ *   of `sample * range`, drawing again only while the low 32 bits are under `-range % range`.
+ *
+ * MSVC's distributions (the rerelease's own Windows build) differ; the lockstep oracle is built
+ * with GCC, which is what this follows.
  */
 export class RandomGenerator {
   private readonly mt: MersenneTwister19937;
@@ -97,53 +114,70 @@ export class RandomGenerator {
     this.mt.seed(seed);
   }
 
-  /** Uniform float in [0, 1). */
+  /** std::generate_canonical<float, 24>: a float in [0, 1). */
+  private canonical(): number {
+    const r = f32(this.mt.nextUint32()) / TWO_POW_32;
+    return r >= 1 ? FLOAT_BELOW_ONE : r;
+  }
+
+  /** frandom(): uniform float in [0, 1). */
   frandom(): number {
-    return this.mt.nextUint32() / TWO_POW_32;
+    return this.canonical();
   }
 
-  /** Uniform float in [min, max). */
+  /** frandom(min, max): uniform float in [min, max). */
   frandomRange(minInclusive: number, maxExclusive: number): number {
-    return minInclusive + (maxExclusive - minInclusive) * this.frandom();
+    const a = f32(minInclusive);
+    return f32(f32(this.canonical() * f32(f32(maxExclusive) - a)) + a);
   }
 
-  /** Uniform float in [0, max). */
+  /** frandom(max): uniform float in [0, max). */
   frandomMax(maxExclusive: number): number {
     return this.frandomRange(0, maxExclusive);
   }
 
-  /** Uniform float in [-1, 1). */
+  /** crandom(): uniform float in [-1, 1). */
   crandom(): number {
     return this.frandomRange(-1, 1);
   }
 
-  /** Uniform float in (-1, 1). */
+  /** crandom_open(): uniform float in (-1, 1). */
   crandomOpen(): number {
-    const epsilon = Number.EPSILON;
-    return this.frandomRange(-1 + epsilon, 1);
+    return this.frandomRange(FLOAT_ABOVE_MINUS_ONE, 1);
   }
 
-  /** Raw uint32 sample. */
+  /** irandom(): a raw uint32 sample. */
   irandomUint32(): number {
     return this.mt.nextUint32();
   }
 
-  /** Uniform integer in [min, max). */
+  /** std::uniform_int_distribution over [min, max] (inclusive), for spans up to 2^32. */
+  private uniformInt(min: number, max: number): number {
+    const span = max - min + 1;
+    if (span >= TWO_POW_32) return min + this.mt.nextUint32();
+    // _S_nd: the high half of sample * span, from a 64-bit product
+    const range = BigInt(span);
+    let product = BigInt(this.mt.nextUint32()) * range;
+    let low = Number(product & 0xffffffffn);
+    if (low < span) {
+      const threshold = (TWO_POW_32 - span) % span;
+      while (low < threshold) {
+        product = BigInt(this.mt.nextUint32()) * range;
+        low = Number(product & 0xffffffffn);
+      }
+    }
+    return min + Number(product >> 32n);
+  }
+
+  /** irandom(min, max): uniform integer in [min, max); min when max - min is 1 or less. */
   irandomRange(minInclusive: number, maxExclusive: number): number {
     if (maxExclusive - minInclusive <= 1) {
       return minInclusive;
     }
-
-    const span = maxExclusive - minInclusive;
-    const limit = TWO_POW_32 - (TWO_POW_32 % span);
-    let sample: number;
-    do {
-      sample = this.mt.nextUint32();
-    } while (sample >= limit);
-    return minInclusive + (sample % span);
+    return this.uniformInt(minInclusive, maxExclusive - 1);
   }
 
-  /** Uniform integer in [0, max). */
+  /** irandom(max): uniform integer in [0, max); 0 when max is 0 or less. */
   irandom(maxExclusive: number): number {
     if (maxExclusive <= 0) {
       return 0;
@@ -151,17 +185,17 @@ export class RandomGenerator {
     return this.irandomRange(0, maxExclusive);
   }
 
-  /** Uniform time in milliseconds [min, max). */
+  /** random_time(min, max): uniform milliseconds in [min, max] (the rerelease passes max to an inclusive distribution). */
   randomTimeRange(minMs: number, maxMs: number): number {
     if (maxMs <= minMs) {
       return minMs;
     }
-    return this.irandomRange(minMs, maxMs);
+    return this.uniformInt(minMs, maxMs);
   }
 
-  /** Uniform time in milliseconds [0, max). */
+  /** random_time(max): uniform milliseconds in [0, max]. */
   randomTime(maxMs: number): number {
-    return this.irandom(maxMs);
+    return this.randomTimeRange(0, maxMs);
   }
 
   randomIndex<T extends { length: number }>(container: T): number {

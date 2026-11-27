@@ -206,7 +206,6 @@ function spawnDoorTrigger(ent: Entity, sys: EntitySystem): void {
   maxs.y += 60;
 
   const other = sys.spawn();
-  other.classname = 'door_trigger';
   other.mins = mins;
   other.maxs = maxs;
   other.owner = ent;
