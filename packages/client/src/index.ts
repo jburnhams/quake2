@@ -1565,3 +1565,10 @@ export function createClient(imports: ClientImports): ClientExports {
 
   return clientExports;
 }
+
+// The original 3.21 client's refresh and effects, a float32 port checked frame by frame against
+// id's C by the demo lockstep oracle (oracle/tests/demo.oracle.test.ts).
+export { OriginalClient, type RefDef, type RefEntity, type ClientAssets, type SoundStart } from './cl/client.js';
+export { ClientEffects, type FxHost, type FxEntity, type CParticle, type TempEntityMessage } from './cl/fx.js';
+export { Rand } from './cl/qmath.js';
+export * as originalTables from './cl/tables.js';

@@ -19,13 +19,16 @@ import {
   createRenderer,
   modelEntitiesFromEntities,
   prepareModels,
+  ParticleSystem,
   prepareWorld,
   viewWeaponEntity,
+  type DLight,
   type Md2Model,
   type Renderer,
   type SceneEntitySource,
   type WorldRenderState,
 } from '@quake2ts/engine';
+import { RandomGenerator } from '@quake2ts/shared';
 import type { BspMap } from '@quake2ts/formats/bsp';
 import { traceBox, type CollisionModel } from '@quake2ts/shared/bsp/collision';
 import { MASK_SOLID } from '@quake2ts/shared/bsp/contents';
@@ -79,13 +82,26 @@ const NO_MODELS: ReadonlyMap<string, Md2Model> = new Map();
 const NO_PORTALS: ReadonlyArray<readonly [number, boolean]> = [];
 const NO_STYLES: ReadonlyArray<readonly [number, string | null]> = [];
 
+/** A particle as the client hands it to the renderer: a point, its colour and alpha (0 to 1). */
+export interface SceneParticle {
+  readonly origin: Vec;
+  readonly colour: readonly [number, number, number, number];
+}
+
+/** A dynamic light as V_AddLight makes one: a point, a colour (0 to 1) and a radius. */
+export interface SceneLight {
+  readonly origin: Vec;
+  readonly colour: Vec;
+  readonly intensity: number;
+}
+
 /** How the world's surfaces are lit: textures times lightmaps (as the game draws), the lightmaps alone, or the textures alone. */
 export type SceneLook = 'lit' | 'lightmap' | 'fullbright';
 
 /** The camera's own small box, so it stops a little short of a wall rather than in it. */
 const CAMERA_BOX = { mins: { x: -4, y: -4, z: -4 }, maxs: { x: 4, y: 4, z: 4 } };
 
-type Scene = { gl: WebGL2RenderingContext; renderer: Renderer; world: WorldRenderState; camera: Camera };
+type Scene = { gl: WebGL2RenderingContext; renderer: Renderer; world: WorldRenderState; camera: Camera; particles: ParticleSystem };
 type SceneState = { status: 'loading' } | { status: 'ready'; scene: Scene } | { status: 'failed'; reason: string };
 
 export interface LabSceneProps {
@@ -122,11 +138,15 @@ export interface LabSceneProps {
    * pitch are added to the orbit's, so `home` holds the person's own turn (0 is none).
    */
   follow?: LabFollow;
+  /** Particles to draw this frame (the client's, which the lab moves itself), held still. */
+  particles?: readonly SceneParticle[];
+  /** Dynamic lights to light the world with this frame. */
+  lights?: readonly SceneLight[];
   /** Told of every turn of the camera (a drag, a key, a new home), so a lab can show the way it faces elsewhere. */
   onTurn?: (orbit: Orbit) => void;
 }
 
-export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, lightStyles = NO_STYLES, timeSeconds = 0, look = 'lit', entities, follow, onTurn }: LabSceneProps) {
+export function LabScene({ label, shows, legend, map, model, home, draw, standAt = false, portals = NO_PORTALS, lightStyles = NO_STYLES, timeSeconds = 0, look = 'lit', entities, follow, particles, lights, onTurn }: LabSceneProps) {
   const { library } = useLibrary();
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
   const [state, setState] = React.useState<SceneState>({ status: 'loading' });
@@ -154,7 +174,9 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
         const world = renderer.uploadWorld(prepared);
         const camera = new Camera(canvas.width || 1, canvas.height || 1);
         camera.fov = 75;
-        setState({ status: 'ready', scene: { gl, renderer, world, camera } });
+        // The lab's own particles: it places every one each frame, so nothing here moves them.
+        const own = new ParticleSystem(4096, new RandomGenerator({ seed: 1 }));
+        setState({ status: 'ready', scene: { gl, renderer, world, camera, particles: own } });
       } catch (e) {
         if (!cancelled) setState({ status: 'failed', reason: `The map could not be drawn: ${e instanceof Error ? e.message : String(e)}.` });
       }
@@ -251,6 +273,13 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
       line: (from, to, colour) => renderer.collisionVis.addLine(from, to, colour),
       box: (mins, maxs, colour) => renderer.collisionVis.addBBox(mins, maxs, colour),
     });
+    let own: ParticleSystem | undefined;
+    if (particles) {
+      own = state.scene.particles;
+      own.killAll();
+      for (const p of particles) own.spawn({ position: p.origin, color: p.colour, size: 1.5, lifetime: 1, gravity: 0, fade: false });
+    }
+    const dlights: DLight[] | undefined = lights?.map((l) => ({ origin: l.origin, color: l.colour, intensity: l.intensity, die: Infinity }));
     gl.viewport(0, 0, size.width, size.height);
     const drawn = entities ? modelEntitiesFromEntities(entities.sources, entities.modelName, { models, timeSeconds }) : [];
     const weapon = entities?.weapon
@@ -271,8 +300,8 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
       : undefined;
     if (weapon) drawn.push(weapon);
     const brushModels = entities ? brushModelsFromEntities(entities.sources, entities.modelName) : undefined;
-    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds, brushModels }, drawn);
-  }, [state, size, view.target, view.yaw, view.pitch, view.distance, draw, model, standAt, portals, lightStyles, timeSeconds, look, entities, models]);
+    renderer.renderFrame({ camera, world, clearColor: [0, 0, 0, 1], timeSeconds, brushModels, particles: own, dlights }, drawn);
+  }, [state, size, view.target, view.yaw, view.pitch, view.distance, draw, model, standAt, portals, lightStyles, timeSeconds, look, entities, models, particles, lights]);
 
   const onKeyDown = (e: React.KeyboardEvent) => {
     if (standAt && ['+', '=', '-', '_'].includes(e.key)) return;
