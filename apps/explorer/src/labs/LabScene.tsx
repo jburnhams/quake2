@@ -56,7 +56,15 @@ export interface LabEntities {
   /** What a modelindex names ("*3", "models/monsters/soldier/tris.md2"). */
   readonly modelName: (index: number) => string | undefined;
   /** The first-person weapon, drawn at the camera. */
-  readonly weapon?: { readonly model: string; readonly frame: number; readonly oldFrame?: number; readonly frameLerp?: number };
+  readonly weapon?: {
+    readonly model: string;
+    readonly frame: number;
+    readonly oldFrame?: number;
+    readonly frameLerp?: number;
+    /** Added to the camera's position and angles, as CL_AddViewWeapon adds gun_offset and gun_angles to the view's. */
+    readonly offset?: Vec;
+    readonly angleOffset?: Vec;
+  };
 }
 
 /** A target that moves (a recorded player), and angles the person's own turn is added to. */
@@ -248,8 +256,16 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
     const weapon = entities?.weapon
       ? viewWeaponEntity({
           ...entities.weapon,
-          origin: { x: camera.position[0], y: camera.position[1], z: camera.position[2] },
-          angles: { x: camera.angles[0], y: camera.angles[1], z: camera.angles[2] },
+          origin: {
+            x: camera.position[0] + (entities.weapon.offset?.x ?? 0),
+            y: camera.position[1] + (entities.weapon.offset?.y ?? 0),
+            z: camera.position[2] + (entities.weapon.offset?.z ?? 0),
+          },
+          angles: {
+            x: camera.angles[0] + (entities.weapon.angleOffset?.x ?? 0),
+            y: camera.angles[1] + (entities.weapon.angleOffset?.y ?? 0),
+            z: camera.angles[2] + (entities.weapon.angleOffset?.z ?? 0),
+          },
           models,
         })
       : undefined;

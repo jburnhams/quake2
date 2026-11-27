@@ -5,7 +5,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { PakArchive } from '@quake2ts/formats';
-import { frameIndexAt, lerpAngle, readDemo, viewAt } from '../src/labs/demo/timeline';
+import { CUSTOM_WEAPON, frameIndexAt, lerpAngle, readDemo, viewAt } from '../src/labs/demo/timeline';
 import { demoPak } from './setup';
 
 const FULL_PAK = resolve(import.meta.dirname, '../../../.paks/baseq2/pak0.pak');
@@ -36,6 +36,13 @@ describe.skipIf(!existsSync(FULL_PAK))('q2demo1.dm2', () => {
     expect(demo.lightStyles.find(([s]) => s === 0)?.[1]).toBe('m');
   });
 
+  it('does not lerp the view across a jump of more than 256 units', () => {
+    const i = demo.frames.findIndex((f, n) => n > 0 && Math.abs(f.player.origin.x - demo.frames[n - 1]!.player.origin.x) > 256);
+    if (i < 0) return; // this recording has no teleport; the rule is CL_CalcViewValues'
+    const mid = viewAt(demo, (demo.frames[i - 1]!.time + demo.frames[i]!.time) / 2);
+    expect(mid.origin.x).toBe(demo.frames[i]!.player.origin.x);
+  });
+
   it('lerps the view halfway between two frames', () => {
     const a = viewAt(demo, 10);
     const b = viewAt(demo, 10.1);
@@ -44,7 +51,8 @@ describe.skipIf(!existsSync(FULL_PAK))('q2demo1.dm2', () => {
     expect(mid.eye.x).toBeCloseTo((a.eye.x + b.eye.x) / 2, 3);
     expect(mid.eye.y).toBeCloseTo((a.eye.y + b.eye.y) / 2, 3);
     expect(mid.weapon?.model).toMatch(/^models\/weapons\/v_/);
-    expect(mid.player.map((p) => p.modelindex)).toEqual([255, 255]); // the body and the weapon it holds
+    expect(mid.player.map((p) => p.modelindex)).toEqual([255, CUSTOM_WEAPON]); // the body and the weapon it holds
+    expect(demo.modelName(CUSTOM_WEAPON)).toBe('players/male/weapon.md2');
     expect(mid.entities.some((e) => demo.modelName(e.modelindex) === 'models/monsters/soldier/tris.md2')).toBe(true);
     expect(mid.health).toBeGreaterThan(0);
   });

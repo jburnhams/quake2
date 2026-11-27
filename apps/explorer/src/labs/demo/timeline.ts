@@ -28,6 +28,13 @@ const CS = { name: 0, models: 32, lights: 800, playerSkins: 1312 } as const;
 const MAX_LIGHTSTYLES = 256;
 /** A modelindex of 255 is the client's own model (CL_AddPacketEntities), from CS_PLAYERSKINS. */
 const CUSTOM_MODEL = 255;
+/**
+ * modelindex2 of 255 is the client's own weapon model (ci->weaponmodel), not their body; it gets
+ * an index of its own here, past the 256 configstring models, so modelName can tell them apart.
+ */
+export const CUSTOM_WEAPON = 256;
+/** CL_CalcViewValues: a player state that moved more than 256 units on an axis was a teleport, drawn without a lerp. */
+const VIEW_SNAP = 256;
 /** EV_PLAYER_TELEPORT and EV_OTHER_TELEPORT: the entity is drawn where it landed, not lerped there. */
 const TELEPORT_EVENTS = new Set([6, 7]);
 const STAT_HEALTH = 1;
@@ -114,7 +121,8 @@ export function readDemo(buffer: ArrayBuffer): DemoTimeline {
   if (frames.length === 0) throw new Error('None of the demo\'s frames could be rebuilt.');
 
   const skin = parsePlayerSkin(strings.get(CS.playerSkins + playerNum));
-  const modelName = (index: number) => (index === CUSTOM_MODEL ? skin.model : strings.get(CS.models + index) || undefined);
+  const modelName = (index: number) =>
+    index === CUSTOM_MODEL ? skin.model : index === CUSTOM_WEAPON ? skin.weapon : strings.get(CS.models + index) || undefined;
   const models = new Set<string>();
   for (let i = 1; i < CUSTOM_MODEL; i++) {
     const name = strings.get(CS.models + i);
@@ -165,8 +173,13 @@ export interface DemoView {
   readonly entities: readonly SceneEntitySource[];
   /** The player's own models (their body and the weapon in their hand), which a first-person view leaves out. */
   readonly player: readonly SceneEntitySource[];
-  /** The first-person weapon: its model, frame and blend, at the eye. */
-  readonly weapon: { readonly model: string; readonly frame: number; readonly oldFrame: number; readonly frameLerp: number; readonly origin: Vec; readonly angles: Vec } | undefined;
+  /**
+   * The first-person weapon: its model, frame and blend, and the recording's gun_offset and
+   * gun_angles, which CL_AddViewWeapon adds to the view's origin and angles (bob and sway).
+   */
+  readonly weapon:
+    | { readonly model: string; readonly frame: number; readonly oldFrame: number; readonly frameLerp: number; readonly offset: Vec; readonly angleOffset: Vec }
+    | undefined;
 }
 
 /** The demo at `time` seconds, between the two frames either side of it. */
@@ -187,15 +200,17 @@ export function viewAt(demo: DemoTimeline, time: number): DemoView {
     const angles = blend ? lerpAngles(was.angles, now.angles, lerp) : now.angles;
     const frame = { frame: now.frame, oldFrame: blend ? was.frame : now.frame, frameLerp: blend ? lerp : 1 };
     // modelindex2 to 4 are what an entity carries (a player's weapon), drawn at the same place.
-    for (const modelindex of [now.modelindex, now.modelindex2, now.modelindex3, now.modelindex4]) {
+    const slots = [now.modelindex, now.modelindex2 === CUSTOM_MODEL ? CUSTOM_WEAPON : now.modelindex2, now.modelindex3, now.modelindex4];
+    for (const modelindex of slots) {
       if (!modelindex) continue;
-      const source: SceneEntitySource = { modelindex, origin, angles, effects: now.effects, skin: modelindex === CUSTOM_MODEL ? 0 : now.skinnum, ...frame };
+      const source: SceneEntitySource = { modelindex, origin, angles, effects: now.effects, skin: modelindex >= CUSTOM_MODEL ? 0 : now.skinnum, ...frame };
       (number === demo.viewer ? player : entities).push(source);
     }
   }
 
   const ps = next.player;
-  const ops = prev.player;
+  const teleported = distance(prev.player.origin, ps.origin) > VIEW_SNAP;
+  const ops = teleported ? ps : prev.player;
   const origin = lerpVec(ops.origin, ps.origin, lerp);
   const offset = lerpVec(ops.viewoffset, ps.viewoffset, lerp);
   const eye = { x: origin.x + offset.x, y: origin.y + offset.y, z: origin.z + offset.z };
@@ -211,8 +226,8 @@ export function viewAt(demo: DemoTimeline, time: number): DemoView {
         frame: ps.gun_frame,
         oldFrame: ops.gun_index === ps.gun_index ? ops.gun_frame : ps.gun_frame,
         frameLerp: lerp,
-        origin: { x: eye.x + gunOffset.x, y: eye.y + gunOffset.y, z: eye.z + gunOffset.z },
-        angles: { x: angles.x + gunAngles.x, y: angles.y + gunAngles.y, z: angles.z + gunAngles.z },
+        offset: gunOffset,
+        angleOffset: gunAngles,
       }
     : undefined;
   const velocity = ps.velocity;
