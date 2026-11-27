@@ -40,7 +40,7 @@ describe('the effects lab', () => {
     vi.stubGlobal('cancelAnimationFrame', () => {});
     render();
     await userEvent.click(await screen.findByRole('button', { name: 'Play' }));
-    const stamp = performance.now() - 20;
+    const stamp = performance.now() - 1000;
     await act(async () => {
       const now = pending;
       pending = [];
