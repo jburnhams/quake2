@@ -3,7 +3,7 @@
 // pak.pak's demo1.dm2 (3.00) refused with the parser's reason.
 import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import { PakArchive } from '@quake2ts/formats';
 import { frameIndexAt, lerpAngle, readDemo, viewAt } from '../src/labs/demo/timeline';
 import { demoPak } from './setup';
@@ -16,7 +16,11 @@ const file = (pak: PakArchive, name: string) => {
 };
 
 describe.skipIf(!existsSync(FULL_PAK))('q2demo1.dm2', () => {
-  const demo = readDemo(file(open(readFileSync(FULL_PAK)), 'demos/q2demo1.dm2'));
+  // Read in a hook: a skipped suite's body still runs, and CI's explorer job has no .paks.
+  let demo: ReturnType<typeof readDemo>;
+  beforeAll(() => {
+    demo = readDemo(file(open(readFileSync(FULL_PAK)), 'demos/q2demo1.dm2'));
+  });
 
   it('is a minute on demo2, every frame rebuilt', () => {
     expect(demo.protocol).toBe(31);
