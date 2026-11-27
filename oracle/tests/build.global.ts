@@ -12,6 +12,7 @@ export default function setup() {
     process.env.Q2ORACLE_BIN = join(dir, 'build', 'q2oracle');
   }
   process.env.Q2PMOVE_BIN ??= join(dir, 'build', 'q2pmove');
+  process.env.Q2PMOVE321_BIN ??= join(dir, 'build', 'q2pmove321');
   process.env.Q2MSG_BIN ??= join(dir, 'build', 'q2msg');
   process.env.Q2MODEL_BIN ??= join(dir, 'build', 'q2model');
   // q2demo is id's whole client and ref_gl, which needs OSMesa. Without it the demo lockstep

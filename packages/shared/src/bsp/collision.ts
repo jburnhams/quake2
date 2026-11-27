@@ -255,13 +255,18 @@ export interface BoxBrushTestResult {
 }
 
 export function testBoxInBrush(origin: Vec3, mins: Vec3, maxs: Vec3, brush: CollisionBrush): BoxBrushTestResult {
+  // In the C's 32-bit floats (CM_TestBoxInBrush): a box resting exactly on a sloped face is inside
+  // or not by the float rounding of these sums, and pmove's PM_GoodPosition turns on it.
+  const f = Math.fround;
   for (const side of brush.sides) {
-    const offset = side.plane.normal.x * (side.plane.normal.x < 0 ? maxs.x : mins.x) +
-      side.plane.normal.y * (side.plane.normal.y < 0 ? maxs.y : mins.y) +
-      side.plane.normal.z * (side.plane.normal.z < 0 ? maxs.z : mins.z);
+    const n = side.plane.normal;
+    const ox = n.x < 0 ? maxs.x : mins.x;
+    const oy = n.y < 0 ? maxs.y : mins.y;
+    const oz = n.z < 0 ? maxs.z : mins.z;
+    const offset = f(f(f(ox * n.x) + f(oy * n.y)) + f(oz * n.z));
 
-    const dist = side.plane.dist - offset;
-    const d1 = origin.x * side.plane.normal.x + origin.y * side.plane.normal.y + origin.z * side.plane.normal.z - dist;
+    const dist = f(side.plane.dist - offset);
+    const d1 = f(f(f(f(origin.x * n.x) + f(origin.y * n.y)) + f(origin.z * n.z)) - dist);
 
     if (d1 > 0) {
       return { startsolid: false, allsolid: false, contents: 0 };

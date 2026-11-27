@@ -327,7 +327,7 @@ export class OriginalClient {
   private rParticles: Particle[] = [];
 
   /** rand(): the effects' (and the beam colours') random numbers, in the C's order. */
-  readonly rand = new Rand();
+  readonly rand: Rand = new Rand();
   readonly fx: ClientEffects;
   /** Every S_StartSound since the last frame, in order. */
   sounds: SoundStart[] = [];

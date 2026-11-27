@@ -40,6 +40,15 @@ Differential tests that run the TypeScript port and id Software's original C cod
   both, starting each TS frame from the C's previous result so a difference is that frame's own.
   It compares origin, velocity, pm_flags, pm_time, view height and angles, bounds, water, ground,
   jump sound, step clip, impact delta and the touch count.
+- `pmove321_harness.c` links 3.21's own `full/qcommon/pmove.c` unchanged into `build/q2pmove321`,
+  with CM_BoxTrace answering its traces as the client's prediction (`entmode 0`: the world is hit
+  only when the fraction is below 1) or the server's SV_Trace (`entmode 1`: always) does.
+  `tests/pmove321.oracle.test.ts` holds `Original.pmove` (`packages/shared/src/original/pmove.ts`,
+  the movement the client and server ports share, as id linked one pmove.c into both) to it
+  exactly: pmove_state_t in shorts, view angles, height, bounds, ground, water and touches, on
+  living, dead, gibbed and spectating players, with landing, teleport and water-jump timers. It
+  found CM_TestBoxInBrush's float rounding: a box resting exactly on a slope was inside in the C
+  and outside in the TS, which PM_GoodPosition turns into a different eighth.
 
 Run it with `pnpm test:oracle`. `ORACLE_QUERIES=200000` runs a bigger collision sample and
 `ORACLE_PMOVE_RUNS=5000` a bigger movement one (40 frames each), `ORACLE_MSG_QUERIES` the message one; `ORACLE_LEAF_QUERIES` the point-in-leaf one; `Q2ORACLE_BIN`, `Q2PMOVE_BIN`, `Q2MSG_BIN` and `Q2MODEL_BIN`

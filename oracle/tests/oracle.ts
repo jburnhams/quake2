@@ -92,6 +92,13 @@ export function pmoveOracleBin(): string {
   return bin;
 }
 
+/** Path of the 3.21 player movement oracle (full/qcommon/pmove.c), built alongside q2oracle. */
+export function pmove321OracleBin(): string {
+  if (process.env.Q2PMOVE321_BIN) return process.env.Q2PMOVE321_BIN;
+  buildOracle();
+  return join(BUILD_DIR, 'q2pmove321');
+}
+
 /** Sends raw command lines to an oracle binary and returns one parsed JSON answer per line. */
 export function runOracleLines(bin: string, args: string[], lines: readonly string[]): any[] {
   const res = spawnSync(bin, args, { input: lines.join('\n') + '\n', maxBuffer: 512 * 1024 * 1024 });

@@ -1,3 +1,4 @@
+export * as Original from './original/index.js';
 export * from './math/vec3.js';
 export * from './math/winding.js';
 export * from './math/angles.js';
