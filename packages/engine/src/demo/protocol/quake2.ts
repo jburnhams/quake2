@@ -83,9 +83,9 @@ export class Quake2ProtocolHandler implements ProtocolHandler {
         if (bits & U_ORIGIN2) to.origin.y = stream.readShort() * 0.125;
         if (bits & U_ORIGIN3) to.origin.z = stream.readShort() * 0.125;
 
-        if (bits & U_ANGLE1) to.angles.x = stream.readByte() * (360.0 / 256);
-        if (bits & U_ANGLE2) to.angles.y = stream.readByte() * (360.0 / 256);
-        if (bits & U_ANGLE3) to.angles.z = stream.readByte() * (360.0 / 256);
+        if (bits & U_ANGLE1) to.angles.x = ((stream.readByte() << 24) >> 24) * (360.0 / 256);
+        if (bits & U_ANGLE2) to.angles.y = ((stream.readByte() << 24) >> 24) * (360.0 / 256);
+        if (bits & U_ANGLE3) to.angles.z = ((stream.readByte() << 24) >> 24) * (360.0 / 256);
 
         if (bits & U_OLDORIGIN) {
             to.old_origin.x = stream.readShort() * 0.125;

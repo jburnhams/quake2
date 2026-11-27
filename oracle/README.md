@@ -82,3 +82,40 @@ leaf sent a point on a plane to the front child where Mod_PointInLeaf sends it t
 whole-unit points landed in another leaf; now `pointInLeaf`, used by `findLeaf` and the renderer).
 Texture animation treated a nexttexinfo of 0 as a link where the C ends the chain. The MD2 parser
 loaded models with a skin taller than 480, no triangles or no frames, which gl_model.c refuses.
+
+## Demo lockstep (`demo/`, `tests/demo.oracle.test.ts`)
+
+Plays `demos/q2demo1.dm2` (the 3.14 demo, protocol 31, from the demo `pak0.pak`) through id's own
+client and through the TS client, frame by frame, and fails at the first frame where a layer of
+what they would draw differs. demo1.dm2 (the 3.00 format) is not used: 3.21 refuses it.
+
+- `demo/build.sh` compiles id's 3.21 client, server, `qcommon` and `ref_gl` from `.id-source/full`
+  unchanged, with `demo/demo_harness.c` as the platform layer, into `build/q2demo` (needs
+  `libosmesa6-dev`; `tests/build.global.ts` builds it and skips the test without OSMesa, except in
+  CI). The harness runs a virtual clock (a fixed 25 ms `Qcommon_Frame`), draws through OSMesa, gives
+  the sound code a fake DMA buffer (22050 Hz, 16-bit stereo) and a stub game DLL. The linker's
+  `--wrap` taps `GetRefAPI` (every refdef and 2D draw call), `CL_ParseServerMessage` (each message's
+  bytes and the netchan ack), `S_StartSound`, `S_Update` (every mixing channel) and `CL_Frame`.
+- `q2demo <basedir> <out> [msec] [shot_every]` writes `<out>/demo.jsonl` (one `msg`, `frame`, `ref`,
+  `draw`, `snd` or `chan` line per event), `<out>/pcm.raw` (the mixed sound, s16le stereo) and,
+  every `shot_every` frames, `<out>/shots/fNNNNN.ppm` (ref_gl's picture). Inline brush models are
+  named `*N` and entities are compared as a sorted multiset (V_RenderView sorts them by pointer).
+- `tests/demo/lockstep.ts` feeds each C frame's message bytes and ack into
+  `packages/client/src/cl/client.ts` (`OriginalClient`, a float32 port of cl_main's `CL_Frame`,
+  cl_parse, cl_ents, cl_pred and cl_view, with 3.x's configstring numbers in `cl/defs.ts`) and
+  compares layer by layer: timing (`cl.time`, lerpfrac), frame state, prediction, the view, light
+  styles, then the entity list, dynamic lights and particles. `Q2DEMO_OUT=dir` reuses a finished
+  run; `Q2DEMO_BIN` points at a prebuilt binary.
+
+Gated, and equal on all 2,528 frames: timing, frame state, prediction, view, light styles, the
+entity list (87,816 entities), dynamic lights (1,547) and particles (1,126,589, in the C's order).
+The effects (`packages/client/src/cl/fx.ts`, a port of cl_fx.c and cl_tent.c) draw their random
+numbers from `Rand` in `cl/qmath.ts`, the MSVC runtime's rand() the original Windows builds used;
+`demo/build.sh` compiles `client/cl_*.c` and `qcommon/common.c` with `-Drand=q2_client_rand`, the
+same generator in `demo_harness.c`, so the server's draws do not move the client's. Sound, the 2D
+draw list and pixels come next. The Rogue mission pack's effects (cl_newfx.c) are not ported and throw.
+
+What it found on its first run (2026-11-27): the demo parsers read entity angles as unsigned bytes,
+where `MSG_ReadAngle` reads a signed char (180 where the C has -180); fixed in
+`engine/src/demo/protocol/legacy.ts` and `quake2.ts`. A demo plays with `pm_type` forced to
+`PM_FREEZE` (`cl.attractloop`), so prediction holds the player still and the view is the server's.

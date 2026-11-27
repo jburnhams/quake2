@@ -2,7 +2,7 @@ name: C Oracle (differential tests)
 
 # Runs the TS collision and player movement against id Software's cmodel.c and the
 # rerelease's p_move.cpp, the message code and ref_gl's model loader (see oracle) on the same random
-# inputs. Any difference fails the build. The job name is kept for branch protection.
+# inputs, and plays demo1 through id's own client beside the TS client (oracle/demo). Any difference fails the build. The job name is kept for branch protection.
 on:
   push:
     branches: [ main ]
@@ -25,6 +25,9 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
+      # The demo lockstep oracle builds id's whole client and ref_gl, which draws through OSMesa.
+      - name: OSMesa
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libosmesa6-dev
       # id's C source, which the oracles build and the labs quote (scripts/fetch-id-source.sh).
       - name: id source
         uses: ./.github/actions/id-source

@@ -536,7 +536,7 @@ export class NetworkMessageParser {
         case TempEntity.RAILTRAIL: case TempEntity.BUBBLETRAIL: case TempEntity.BFG_LASER: case TempEntity.DEBUGTRAIL: case TempEntity.BUBBLETRAIL2:
             this.readPos(pos); this.readPos(pos2); break;
         case TempEntity.PARASITE_ATTACK: case TempEntity.MEDIC_CABLE_ATTACK:
-            this.stream.readShort(); this.readPos(pos); this.readPos(pos2); break;
+            ent = this.stream.readShort(); this.readPos(pos); this.readPos(pos2); break;
         case TempEntity.GRAPPLE_CABLE:
             ent = this.stream.readShort(); this.readPos(pos); this.readPos(pos2); this.readPos(dir); break;
         case TempEntity.LIGHTNING:
@@ -550,9 +550,14 @@ export class NetworkMessageParser {
              color = this.stream.readByte(); this.stream.readShort();
              if (nextId !== -1) this.stream.readLong();
              break;
-        case TempEntity.WIDOWBEAMOUT: this.stream.readShort();
+        case TempEntity.WIDOWBEAMOUT:
+            // CL_ParseWidow: an id, then a position
+            ent = this.stream.readShort(); this.readPos(pos); break;
         case TempEntity.HEATBEAM: case TempEntity.MONSTER_HEATBEAM:
-            ent = this.stream.readShort(); this.readPos(pos); this.readPos(pos2); this.readDir(dir); break;
+            // CL_ParsePlayerBeam: 3.x servers send no offset for the heat beams (the client knows it)
+            ent = this.stream.readShort(); this.readPos(pos); this.readPos(pos2);
+            if (this.getProtocolVersion() > 34) this.readDir(dir);
+            break;
       }
       if (this.handler) this.handler.onTempEntity(type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt);
   }
