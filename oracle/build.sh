@@ -3,6 +3,7 @@
 # .id-source by scripts/fetch-id-source.sh (pinned in scripts/id-source.pins):
 #   build/q2oracle  collision (full/qcommon/cmodel.c)
 #   build/q2pmove   player movement (rerelease/p_move.cpp, traced through cmodel.c)
+#   build/q2pmove321 player movement as 3.21 shipped it (full/qcommon/pmove.c, through cmodel.c)
 #   build/q2msg     message encoding and checksums (qcommon/common.c, crc.c, client/cl_ents.c)
 #   build/q2model   map, alias model and sprite loading (ref_gl/gl_model.c)
 set -e
@@ -20,6 +21,8 @@ cc $CFLAGS -c -o "$out/cmodel.o" "$full/qcommon/cmodel.c"
 cc $CFLAGS -c -o "$out/q_shared.o" "$full/game/q_shared.c"
 cc $CFLAGS -c -o "$out/cm_stubs.o" "$here/cm_stubs.c"
 cc $CFLAGS -o "$out/q2oracle" "$here/harness.c" "$out/cm_stubs.o" "$out/cmodel.o" "$out/q_shared.o" -lm
+cc $CFLAGS -c -o "$out/pmove321.o" "$full/qcommon/pmove.c"
+cc $CFLAGS -o "$out/q2pmove321" "$here/pmove321_harness.c" "$out/pmove321.o" "$out/cm_stubs.o" "$out/cmodel.o" "$out/q_shared.o" -lm
 # common.c is linked whole; --gc-sections drops the engine it would otherwise pull in.
 GCFLAGS="$CFLAGS -ffunction-sections -fdata-sections"
 cc $GCFLAGS -c -o "$out/common.o" "$full/qcommon/common.c"
