@@ -30,7 +30,8 @@ describe('Misc Entities', () => {
         expect(entity).toBeDefined();
         expect(entity.solid).toBe(Solid.BoundingBox); // a barrel model, not a brush (g_misc.c)
         expect(entity.maxs).toEqual({ x: 16, y: 16, z: 40 });
-        expect(entity.movetype).toBe(MoveType.None);
+        expect(entity.movetype).toBe(MoveType.Step); // SP_misc_explobox: it can be pushed and falls
+        expect(entity.mass).toBe(50);
     });
 
     it('misc_banner should be created with correct properties', () => {
