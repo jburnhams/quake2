@@ -10,7 +10,7 @@ describe('the effects lab simulation', () => {
     const run = runEffect(EFFECTS.rocket!, spot, 1000, options);
     const first = run.frames[0]!;
     expect(first.particles).toHaveLength(256);
-    expect(first.models.length).toBeGreaterThan(0);
+    expect(first.models).toHaveLength(1);
     expect(first.lights.length).toBeGreaterThan(0);
     expect(run.drawsToFire).toBeGreaterThan(256);
     // Every spark has faded within a second and a half.

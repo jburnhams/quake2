@@ -165,6 +165,12 @@ export interface Run {
  * Fires `effect` at `spot` at time 0 and runs the client's effects for `durationMs`, a frame at a
  * time: what each frame draws (CL_AddTEnts, CL_AddParticles, CL_AddDLights), then CL_RunDLights.
  */
+/**
+ * cl.time when the effect fires. Not 0: a cleared laser or beam slot has an end time of 0, and at
+ * cl.time 0 CL_AddLasers would draw all 32 of them, as id's client would on its first frame.
+ */
+const START = 1000;
+
 export function runEffect(effect: Effect, spot: EffectSpot, durationMs: number, options: RunOptions): Run {
   let time = 0;
   let frametime = 0;
@@ -173,10 +179,10 @@ export function runEffect(effect: Effect, spot: EffectSpot, durationMs: number, 
   let models: RefEntity[] = [];
   const ent: FxEntity = { current: { ...nullState(), origin: [...spot.from] }, trailcount: 1024, fly_stoptime: 0, lerp_origin: [...spot.from] };
   const host: FxHost = {
-    get time() { return time; },
+    get time() { return START + time; },
     get frametime() { return frametime; },
     // The effect arrives with the frame being drawn: cl.time at the frame's own server time.
-    get servertime() { return time; },
+    get servertime() { return START + time; },
     lerpfrac: 1,
     playernum: 0,
     vieworg: [0, 0, 0],

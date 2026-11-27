@@ -100,8 +100,14 @@ export function EffectsLab() {
 export function spotFor(world: LabWorld): EffectSpot {
   const { origin, yaw } = world.start;
   const rad = (yaw * Math.PI) / 180;
-  const ahead: Vec = { x: origin.x + Math.cos(rad) * 192, y: origin.y + Math.sin(rad) * 192, z: origin.z + 16 };
-  const down = traceBox({ model: world.model, start: ahead, end: { ...ahead, z: ahead.z - 512 }, mins: { x: 0, y: 0, z: 0 }, maxs: { x: 0, y: 0, z: 0 }, contentMask: MASK_SOLID });
+  const line = (start: Vec, end: Vec) =>
+    traceBox({ model: world.model, start, end, mins: { x: 0, y: 0, z: 0 }, maxs: { x: 0, y: 0, z: 0 }, contentMask: MASK_SOLID });
+  // As far ahead as the room goes, up to 256 units, kept 48 short of a wall; then down to the floor.
+  const eye: Vec = { x: origin.x, y: origin.y, z: origin.z + 16 };
+  const reach = 256 * line(eye, { x: eye.x + Math.cos(rad) * 256, y: eye.y + Math.sin(rad) * 256, z: eye.z }).fraction;
+  const along = Math.max(0, reach - 48);
+  const ahead: Vec = { x: eye.x + Math.cos(rad) * along, y: eye.y + Math.sin(rad) * along, z: eye.z };
+  const down = line(ahead, { ...ahead, z: ahead.z - 512 });
   const floor: V3 = [down.endpos.x, down.endpos.y, Math.fround(down.endpos.z + 1)];
   const normal: V3 = down.plane ? [down.plane.normal.x, down.plane.normal.y, down.plane.normal.z] : [0, 0, 1];
   return { origin: floor, normal, from: [origin.x, origin.y, Math.fround(origin.z + 22)] };
@@ -128,7 +134,7 @@ function EffectView({ map, world, effectKey, gravity, seed, frameMs }: { map: Bs
     [frame, colours],
   );
   const lights = React.useMemo<SceneLight[]>(() => frame.lights.map((l) => ({ origin: vec(l.origin), colour: vec(l.color), intensity: l.intensity })), [frame]);
-  const home = React.useMemo<Orbit>(() => ({ target: vec(spot.origin), yaw: world.start.yaw + 180, pitch: 20, distance: 260 }), [spot, world]);
+  const home = React.useMemo<Orbit>(() => ({ target: { ...vec(spot.origin), z: spot.origin[2] + 24 }, yaw: world.start.yaw, pitch: 25, distance: 180 }), [spot, world]);
   const draw = React.useCallback<React.ComponentProps<typeof LabScene>['draw']>(
     (lines) => {
       // Each model the effect draws (an explosion, smoke, a flash) as a box at its origin.

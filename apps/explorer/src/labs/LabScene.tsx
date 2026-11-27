@@ -277,7 +277,7 @@ export function LabScene({ label, shows, legend, map, model, home, draw, standAt
     if (particles) {
       own = state.scene.particles;
       own.killAll();
-      for (const p of particles) own.spawn({ position: p.origin, color: p.colour, size: 1.5, lifetime: 1, gravity: 0, fade: false });
+      for (const p of particles) own.spawn({ position: p.origin, color: p.colour, size: 2, lifetime: 1, gravity: 0, fade: false });
     }
     const dlights: DLight[] | undefined = lights?.map((l) => ({ origin: l.origin, color: l.colour, intensity: l.intensity, die: Infinity }));
     gl.viewport(0, 0, size.width, size.height);
