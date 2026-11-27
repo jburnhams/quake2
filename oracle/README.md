@@ -153,8 +153,8 @@ compares what they spawn. The work goes in slices, each gated before the next: (
   server built on 3.21's `cmodel.c` (collision, areas and PVS through `world_shim.c`), into
   `build/q2rgame`. Needs `libfmt-dev` and `libjsoncpp-dev`; `tests/build.global.ts` builds it and
   skips the test if that fails, except in CI.
-- `q2rgame <basedir> <map> <ticks>` loads the map, spawns its entities, connects one player and runs
-  25 ms frames, writing a JSON line per tick with every edict and, after ClientBegin, one `cs` line
+- `q2rgame <map.bsp> <mapname> <out.jsonl> [ticks=1200] [cvar=value...]` loads the map, spawns its
+  entities, connects one player and runs 25 ms frames, writing a JSON line per tick with every edict and, after ClientBegin, one `cs` line
   with every configstring. `Q2RGAME_INDEX_LOG=1` logs each new model, sound and image index to stderr.
 - The game's random numbers come from `std::mt19937` through libstdc++'s distributions (MSVC's
   differ), so `packages/strata-math/src/random.ts` follows libstdc++ 13: `uniform_real<float>` from
