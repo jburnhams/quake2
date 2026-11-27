@@ -59,3 +59,56 @@ export function vectorMA(a: readonly number[], scale: number, b: readonly number
 
 /** SHORT2ANGLE: x * (360.0/65536), a double stored as float. */
 export const short2angle = (x: number): number => f(x * (360.0 / 65536));
+
+/** DotProduct, in floats. */
+export const dot = (a: readonly number[], b: readonly number[]): number => f(f(f(a[0] * b[0]) + f(a[1] * b[1])) + f(a[2] * b[2]));
+
+/** VectorNormalize: normalizes v in place and returns its length (sqrt in doubles, stored as float). */
+export function vectorNormalize(v: number[]): number {
+  const length = f(Math.sqrt(dot(v, v)));
+  if (length) {
+    const ilength = f(1 / length);
+    v[0] = f(v[0] * ilength);
+    v[1] = f(v[1] * ilength);
+    v[2] = f(v[2] * ilength);
+  }
+  return length;
+}
+
+/** VectorLength: the sum is a loop of float additions from 0. */
+export function vectorLength(v: readonly number[]): number {
+  let length = 0;
+  for (let i = 0; i < 3; i++) length = f(length + f(v[i] * v[i]));
+  return f(Math.sqrt(length));
+}
+
+/** CrossProduct. */
+export const crossProduct = (a: readonly number[], b: readonly number[]): Vec3 => [
+  f(f(a[1] * b[2]) - f(a[2] * b[1])),
+  f(f(a[2] * b[0]) - f(a[0] * b[2])),
+  f(f(a[0] * b[1]) - f(a[1] * b[0])),
+];
+
+/** VectorScale. */
+export const vectorScale = (v: readonly number[], s: number): Vec3 => [f(v[0] * s), f(v[1] * s), f(v[2] * s)];
+
+/** VectorAdd and VectorSubtract. */
+export const vectorAdd = (a: readonly number[], b: readonly number[]): Vec3 => [f(a[0] + b[0]), f(a[1] + b[1]), f(a[2] + b[2])];
+export const vectorSubtract = (a: readonly number[], b: readonly number[]): Vec3 => [f(a[0] - b[0]), f(a[1] - b[1]), f(a[2] - b[2])];
+
+/**
+ * rand() as the original Windows builds had it (the MSVC runtime's generator), seeded 1 as an
+ * unseeded program is. The demo oracle builds id's client with the same generator.
+ */
+export class Rand {
+  private holdrand = 1;
+  constructor(seed = 1) { this.holdrand = seed >>> 0; }
+  rand(): number {
+    this.holdrand = (Math.imul(this.holdrand, 214013) + 2531011) >>> 0;
+    return (this.holdrand >>> 16) & 0x7fff;
+  }
+  /** frand: (rand()&32767) * (1.0/32767), returned as a float. */
+  frand(): number { return f((this.rand() & 32767) * (1.0 / 32767)); }
+  /** crand: (rand()&32767) * (2.0/32767) - 1, returned as a float. */
+  crand(): number { return f((this.rand() & 32767) * (2.0 / 32767) - 1); }
+}

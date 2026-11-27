@@ -26,7 +26,10 @@ for f in \
   ref_gl/gl_rmisc.c ref_gl/gl_rsurf.c ref_gl/gl_warp.c linux/qgl_linux.c
 do
   o="$out/$(echo "$f" | tr / _ | sed 's/\.c$/.o/')"
-  if [ ! -f "$o" ] || [ "$full/$f" -nt "$o" ]; then cc $CFLAGS -c -o "$o" "$full/$f"; fi
+  # The client's effects draw from rand(); give them a stream of their own (demo_harness.c's
+  # q2_client_rand, the MSVC generator the TS client also runs) so the server's draws do not move it.
+  case "$f" in client/cl_*|qcommon/common.c) extra="-Drand=q2_client_rand" ;; *) extra="" ;; esac
+  if [ ! -f "$o" ] || [ "$full/$f" -nt "$o" ] || [ "$0" -nt "$o" ]; then cc $CFLAGS $extra -c -o "$o" "$full/$f"; fi
   objs="$objs $o"
 done
 cc $CFLAGS -c -o "$out/demo_harness.o" "$here/demo_harness.c"

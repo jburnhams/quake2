@@ -107,10 +107,13 @@ what they would draw differs. demo1.dm2 (the 3.00 format) is not used: 3.21 refu
   styles, then the entity list, dynamic lights and particles. `Q2DEMO_OUT=dir` reuses a finished
   run; `Q2DEMO_BIN` points at a prebuilt binary.
 
-Gated today, and equal on all 2,528 frames: timing, frame state, prediction, view and light styles.
-Reported, not gated, until cl_fx.c and cl_tent.c are ported: the entity list, dynamic lights and
-particles, which differ from frame 88 (the first muzzle flash). Sound, the 2D draw list and pixels
-come after.
+Gated, and equal on all 2,528 frames: timing, frame state, prediction, view, light styles, the
+entity list (87,816 entities), dynamic lights (1,547) and particles (1,126,589, in the C's order).
+The effects (`packages/client/src/cl/fx.ts`, a port of cl_fx.c and cl_tent.c) draw their random
+numbers from `Rand` in `cl/qmath.ts`, the MSVC runtime's rand() the original Windows builds used;
+`demo/build.sh` compiles `client/cl_*.c` and `qcommon/common.c` with `-Drand=q2_client_rand`, the
+same generator in `demo_harness.c`, so the server's draws do not move the client's. Sound, the 2D
+draw list and pixels come next. The Rogue mission pack's effects (cl_newfx.c) are not ported and throw.
 
 What it found on its first run (2026-11-27): the demo parsers read entity angles as unsigned bytes,
 where `MSG_ReadAngle` reads a signed char (180 where the C has -180); fixed in

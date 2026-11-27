@@ -12,10 +12,10 @@
  * is (see qmath.ts), so a match is exact.
  *
  * The network (netchan sequences) and platform (the clock) are inputs: `runFrame` takes what the
- * C's CL_Frame reads from them. Not yet ported, so their parts of the refdef are empty: temporary
- * entities, particles and dynamic lights (cl_tent.c, cl_fx.c, cl_newfx.c), and movement prediction
- * for a player who can move (pmove.c); a frozen player (PM_FREEZE, as in every frame of the
- * demos) does not move, which is all prediction does then.
+ * C's CL_Frame reads from them. The effects (cl_fx.c, cl_tent.c) are in fx.ts, drawing from the
+ * same rand() as the C. Not yet ported: the Rogue mission pack's effects (cl_newfx.c), which throw,
+ * and movement prediction for a player who can move (pmove.c); a frozen player (PM_FREEZE, as in
+ * every frame of the demos) does not move, which is all prediction does then.
  */
 import {
   NetworkMessageParser,
@@ -29,7 +29,8 @@ import {
 } from '@quake2ts/engine';
 import { BinaryStream } from '@quake2ts/shared';
 import * as d from './defs.js';
-import { anglemod, angleVectors, f, lerpAngle, short2angle, vectorMA, type Vec3 } from './qmath.js';
+import { ClientEffects, type FxHost } from './fx.js';
+import { anglemod, angleVectors, f, lerpAngle, Rand, short2angle, vectorMA, type Vec3 } from './qmath.js';
 
 /** entity_state_t. */
 export interface EntityState {
@@ -229,6 +230,17 @@ export interface FrameInput {
   seq: number;
 }
 
+/** An S_StartSound call: what the sound layer will be compared on. */
+export interface SoundStart {
+  origin: Vec3 | null;
+  ent: number;
+  channel: number;
+  name: string;
+  volume: number;
+  attenuation: number;
+  timeofs: number;
+}
+
 export interface FrameOutput {
   /** False when CL_Frame returned early: the time is held for the next call. */
   ran: boolean;
@@ -240,8 +252,9 @@ export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'act
 
 export interface ClientOptions {
   assets: ClientAssets;
-  /** cl_maxfps (90), cl_predict (1), cl_gun (1), cl_vwep (1), cl_noskins (0). */
+  /** cl_maxfps (90), cl_predict (1), cl_gun (1), cl_vwep (1), cl_noskins (0), cl_footsteps (1). */
   maxfps?: number;
+  footsteps?: boolean;
   predict?: boolean;
   gun?: boolean;
   vwep?: boolean;
@@ -301,7 +314,14 @@ export class OriginalClient {
   private rDlights: DLight[] = [];
   private rParticles: Particle[] = [];
 
+  /** rand(): the effects' (and the beam colours') random numbers, in the C's order. */
+  readonly rand = new Rand();
+  readonly fx: ClientEffects;
+  /** Every S_StartSound since the last frame, in order. */
+  sounds: SoundStart[] = [];
+
   private readonly assets: ClientAssets;
+  private readonly footsteps: boolean;
   private readonly maxfps: number;
   private readonly predict: boolean;
   private readonly gun: boolean;
@@ -318,6 +338,28 @@ export class OriginalClient {
     this.vwep = options.vwep ?? true;
     this.noskins = options.noskins ?? false;
     this.vrect = options.vrect ?? { x: 0, y: 0, width: 640, height: 480 };
+    this.footsteps = options.footsteps ?? true;
+    this.fx = new ClientEffects(this.fxHost(), this.rand);
+  }
+
+  private fxHost(): FxHost {
+    const cl = this;
+    return {
+      get time() { return cl.time; },
+      get frametime() { return cl.frametime; },
+      get servertime() { return cl.frame.servertime; },
+      get lerpfrac() { return cl.lerpfrac; },
+      get playernum() { return cl.playernum; },
+      get vieworg() { return cl.refdef.vieworg; },
+      get footsteps() { return cl.footsteps; },
+      entity: (n) => cl.entities[n],
+      addEntity: (ent) => cl.addEntity(ent),
+      addLight: (org, intensity, r, g, b) => cl.addLight(org, intensity, r, g, b),
+      addParticle: (org, color, alpha) => cl.addParticle(org, color, alpha),
+      startSound: (origin, ent, channel, name, volume, attenuation, timeofs) => {
+        cl.sounds.push({ origin: origin ? [...origin] : null, ent, channel, name, volume, attenuation, timeofs });
+      },
+    };
   }
 
   private static emptyRefdef(): RefDef {
@@ -341,6 +383,7 @@ export class OriginalClient {
     this.realtime = input.realtime;
     this.extratime = 0;
     if (this.frametime > 1.0 / 5) this.frametime = f(1.0 / 5);
+    this.sounds = [];
 
     // CL_ReadPackets
     for (const message of input.messages) {
@@ -356,6 +399,8 @@ export class OriginalClient {
     // SCR_UpdateScreen draws the 3D view through V_RenderView
     const refdef = this.renderView();
 
+    // advance local effects for next frame
+    this.fx.runDlights();
     this.runLightStyles();
     return { ran: true, refdef };
   }
@@ -377,8 +422,14 @@ export class OriginalClient {
       onSpawnBaseline: (entity) => this.parseBaseline(entity),
       onFrame: (frame) => this.parseFrame(frame),
       onStuffText: (text) => this.stuffText(text),
-      onCenterPrint: ignore, onPrint: ignore, onSound: ignore, onTempEntity: ignore, onLayout: ignore,
-      onInventory: ignore, onMuzzleFlash: ignore, onMuzzleFlash2: ignore, onDisconnect: ignore, onReconnect: ignore,
+      onCenterPrint: ignore, onPrint: ignore, onSound: ignore, onLayout: ignore, onInventory: ignore,
+      onTempEntity: (type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt) => {
+        const v = (p?: { x: number; y: number; z: number }): Vec3 => (p ? [f(p.x), f(p.y), f(p.z)] : [0, 0, 0]);
+        this.fx.tempEntity({ type, pos: v(pos), pos2: v(pos2), dir: v(dir), cnt, color, ent, srcEnt, destEnt });
+      },
+      onMuzzleFlash: (ent, weapon) => this.fx.muzzleFlash(ent, weapon),
+      onMuzzleFlash2: (ent, weapon) => this.fx.muzzleFlash2(ent, weapon),
+      onDisconnect: ignore, onReconnect: ignore,
       onDownload: ignore,
     };
   }
@@ -419,6 +470,7 @@ export class OriginalClient {
     this.lightstyleMaps = Array.from({ length: d.MAX_LIGHTSTYLES }, () => []);
     this.lightstyleValues = Array.from({ length: d.MAX_LIGHTSTYLES }, () => [0, 0, 0] as Vec3);
     this.lastofs = -1;
+    this.fx.clear();
   }
 
   private parseConfigString(index: number, str: string): void {
@@ -596,7 +648,18 @@ export class OriginalClient {
         this.predictedOrigin = [f(o[0] * 0.125), f(o[1] * 0.125), f(o[2] * 0.125)];
         this.predictedAngles = [...frame.playerstate.viewangles];
       }
+      this.fireEntityEvents(frame);
       this.checkPredictionError();
+    }
+  }
+
+  /** CL_FireEntityEvents. */
+  private fireEntityEvents(frame: Frame): void {
+    for (let pnum = 0; pnum < frame.num_entities; pnum++) {
+      const s1 = this.parseEntities[(frame.parse_entities + pnum) & (d.MAX_PARSE_ENTITIES - 1)];
+      if (s1.event) this.fx.entityEvent(s1);
+      // EF_TELEPORTER acts like an event, but is not cleared each frame
+      if (s1.effects & d.EF_TELEPORTER) this.fx.teleporterParticles(s1);
     }
   }
 
@@ -691,6 +754,7 @@ export class OriginalClient {
       if (!this.configstrings[d.CS_PLAYERSKINS + i]) continue;
       this.loadClientinfo(this.clientinfo[i], this.configstrings[d.CS_PLAYERSKINS + i]);
     }
+    this.fx.registerModels((name) => this.registerModel(name));
     this.loadClientinfo(this.baseclientinfo, 'unnamed\\male/grunt');
     this.refreshPrepped = true;
     this.forceRefdef = true;
@@ -782,6 +846,11 @@ export class OriginalClient {
     this.rDlights.push({ origin: [...org], intensity: f(intensity), color: [f(r), f(g), f(b)] });
   }
 
+  private addParticle(org: Vec3, color: number, alpha: number): void {
+    if (this.rParticles.length >= d.MAX_PARTICLES) return;
+    this.rParticles.push({ origin: [...org], color, alpha });
+  }
+
   /** CL_AddPacketEntities. */
   private addPacketEntities(frame: Frame): void {
     // bonus items rotate at a fixed rate
@@ -830,7 +899,7 @@ export class OriginalClient {
       if (renderfx & d.RF_BEAM) {
         // the four beam colors are encoded in 32 bits of skinnum (hack)
         ent.alpha = f(0.3);
-        ent.skinnum = (s1.skinnum >> ((this.rand() % 4) * 8)) & 0xff;
+        ent.skinnum = (s1.skinnum >> ((this.rand.rand() % 4) * 8)) & 0xff;
         ent.model = null;
       } else if (s1.modelindex === 255) {
         // use custom player skin
@@ -933,7 +1002,8 @@ export class OriginalClient {
         this.addEntity(ent);
       }
 
-      // EF_POWERSCREEN, particle trails and the lights that go with them come with cl_fx.c
+      // EF_POWERSCREEN, particle trails and the lights that go with them
+      this.fx.entityEffects(cent, s1, effects, ent);
 
       cent.lerp_origin = [...ent.origin];
     }
@@ -1031,6 +1101,9 @@ export class OriginalClient {
     }
     this.calcViewValues();
     this.addPacketEntities(this.frame);
+    this.fx.addTEnts();
+    this.fx.addParticles();
+    this.fx.addDlights();
     this.addLightStyles();
   }
 
@@ -1070,13 +1143,5 @@ export class OriginalClient {
       rd.rdflags = this.frame.playerstate.rdflags;
     }
     return { ...this.refdef, vieworg: [...this.refdef.vieworg], viewangles: [...this.refdef.viewangles] };
-  }
-
-  /**
-   * rand(), for the beam colour pick. The C calls the C library's, so the lockstep oracle compares
-   * beams by everything but their colour until the effects port brings a shared generator.
-   */
-  private rand(): number {
-    return 0;
   }
 }

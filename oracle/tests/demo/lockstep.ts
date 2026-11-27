@@ -84,6 +84,8 @@ export interface LayerResult {
   first: Divergence | null;
   /** Frames that differ, of `compared`. */
   differing: number;
+  /** For the list layers, how many entries the C drew over all frames (so a pass is not an empty one). */
+  items: number;
 }
 
 const F = Math.fround;
@@ -108,10 +110,11 @@ function entityKey(e: { model: string | null; frame: number; oldframe: number; b
 class Layer {
   result: LayerResult;
   constructor(name: string) {
-    this.result = { layer: name, compared: 0, first: null, differing: 0 };
+    this.result = { layer: name, compared: 0, first: null, differing: 0, items: 0 };
   }
-  check(frame: number, field: string | null, c: unknown, ts: unknown) {
+  check(frame: number, field: string | null, c: unknown, ts: unknown, items = 0) {
     this.result.compared++;
+    this.result.items += items;
     if (field === null) return;
     this.result.differing++;
     this.result.first ??= { frame, field, c, ts };
@@ -251,8 +254,8 @@ function compareRefdef(
     styles.check(f, field, field && c ? c[Number(field.split(' ')[1].split('[')[0])] : null, field ? rd.lightstyles[Number(field.split(' ')[1].split('[')[0])]?.rgb : null);
   }
   {
-    // beams pick their colour with rand(): compared without it
-    const key = (e: any) => entityKey({ ...e, skinnum: e.flags & 128 ? -1 : e.skinnum });
+    // V_RenderView sorts the entities by their entity_t pointers, so the order is the C's memory layout
+    const key = (e: any) => entityKey(e);
     const c = (cr.ents as any[]).map(key).sort();
     const ts = rd.entities.map((e: RefEntity) => key(e)).sort();
     let field: string | null = null;
@@ -268,25 +271,34 @@ function compareRefdef(
         break;
       }
     }
-    entities.check(f, field, cv, tv);
+    entities.check(f, field, cv, tv, c.length);
   }
   {
-    const c = (cr.dlights as any[]).map((l) => [...l.origin, ...l.color, l.intensity].map(F).join(' ')).sort();
-    const ts = rd.dlights.map((l) => [...l.origin, ...l.color, l.intensity].map(F).join(' ')).sort();
-    dlights.check(f, c.join() === ts.join() ? null : `count ${c.length} vs ${ts.length}`, c, ts);
+    // in order: r_dlights is a list, and ref_gl lights the world in that order
+    const c = (cr.dlights as any[]).map((l) => [...l.origin, ...l.color, l.intensity].map(F).join(' '));
+    const ts = rd.dlights.map((l) => [...l.origin, ...l.color, l.intensity].map(F).join(' '));
+    const i = firstDiff(c, ts);
+    dlights.check(f, i < 0 ? null : c.length !== ts.length ? `count ${c.length} vs ${ts.length}` : `light ${i}`, i < 0 ? null : c[i] ?? c.length, i < 0 ? null : ts[i] ?? ts.length, c.length);
   }
   {
-    // particles' positions come from rand(): compared by count and colour until the RNG is shared
-    const c = (cr.particles as number[][]).map((p) => p[3]).sort((a, b) => a - b).join();
-    const ts = rd.particles.map((p) => p.color).sort((a, b) => a - b).join();
-    particles.check(f, c === ts ? null : `count ${cr.particles.length} vs ${rd.particles.length}`, null, null);
+    // in order: CL_AddParticles walks the active list from its head
+    const c = (cr.particles as number[][]).map((p) => p.map(F).join(' '));
+    const ts = rd.particles.map((p) => [...p.origin, p.color, p.alpha].map(F).join(' '));
+    const i = firstDiff(c, ts);
+    particles.check(f, i < 0 ? null : c.length !== ts.length ? `count ${c.length} vs ${ts.length}, first differing ${i}` : `particle ${i}`, i < 0 ? null : c[i], i < 0 ? null : ts[i], c.length);
   }
+}
+
+function firstDiff(a: string[], b: string[]): number {
+  for (let i = 0; i < Math.max(a.length, b.length); i++) if (a[i] !== b[i]) return i;
+  return -1;
 }
 
 /** One line per layer, for a test's output. */
 export function formatReport(report: LockstepReport): string {
   return report.layers.map((l) => {
-    if (!l.first) return `  ok    ${l.layer}: ${l.compared} frames`;
+    const items = l.items ? `, ${l.items} drawn` : '';
+    if (!l.first) return `  ok    ${l.layer}: ${l.compared} frames${items}`;
     const show = (v: unknown) => { const s = typeof v === 'string' ? v : JSON.stringify(v); return s && s.length > 400 ? s.slice(0, 400) + '…' : s; };
     return `  DIFF  ${l.layer}: ${l.differing} of ${l.compared} frames; first at frame ${l.first.frame}, ${l.first.field}\n          C:  ${show(l.first.c)}\n          TS: ${show(l.first.ts)}`;
   }).join('\n');

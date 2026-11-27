@@ -3,12 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { existsSync } from 'node:fs';
 import { DEMO_PAK, formatReport, lockstep, runCDemo } from './demo/lockstep';
 
-/**
- * Layers the TS client builds today. The entity list, dynamic lights and particles wait for the
- * effects port (cl_fx.c, cl_tent.c): the first muzzle flash, at frame 88, adds the flash and smoke
- * models and its light. They are reported meanwhile.
- */
-const GATED = ['timing', 'frame state', 'prediction', 'view', 'light styles'];
+/** Every layer the TS client builds; all are equal on every frame. Sound, the HUD and pixels come next. */
+const GATED = ['timing', 'frame state', 'prediction', 'view', 'light styles', 'entity list', 'dynamic lights', 'particles'];
 const canRun = existsSync(DEMO_PAK) && Boolean(process.env.Q2DEMO_BIN || process.env.Q2DEMO_OUT);
 
 describe('q2demo1.dm2 in lockstep with id\'s client', () => {

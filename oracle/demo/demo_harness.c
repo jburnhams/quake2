@@ -51,6 +51,17 @@ int Sys_Milliseconds(void) {
 	return curtime;
 }
 
+/* ---------------------------------------------------------------------- the client's rand */
+
+/* build.sh compiles client/cl_*.c and common.c with -Drand=q2_client_rand: the MSVC runtime's
+ * generator (the original Windows builds' rand), seeded 1 as an unseeded program is, so the TS
+ * client can draw the same numbers in the same order. */
+static unsigned int client_holdrand = 1;
+int q2_client_rand(void) {
+	client_holdrand = client_holdrand * 214013u + 2531011u;
+	return (client_holdrand >> 16) & 0x7fff;
+}
+
 /* ---------------------------------------------------------------------- output */
 
 static FILE *out_json;
