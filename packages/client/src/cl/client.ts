@@ -912,7 +912,8 @@ export class OriginalClient {
             if (!ent.model) ent.model = this.baseclientinfo.weaponmodel[0];
           }
         } else if (s1.modelindex2 & 0x80) {
-          // translucent linked models (defender sphere's shell)
+          // translucent linked models (defender sphere's shell): cl_ents.c's own hack (PGM), so a
+          // linked model index from 128 to 254 is drawn from slot & 0x7f, translucent, as the C does
           ent.model = this.modelDraw[s1.modelindex2 & 0x7f];
           ent.alpha = f(0.32);
           ent.flags = d.RF_TRANSLUCENT;
