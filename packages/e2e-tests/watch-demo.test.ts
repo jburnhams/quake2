@@ -70,6 +70,12 @@ describe.skipIf(!havePak)('/watch plays q2demo1.dm2 in the browser', () => {
     await page.waitForTimeout(1500); // the models load after the world
     return canvas;
   };
+  /**
+   * Goes to a moment. Waits only for the navigation to commit, not for "load": on a CI runner's
+   * software WebGL the page before can hold the browser past goto's 30 s, and stage() already
+   * waits for the drawn world, which is what the tests need.
+   */
+  const open = (url: string) => page.goto(url, { waitUntil: 'commit' });
   const shot = async (name: string) => {
     const png = await (await stage()).screenshot();
     if (shots) {
@@ -80,18 +86,18 @@ describe.skipIf(!havePak)('/watch plays q2demo1.dm2 in the browser', () => {
   };
 
   it('opens on a moment from the link, through the player\'s eyes', async () => {
-    await page.goto(`${base}/watch?t=100`);
+    await open(`${base}/watch?t=100`);
     const at10 = await shot('watch-eyes-10s');
     expect(await page.getByText('Installation').count()).toBeGreaterThan(0);
     expect(await page.getByText('maps/demo2.bsp').count()).toBeGreaterThan(0);
-    await page.goto(`${base}/watch?t=300`);
+    await open(`${base}/watch?t=300`);
     const at30 = await shot('watch-eyes-30s');
     expect(at30.equals(at10)).toBe(false);
     expect(errors).toEqual([]);
   });
 
   it('plays, and writes where it stopped to the URL', async () => {
-    await page.goto(`${base}/watch?t=50`);
+    await open(`${base}/watch?t=50`);
     await stage();
     await page.getByRole('button', { name: 'Play', exact: true }).click();
     await page.waitForTimeout(2000);
@@ -102,7 +108,7 @@ describe.skipIf(!havePak)('/watch plays q2demo1.dm2 in the browser', () => {
   });
 
   it('follows the player from behind', async () => {
-    await page.goto(`${base}/watch?camera=behind&t=100`);
+    await open(`${base}/watch?camera=behind&t=100`);
     await shot('watch-behind-10s');
     expect(errors).toEqual([]);
   });
