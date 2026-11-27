@@ -26,7 +26,7 @@ describe('frameAt', () => {
 
 describe('the movement lab played like a video', () => {
   it('starts at the end, plays from the start, and stops at the end', async () => {
-    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'], shouldAdvanceTime: true });
+    vi.useFakeTimers({ toFake: ['requestAnimationFrame', 'cancelAnimationFrame', 'performance'] });
     render('/labs/movement');
     const seek = await screen.findByRole('slider', { name: 'The run' }, { timeout: 5000 });
     expect(Number(seek.getAttribute('aria-valuenow') ?? (seek as HTMLInputElement).value)).toBeCloseTo(2.5);

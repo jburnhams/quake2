@@ -244,6 +244,43 @@ void SNDDMA_Shutdown(void) {}
 void SNDDMA_BeginPainting(void) {}
 void SNDDMA_Submit(void) {}
 
+/*
+ * snd_mixa.s's two routines, in C: the i386 Linux build linked these in place of snd_mix.c's C
+ * versions (build.sh compiles snd_mix.c without them). S_PaintChannelFrom8 picks the scale table's
+ * row by volume >> 3 (the assembly's "and $0xF8; shl $7"), and reads each sample as an unsigned byte
+ * index into a row of (signed char)j * scale.
+ */
+typedef struct { int left, right; } harness_samplepair_t;
+extern harness_samplepair_t paintbuffer[];
+extern int snd_scaletable[32][256];
+extern int *snd_p, snd_linear_count;
+extern short *snd_out;
+
+void S_PaintChannelFrom8(channel_t *ch, sfxcache_t *sc, int count, int offset) {
+	int i, *lscale, *rscale;
+	unsigned left = ch->leftvol, right = ch->rightvol;
+	unsigned char *sfx;
+	/* clamped in registers only ("cmpl $255; jna"): the channel keeps its volumes */
+	if (left > 255) left = 255;
+	if (right > 255) right = 255;
+	lscale = snd_scaletable[left >> 3];
+	rscale = snd_scaletable[right >> 3];
+	sfx = (unsigned char *)sc->data + ch->pos;
+	for (i = 0; i < count; i++) {
+		paintbuffer[offset + i].left += lscale[sfx[i]];
+		paintbuffer[offset + i].right += rscale[sfx[i]];
+	}
+	ch->pos += count;
+}
+
+void S_WriteLinearBlastStereo16(void) {
+	int i, val;
+	for (i = 0; i < snd_linear_count; i++) {
+		val = snd_p[i] >> 8;
+		snd_out[i] = val > 0x7fff ? 0x7fff : val < -0x8000 ? -0x8000 : val;
+	}
+}
+
 /* Writes the samples painted since the last call (snd_mix.c's S_TransferStereo16 layout). */
 static void flush_pcm(void) {
 	extern int paintedtime;
@@ -504,6 +541,8 @@ void __wrap_CL_Frame(int msec) {
 	drew_3d = 0;
 	__real_CL_Frame(msec);
 	if (cls.state == ca_active && draw_len) fprintf(f, "{\"t\":\"draw\",\"f\":%d,\"d\":[%.*s]}\n", frame_no, draw_len, draw_buf);
+	/* before the client is active, only the clock: the sound device plays at it from the start */
+	if (cls.state != ca_active) fprintf(f, "{\"t\":\"tick\",\"f\":%d,\"msec\":%d,\"clock\":%d}\n", frame_no, msec, vclock);
 	if (cls.state == ca_active) {
 		fprintf(f, "{\"t\":\"frame\",\"f\":%d,\"msec\":%d,\"clock\":%d,\"time\":%d,\"lerp\":", frame_no, msec, vclock, cl.time);
 		jfloat(f, cl.lerpfrac);

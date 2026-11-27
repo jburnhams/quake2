@@ -39,9 +39,11 @@ if [ -z "$stale" ]; then
 fi
 
 tmp=$(mktemp -d)
-trap 'rm -rf "$tmp"' EXIT
+# A background auto-gc can still be writing into the cache as the trap runs, so the clean-up never
+# fails the fetch (CI saw "rm: cannot remove .../cache: Directory not empty" after a good fetch).
+trap 'rm -rf "$tmp" 2>/dev/null || true' EXIT
 git init -q --bare "$tmp/cache"
-g() { git -C "$tmp/cache" "$@"; }
+g() { git -C "$tmp/cache" -c gc.auto=0 -c maintenance.auto=false "$@"; }
 
 # fetch <url> <ref>: quietly, one commit deep, retried on a flaky network.
 fetch() {

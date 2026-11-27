@@ -1572,3 +1572,4 @@ export { OriginalClient, type RefDef, type RefEntity, type ClientAssets, type So
 export { ClientEffects, type FxHost, type FxEntity, type CParticle, type TempEntityMessage } from './cl/fx.js';
 export { Rand } from './cl/qmath.js';
 export * as originalTables from './cl/tables.js';
+export { ClientSound, virtualDevice, getWavinfo, type SoundDevice, type SoundHost, type SoundOptions, type Sfx, type SfxCache, type Channel as SoundChannel } from './cl/snd.js';

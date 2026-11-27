@@ -102,6 +102,12 @@ export function IntroScreen() {
           />
           <LinkCard
             as="h2"
+            to="/labs/sound"
+            title="Sound lab"
+            description="Hear a rocket fly round you through the game's own mixer, and see the two numbers that are all of its 3D sound: a volume for each ear."
+          />
+          <LinkCard
+            as="h2"
             to="/labs/lag"
             title="Lag lab"
             description="One player through a client, a server and a network: why your keys answer at once when the server is far away."

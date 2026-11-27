@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { PakArchive } from '@quake2ts/engine';
 import { OriginalClient, type RefDef, type RefEntity } from '../../../packages/client/src/cl/client';
+import { virtualDevice } from '../../../packages/client/src/cl/snd';
 
 export const ORACLE_DIR = resolve(__dirname, '../..');
 export const REPO_ROOT = resolve(ORACLE_DIR, '..');
@@ -27,6 +28,8 @@ export interface CFrame {
   ref?: Line;
   draw?: Line;
   chan?: Line;
+  /** A frame before the client was active: its msec and the virtual clock. */
+  tick?: Line;
   snds: Line[];
 }
 
@@ -67,6 +70,7 @@ export function pakAssets(pakPath = DEMO_PAK) {
     hasSkin: has,
     // a pic name that starts with a slash is a path; otherwise pics/<name>.pcx
     hasPic: (name: string) => (name.startsWith('/') || name.startsWith('\\') ? has(name.slice(1)) : has(`pics/${name}.pcx`)),
+    loadFile: (name: string) => (has(name) ? pak.readFile(name) : null),
   };
 }
 
@@ -86,6 +90,8 @@ export interface LayerResult {
   differing: number;
   /** For the list layers, how many entries the C drew over all frames (so a pass is not an empty one). */
   items: number;
+  /** What the items and the compared units are called in the report. */
+  units?: { items: string; compared: string };
 }
 
 const F = Math.fround;
@@ -109,8 +115,8 @@ function entityKey(e: { model: string | null; frame: number; oldframe: number; b
 
 class Layer {
   result: LayerResult;
-  constructor(name: string) {
-    this.result = { layer: name, compared: 0, first: null, differing: 0, items: 0 };
+  constructor(name: string, units?: { items: string; compared: string }) {
+    this.result = { layer: name, compared: 0, first: null, differing: 0, items: 0, units };
   }
   check(frame: number, field: string | null, c: unknown, ts: unknown, items = 0) {
     this.result.compared++;
@@ -127,7 +133,13 @@ export interface LockstepReport {
 }
 
 /** Plays the C run's inputs through the TS client and compares what each drew. */
-export function lockstep(frames: CFrame[], client = new OriginalClient({ assets: pakAssets() })): LockstepReport {
+export function lockstep(frames: CFrame[], pcm?: Int16Array): LockstepReport {
+  // the harness's sound device: the "hardware" plays at the virtual clock, 22,050 Hz, 16-bit stereo
+  let clock = 0;
+  const device = virtualDevice(() => clock);
+  const client = new OriginalClient({ assets: pakAssets(), soundDevice: device, sound: { loadas8bit: true } });
+  const mixed: number[] = [];
+  let written = 0;
   const timing = new Layer('timing (cl.time, lerpfrac)');
   const state = new Layer('frame state (cl.frame, player state, entities)');
   const prediction = new Layer('prediction');
@@ -136,6 +148,8 @@ export function lockstep(frames: CFrame[], client = new OriginalClient({ assets:
   const entities = new Layer('entity list');
   const dlights = new Layer('dynamic lights');
   const particles = new Layer('particles');
+  const sounds = new Layer('sound starts', { items: 'started', compared: 'frames' });
+  const channels = new Layer('sound channels', { items: 'channel-frames playing', compared: 'frames' });
 
   const msec = frames.find((f) => f.frame)?.frame?.msec ?? 25;
   let framesRun = 0;
@@ -143,13 +157,22 @@ export function lockstep(frames: CFrame[], client = new OriginalClient({ assets:
 
   for (const cf of frames) {
     const cl = cf.frame;
+    clock = cl?.clock ?? cf.tick?.clock ?? clock;
     const out = client.runFrame({
-      msec: cl?.msec ?? msec,
+      msec: cl?.msec ?? cf.tick?.msec ?? msec,
       realtime: cl?.realtime ?? 0,
       messages: cf.msgs,
       ack: cl?.ack ?? 0,
       seq: cl?.seq ?? 0,
     });
+    {
+      // S_StartSound and S_StartLocalSound calls, in order, whether or not a frame was drawn
+      const n = (v: number) => F(v).toString();
+      const c = cf.snds.map((s) => (s.local !== undefined ? `local ${s.local}` : [s.ent, s.ch, s.sfx, n(s.vol), n(s.attn), n(s.ofs), s.org ? s.org.map(n).join(' ') : '-'].join('|')));
+      const ts = (out.ran ? client.sounds : []).map((s) => (s.local ? `local ${s.name}` : [s.ent, s.channel, s.name, n(s.volume), n(s.attenuation), n(s.timeofs), s.origin ? s.origin.map(n).join(' ') : '-'].join('|')));
+      const i = firstDiff(c, ts);
+      sounds.check(cf.f, i < 0 ? null : c.length !== ts.length ? `count ${c.length} vs ${ts.length}, first differing ${i}` : `sound ${i}`, i < 0 ? null : c[i], i < 0 ? null : ts[i], c.length);
+    }
     if (!cl) continue;
     framesRun++;
     const f = cf.f;
@@ -213,6 +236,38 @@ export function lockstep(frames: CFrame[], client = new OriginalClient({ assets:
       prediction.check(f, field, p, { origin: client.predictedOrigin, error: client.predictionError, step: client.predictedStep, steptime: client.predictedStepTime });
     }
 
+    // the mixer's channels after S_Update, and the samples it painted (the harness's flush_pcm)
+    if (out.ran && client.state === 'active') {
+      const snd = client.snd;
+      const c = cf.chan;
+      const ts = {
+        soundtime: snd.soundtime,
+        painted: snd.paintedtime,
+        c: snd.channels.flatMap((ch, i) => (ch.sfx ? [[i, ch.sfx.name, ch.leftvol, ch.rightvol, ch.end, ch.pos, ch.entnum, ch.entchannel, ch.master_vol, ch.fixed_origin ? 1 : 0, ch.autosound ? 1 : 0, F(ch.dist_mult), ch.origin.map(F).join(' ')].join('|')] : [])),
+      };
+      let field: string | null = null;
+      let cv: unknown = c;
+      let tv: unknown = ts;
+      if (!c) field = 'no C channels line';
+      else {
+        const cc = (c.c as any[]).map((h) => [h.i, h.sfx, h.left, h.right, h.end, h.pos, h.ent, h.ch, h.master, h.fixed, h.auto, F(h.dist), h.origin.map(F).join(' ')].join('|'));
+        if (c.soundtime !== ts.soundtime) [field, cv, tv] = ['soundtime', c.soundtime, ts.soundtime];
+        else if (c.painted !== ts.painted) [field, cv, tv] = ['paintedtime', c.painted, ts.painted];
+        else if (diffFloats('listener', c.listener.flat(), [...snd.listener_origin, ...snd.listener_forward, ...snd.listener_right, ...snd.listener_up])) [field, cv, tv] = ['listener', c.listener, [snd.listener_origin, snd.listener_forward, snd.listener_right, snd.listener_up]];
+        else {
+          const i = firstDiff(cc, ts.c);
+          if (i >= 0) [field, cv, tv] = [cc.length !== ts.c.length ? `count ${cc.length} vs ${ts.c.length}, first differing ${i}` : `channel ${i}`, cc[i], ts.c[i]];
+        }
+        channels.check(cf.f, field, cv, tv, cc.length);
+      }
+      if (!c) channels.check(cf.f, field, cv, tv);
+      if (pcm) {
+        const buf = device.buffer;
+        const mask = (device.samples >> 1) - 1;
+        for (; written < snd.paintedtime; written++) mixed.push(buf[(written & mask) * 2], buf[(written & mask) * 2 + 1]);
+      }
+    }
+
     const cr = cf.ref;
     const rd = out.refdef;
     if (!cr && !rd) continue;
@@ -223,7 +278,21 @@ export function lockstep(frames: CFrame[], client = new OriginalClient({ assets:
     compareRefdef(f, cr, rd, view, styles, entities, dlights, particles, (s) => (cStyles = s ?? cStyles), () => cStyles);
   }
 
-  return { framesRun, layers: [timing, state, prediction, view, styles, entities, dlights, particles].map((l) => l.result) };
+  const layers = [timing, state, prediction, view, styles, entities, dlights, particles, sounds, channels];
+  if (pcm) {
+    // the mixed audio, sample for sample (left and right interleaved), at 22,050 pairs a second
+    const audio = new Layer('mixed audio', { items: 'in the C run', compared: 'stereo samples' });
+    const n = Math.max(pcm.length, mixed.length);
+    let first = -1;
+    let differing = 0;
+    for (let i = 0; i < n; i++) if (pcm[i] !== mixed[i]) { differing++; if (first < 0) first = i; }
+    audio.result = {
+      ...audio.result, compared: n >> 1, differing: differing, items: pcm.length >> 1,
+      first: first < 0 ? null : { frame: -1, field: `sample ${first >> 1} (${(first >> 1) / 22050} s), ${first & 1 ? 'right' : 'left'}; ${pcm.length} vs ${mixed.length} values`, c: Array.from(pcm.subarray(first, first + 8)), ts: mixed.slice(first, first + 8) },
+    };
+    layers.push(audio);
+  }
+  return { framesRun, layers: layers.map((l) => l.result) };
 }
 
 function compareRefdef(
@@ -297,9 +366,11 @@ function firstDiff(a: string[], b: string[]): number {
 /** One line per layer, for a test's output. */
 export function formatReport(report: LockstepReport): string {
   return report.layers.map((l) => {
-    const items = l.items ? `, ${l.items} drawn` : '';
-    if (!l.first) return `  ok    ${l.layer}: ${l.compared} frames${items}`;
+    const units = l.units ?? { items: 'drawn', compared: 'frames' };
+    const items = l.items ? `, ${l.items} ${units.items}` : '';
+    if (!l.first) return `  ok    ${l.layer}: ${l.compared} ${units.compared}${items}`;
     const show = (v: unknown) => { const s = typeof v === 'string' ? v : JSON.stringify(v); return s && s.length > 400 ? s.slice(0, 400) + '…' : s; };
-    return `  DIFF  ${l.layer}: ${l.differing} of ${l.compared} frames; first at frame ${l.first.frame}, ${l.first.field}\n          C:  ${show(l.first.c)}\n          TS: ${show(l.first.ts)}`;
+    const at = l.first.frame < 0 ? '' : `frame ${l.first.frame}, `;
+    return `  DIFF  ${l.layer}: ${l.differing} of ${l.compared} ${units.compared}; first at ${at}${l.first.field}\n          C:  ${show(l.first.c)}\n          TS: ${show(l.first.ts)}`;
   }).join('\n');
 }
