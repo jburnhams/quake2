@@ -13,13 +13,14 @@ export interface Excerpt {
 /**
  * The declaration that starts on the first line containing `start`, with the comment block right
  * above it, to the brace that closes its body. Pass `upTo` to stop at the first line after `start`
- * that contains it instead (for a branch inside a function), and `comment: false` to leave the
- * comment above out. Throws when `start` is not in the file, so a renamed function fails a test
+ * that contains it instead (for a branch inside a function), `comment: false` to leave the
+ * comment above out, and `definition: true` to pass over declarations (a line ending in `;`, as a C
+ * prototype above the function does). Throws when `start` is not in the file, so a renamed function fails a test
  * rather than showing nothing.
  */
-export function excerpt(text: string, start: string, options: { upTo?: string; comment?: boolean } = {}): Excerpt {
+export function excerpt(text: string, start: string, options: { upTo?: string; comment?: boolean; definition?: boolean } = {}): Excerpt {
   const lines = text.split('\n');
-  const at = lines.findIndex((l) => l.includes(start));
+  const at = lines.findIndex((l) => l.includes(start) && !(options.definition && l.trim().endsWith(';')));
   if (at < 0) throw new Error(`"${start}" is not in the source.`);
 
   let first = at;

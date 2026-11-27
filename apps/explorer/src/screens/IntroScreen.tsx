@@ -96,6 +96,12 @@ export function IntroScreen() {
           />
           <LinkCard
             as="h2"
+            to="/labs/effects"
+            title="Effects lab"
+            description="Fire a rocket, a rail shot or a teleport in demo1 and step through every particle and light the client makes, with id's effects code beside the port's."
+          />
+          <LinkCard
+            as="h2"
             to="/labs/lag"
             title="Lag lab"
             description="One player through a client, a server and a network: why your keys answer at once when the server is far away."

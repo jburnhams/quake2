@@ -60,7 +60,9 @@ export function useLabClock({ duration, frame, loop = false, start = 0, held }: 
     if (!playing) return;
     let last = performance.now();
     let id = requestAnimationFrame(function tick(now) {
-      const t = ref.current.time + ((now - last) / 1000) * ref.current.rate;
+      // A frame's timestamp is when the frame began, which can be before the performance.now()
+      // taken as the effect started: a step back in time would play from before the start.
+      const t = ref.current.time + (Math.max(0, now - last) / 1000) * ref.current.rate;
       last = now;
       if (loop) {
         ref.current.time = duration > 0 ? t % duration : 0;

@@ -169,6 +169,11 @@ export class ClientEffects {
   private readonly lasers: Laser[] = Array.from({ length: MAX_LASERS }, () => ({ ent: zeroEntity(), endtime: 0 }));
   /** avelocities, a static that CL_ClearState leaves alone. */
   private readonly avelocities = new Array<number>(NUMVERTEXNORMALS * 3).fill(0);
+  /**
+   * PARTICLE_GRAVITY, 40 units a second squared (a tenth of the world's 800: particles drift). The
+   * C's is a #define; here a lab can change it. The demo oracle runs it at 40.
+   */
+  gravity = PARTICLE_GRAVITY;
   /** CL_AddParticles' `time`, which keeps its value into the next particle when that one is instant. */
   private particleTime = 0;
 
@@ -449,7 +454,7 @@ export class ClientEffects {
         p.org[j] = f(f(org[j] + ((r.rand() & 7) - 4)) + f(dd * dir[j]));
         p.vel[j] = f(r.crand() * 20);
       }
-      p.accel = [0, 0, -PARTICLE_GRAVITY];
+      p.accel = [0, 0, -this.gravity];
       p.alpha = 1.0;
       p.alphavel = f(-1.0 / (0.5 + r.frand() * 0.3));
     }
@@ -467,7 +472,7 @@ export class ClientEffects {
         p.org[j] = f(f(org[j] + ((r.rand() & 7) - 4)) + f(dd * dir[j]));
         p.vel[j] = f(r.crand() * 20);
       }
-      p.accel = [0, 0, rising ? PARTICLE_GRAVITY : -PARTICLE_GRAVITY];
+      p.accel = [0, 0, rising ? this.gravity : -this.gravity];
       p.alpha = 1.0;
       p.alphavel = f(-1.0 / (0.5 + r.frand() * 0.3));
     }
@@ -486,7 +491,7 @@ export class ClientEffects {
       }
       p.org[2] = f(f(ent.origin[2] - 8) + (r.rand() & 7));
       p.vel[2] = f(80 + (r.rand() & 7));
-      p.accel = [0, 0, -PARTICLE_GRAVITY];
+      p.accel = [0, 0, -this.gravity];
       p.alpha = 1.0;
       p.alphavel = -0.5;
     }
@@ -505,7 +510,7 @@ export class ClientEffects {
       p.org[1] = f(f(org[1] - 16) + f(r.frand() * 32));
       p.org[2] = f(f(org[2] - 24) + f(r.frand() * 56));
       for (let j = 0; j < 3; j++) p.vel[j] = f(r.crand() * 20);
-      p.accel = [0, 0, -PARTICLE_GRAVITY];
+      p.accel = [0, 0, -this.gravity];
       p.alpha = 1.0;
       p.alphavel = f(-1.0 / (1.0 + r.frand() * 0.3));
     }
@@ -520,7 +525,7 @@ export class ClientEffects {
       p.color = f(0xd4 + (r.rand() & 3)); // green
       for (let j = 0; j < 3; j++) p.org[j] = f(org[j] + f(r.crand() * 8));
       for (let j = 0; j < 3; j++) p.vel[j] = f(r.crand() * 8);
-      p.accel = [0, 0, f(-PARTICLE_GRAVITY * 0.2)];
+      p.accel = [0, 0, f(-this.gravity * 0.2)];
       p.alpha = 1.0;
       p.alphavel = f(-1.0 / (1.0 + r.frand() * 0.3));
     }
@@ -537,7 +542,7 @@ export class ClientEffects {
         p.org[j] = f(org[j] + ((r.rand() % 32) - 16));
         p.vel[j] = f((r.rand() % 384) - 192);
       }
-      p.accel = [0, 0, -PARTICLE_GRAVITY];
+      p.accel = [0, 0, -this.gravity];
       p.alpha = 1.0;
       p.alphavel = f(-0.8 / (0.5 + r.frand() * 0.3));
     }
@@ -561,7 +566,7 @@ export class ClientEffects {
       p.accel[1] = f(-Math.sin(angle) * 100);
       p.org[2] = f(f(org[2] + 8) + (r.rand() % 90));
       p.vel[2] = f(-100 + (r.rand() & 31));
-      p.accel[2] = PARTICLE_GRAVITY * 4;
+      p.accel[2] = this.gravity * 4;
       p.alpha = 1.0;
       p.alphavel = f(-0.3 / (0.5 + r.frand() * 0.3));
     }
@@ -579,7 +584,7 @@ export class ClientEffects {
         p.org[j] = f(f(org[j] + ((r.rand() & 7) - 4)) + f(dd * dir[j]));
         p.vel[j] = f(f(dir[j] * 30) + f(r.crand() * 40));
       }
-      p.accel = [0, 0, -PARTICLE_GRAVITY];
+      p.accel = [0, 0, -this.gravity];
       p.alpha = 1.0;
       p.alphavel = f(-1.0 / (0.5 + r.frand() * 0.3));
     }
@@ -664,7 +669,7 @@ export class ClientEffects {
             p.vel[j] = f(r.crand() * velscale);
             p.accel[j] = 0;
           }
-          p.vel[2] = f(p.vel[2] - PARTICLE_GRAVITY);
+          p.vel[2] = f(p.vel[2] - this.gravity);
         } else if (flags & d.EF_GREENGIB) {
           p.alpha = 1.0;
           p.alphavel = f(-1.0 / (1 + r.frand() * 0.4));
@@ -674,7 +679,7 @@ export class ClientEffects {
             p.vel[j] = f(r.crand() * velscale);
             p.accel[j] = 0;
           }
-          p.vel[2] = f(p.vel[2] - PARTICLE_GRAVITY);
+          p.vel[2] = f(p.vel[2] - this.gravity);
         } else {
           p.alpha = 1.0;
           p.alphavel = f(-1.0 / (1 + r.frand() * 0.2));
@@ -710,7 +715,7 @@ export class ClientEffects {
           p.org[j] = f(move[j] + f(r.crand() * 5));
           p.vel[j] = f(r.crand() * 20);
         }
-        p.accel[2] = -PARTICLE_GRAVITY;
+        p.accel[2] = -this.gravity;
       }
       this.step(move, vec);
     }
@@ -902,7 +907,7 @@ export class ClientEffects {
         p.vel[j] = f(r.crand() * 15);
         p.accel[j] = 0;
       }
-      p.accel[2] = PARTICLE_GRAVITY;
+      p.accel[2] = this.gravity;
       this.step(move, vec);
     }
 
@@ -924,7 +929,7 @@ export class ClientEffects {
           vectorNormalize(dir);
           const vel = (50 + r.rand()) & 63;
           p.vel = vectorScale(dir, vel);
-          p.accel = [0, 0, -PARTICLE_GRAVITY];
+          p.accel = [0, 0, -this.gravity];
         }
       }
     }
@@ -948,7 +953,7 @@ export class ClientEffects {
           vectorNormalize(dir);
           const vel = f(50 + (r.rand() & 63));
           p.vel = vectorScale(dir, vel);
-          p.accel = [0, 0, -PARTICLE_GRAVITY];
+          p.accel = [0, 0, -this.gravity];
         }
       }
     }
