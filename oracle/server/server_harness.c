@@ -231,7 +231,7 @@ static void script(usercmd_t *cmd, int t, int msec) {
 	case 3: cmd->sidemove = -400; cmd->buttons = (t % 8) < 4 ? BUTTON_ATTACK : 0; break;
 	case 4: cmd->forwardmove = -200; cmd->upmove = -200; break;
 	case 5: cmd->forwardmove = 400; cmd->buttons = BUTTON_ATTACK; break;
-	case 6: if (t % 40 == 0) cmd->impulse = 10; cmd->forwardmove = 300; break;
+	case 6: cmd->forwardmove = 300; break; /* and a weapnext as it starts (send_move) */
 	case 7: cmd->forwardmove = 400; cmd->sidemove = (t % 16) < 8 ? 300 : -300; break;
 	}
 }
@@ -248,7 +248,11 @@ static void send_move(int msec) {
 	usercmd_t nullcmd, *oldcmd, *cmd;
 	int checksumIndex, i;
 
-	script(&cmds[chan.outgoing_sequence & (CMD_BACKUP - 1)], tick_no - spawned_tick, msec);
+	int t = tick_no - spawned_tick;
+
+	/* 3.21's ClientThink ignores impulses: a weapon change is the weapnext command (ClientCommand) */
+	if (t % 320 == 240) send_string("weapnext");
+	script(&cmds[chan.outgoing_sequence & (CMD_BACKUP - 1)], t, msec);
 	SZ_Init(&buf, data, sizeof(data));
 	MSG_WriteByte(&buf, clc_move);
 	checksumIndex = buf.cursize;
