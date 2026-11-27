@@ -143,3 +143,15 @@ export const U_OLDORIGIN = 1 << 24;
 export const U_SKIN16 = 1 << 25;
 export const U_SOUND = 1 << 26;
 export const U_SOLID = 1 << 27;
+
+// svc_sound's flags (q_shared.h / qcommon.h) and their defaults
+export const SND_VOLUME = 1 << 0;
+export const SND_ATTENUATION = 1 << 1;
+export const SND_POS = 1 << 2;
+export const SND_ENT = 1 << 3;
+export const SND_OFFSET = 1 << 4;
+export const DEFAULT_SOUND_PACKET_VOLUME = 1.0;
+export const DEFAULT_SOUND_PACKET_ATTENUATION = 1.0;
+
+/** svc_print's chat level, which beeps (q_shared.h). */
+export const PRINT_CHAT = 3;

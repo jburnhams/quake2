@@ -97,23 +97,36 @@ what they would draw differs. demo1.dm2 (the 3.00 format) is not used: 3.21 refu
   `--wrap` taps `GetRefAPI` (every refdef and 2D draw call), `CL_ParseServerMessage` (each message's
   bytes and the netchan ack), `S_StartSound`, `S_Update` (every mixing channel) and `CL_Frame`.
 - `q2demo <basedir> <out> [msec] [shot_every]` writes `<out>/demo.jsonl` (one `msg`, `frame`, `ref`,
-  `draw`, `snd` or `chan` line per event), `<out>/pcm.raw` (the mixed sound, s16le stereo) and,
+  `draw`, `snd` or `chan` line per event, and a `tick` with the clock for each frame before the client
+  is active), `<out>/pcm.raw` (the mixed sound, s16le stereo) and,
   every `shot_every` frames, `<out>/shots/fNNNNN.ppm` (ref_gl's picture). Inline brush models are
   named `*N` and entities are compared as a sorted multiset (V_RenderView sorts them by pointer).
 - `tests/demo/lockstep.ts` feeds each C frame's message bytes and ack into
   `packages/client/src/cl/client.ts` (`OriginalClient`, a float32 port of cl_main's `CL_Frame`,
   cl_parse, cl_ents, cl_pred and cl_view, with 3.x's configstring numbers in `cl/defs.ts`) and
   compares layer by layer: timing (`cl.time`, lerpfrac), frame state, prediction, the view, light
-  styles, then the entity list, dynamic lights and particles. `Q2DEMO_OUT=dir` reuses a finished
-  run; `Q2DEMO_BIN` points at a prebuilt binary.
+  styles, then the entity list, dynamic lights and particles, then the sound: every `S_StartSound`,
+  the mixer's channels after each `S_Update`, and `pcm.raw` against the samples the TS mixer painted.
+  `Q2DEMO_OUT=dir` reuses a finished run; `Q2DEMO_BIN` points at a prebuilt binary.
 
 Gated, and equal on all 2,528 frames: timing, frame state, prediction, view, light styles, the
 entity list (87,816 entities), dynamic lights (1,547) and particles (1,126,589, in the C's order).
 The effects (`packages/client/src/cl/fx.ts`, a port of cl_fx.c and cl_tent.c) draw their random
 numbers from `Rand` in `cl/qmath.ts`, the MSVC runtime's rand() the original Windows builds used;
 `demo/build.sh` compiles `client/cl_*.c` and `qcommon/common.c` with `-Drand=q2_client_rand`, the
-same generator in `demo_harness.c`, so the server's draws do not move the client's. Sound, the 2D
-draw list and pixels come next. The Rogue mission pack's effects (cl_newfx.c) are not ported and throw.
+same generator in `demo_harness.c`, so the server's draws do not move the client's. The Rogue mission
+pack's effects (cl_newfx.c) are not ported and throw.
+
+Sound is gated too, and exact: the 610 sounds the client starts (server sound packets, effects,
+footsteps), the mixer's channels on every frame (10,608 channel-frames: volumes, positions, ends),
+and all 1,416,161 stereo samples of the mixed audio. The mixer is `packages/client/src/cl/snd.ts`,
+a port of snd_dma.c, snd_mem.c and snd_mix.c over a device the platform supplies (`virtualDevice`
+plays at the harness's clock, as `SNDDMA_GetDMAPos` does). id's C `S_PaintChannelFrom8` indexes its
+scale table by `volume >> 11`, which is always row 0, so every 8-bit sound (every sound, with
+`s_loadas8bit`'s default) mixes as silence; the game shipped with snd_mixa.s, which uses `volume >> 3`.
+`demo/build.sh` therefore compiles snd_mix.c as the i386 Linux build did, without its C
+`S_PaintChannelFrom8` and `S_WriteLinearBlastStereo16`, and `demo_harness.c` supplies the assembly's
+two routines in C; the TS mixer follows the assembly. The 2D draw list and pixels come next.
 
 What it found on its first run (2026-11-27): the demo parsers read entity angles as unsigned bytes,
 where `MSG_ReadAngle` reads a signed char (180 where the C has -180); fixed in

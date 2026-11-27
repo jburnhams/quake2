@@ -28,7 +28,15 @@ do
   o="$out/$(echo "$f" | tr / _ | sed 's/\.c$/.o/')"
   # The client's effects draw from rand(); give them a stream of their own (demo_harness.c's
   # q2_client_rand, the MSVC generator the TS client also runs) so the server's draws do not move it.
-  case "$f" in client/cl_*|qcommon/common.c) extra="-Drand=q2_client_rand" ;; *) extra="" ;; esac
+  # snd_mix.c as the i386 Linux build compiled it: without its C S_PaintChannelFrom8 and
+  # S_WriteLinearBlastStereo16, which snd_mixa.s replaced there (demo_harness.c has them in C). The C
+  # S_PaintChannelFrom8 indexes snd_scaletable by volume >> 11, which is always row 0, so every 8-bit
+  # sound (all of them, with s_loadas8bit's default of 1) mixes as silence; the assembly used >> 3.
+  case "$f" in
+    client/cl_*|qcommon/common.c) extra="-Drand=q2_client_rand" ;;
+    client/snd_mix.c) extra="-D__i386__" ;;
+    *) extra="" ;;
+  esac
   if [ ! -f "$o" ] || [ "$full/$f" -nt "$o" ] || [ "$0" -nt "$o" ]; then cc $CFLAGS $extra -c -o "$o" "$full/$f"; fi
   objs="$objs $o"
 done

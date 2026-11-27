@@ -13,7 +13,8 @@
  *
  * The network (netchan sequences) and platform (the clock) are inputs: `runFrame` takes what the
  * C's CL_Frame reads from them. The effects (cl_fx.c, cl_tent.c) are in fx.ts, drawing from the
- * same rand() as the C. Not yet ported: the Rogue mission pack's effects (cl_newfx.c), which throw,
+ * same rand() as the C, and the sound (snd_dma.c, snd_mem.c, snd_mix.c) in snd.ts, over a device the
+ * caller gives it (`soundDevice`). Not yet ported: the Rogue mission pack's effects (cl_newfx.c), which throw,
  * and movement prediction for a player who can move (pmove.c); a frozen player (PM_FREEZE, as in
  * every frame of the demos) does not move, which is all prediction does then.
  */
@@ -29,6 +30,7 @@ import {
 } from '@quake2ts/engine';
 import { BinaryStream } from '@quake2ts/shared';
 import * as d from './defs.js';
+import { ClientSound, type Sfx, type SoundDevice, type SoundHost, type SoundOptions } from './snd.js';
 import { ClientEffects, type FxHost } from './fx.js';
 import { anglemod, angleVectors, f, lerpAngle, Rand, short2angle, vectorMA, type Vec3 } from './qmath.js';
 
@@ -161,6 +163,8 @@ export interface ClientAssets {
   hasModel(name: string): boolean;
   hasSkin(name: string): boolean;
   hasPic(name: string): boolean;
+  /** FS_LoadFile, for the sounds: a file's bytes, or null. Without it no sound loads. */
+  loadFile?(path: string): Uint8Array | null;
 }
 
 interface ClientInfo {
@@ -235,10 +239,12 @@ export interface SoundStart {
   origin: Vec3 | null;
   ent: number;
   channel: number;
-  name: string;
+  name: string | null;
   volume: number;
   attenuation: number;
   timeofs: number;
+  /** S_StartLocalSound: a sound played at the listener (the chat beep); the other fields are unset. */
+  local?: true;
 }
 
 export interface FrameOutput {
@@ -261,6 +267,10 @@ export interface ClientOptions {
   noskins?: boolean;
   /** scr_vrect: the 3D view's rectangle (the whole screen at viewsize 100). */
   vrect?: { x: number; y: number; width: number; height: number };
+  /** The sound device (SNDDMA_*); without one, sound does not start, as when SNDDMA_Init fails. */
+  soundDevice?: SoundDevice | null;
+  /** s_volume, s_loadas8bit, s_mixahead. */
+  sound?: SoundOptions;
 }
 
 export class OriginalClient {
@@ -283,6 +293,8 @@ export class OriginalClient {
   refreshPrepped = false;
   forceRefdef = false;
   configstrings: string[] = new Array(d.MAX_CONFIGSTRINGS).fill('');
+  /** cl.sound_precache: each sound index's sfx once registered (null while sound has not started). */
+  soundPrecache: (Sfx | null)[] = new Array(d.MAX_SOUNDS).fill(null);
   modelDraw: (string | null)[] = new Array(d.MAX_MODELS).fill(null);
   clientinfo: ClientInfo[] = Array.from({ length: d.MAX_CLIENTS }, emptyClientInfo);
   baseclientinfo: ClientInfo = emptyClientInfo();
@@ -319,6 +331,17 @@ export class OriginalClient {
   readonly fx: ClientEffects;
   /** Every S_StartSound since the last frame, in order. */
   sounds: SoundStart[] = [];
+  readonly snd: ClientSound;
+  /**
+   * cls.disable_screen: the loading plaque's start time, 0 when it is down. CL_Init raises it, but
+   * Qcommon_Init drops it again when the command line asked for something (a demo, a map), and the
+   * map command's SCR_BeginLoadingPlaque does nothing while disconnected; so a client started on a
+   * demo or a server begins with it down.
+   */
+  disableScreen = 0;
+  private disableServercount = 0;
+  /** cl.sound_prepped: loop sounds play once a frame has arrived. */
+  soundPrepped = false;
 
   private readonly assets: ClientAssets;
   private readonly footsteps: boolean;
@@ -340,6 +363,46 @@ export class OriginalClient {
     this.vrect = options.vrect ?? { x: 0, y: 0, width: 640, height: 480 };
     this.footsteps = options.footsteps ?? true;
     this.fx = new ClientEffects(this.fxHost(), this.rand);
+    this.snd = new ClientSound(this.soundHost(), options.soundDevice ?? null, options.sound);
+  }
+
+  private soundHost(): SoundHost {
+    const cl = this;
+    return {
+      get active() { return cl.state === 'active'; },
+      get disableScreen() { return cl.disableScreen !== 0; },
+      get soundPrepped() { return cl.soundPrepped; },
+      get playernum() { return cl.playernum; },
+      get servertime() { return cl.frame.servertime; },
+      entityOrigin: (ent) => {
+        if (ent < 0 || ent >= d.MAX_EDICTS) throw new Error('CL_GetEntitySoundOrigin: bad ent');
+        return cl.entities[ent].lerp_origin;
+      },
+      entityNumber: (ent) => cl.entities[ent].current.number,
+      frameEntities: () => {
+        const out: { origin: Vec3; sound: number }[] = [];
+        for (let i = 0; i < cl.frame.num_entities; i++) {
+          const s = cl.parseEntities[(cl.frame.parse_entities + i) & (d.MAX_PARSE_ENTITIES - 1)];
+          out.push({ origin: s.origin, sound: s.sound });
+        }
+        return out;
+      },
+      soundPrecache: (i) => cl.soundPrecache[i],
+      configstring: (i) => cl.configstrings[i],
+      loadFile: (path) => cl.assets.loadFile?.(path) ?? null,
+    };
+  }
+
+  /** S_StartSound, noted for the lockstep (the harness's tap) and played. */
+  private startSound(origin: Vec3 | null, ent: number, channel: number, sfx: Sfx | null, volume: number, attenuation: number, timeofs: number): void {
+    this.sounds.push({ origin: origin ? [...origin] : null, ent, channel, name: sfx?.name ?? null, volume, attenuation, timeofs });
+    this.snd.startSound(origin, ent, channel, sfx, volume, attenuation, timeofs);
+  }
+
+  /** S_StartLocalSound */
+  private startLocalSound(name: string): void {
+    this.sounds.push({ origin: null, ent: 0, channel: 0, name, volume: 0, attenuation: 0, timeofs: 0, local: true });
+    this.snd.startLocalSound(name);
   }
 
   private fxHost(): FxHost {
@@ -356,9 +419,9 @@ export class OriginalClient {
       addEntity: (ent) => cl.addEntity(ent),
       addLight: (org, intensity, r, g, b) => cl.addLight(org, intensity, r, g, b),
       addParticle: (org, color, alpha) => cl.addParticle(org, color, alpha),
-      startSound: (origin, ent, channel, name, volume, attenuation, timeofs) => {
-        cl.sounds.push({ origin: origin ? [...origin] : null, ent, channel, name, volume, attenuation, timeofs });
-      },
+      // the effects name their sounds; the C registered each one (S_RegisterSound) beforehand
+      startSound: (origin, ent, channel, name, volume, attenuation, timeofs) =>
+        cl.startSound(origin, ent, channel, cl.snd.registerSound(name), volume, attenuation, timeofs),
     };
   }
 
@@ -396,8 +459,13 @@ export class OriginalClient {
 
     if (!this.refreshPrepped && this.state === 'active') this.prepRefresh();
 
-    // SCR_UpdateScreen draws the 3D view through V_RenderView
-    const refdef = this.renderView();
+    // SCR_UpdateScreen draws the 3D view through V_RenderView, unless the loading plaque is up
+    let refdef: RefDef | undefined;
+    if (this.disableScreen && this.realtime - this.disableScreen > 120000) this.disableScreen = 0; // timed out
+    if (!this.disableScreen) refdef = this.renderView();
+
+    // update audio
+    this.snd.update(this.refdef.vieworg, this.v_forward, this.v_right, this.v_up);
 
     // advance local effects for next frame
     this.fx.runDlights();
@@ -422,7 +490,12 @@ export class OriginalClient {
       onSpawnBaseline: (entity) => this.parseBaseline(entity),
       onFrame: (frame) => this.parseFrame(frame),
       onStuffText: (text) => this.stuffText(text),
-      onCenterPrint: ignore, onPrint: ignore, onSound: ignore, onLayout: ignore, onInventory: ignore,
+      onCenterPrint: ignore, onLayout: ignore, onInventory: ignore,
+      onPrint: (level) => {
+        // svc_print: a chat line beeps
+        if (level === d.PRINT_CHAT) this.startLocalSound('misc/talk.wav');
+      },
+      onSound: (flags, soundNum, volume, attenuation, offset, ent, pos) => this.parseStartSoundPacket(flags, soundNum, volume, attenuation, offset, ent, pos),
       onTempEntity: (type, pos, pos2, dir, cnt, color, ent, srcEnt, destEnt) => {
         const v = (p?: { x: number; y: number; z: number }): Vec3 => (p ? [f(p.x), f(p.y), f(p.z)] : [0, 0, 0]);
         this.fx.tempEntity({ type, pos: v(pos), pos2: v(pos2), dir: v(dir), cnt, color, ent, srcEnt, destEnt });
@@ -432,6 +505,27 @@ export class OriginalClient {
       onDisconnect: ignore, onReconnect: ignore,
       onDownload: ignore,
     };
+  }
+
+  /**
+   * CL_ParseStartSoundPacket, from the fields the engine's parser read: SND_ENT's short is the entity
+   * and its channel (ent << 3 | channel), and a sound not precached is dropped.
+   */
+  private parseStartSoundPacket(flags: number, soundNum: number, vol?: number, attn?: number, ofs?: number, entchan?: number, pos?: { x: number; y: number; z: number }): void {
+    const volume = flags & d.SND_VOLUME ? f(vol! / 255.0) : d.DEFAULT_SOUND_PACKET_VOLUME;
+    const attenuation = flags & d.SND_ATTENUATION ? f(attn! / 64.0) : d.DEFAULT_SOUND_PACKET_ATTENUATION;
+    const timeofs = flags & d.SND_OFFSET ? f(ofs! / 1000.0) : 0;
+    let ent = 0;
+    let channel = 0;
+    if (flags & d.SND_ENT) {
+      ent = entchan! >> 3;
+      if (ent > d.MAX_EDICTS) throw new Error(`CL_ParseStartSoundPacket: ent = ${ent}`);
+      channel = entchan! & 7;
+    }
+    const origin: Vec3 | null = flags & d.SND_POS ? [f(pos!.x), f(pos!.y), f(pos!.z)] : null;
+    const sfx = this.soundPrecache[soundNum];
+    if (!sfx) return;
+    this.startSound(origin, ent, channel, sfx, volume, attenuation, timeofs);
   }
 
   /** CL_ParseServerData: a new server (or a demo's start) clears the client. */
@@ -455,6 +549,9 @@ export class OriginalClient {
     this.forceRefdef = false;
     this.configstrings.fill('');
     this.modelDraw.fill(null);
+    this.soundPrecache.fill(null);
+    this.soundPrepped = false;
+    this.snd.stopAllSounds();
     this.clientinfo = Array.from({ length: d.MAX_CLIENTS }, emptyClientInfo);
     this.baseclientinfo = emptyClientInfo();
     this.predictedOrigin = [0, 0, 0];
@@ -479,6 +576,8 @@ export class OriginalClient {
     if (index >= d.CS_LIGHTS && index < d.CS_LIGHTS + d.MAX_LIGHTSTYLES) this.setLightstyle(index - d.CS_LIGHTS);
     else if (index >= d.CS_MODELS && index < d.CS_MODELS + d.MAX_MODELS) {
       if (this.refreshPrepped) this.modelDraw[index - d.CS_MODELS] = this.registerModel(str);
+    } else if (index >= d.CS_SOUNDS && index < d.CS_SOUNDS + d.MAX_MODELS) {
+      if (this.refreshPrepped) this.soundPrecache[index - d.CS_SOUNDS] = this.registerSound(str);
     } else if (index >= d.CS_PLAYERSKINS && index < d.CS_PLAYERSKINS + d.MAX_CLIENTS) {
       if (this.refreshPrepped) this.loadClientinfo(this.clientinfo[index - d.CS_PLAYERSKINS], str);
     }
@@ -491,7 +590,10 @@ export class OriginalClient {
 
   private stuffText(text: string): void {
     // "precache" ends the downloads; CL_RequestNextDownload then registers everything.
-    if (/^\s*precache\b/.test(text) && this.state !== 'disconnected') this.prepRefresh();
+    if (/^\s*precache\b/.test(text) && this.state !== 'disconnected') {
+      this.registerSounds();
+      this.prepRefresh();
+    }
   }
 
   /**
@@ -647,7 +749,10 @@ export class OriginalClient {
         const o = frame.playerstate.pmove.origin;
         this.predictedOrigin = [f(o[0] * 0.125), f(o[1] * 0.125), f(o[2] * 0.125)];
         this.predictedAngles = [...frame.playerstate.viewangles];
+        // get rid of loading plaque (SCR_EndLoadingPlaque)
+        if (this.disableServercount !== this.servercount && this.refreshPrepped) this.disableScreen = 0;
       }
+      this.soundPrepped = true; // can start mixing ambient sounds
       this.fireEntityEvents(frame);
       this.checkPredictionError();
     }
@@ -739,6 +844,18 @@ export class OriginalClient {
   }
 
   /** CL_PrepRefresh's model and client registration. */
+  /** CL_RegisterSounds: the precache list up to its first empty name. */
+  registerSounds(): void {
+    for (let i = 1; i < d.MAX_SOUNDS; i++) {
+      if (!this.configstrings[d.CS_SOUNDS + i]) break;
+      this.soundPrecache[i] = this.registerSound(this.configstrings[d.CS_SOUNDS + i]);
+    }
+  }
+
+  private registerSound(name: string): Sfx | null {
+    return this.snd.registerSound(name);
+  }
+
   prepRefresh(): void {
     if (!this.configstrings[d.CS_MODELS + 1]) return; // no map loaded
     this.weaponModels = ['weapon.md2'];
