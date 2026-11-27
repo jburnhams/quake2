@@ -1,6 +1,7 @@
 import { Entity, Solid, ServerFlags } from '../entity.js';
 import { GameExports, MulticastType } from '../../index.js';
 import { ServerCommand, TempEntity } from '@quake2ts/shared';
+import { doRespawn } from './spawnItem.js';
 
 // Helper to handle what happens when an item is picked up
 export function handleItemPickup(game: GameExports, self: Entity, other: Entity, respawnTime: number = 30) {
@@ -13,24 +14,14 @@ export function handleItemPickup(game: GameExports, self: Entity, other: Entity,
         return;
     }
 
-    // In DM, item respawns
-    // Hide model
-    self.solid = Solid.Not;
-    // We need to preserve the modelindex to restore it.
-    // We can assume the entity properties (self.model) are enough to look it up again,
-    // or we store it. Since self.modelindex is overwritten, we rely on the respawn closure
-    // capturing the original index OR re-resolving it.
-    // However, simpler is to just hide it via effects or svflags if the engine supports it.
-    // Setting modelindex = 0 hides it effectively.
-    // We'll store the original index in a temp property if needed, but since we use a factory
-    // pattern where 'respawn' is defined in the closure of creation, we can capture it there.
-    // But here we are in a helper.
-    // Let's assume the entity has 'model' property set correctly.
-
-    self.modelindex = 0;
+    // SetRespawn: hidden and not touchable until DoRespawn brings it back. The model stays, as
+    // NoClient already hides it, and the think is DoRespawn: spawnItem's own think (droptofloor)
+    // would leave the item hidden.
     self.svflags |= ServerFlags.NoClient;
-
+    self.solid = Solid.Not;
     self.nextthink = game.time + respawnTime;
+    self.think = (e) => doRespawn(e, game.entities);
+    game.entities.linkentity(self);
     game.entities.scheduleThink(self, self.nextthink);
 }
 

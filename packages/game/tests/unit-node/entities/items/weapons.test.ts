@@ -30,6 +30,7 @@ describe('Weapon Pickup Entities', () => {
             deathmatch: true,
             entities: {
                 scheduleThink: vi.fn(),
+                linkentity: vi.fn(),
                 modelIndex: vi.fn().mockReturnValue(1),
             } as any,
             hooks: {

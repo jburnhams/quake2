@@ -44,7 +44,7 @@ describe('Item Respawn', () => {
 
     // Item should be hidden and non-solid
     expect(item.solid).toBe(Solid.Not);
-    expect(item.modelindex).toBe(0);
+    expect(item.modelindex).toBe(1); // SetRespawn keeps the model: NoClient hides it
     expect(item.svflags & 1).toBeTruthy(); // Hidden
 
     expect(scheduleThinkMock).toHaveBeenCalled();

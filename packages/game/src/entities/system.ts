@@ -900,6 +900,10 @@ export class EntitySystem {
         helpmessage2: this.level.helpmessage2,
         help1changed: this.level.help1changed,
         help2changed: this.level.help2changed,
+        total_secrets: this.level.total_secrets ?? 0,
+        found_secrets: this.level.found_secrets ?? 0,
+        total_goals: this.level.total_goals ?? 0,
+        found_goals: this.level.found_goals ?? 0,
       },
     };
   }

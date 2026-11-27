@@ -292,6 +292,10 @@ function parseEntitySnapshot(raw: unknown): EntitySystemSnapshot {
         helpmessage2: ensureString(levelState.helpmessage2 || "", 'level.helpmessage2'),
         help1changed: ensureNumberOrDefault(levelState.help1changed, 'level.help1changed', 0),
         help2changed: ensureNumberOrDefault(levelState.help2changed, 'level.help2changed', 0),
+        total_secrets: ensureNumberOrDefault(levelState.total_secrets, 'level.total_secrets', 0),
+        found_secrets: ensureNumberOrDefault(levelState.found_secrets, 'level.found_secrets', 0),
+        total_goals: ensureNumberOrDefault(levelState.total_goals, 'level.total_goals', 0),
+        found_goals: ensureNumberOrDefault(levelState.found_goals, 'level.found_goals', 0),
     },
   };
 }
